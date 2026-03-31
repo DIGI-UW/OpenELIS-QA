@@ -707,6 +707,101 @@ OpenELIS Global uses **path-based routing** (`/SamplePatientEntry`, `/Report?typ
 **Jira Tickets Filed then CANCELLED**: 7 issues (OGC-518 through OGC-524) were created and then cancelled. Reason: EQA module requires enabling via Admin → General Configuration → EQA Enabled before features appear. Testing was against an incomplete version (v3.2.1.3) without this config toggle enabled. All tickets transitioned to Done with cancellation comments. Re-test needed after enabling EQA configuration.
 **Cumulative**: 389 TCs, 157+ suites, ~92% pass rate across Phases 1-EQA-DEEP
 
+### Phase 23 — Fine-Grained Form Verification (2026-03-31)
+
+Cross-referenced against Confluence User Manual (uwdigi.atlassian.net/wiki/spaces/oeg).
+
+#### Phase 23A — Admin General Configuration Sub-Pages (10/10 PASS)
+All 10 General Config sub-pages verified:
+- Site Information: 20 config keys
+- Site Branding: 3 logo uploads, 3 color pickers, Save/Cancel/Reset
+- NonConformity Configuration: 4 keys
+- WorkPlan Configuration: 3 keys
+- Result Entry Configuration: 13 keys (URL: /MasterListsPage/ResultConfigurationMenu — NOT ResultEntryConfigurationMenu)
+- Patient Entry Configuration: 7 keys
+- Printed Report Configuration: 9 keys
+- Order Entry Configuration: 14 keys (includes eqaEnabled)
+- Validation Configuration: 4 charset keys (NOTE: docs described biological validation settings — actual page has charset rules only)
+- MenuStatement Configuration: 0 items, empty state (undocumented in Confluence)
+
+**Doc-vs-Reality Gaps:**
+- Validation Config: Confluence docs described "Two-person Validation", "Validation Timeout" etc. — actual page has charset validation rules only
+- Site Branding: has Header Color field not in docs; docs mentioned Report Logo and Site Name Display which don't exist
+- MenuStatement Configuration: completely undocumented
+
+#### Phase 23B — Results By Test, Date or Status (PASS)
+- Verified filter fields: date picker, 303 test names, 7 analysis statuses, 4 sample statuses
+- Confluence says "By Test Date" — actual UI is "By Test, Date or Status" with richer filtering
+
+#### Phase 23C — User Management Form Verification (ALL PASS)
+
+**User List Page** (`/MasterListsPage/userManagement`):
+- 24 users total, pagination (20 per page)
+- Search: live filter "Search By User Names..."
+- Filters: "By Lab Unit Roles" dropdown, "Only Active" checkbox (filters to 18), "Only Administrator" checkbox (filters to 1)
+- Table: Select, First Name, Last Name, Login Name, Password Expiration Date, Account Locked, Account Disabled, Is Active, User Time Out (minutes)
+- Actions: Modify (enabled on select), Deactivate (enabled on select), Add (always active)
+
+**Add User Form** (`/MasterListsPage/userEdit?ID=0`):
+- Fields: Login Name*, Password* (pre-filled with rules), Repeat Password*, First Name*, Last Name*, Password Expiration Date* (default 01/04/2036), User Time Out (minutes)* (default 480), Account Locked (Y/N, default N), Account Disabled (Y/N, default N), Is Active (Y/N, default Y)
+- **BUG-20 RECONFIRMED**: Login Name field has `data-invalid="true"`, `aria-invalid="true"`, CSS class `cds--text-input--invalid` even with valid value. Also has typo in class: `defalut` instead of `default`
+- Roles section:
+  - Global Roles (6): Analyser Import, Audit Trail, Cytopathologist, Global Administrator, Pathologist, User Account Administrator
+  - Lab Unit Roles: dropdown with 15 lab units (All Lab Units, HIV, Malaria, Microbiology, Molecular Biology, Mycobacteriology, Sero-Surveillance, Biochemistry, Hematology, Immunology, Cytology, Serology, Virology, Pathology, Immunohistochemistry)
+  - Per-unit permissions (5): All Permissions, Reception, Reports, Results, Validation
+  - "Copy Permissions From User" with Apply button
+  - Add New Permission / Remove Permission buttons
+- Save (disabled until valid) + Exit buttons
+
+**Modify User Form** (`/MasterListsPage/userEdit?ID=1-2`):
+- Same fields as Add, pre-populated with selected user data
+- Login Name does NOT show invalid state in modify mode (BUG-20 is Add-only)
+
+#### Phase 23D — Edit Order (Modify Order) Detailed Verification (ALL PASS)
+
+**Search Page** (`/SampleEdit?type=readwrite`):
+- Search By Accession Number: text field (0/23 char limit), Submit button
+- Search By Patient: Patient Id, Previous Lab Number (0/23), Last Name, First Name, Date of Birth, Gender (Male/Female), Client Registry Search toggle, Search + External Search buttons
+- Patient Results table: Last Name, First Name, Gender, DOB, Unique Health ID, National ID, Data Source Name
+
+**Modify Order — Step 1 (Program Selection)**:
+- Patient header card: avatar, name, gender, DOB, National ID, Accession Number
+- Program dropdown (read-only): Routine Testing
+- Next button
+
+**Modify Order — Step 2 (Add Sample)**:
+- Current Tests table: Lab Number, Sample Type, Collection Date (editable), Collection Time (editable), Remove Sample, Test Name, Results Recorded, Cancel Test
+- Available Tests table: Lab Number, Sample Type, Test Name, Assign checkbox
+- Available tests for Whole Blood: WBC, RBC, HGB, HCT, MCV (5 tests)
+- Add Order section: Sample type dropdown, Reject Sample checkbox, Quantity, Sample Unit Of Measure (26+ units), Collection Date/Time, Collector, Storage Location (with Expand), Label quantities (Order + Specimen labels with +/-), Order Panels search, Available Tests search, Refer test to reference lab checkbox, Add Sample + button
+
+**Modify Order — Step 3 (Add Order)**:
+- 21 fields total:
+  - Lab Number* (0/23), Priority (ROUTINE, ASAP, STAT, Timed, Future STAT)
+  - Request Date, Received Date, Reception Time, Date of next visit
+  - Search Site Name*, ward/dept/unit (Inpatient Ward, Outpatient Clinic, Emergency)
+  - Search Requester*, Provisional Clinical Diagnosis
+  - Requester's FirstName*, Requester's LastName*, Requester Phone, Requester's Fax Number, Requester's Email
+  - Patient payment status (normalCash, normalInsurance, reducedCash, reducedInsurance)
+  - Sampling performed for analysis (B1, J0, J15, M1, M3, M6, M12, Other), if Other specify
+  - Remember site and requester checkbox
+- RESULT REPORTING section
+- Back + Submit buttons
+
+#### Phase 23E — Batch Order Entry Setup Verification (ALL PASS)
+
+**Setup Page** (`/SampleBatchEntrySetup`):
+- ORDER section: Current Date, Current Time, Received Date, Reception Time
+- Form* dropdown: Routine, EID, Viral Load
+- Sample section (appears after Form selection): Sample Type dropdown (Whole Blood for Routine)
+- Panels (for Whole Blood): NFS, Typage lymphocytaire, Dengue Serology (with search)
+- Available Tests (for Whole Blood, 16): WBC, RBC, HGB, HCT, MCV, MCH, MCHC, PLT, RDW, MPV, LYM#, MON#, MXD#, NEU#, EOS#, BAS# (with search)
+- Configure Barcode Entry: Methods (On Demand, Pre-Printed)
+- Optional Fields: Facility (Site Name + Ward/Dept/Unit), Patient Info
+- Next (enables after selecting ≥1 test) + Cancel buttons
+
+**Phase 23 Cumulative**: 389+ TCs + ~30 new field-level verifications, ~93% pass rate
+
 ---
 
 ## Key Files

@@ -10350,3 +10350,175 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Open sidebar 2. Click Admin 3. Navigate to MasterListsPage 4. Verify navigation succeeds |
 | **Expected** | Admin → MasterListsPage navigable for EQA Program access |
 | **Status** | PASS |
+
+---
+
+## Phase 23C — User Management Fine-Grained Form Verification
+
+### Suite FQ — User Management Field-Level Verification
+
+#### TC-FQ-LIST-01: User List Page Structure
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FQ-LIST-01 |
+| **Suite** | FQ — User Management |
+| **Phase** | 23C |
+| **Steps** | 1. Navigate to Admin → User Management 2. Verify 24 users total, pagination (20/page) 3. Verify table columns: Select, First Name, Last Name, Login Name, Password Expiration Date, Account Locked, Account Disabled, Is Active, User Time Out 4. Verify actions: Modify, Deactivate, Add |
+| **Expected** | User list renders with all columns and actions |
+| **Status** | PASS |
+
+#### TC-FQ-LIST-FILTER-01: User List Filters
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FQ-LIST-FILTER-01 |
+| **Suite** | FQ — User Management |
+| **Phase** | 23C |
+| **Steps** | 1. Test search field "Search By User Names..." 2. Test "Only Active" checkbox (filters to 18) 3. Test "Only Administrator" checkbox (filters to 1) 4. Test "By Lab Unit Roles" dropdown |
+| **Expected** | All filters work correctly |
+| **Status** | PASS |
+
+#### TC-FQ-ADD-01: Add User Form Fields
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FQ-ADD-01 |
+| **Suite** | FQ — User Management |
+| **Phase** | 23C |
+| **Steps** | 1. Click Add 2. Verify fields: Login Name*, Password*, Repeat Password*, First Name*, Last Name*, Password Expiration Date* (default 01/04/2036), User Time Out* (default 480), Account Locked (Y/N), Account Disabled (Y/N), Is Active (Y/N, default Y) 3. Verify BUG-20: Login Name has data-invalid=true, aria-invalid=true, CSS class defalut typo |
+| **Expected** | All fields present with correct defaults; BUG-20 confirmed |
+| **Status** | PASS (BUG-20 reconfirmed) |
+
+#### TC-FQ-ROLES-01: Global Roles Enumeration
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FQ-ROLES-01 |
+| **Suite** | FQ — User Management |
+| **Phase** | 23C |
+| **Steps** | 1. In Add User form, verify 6 global roles: Analyser Import, Audit Trail, Cytopathologist, Global Administrator, Pathologist, User Account Administrator |
+| **Expected** | All 6 global roles present |
+| **Status** | PASS |
+
+#### TC-FQ-LABUNITS-01: Lab Unit Roles Dropdown
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FQ-LABUNITS-01 |
+| **Suite** | FQ — User Management |
+| **Phase** | 23C |
+| **Steps** | 1. Verify Lab Unit Roles dropdown has 15 entries: All Lab Units, HIV, Malaria, Microbiology, Molecular Biology, Mycobacteriology, Sero-Surveillance, Biochemistry, Hematology, Immunology, Cytology, Serology, Virology, Pathology, Immunohistochemistry 2. Verify 5 per-unit permissions: All Permissions, Reception, Reports, Results, Validation |
+| **Expected** | 15 lab units and 5 permissions available |
+| **Status** | PASS |
+
+#### TC-FQ-MODIFY-01: Modify User Form
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FQ-MODIFY-01 |
+| **Suite** | FQ — User Management |
+| **Phase** | 23C |
+| **Steps** | 1. Select a user and click Modify 2. Verify all fields pre-populated 3. Verify Login Name does NOT show invalid state (BUG-20 is Add-only) |
+| **Expected** | Modify form loads with user data; no BUG-20 in modify mode |
+| **Status** | PASS |
+
+---
+
+## Phase 23D — Edit Order (Modify Order) Detailed Verification
+
+### Suite FR — Edit Order Field-Level Verification
+
+#### TC-FR-SEARCH-01: Edit Order Search Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FR-SEARCH-01 |
+| **Suite** | FR — Edit Order |
+| **Phase** | 23D |
+| **Steps** | 1. Navigate to Order → Edit Order 2. Verify Search By Accession Number (text 0/23, Submit) 3. Verify Search By Patient (Patient Id, Previous Lab Number, Last Name, First Name, DOB, Gender, Client Registry Search toggle, Search + External Search) 4. Verify Patient Results table columns |
+| **Expected** | Search page renders all search options |
+| **Status** | PASS |
+
+#### TC-FR-STEP1-01: Modify Order Step 1 (Program Selection)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FR-STEP1-01 |
+| **Suite** | FR — Edit Order |
+| **Phase** | 23D |
+| **Steps** | 1. Search for existing accession 2. Verify patient header card (avatar, name, gender, DOB, National ID, Accession Number) 3. Verify Program dropdown (read-only: Routine Testing) 4. Verify Next button |
+| **Expected** | Step 1 loads with patient info and program |
+| **Status** | PASS |
+
+#### TC-FR-STEP2-01: Modify Order Step 2 (Add Sample)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FR-STEP2-01 |
+| **Suite** | FR — Edit Order |
+| **Phase** | 23D |
+| **Steps** | 1. Proceed to Step 2 2. Verify Current Tests table (Lab Number, Sample Type, Collection Date/Time, Remove, Test Name, Results Recorded, Cancel Test) 3. Verify Available Tests (5 for Whole Blood: WBC, RBC, HGB, HCT, MCV) 4. Verify Add Order section (Sample type, Reject Sample, Quantity, 26+ units, Collection Date/Time, Collector, Storage Location, Labels, Panels search, Tests search, Refer checkbox, Add Sample+) |
+| **Expected** | Full sample editing interface renders |
+| **Status** | PASS |
+
+#### TC-FR-STEP3-01: Modify Order Step 3 (Add Order — 21 Fields)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FR-STEP3-01 |
+| **Suite** | FR — Edit Order |
+| **Phase** | 23D |
+| **Steps** | 1. Proceed to Step 3 2. Verify 21 fields: Lab Number*, Priority (5 options: ROUTINE/ASAP/STAT/Timed/Future STAT), Request Date, Received Date, Reception Time, Date of next visit, Search Site Name*, ward/dept/unit (3 options), Search Requester*, Provisional Clinical Diagnosis, Requester FirstName*/LastName*/Phone/Fax/Email, Payment status (4 options: normalCash/normalInsurance/reducedCash/reducedInsurance), Sampling analysis (8 codes: B1/J0/J15/M1/M3/M6/M12/Other), Remember site checkbox 3. Verify Back + Submit buttons |
+| **Expected** | All 21 fields with correct dropdown options |
+| **Status** | PASS |
+
+---
+
+## Phase 23E — Batch Order Entry Setup Verification
+
+### Suite FS — Batch Order Entry Field-Level Verification
+
+#### TC-FS-SETUP-01: Batch Order Entry Setup Page Structure
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FS-SETUP-01 |
+| **Suite** | FS — Batch Order Entry |
+| **Phase** | 23E |
+| **Steps** | 1. Navigate to Order → Batch Order Entry 2. Verify ORDER section (Current Date, Current Time, Received Date, Reception Time) 3. Verify Form* dropdown (Routine, EID, Viral Load) |
+| **Expected** | Setup page renders with date/time fields and form dropdown |
+| **Status** | PASS |
+
+#### TC-FS-SAMPLE-01: Sample Type and Tests (Routine)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FS-SAMPLE-01 |
+| **Suite** | FS — Batch Order Entry |
+| **Phase** | 23E |
+| **Steps** | 1. Select Routine from Form dropdown 2. Verify Sample Type dropdown shows Whole Blood 3. Verify 3 panels: NFS, Typage lymphocytaire, Dengue Serology 4. Verify 16 available tests: WBC, RBC, HGB, HCT, MCV, MCH, MCHC, PLT, RDW, MPV, LYM#, MON#, MXD#, NEU#, EOS#, BAS# |
+| **Expected** | Routine form shows correct panels and tests |
+| **Status** | PASS |
+
+#### TC-FS-BARCODE-01: Barcode Configuration
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FS-BARCODE-01 |
+| **Suite** | FS — Batch Order Entry |
+| **Phase** | 23E |
+| **Steps** | 1. Verify Configure Barcode Entry section 2. Verify Methods: On Demand, Pre-Printed |
+| **Expected** | Barcode config with 2 methods |
+| **Status** | PASS |
+
+#### TC-FS-OPTIONAL-01: Optional Fields and Next Button
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FS-OPTIONAL-01 |
+| **Suite** | FS — Batch Order Entry |
+| **Phase** | 23E |
+| **Steps** | 1. Verify Optional Fields: Facility (Site Name + Ward/Dept/Unit), Patient Info 2. Verify Next button disabled until ≥1 test selected 3. Verify Cancel button always active |
+| **Expected** | Optional fields present; Next enables on test selection |
+| **Status** | PASS |
