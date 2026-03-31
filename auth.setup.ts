@@ -13,7 +13,7 @@
 
 import { test as setup, expect } from '@playwright/test';
 
-const BASE = process.env.BASE_URL || 'https://www.jdhealthsolutions-openelis.com';
+const BASE = process.env.BASE_URL || 'https://testing.openelis-global.org';
 const TEST_USER = process.env.TEST_USER || 'admin';
 const TEST_PASS = process.env.TEST_PASS || 'adminADMIN!';
 const AUTH_FILE = '.auth/user.json';
