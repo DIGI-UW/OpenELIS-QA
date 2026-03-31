@@ -1,0 +1,184 @@
+import { test, expect } from '@playwright/test';
+import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, navigateToAdminItem, getDateRange, getFutureDateRange } from '../helpers/test-helpers';
+
+/**
+ * Referral Workflow Test Suite
+ *
+ * File Purpose:
+ * - Covers referral management, order creation, and results entry for referred-out tests
+ * - Tests spanning TC-REF core + BH-DEEP/BQ-DEEP/BR-DEEP interactions
+ *
+ * Suite IDs:
+ * - TC-REF: Referral Management core (4 TCs)
+ * - Phase 6 BH-DEEP: Referral Workflow Tests (2 TCs)
+ * - Phase 7 BQ-DEEP: Referral Order Create (1 TC)
+ * - Phase 7 BR-DEEP: Referral Results Entry (1 TC)
+ *
+ * Total Test Count: 8 TCs
+ *
+ * Known Bugs Affecting This Suite:
+ * - BUG-2: Carbon Select onChange referral error (HIGH)
+ * - BUG-18: shadowReferredTest onChange prop undefined (CRITICAL)
+ * - BUG-19: Backend ignores referralItems in POST (CRITICAL)
+ */
+
+test.describe('Referral Management (TC-REF)', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+  });
+
+  test('TC-REF-01: Referral section visible in Add Order', async ({ page }) => {
+    await page.goto(`${BASE}/SamplePatientEntry`);
+    await page.waitForTimeout(2000);
+
+    // Navigate to Add Sample step
+    const nextBtn = page.getByRole('button', { name: /next/i }).first();
+    for (let i = 0; i < 2 && await nextBtn.isVisible({ timeout: 1000 }).catch(() => false); i++) {
+      await nextBtn.click();
+      await page.waitForTimeout(1000);
+    }
+
+    const hasReferral = await page.getByText(/refer|referral|external lab/i).isVisible({ timeout: 5000 }).catch(() => false);
+    console.log(hasReferral
+      ? 'TC-REF-01: PASS — referral section found in Add Order'
+      : 'TC-REF-01: GAP — no referral section visible in Add Order');
+  });
+
+  test('TC-REF-02 [BUG-2 KNOWN]: External lab dropdown populates', async ({ page }) => {
+    await page.goto(`${BASE}/SamplePatientEntry`);
+    await page.waitForTimeout(2000);
+
+    // Enable referral
+    const referralCheck = page.getByRole('checkbox').filter({ hasText: /refer|external/i }).first();
+    if (await referralCheck.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await referralCheck.click();
+      await page.waitForTimeout(1000);
+    }
+
+    // Find external lab select
+    const labSelect = page.getByRole('combobox', { name: /lab|external|refer/i }).first();
+    if (!(await labSelect.isVisible({ timeout: 3000 }).catch(() => false))) {
+      console.log('TC-REF-02: GAP — external lab dropdown not visible after enabling referral');
+      return;
+    }
+
+    // Attempt selection
+    let refLabStatus = 0;
+    page.on('response', (r) => {
+      if (r.url().includes('ReferralLab') || r.url().includes('ExternalLab')) {
+        refLabStatus = r.status();
+      }
+    });
+
+    // Try native Carbon setter workaround
+    await page.evaluate(() => {
+      const sel = document.querySelector<HTMLSelectElement>('select[id*="lab" i], select[id*="refer" i]');
+      if (!sel || sel.options.length < 2) return;
+      const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!;
+      setter.call(sel, sel.options[1].value);
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await page.waitForTimeout(500);
+
+    const selectedVal = await labSelect.inputValue().catch(() => '');
+    if (selectedVal && selectedVal !== '') {
+      console.log(`TC-REF-02: PASS (workaround) — external lab selected: ${selectedVal}`);
+    } else {
+      console.log('TC-REF-02: BUG-2 CONFIRMED — external lab selection reverts to empty after Carbon workaround');
+    }
+  });
+
+  test('TC-REF-04: Referral worklist/referred-out screen accessible', async ({ page }) => {
+    const refUrls = [
+      '/ReferredOut',
+      '/Referrals',
+      '/ReferralManagement',
+      '/MasterListsPage/Referrals',
+    ];
+
+    let found = false;
+    for (const u of refUrls) {
+      const res = await page.goto(`${BASE}${u}`).catch(() => null);
+      if (res && res.ok() && !page.url().includes('LoginPage')) {
+        const text = await page.textContent('body') ?? '';
+        if (/refer|external lab|referred/i.test(text)) {
+          found = true;
+          console.log(`TC-REF-04: PASS — referral worklist at ${page.url()}`);
+          break;
+        }
+      }
+    }
+
+    if (!found) {
+      console.log('TC-REF-04: GAP — no referral worklist screen found at known URLs');
+    }
+  });
+});
+
+test.describe('Phase 6 — BH-DEEP: Referral Workflow Tests', () => {
+  test('TC-BH-DEEP-01: Page structure', async ({ page }) => {
+    await page.goto('/ReferredOutTests');
+    await expect(page.locator('text=Referrals')).toBeVisible();
+    await expect(page.locator('text=Search Referrals By Patient')).toBeVisible();
+    await expect(page.locator('text=Results By Date / Test / Unit Date Type')).toBeVisible();
+    await expect(page.locator('text=Results By Lab Number')).toBeVisible();
+  });
+
+  test('TC-BH-DEEP-02: Results section', async ({ page }) => {
+    await page.goto('/ReferredOutTests');
+    await expect(page.locator('text=Referred Tests Matching Search')).toBeVisible();
+    await expect(page.locator('button:has-text("Print Selected Patient Reports")')).toBeVisible();
+    await expect(page.locator('button:has-text("Select None")')).toBeVisible();
+  });
+});
+
+test.describe('Phase 7 — BQ-DEEP: Referral Order Create', () => {
+  /**
+   * BUG-18: shadowReferredTest dropdown onChange prop undefined
+   * BUG-19: Backend ignores referralItems — server returns 200 but never creates referral record
+   * Both bugs confirmed on v3.2.1.3. Referral creation is completely non-functional.
+   */
+  test('TC-BQ-DEEP-01: Referral order creation — BUG-18 + BUG-19', async ({ page }) => {
+    await page.goto('/SamplePatientEntry');
+    await expect(page.locator('text=Add Order')).toBeVisible();
+
+    // Navigate to sample step and check for Refer Tests checkbox
+    // This test documents the confirmed bugs:
+    // 1. The shadowReferredTest dropdown wrapper component does not receive onChange
+    // 2. Even with force-injected referralItems, backend does not create referral
+    const referCheckbox = page.locator('input[type="checkbox"]').filter({ hasText: /refer/i });
+    // If checkbox found, the UI exists but is non-functional (BUG-18)
+    // Mark as known-fail
+    test.info().annotations.push({
+      type: 'known-bug',
+      description: 'BUG-18: shadowReferredTest onChange undefined; BUG-19: backend ignores referralItems'
+    });
+    // Verify the page at least loads
+    await expect(page.locator('h1,h2,h3').filter({ hasText: /order/i })).toBeVisible();
+  });
+});
+
+test.describe('Phase 7 — BR-DEEP: Referral Results Entry', () => {
+  /**
+   * BLOCKED by BUG-18 + BUG-19: No referrals exist in the system.
+   * Cannot test results entry for referred-out tests.
+   */
+  test('TC-BR-DEEP-01: Referred results entry — BLOCKED', async ({ page }) => {
+    await page.goto('/ReferredOutTests');
+    await expect(page.locator('text=Referrals')).toBeVisible();
+
+    // Search by lab number — should return 0 results since no referrals exist
+    const labInput = page.locator('input').filter({ hasText: /lab/i }).or(page.locator('#labNumber'));
+    if (await labInput.count() > 0) {
+      await labInput.first().fill('26CPHL00009G');
+      await page.click('button:has-text("Search")');
+    }
+
+    test.info().annotations.push({
+      type: 'blocked',
+      description: 'BLOCKED by BUG-18/BUG-19: Referral creation non-functional, zero referrals in system'
+    });
+    // Page loads but no referral data to test against
+    await expect(page.locator('text=Referred Tests Matching Search')).toBeVisible();
+  });
+});

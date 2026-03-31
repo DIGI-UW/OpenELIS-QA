@@ -1,0 +1,23 @@
+{
+  "skill_name": "openelis-test-catalog-qa",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Run the full OpenELIS test catalog QA suite against https://demo.openelis-global.org and give me a report",
+      "expected_output": "A structured QA report covering all 7 test cases (TC-01 through TC-07), with PASS/FAIL status for each, a summary table, full step log, and any Jira tickets or failure sections for tests that didn't pass.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Can you test the test catalog on my local OpenELIS at http://localhost:8080? I specifically want to make sure creating and editing tests works.",
+      "expected_output": "A QA report focused on TC-01 (Create) and TC-03 (Edit), but the skill should still run the full suite. The report should be saved as a .md file and log all steps taken.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "We just deployed a new version of OpenELIS to https://uat.openelis-global.org — run a regression test on the test catalog tools and create Jira tickets if anything is broken. Project key is OELIS.",
+      "expected_output": "A full QA run against the UAT environment, a saved .md report, and Jira bug tickets created for any failures with the project key OELIS and labels 'automated-qa' and 'test-catalog'.",
+      "files": []
+    }
+  ]
+}

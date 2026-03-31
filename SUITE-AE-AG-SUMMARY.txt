@@ -1,0 +1,202 @@
+================================================================================
+OpenELIS Global 3.2.1.3 — Gap Suites AE–AG (Reports Module)
+Test Suite Summary
+================================================================================
+
+CREATED: 2026-03-24
+FILES DELIVERED:
+  1. gap-suites-AE-AG.md       — Manual test cases (611 lines)
+  2. gap-suites-AE-AG.spec.ts  — Playwright automated specs (958 lines)
+
+================================================================================
+TEST COVERAGE
+================================================================================
+
+SUITE AE — Routine Reports (5 TCs)
+  TC-RPT-R01: Patient Status Report page loads
+  TC-RPT-R02: Generate Patient Status Report with date range
+  TC-RPT-R03: Statistics Report page loads with date range selector
+  TC-RPT-R04: Generate Statistics Report — verify table/data output
+  TC-RPT-R05: Summary of All Tests report loads and generates
+
+SUITE AF — Management Reports (5 TCs)
+  TC-RPT-M01: Rejection Report page loads with date picker
+  TC-RPT-M02: Generate Rejection Report — verify rejection data displayed
+  TC-RPT-M03: Referred Out Tests Report loads and generates
+  TC-RPT-M04: Delayed Validation report loads and generates
+  TC-RPT-M05: Audit Trail report loads with date/user filters
+
+SUITE AG — WHONET & Export Reports (5 TCs)
+  TC-RPT-W01: WHONET Report page loads with organism/antibiotic selectors
+  TC-RPT-W02: Generate WHONET Report — verify data export
+  TC-RPT-W03: WHONET Report date range filtering works
+  TC-RPT-W04: Report handles no-data gracefully (empty date range)
+  TC-RPT-W05: Report download/export functionality
+
+TOTAL: 15 new test cases (no existing duplicates)
+
+================================================================================
+DESIGN PATTERNS & KEY FEATURES
+================================================================================
+
+Manual Test Cases (gap-suites-AE-AG.md):
+  ✓ Structured format matching master-test-cases.md
+  ✓ Summary table with TC ID, Suite, Scenario, Result, Notes columns
+  ✓ Detailed sections for each TC with:
+    - Navigation path
+    - Preconditions
+    - Numbered steps
+    - Expected results
+    - Fail criteria
+  ✓ Graceful degradation notes (GAP, SKIP, missing data handling)
+  ✓ Clear success criteria for full suite completion
+
+Playwright Specs (gap-suites-AE-AG.spec.ts):
+  ✓ URL discovery pattern: tries multiple candidate URLs before failing
+  ✓ Reusable helpers for login, navigation, form filling, date handling
+  ✓ Graceful error handling with console.log for missing UI elements
+  ✓ Date range generation (past 30 days for real data, future for empty state)
+  ✓ Carbon for React UI compatibility (native selectors for inputs/buttons)
+  ✓ Async/await patterns with proper timeouts (3-8s depending on action)
+  ✓ Conditional test skip if preconditions not met
+  ✓ Downloads listener for file export validation
+
+================================================================================
+TECHNICAL DETAILS
+================================================================================
+
+Base URL: https://www.jdhealthsolutions-openelis.com
+Admin Credentials: user=admin, pass=adminADMIN!
+
+Report Navigation Structure:
+  Reports > Routine
+    → Patient Status Report
+    → Aggregate Reports
+       → Statistics Report
+       → Summary of All Tests
+    → Management Reports
+       → Rejection Report
+       → Activity Reports
+          → Referred Out Tests Report
+       → Non Conformity Reports
+          → Delayed Validation
+          → Audit Trail
+  Reports > WHONET Report
+
+URL Discovery Candidates per Report:
+  Patient Status:    /PatientStatusReport, /Report/PatientStatus, /reports/patient-status
+  Statistics:        /StatisticsReport, /Report/Statistics, /reports/statistics
+  Summary:           /SummaryReport, /Report/SummaryOfTests, /reports/all-tests
+  Rejection:         /RejectionReport, /Report/Rejection, /reports/rejections
+  Referred Out:      /ReferredOutReport, /Report/ReferredOut, /reports/referrals
+  Delayed Validation:/DelayedValidationReport, /Report/DelayedValidation, /reports/delays
+  Audit Trail:       /AuditTrailReport, /Report/AuditTrail, /reports/audit
+  WHONET:            /WHONETReport, /Report/WHONET, /reports/whonet
+
+Date Range Strategy:
+  Real data:    30 days ago → today (TC-RPT-R02, R04, M02, M03, M04, M05, W02, W03)
+  Empty state:  Future year (TC-W04 — validates graceful no-data handling)
+
+Form Interaction:
+  Dates:     input[type="date"] or input[placeholder*="date" i]
+  Patient:   input[placeholder*="patient"], select[id*="patient"]
+  Organism:  select[id*="organism"], input[placeholder*="organism"]
+  Buttons:   getByRole('button', {name: /Generate|View|Export|Download/})
+
+================================================================================
+EXECUTION NOTES
+================================================================================
+
+Test Execution Prerequisites:
+  ✓ OpenELIS 3.2.1.3 running and accessible
+  ✓ Admin login must be functional
+  ✓ At least one patient record with test results
+  ✓ At least one active test configured
+
+Data Requirements:
+  OPTIONAL: Rejection records (for TC-RPT-M02)
+  OPTIONAL: Referred out tests (for TC-RPT-M03)
+  OPTIONAL: Delayed validations (for TC-RPT-M04)
+  OPTIONAL: Microbiology/antibiotic tests (for TC-RPT-W01–W05)
+
+Graceful Degradation:
+  • If a report URL is not found → Mark as GAP (feature not in scope)
+  • If test data is missing → Mark as SKIP (document reason)
+  • If report crashes → Mark as FAIL (escalate to development)
+  • Empty date ranges → Must show graceful message (not crash)
+
+Test Outcomes:
+  PASS:  All steps completed; report loaded, generated, displayed correctly
+  FAIL:  Test step failed with error; report did not load; app crashed
+  SKIP:  Test data not available OR precondition failed
+  GAP:   Report feature does not exist in app (404 or menu item not found)
+
+Success Metrics:
+  ✓ At least 12 TCs PASS (out of 15 total)
+  ✓ No more than 2 TCs FAIL (critical bugs)
+  ✓ GAP results acceptable if feature not in scope
+  ✓ All SKIP results documented
+  ✓ All FAIL results escalated with console logs
+
+================================================================================
+HOW TO RUN
+================================================================================
+
+Manual Testing:
+  1. Open gap-suites-AE-AG.md in your QA tool (TestRail, Jira, etc.)
+  2. For each TC:
+     - Follow navigation steps
+     - Execute test steps in order
+     - Record result (PASS/FAIL/SKIP/GAP)
+     - Attach screenshots if failed
+  3. Document findings in results section
+
+Automated Testing with Playwright:
+  $ npx playwright test gap-suites-AE-AG.spec.ts
+
+  Run specific suite:
+  $ npx playwright test gap-suites-AE-AG.spec.ts -g "Suite AE"
+  $ npx playwright test gap-suites-AE-AG.spec.ts -g "Suite AF"
+  $ npx playwright test gap-suites-AE-AG.spec.ts -g "Suite AG"
+
+  Run specific test:
+  $ npx playwright test gap-suites-AE-AG.spec.ts -g "TC-RPT-R01"
+
+  Generate HTML report:
+  $ npx playwright test gap-suites-AE-AG.spec.ts --reporter=html
+
+================================================================================
+KNOWN GAPS & LIMITATIONS
+================================================================================
+
+✓ WHONET report is optional for non-microbiology labs
+✓ Some reports may require specific test data that may not exist in test system
+✓ Report URLs may differ from candidates list (uses discovery fallback)
+✓ Carbon for React DatePicker components use standard input[type="date"] selectors
+✓ PDF exports validated by file download, not content inspection
+✓ Empty state validation checks for UI message OR graceful handling (no crash)
+
+================================================================================
+INTEGRATION WITH EXISTING SUITES
+================================================================================
+
+This suite fills critical gap in existing test coverage:
+  • Suites A–AD cover: CRUD, Workflow, RBAC, Results, Validation, Patient, NC, Sessions
+  • Suites AE–AG cover: Reports module (COMPLETELY NEW)
+  • Cumulative: 30 existing suites + 3 new = 33 total suites
+  • Cumulative: 168 existing TCs + 15 new = 183 total TCs
+
+No overlaps with existing suites. All tests focus exclusively on Reports menu.
+
+================================================================================
+REFERENCES
+================================================================================
+
+Master Test Cases:      /master-test-cases.md (Suites A–AD baseline)
+Previous Gap Suites:    /gap-suites-AA-AD.md (clinical workflow gaps)
+Live System:            https://www.jdhealthsolutions-openelis.com
+Version Tested:         OpenELIS Global 3.2.1.3
+Created By:             Claude AI (Anthropic)
+Date Created:           2026-03-24
+
+================================================================================

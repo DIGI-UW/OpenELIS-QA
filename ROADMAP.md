@@ -1,0 +1,721 @@
+# OpenELIS QA Testing — Roadmap & Next Steps
+
+**Created:** 2026-03-27
+**Updated:** 2026-03-29 (Phase 19 complete)
+**Current State:** Phase 19 complete, 272 TCs, ~93% pass rate. Phase 19 tested deeper interaction on Analyzers, Notifications, User panel, Global Search.
+
+---
+
+## Completed Phases
+
+| Phase | Date | Suites | TCs | Pass Rate | Key Findings |
+|-------|------|--------|-----|-----------|--------------|
+| 1 (Smoke) | 03-23 | A-D | 2 | 50% | BUG-1 cascade |
+| 2 (Frontend) | 03-24 | H,I,J,K,T,V | 27 | 100% | Frontend healthy |
+| 3 (Sidebar) | 03-24 | AA-AP | 24 | 92% | Reports 404, Billing/NoteBook 404 |
+| 4 (Admin) | 03-24 | AQ-AX | 28 | 100% | All 28 admin pass |
+| 5 (Deep Interaction) | 03-25 | 11 DEEP | 32 | 100% | BUG-16 (i18n), NOTE-2 (a11y) |
+| 6 (Deep E2E) | 03-25 | 8 DEEP | 21 | 100% | All pass |
+| 7 (Referral/Pathology) | 03-27 | 7 DEEP | 14 | 71% | BUG-18/19 (referral broken) |
+| Script Validation | 03-27 | — | — | — | Fixed structural TS errors, compliance analysis |
+| 8 (Write Op Deep) | 03-27 | BS-BX | 6 | 50% | BUG-1,3,7a,8 CONFIRMED; BUG-14,18,19 RESOLVED; BUG-20 NEW |
+| 9 (Regression/XMod) | 03-27 | BY-CB | 8 | 100% | All regression pass; cross-module data consistent; NOTE-3 (API typos) |
+| 10 (Security) | 03-28 | CC-CH | 6 | 83% | No rate limiting (BUG-22); CSP weak (NOTE-4); good SQL/XSS protection |
+| 11 (Performance) | 03-28 | CI-CL | 4 | 100% | All API p50 ~370ms (network-dominated); no memory leaks; SPA shell 40ms DCL |
+| 12 (Accessibility) | 03-28 | CM-CR | 6 | 33% | Critical: color contrast 1.08:1, no H1, 90% small touch targets, no skip link, no live regions |
+| 13 (i18n Infra) | 03-28 | CS-CT | 2 | 100% | Locale switch works, persists across nav; html lang never updates (NOTE-13); API locale-agnostic (by design) |
+| 14 (E2E/Reports) | 03-28 | CU-CX | 4 | 75% | ~~BUG-23 RETRACTED~~ Report UI works via path-based routing; ReportPrint API works; FHIR Patient/Obs OK; test data wiped (NOTE-14) |
+| 15 (Notif/Error) | 03-28 | CY-DB | 4 | 100% | Notification system functional (empty data); API error leak reconfirms NOTE-7; session timeout works; SPA uses path-based routing (corrects BUG-23) |
+| 16 (Deep Ops) | 03-29 | DC-DI | 22 | 100% | PDF via form works; null report header; "labratory" typo; FHIR 5 resources confirmed; Workplan 4 sub-pages OK; EQA Distribution functional |
+| 17 (Module Deep) | 03-29 | DJ-DQ | 15 | 93% | Storage dashboard rich; Cold Storage monitoring functional; Pathology/IHC/Cytology dashboards OK; Billing href=null (stub); NoteBook blank page; Aliquot functional |
+| 18 (NCE/Analyzers/Help) | 03-29 | DR-DZ | 9 | 89% | Non-Conform 3 pages OK; Analyzers rich (List/Errors/Types); Help: User Manual PDF works, Video Tutorials + Release Notes stub buttons |
+| 19 (Deep Interaction) | 03-29 | EA-EH | 8 | 88% | Analyzer kebab 6 actions; Delete {name} bug; Analyzer Types creation; Notifications panel; User panel; Global Search works |
+
+---
+
+## Completed Refactoring
+
+### Refactoring Phase A — Quick Wins ✅
+- [x] `auth.setup.ts` created with cached session pattern
+- [x] `playwright.config.ts` created with 16 project definitions
+- [x] Compliance analysis completed (`testing-constitution-compliance.md`)
+
+### Refactoring Phase B — File Splitting & POM ✅
+- [x] 10 Page Object classes created in `pages/` directory
+- [x] 15 feature-specific test files created in `tests/` directory
+- [x] Monolithic spec preserved as reference (`openelis-e2e.spec.ts`)
+
+### Refactoring Phase C — Selector Modernization & TS Strict ✅
+- [x] Replace `text=...` selectors → `getByText()` (183 replacements; 0 remaining)
+- [x] Replace `button:has-text(...)` → `getByRole('button', { name: })` (127 standalone replaced; 56 compound selectors preserved)
+- [x] Fix TypeScript strict-mode: 57 null-safe `textContent` patterns (`?? ''`), 43 `page.$()` → `page.locator()` modernizations
+- [x] Total: 410 selector/TS changes, 436 test blocks preserved, 185 describe blocks intact
+
+---
+
+## Future Testing Phases
+
+### Phase 8 — Write Operation Deep Testing ✅ COMPLETE
+**Focus:** Exercise all confirmed-broken write operations with detailed error capture
+**Tested in:** New React/Carbon UI (v3.2.1.3)
+
+| Test | Bug | Result | Details |
+|------|-----|--------|---------|
+| BS-DEEP: TestAdd | BUG-1 | **CONFIRMED** | POST `/rest/TestAdd` → HTTP 500. Form silently resets to step 1. |
+| BT-DEEP: UserCreate | BUG-3 | **CONFIRMED** | POST `/rest/UnifiedSystemUser` → HTTP 500 ("Check server logs"). Save button disabled. **NEW BUG-20:** Login Name field permanently shows invalid state (React `invalid: true` with no `invalidText`). |
+| BU-DEEP: PanelCreate | BUG-7a | **CONFIRMED & UPGRADED** | POST `/rest/PanelCreate` → HTTP 500. Previously "silent failure" — actually server 500. UI resets form silently. |
+| BV-DEEP: TestModify | BUG-8 | **CONFIRMED & WORSE** | POST `/rest/TestModifyEntry` → HTTP 200 (false success). Normal ranges NOT persisted. Panel association LOST (severe data integrity bug). |
+| BW-DEEP: FHIR | BUG-14 | **RESOLVED** | `/fhir/metadata` → HTTP 200. Valid CapabilityStatement (HAPI FHIR 7.0.2, R4, 5 resources). |
+| BX-DEEP: Referral | BUG-18/19 | **RESOLVED** | Referral dropdowns (org, reason) work in expanded logbook row. POST saves correctly — new referral created with org "Doherty Institute", reason "Test not performed". |
+
+**Bonus findings:**
+- All `patient-photos/{id}/true` endpoints return HTTP 500 (potential BUG-21)
+- Referral UI is in expanded row of LogbookResults, not a standalone page
+
+### Phase 9 — Regression & Cross-Module Integrity ✅ COMPLETE
+**Focus:** Verify that working features haven't regressed
+**Completed:** 2026-03-27
+
+**Results Summary:**
+
+**Phase 9A — Regression Tests (4 test cases, 4 PASS)**
+| Test | Suite | Name | Result | Details |
+|------|-------|------|--------|---------|
+| BY-REG-01 | BY | API Endpoint Health Check | PASS | 12/14 core endpoints (Patient search, logbook, test mgmt, FHIR, etc.) return HTTP 200 |
+| BY-REG-02 | BY | Admin MasterListsPage | PASS | All 20+ admin items render correctly; Organization Management loads with 4,726 orgs |
+| BY-REG-03 | BY | Add Order Page | PASS | Multi-step wizard (Patient Info → Program → Sample → Order) fully functional |
+| BY-REG-04 | BY | LogbookResults Page | PASS | Test unit dropdown loads 14 sections; Hematology returns 14 results with correct table |
+
+**Phase 9B — Cross-Module Data Flow (2 test cases, 2 PASS)**
+| Test | Suite | Name | Result | Details |
+|------|-------|------|--------|---------|
+| BZ-XMOD-01 | BZ | Order Tracing (26CPHL00008K) | PASS | Order appears consistently in LogbookResults (WBC=7.5) AND ReferredOutTests (status=SENT); referredOut flag consistent |
+| BZ-XMOD-02 | BZ | Validation Consistency (26CPHL00008M) | PASS | Order in LogbookResults (WBC=8.5) AND AccessionValidation (result=8.5, accepted=false); perfect data match |
+
+**Phase 9C — Dashboard KPI Accuracy (1 test case, 1 PASS with NOTE)**
+| Test | Suite | Name | Result | Details |
+|------|-------|------|--------|---------|
+| CA-KPI-01 | CA | Dashboard Metrics vs Actual | PASS (with NOTE) | Dashboard API `/rest/home-dashboard/metrics` returns JSON correctly. Discrepancy explained: dashboard counts ORDERS (104) while logbook shows individual TESTS (249 across 76 orders). NOTE-3: API field name typos detected (patiallyCompletedToday, orderEnterdByUserToday, unPritendResults, incomigOrders, averageTurnAroudTime) |
+
+**Phase 9D — Patient Data Consistency (1 test case, 1 PASS)**
+| Test | Suite | Name | Result | Details |
+|------|-------|------|--------|---------|
+| CB-PAT-01 | CB | Patient Identity Across Modules | PASS | Logbook patients verified in patient-search: "Test, CPHL" (IDs 14/15), "Abby, Sebby" (ID 103), "QANEWPATIENT, Test" (ID 125) — all consistent |
+
+**Phase 9 Key Findings:**
+- All 8 tests passed (100% pass rate)
+- Regression testing confirms Phase 5–7 features remain stable
+- Cross-module data flow validated: order data consistent from entry through validation
+- Dashboard metric discrepancy is architectural (order-level vs test-level counting), not a bug
+- NOTE-3 (NEW): Dashboard metrics API field names contain typos — cosmetic issue, low priority
+- BUG-21 reconfirmed: All patient-photos endpoints return HTTP 500 (seen in network activity during LogbookResults)
+
+### Phase 10 — Security & Edge Cases ✅ COMPLETE
+**Focus:** Security posture and boundary testing
+**Completed:** 2026-03-28
+
+**Results Summary:**
+
+**Phase 10A — CSRF & Session Security (1 test case, 1 PASS with NOTES)**
+| Test | Name | Result | Details |
+|------|------|--------|---------|
+| CC-CSRF-01 | CSRF & Session Security Audit | PASS | No CSRF meta tag, BUT CSP header present. POST without token → 500 (unclear if CSRF or validation). Security headers solid: X-Frame-Options=SAMEORIGIN, X-Content-Type-Options=nosniff, HSTS present. CSP weakness: includes `unsafe-inline` + `unsafe-eval` (NOTE-4). X-XSS-Protection=0 (modern best practice with CSP). Referrer-Policy NOT SET (NOTE-5). HTTP methods restricted correctly (PUT/DELETE/PATCH → 405). |
+
+**Phase 10B — XSS Injection (1 test case, 1 PASS)**
+| Test | Name | Result | Details |
+|------|------|--------|---------|
+| CD-XSS-01 | XSS Injection Testing | PASS | Patient search: all 4 XSS payloads (script tag, img onerror, svg onload, event handler) NOT reflected. Safe. LogbookResults: input reflected in JSON but Content-Type is `application/json` (browsers won't execute). Low-risk unless frontend uses `dangerouslySetInnerHTML` (NOTE-6). |
+
+**Phase 10C — SQL Injection (1 test case, 1 PASS)**
+| Test | Name | Result | Details |
+|------|------|--------|---------|
+| CE-SQLI-01 | SQL Injection Testing | PASS | Patient search: all 4 SQLi payloads (single quote, OR 1=1, UNION SELECT, DROP TABLE) returned empty JSON arrays with no SQL errors. Parameterized queries working correctly. LogbookResults accession search: OR 1=1 returned 0 results (not all records). Safe. |
+
+**Phase 10D — Concurrent Session Handling (1 test case, 1 PASS)**
+| Test | Name | Result | Details |
+|------|------|--------|---------|
+| CF-CONCURRENT-01 | Concurrent Request Handling | PASS | 20 simultaneous requests to `/rest/home-dashboard/metrics`: all 200 OK. 50 rapid sequential requests: all 200 OK. No session invalidation or degradation. |
+
+**Phase 10E — Rate Limiting (1 test case, 1 FAIL)**
+| Test | Name | Result | Details |
+|------|------|--------|---------|
+| CG-RATE-01 | Login Rate Limiting | **FAIL** | 30 rapid wrong-password attempts to `/rest/validateLogin`: all returned 403 (rejected) but NO escalation to 429 (Too Many Requests) and NO account lockout. 50 rapid API requests to authenticated endpoints: all 200, no 429. **BUG-22 (NEW, Medium): No rate limiting on login or API endpoints. Brute-force attacks possible.** |
+
+**Phase 10F — Authorization & Error Handling (1 test case, 1 PASS with NOTES)**
+| Test | Name | Result | Details |
+|------|------|--------|---------|
+| CH-AUTH-01 | Authorization & Information Leakage | PASS | `credentials:omit` request to `/rest/UnifiedSystemUser`: returns 200 with HTML shell (11890 bytes, not JSON) — SPA redirect to login. Auth IS enforced. Error responses (404 endpoints): contain "Exception" keyword — minor server info leakage (NOTE-7). |
+
+**Phase 10 Key Findings:**
+- All 6 tests run; 5 PASS, 1 FAIL (83% pass rate)
+- **BUG-22 (NEW, Medium):** No rate limiting on login endpoint or API endpoints. Brute-force attacks possible.
+- **NOTE-4 (NEW):** CSP includes `unsafe-inline` and `unsafe-eval`, significantly weakening Content Security Policy
+- **NOTE-5 (NEW):** Referrer-Policy header not set
+- **NOTE-6 (NEW):** User input reflected in JSON API responses (LogbookResults labNumber parameter). Low risk with application/json Content-Type.
+- **NOTE-7 (NEW):** Error responses contain "Exception" text, leaking server implementation details
+- SQL injection and XSS protections are solid (parameterized queries, input encoding)
+- CSRF protection unclear — POST without token returns 500, not 403 (could be validation error)
+
+### Phase 11 — Performance Benchmarking ✅ COMPLETE (2026-03-28)
+**Focus:** Quantitative performance metrics
+**Result:** 4 test suites, 4 PASS (100% pass rate)
+
+**11A — API Response Time Benchmarks (TC-CI-API-01) — PASS**
+- 10 endpoints tested, 10 iterations each
+- All p50/p95/p99 in ~367-398ms range (extremely consistent)
+- Response times dominated by ~365ms network RTT to server
+- No endpoint-specific bottlenecks detected
+
+**11B — Page Load Benchmarks (TC-CJ-PAGE-01) — PASS**
+- Dashboard SPA shell: DCL=40ms, 26 resources, 53KB total transfer, 13 API calls
+- Slowest initial API: site-branding@355ms
+- SampleEntry: 442ms/59KB, LogbookResults: 414ms/24KB, ReferredOut: 182ms/21KB
+- Validation: 178ms/1KB, MasterLists: 182ms/8KB
+
+**11C — Large Dataset Stress (TC-CK-STRESS-01) — PASS**
+- Mycobacteriology (96 rows): 2207ms — acceptable for large result set
+- Parallel 14-section load: 3454ms total
+- TestAdd (largest single payload): 729ms/56KB
+- Patient search (16 results): 180ms — fast
+
+**11D — Memory Leak Detection (TC-CL-MEMORY-01) — PASS**
+- API-level: 0.1MB growth (0.27%) across 10 API fetches — negligible
+- SPA navigation: 2MB growth (5.28%) across 10 route changes — normal deferred GC
+- DOM nodes: perfectly stable at 853 across all navigations — no React component leaks
+- No actionable memory leak detected
+
+### Phase 12 — Accessibility Deep Audit ✅ COMPLETE (2026-03-28)
+**Focus:** WCAG 2.1 AA comprehensive compliance
+**Result:** 6 test suites, 2 PASS, 4 FAIL (33% pass rate)
+
+**12A — axe-core Full Page Scan (TC-CM-AXE-01) — FAIL**
+- Scanned 7 pages (Dashboard, FindOrder, LogbookResults, ResultSearch, MasterLists, SampleAdd, WorkPlan, OrgManagement)
+- All pages have identical 5 violations (shell-level, not page-specific):
+  - `color-contrast` (serious, 8 nodes): white #fff on #f5f6f8 = 1.08:1 ratio (needs 4.5:1)
+  - `listitem` (serious, 20 nodes): Carbon sidebar `<li>` elements inside `<span role="none">` instead of `<ul>`
+  - `list` (serious, 1 node): `cds--side-nav__items` UL has non-li direct children
+  - `duplicate-id` (minor, 1 node): SVG `id="maximizeIcon"` duplicated
+  - `page-has-heading-one` (moderate, 1 node): no H1 heading on any page
+- 39 rules PASS per page; 2 incomplete
+
+**12B — Keyboard Navigation (TC-CN-KBD-01) — PARTIAL PASS**
+- 101 focusable elements detected; tab order uses natural DOM order (no positive tabindex abuse)
+- 11/20 tested elements have visible focus indicators; 9/20 lack visible focus outline/box-shadow
+- **No skip navigation link** present — keyboard users must tab through entire sidebar
+- No keyboard traps detected
+- NOTE-8: 45% of elements lack visible focus indicator
+
+**12C — Heading Hierarchy (TC-CO-HEADING-01) — FAIL**
+- No H1 on any page; heading order starts at H5, then H3×10, H4×1
+- Violates WCAG 1.3.1 (Info and Relationships) and WCAG 2.4.6 (Headings and Labels)
+- NOTE-9: Heading hierarchy completely broken across all pages
+
+**12D — ARIA & Landmarks (TC-CP-ARIA-01) — PASS**
+- Proper landmark structure: main=1, nav=2, banner=1, contentinfo=1
+- 18 aria-expanded attributes for collapsible menus
+- Missing: `role="search"` on search inputs, `role="complementary"` for sidebar
+- **0 aria-live regions, 0 role="alert", 0 role="status"** — dynamic content invisible to screen readers
+- NOTE-10: No live regions for dynamic content announcements
+
+**12E — Color Contrast (TC-CQ-CONTRAST-01) — FAIL**
+- 8 elements on every page with 1.08:1 contrast ratio (white #ffffff on #f5f6f8)
+- WCAG AA minimum is 4.5:1 for normal text, 3:1 for large text
+- All failing elements are 14px (10.5pt) — requires 4.5:1 minimum
+- These appear to be in the sidebar/shell area (affects all pages identically)
+
+**12F — Touch Targets & Form A11y (TC-CR-TOUCH-01) — FAIL**
+- 87/97 (90%) interactive targets below 44×44px WCAG 2.5.5 recommended minimum
+- All form inputs have proper labels (0 unlabeled inputs found)
+- No autocomplete attributes on name/address fields (WCAG 1.3.5)
+- `lang="en"` properly set on HTML element
+- Base font size 16px (appropriate)
+- NOTE-11: 90% of touch targets undersized
+
+---
+
+## Bug Tracking Summary
+
+| Bug | Severity | Status | Jira |
+|-----|----------|--------|------|
+| BUG-1 | Critical | Open | OGC-448 |
+| BUG-2 EXT | High | Open | OGC-467/468 |
+| BUG-3 | High | Open | OGC-448 |
+| BUG-4 | Medium | Open | — |
+| BUG-6 | Low | Open | — |
+| BUG-7/7a | Medium/High | Open | OGC-450/451 |
+| BUG-8 | Critical | Open | OGC-452 |
+| BUG-9 | High | Open | — |
+| BUG-10 | Low | Open | OGC-469/470 |
+| BUG-11/15 | Medium | Open | OGC-471/472 |
+| BUG-12 | Medium | Open | OGC-473/474 |
+| BUG-13 | Critical | Open | OGC-475/476 |
+| BUG-14 | High | **Resolved (P8)** | OGC-477 ✅ |
+| BUG-16 | Medium | Open | — |
+| BUG-17 | Low | Open | — |
+| BUG-18 | Critical | **Resolved (P8)** | OGC-449 ✅ |
+| BUG-19 | Critical | **Resolved (P8)** | OGC-493 ✅ |
+| BUG-20 | Medium | **New (P8)** | OGC-494 |
+| BUG-21 | Low | **New (P8)** | OGC-495 |
+| BUG-22 | Medium | **New (P10)** | OGC-496 |
+| NOTE-1 | Low (UX) | Open | — |
+| NOTE-2 | Low (a11y) | Open | — |
+| NOTE-3 | Low (Code Review) | **New (P9)** | — |
+| NOTE-4 | Low (Security) | **New (P10)** | — |
+| NOTE-5 | Low (Security) | **New (P10)** | — |
+| NOTE-6 | Low (Security) | **New (P10)** | — |
+| NOTE-7 | Low (Security) | **New (P10)** | — |
+| NOTE-8 | Medium (a11y) | **New (P12)** | OGC-497 |
+| NOTE-9 | Medium (a11y) | **New (P12)** | OGC-497 |
+| NOTE-10 | Medium (a11y) | **New (P12)** | OGC-497 |
+| NOTE-11 | Low (a11y) | **New (P12)** | OGC-497 |
+| NOTE-12 | Serious (a11y) | **New (P12)** | OGC-497 |
+| NOTE-13 | Low (i18n) | **New (P13)** | OGC-498 |
+| BUG-23 | ~~High~~ | **RETRACTED (P15)** — false positive, hash-based URL test error | — |
+| NOTE-14 | Medium (Data) | **New (P14)** | — |
+| NOTE-15 | Low (Security) | **New (P15)** — reconfirms NOTE-7 | OGC-499 |
+
+---
+
+### Phase 13 — i18n Infrastructure ✅ COMPLETE (2026-03-28)
+**Focus:** Locale switching mechanism, API locale support (translations managed in Transifex — not tested here)
+**Result:** 2 test suites, 2 PASS (100% pass rate)
+
+- Locale selector (en/fr) works correctly, persists across SPA navigation
+- 42% of visible text nodes changed when switching to French
+- **NOTE-13 (NEW, Low):** `<html lang="en">` never updates to `lang="fr"` when locale is switched — screen readers won't detect language change
+- API is locale-agnostic (identical responses regardless of Accept-Language header) — i18n is purely client-side React state, which is expected for Transifex-managed translations
+
+### Phase 14 — End-to-End Workflow, Report & Integration ✅ COMPLETE (2026-03-28)
+**Focus:** Report UI rendering, ReportPrint API, FHIR integration endpoints, data availability for E2E tracing
+**Result:** 4 test suites, 3 PASS, 1 FAIL (75% pass rate — corrected after BUG-23 retraction)
+
+**14A — Report UI Rendering (TC-CU-RPTUI-01) — ~~FAIL~~ PASS (corrected in P15)**
+- Tested 7 report routes: RoutineReport, StudyReport, AggregateReportByDate, ActivityReport, NonConformityReport, PatientReport, StatisticsReport
+- ~~BUG-23 RETRACTED:~~ Initial test used hash-based URLs (`#/RoutineReport`) which are wrong. SPA uses **path-based routing** (`/Report?type=patient&report=patientCILNSP_vreduit`). Sidebar link clicks navigate correctly and render report forms with 24+ form inputs.
+- **Correction:** Phase 14 actual pass rate is 75% (3 PASS, 1 FAIL for data availability only)
+
+**14B — Report API / ReportPrint (TC-CV-RPTAPI-01) — PASS**
+- POST `/rest/ReportPrint` with patientCILNSP_vreduit → 200, returns 1440-byte PDF
+- POST with patientCILNSP → 200, returns 1440-byte PDF
+- POST with statisticsReport → 500 (server error)
+- POST with labNumberRangeReport → 200, 0 bytes (no data in range, endpoint functional)
+- GET `/rest/reports` → 200, namespace available
+- Backend report generation works; the problem is the UI can't reach it
+
+**14C — FHIR Integration (TC-CW-FHIR-01) — PASS**
+- `/fhir/metadata` → 200, 5695 bytes (HAPI FHIR capability statement)
+- `/fhir/Patient?_count=3` → 200, Bundle with 3 entries
+- `/fhir/Observation?_count=1` → 200
+- `/fhir/ServiceRequest` → 404 (not implemented)
+- `/fhir/DiagnosticReport` → 404 (not implemented)
+- `/fhir/Task` → 404, `/fhir/Specimen` → 404
+- FHIR R4 base resources (Patient, Observation) functional; clinical workflow resources not yet exposed
+
+**14D — Data Availability for E2E Tracing (TC-CX-DATA-01) — FAIL**
+- **NOTE-14 (NEW, Medium):** Test instance data appears wiped — all logbook types return 0 results, patient search returns 0, referredOut returns 0
+- Dashboard still shows 104 in-progress + 142 ready-for-validation (stale cache or different data source)
+- E2E order lifecycle tracing not possible without test data
+- Previous sessions had data (96 mycobacteriology rows, 16 patients, referral orders) — indicates periodic data reset on test instance
+
+### Phase 15 — Notification, Alert & Error Handling ✅ COMPLETE (2026-03-28)
+**Focus:** Notification panel, alert system, API error handling, session timeout, SPA routing verification
+**Result:** 4 test suites, 4 PASS (100% pass rate)
+
+**15A — Notification Panel (TC-CY-NOTIF-01) — PASS**
+- Bell button in header opens notification panel correctly
+- Panel has Subscribe, Reload, Mark All Read buttons — all functional
+- `/rest/notifications` returns empty array (no notifications configured)
+- Panel renders correctly with "no notifications" state
+
+**15B — Alert System (TC-CZ-ALERT-01) — PASS**
+- `/rest/alerts` API returns empty array (no active alerts)
+- `/Alerts` page accessible via sidebar click (path-based routing)
+- Alert system infrastructure present and functional; no test data to validate alert display
+
+**15C — API Error Response Audit (TC-DA-ERROR-01) — PASS**
+- Invalid endpoints return 404 with "Exception" text in response body
+- **NOTE-15 (NEW, Low):** Reconfirms NOTE-7 — error responses leak server stack trace / "Exception" keyword. Should return generic error messages.
+- Malformed POST bodies to valid endpoints return appropriate 4xx/5xx without stack traces in response headers
+
+**15D — Session Timeout & SPA Routing (TC-DB-SESSION-01) — PASS**
+- "Still There?" inactivity dialog appears correctly and is dismissable
+- SPA uses **path-based routing** (e.g., `/Report?type=patient&report=...`, `/FindOrder`, `/SamplePatientEntry`)
+- Sidebar link clicks navigate correctly — this discovery led to **BUG-23 retraction**
+- Report pages render full forms (24+ inputs) when accessed via correct path-based URLs
+
+**CRITICAL ROUTING DISCOVERY:**
+OpenELIS Global uses **path-based routing** (`/SamplePatientEntry`, `/Report?type=patient&report=patientCILNSP_vreduit`), NOT hash-based routing (`#/RoutineReport`). Sidebar links use `href="/..."` attributes. Hash-based URLs were coincidentally working for some routes but are NOT the canonical routing pattern. All Playwright tests using `/#/...` routes should be corrected to use path-based URLs or sidebar click navigation.
+
+---
+
+### Phase 16 — Deep Operations (Print/PDF, Batch, Concurrency, FHIR, Workplan/EQA) ✅ COMPLETE (2026-03-29)
+**Focus:** Print/PDF workflows, batch operations, multi-user concurrency, FHIR resource deep testing, Workplan sub-pages, EQA Distributions
+**Result:** 7 test areas, 22 test cases, 100% pass rate
+
+**16A — Print/PDF Workflow Deep Testing (14 report links + PDF generation)**
+- All 14 report sidebar links render correctly via path-based routing
+- PDF generation works via "Generate Printable Version" form submission (POST /ReportPrint with CSRF context)
+- Direct fetch() to ReportPrint returns 403 (expected — requires form-based CSRF context)
+- **NOTE-16 (NEW, Low):** PDF report header displays "null" instead of lab/site name — missing SiteInformation configuration
+- **NOTE-17 (NEW, Low):** Typo "labratory" (should be "laboratory") in External Referrals Report sidebar link
+
+**16B — Batch Operations Deep Testing**
+- Batch Test Reassignment page (/MasterListsPage/batchTestReassignment) renders correctly
+- Sample type dropdown, current test dropdown, replacement test dropdown all functional
+- Ok/Cancel buttons present and interactive
+- Checkboxes for "Check all not started" and "Check all in progress" present
+
+**16C — Multi-User Concurrency Testing**
+- 20 parallel API requests to /rest/home-dashboard/metrics: all returned HTTP 200 within 3160ms
+- No session invalidation, no degradation, no error responses
+- Server handles concurrent requests correctly
+
+**16D — FHIR Resources Deep Testing**
+- CapabilityStatement confirms exactly 5 declared resource types: Observation, OperationDefinition, Organization, Patient, Practitioner
+- 4 working resources: Patient (200), Observation (200), Practitioner (200), Organization (200)
+- 8 undeclared resources return 404: ServiceRequest, DiagnosticReport, Task, Specimen, Encounter, Location, Medication, MedicationRequest
+- OperationDefinition declared but not tested (not a data resource)
+- **Discovery:** Practitioner and Organization are functional (previously untested)
+
+**16E — Workplan & EQA Distribution Deep Testing**
+- Workplan has 4 sub-pages, all render correctly via sidebar click navigation:
+  - By Test Type (/WorkPlanByTest?type=test) — 302 test type options in dropdown
+  - By Panel (/WorkPlanByPanel?type=panel) — panel type dropdown functional
+  - By Unit (/WorkPlanByTestSection?type=) — unit type dropdown functional
+  - By Priority (/WorkPlanByPriority?type=priority) — 5 priority options (Routine, ASAP, STAT, Timed, Future STAT)
+- **IMPORTANT:** Direct URL navigation to /WorkPlan redirects to API path (/api/OpenELIS-Global/WorkPlan) and returns 404. Must use sidebar click navigation.
+- EQA Distribution page (/EQADistribution) renders fully:
+  - Status cards: Draft Shipments, Shipped, Completed, Participants
+  - Filter dropdown: All Shipments, Draft, Prepared, Shipped, Completed
+  - Action buttons: Create New Shipment, Manage Participants
+  - EQA Shipments section with "No distributions found" empty state
+  - Participant Network section with Total/Active Participants and Average Response Rate
+
+**Phase 16 Key Findings:**
+- **NOTE-16 (NEW, Low):** Report PDF header shows "null" — missing site name configuration
+- **NOTE-17 (NEW, Low):** Typo "labratory" in External Referrals Report link text
+- FHIR resource mapping now fully documented (5 declared, 4 data resources functional)
+- All Workplan sub-pages require sidebar click navigation (not direct URLs)
+- EQA Distribution module is present and functional with comprehensive UI
+
+---
+
+### Phase 17 — Remaining Module Deep Testing ✅ COMPLETE (2026-03-29)
+**Focus:** Storage Management & Cold Storage Monitoring, Pathology/IHC/Cytology dashboards, Billing, Aliquot, NoteBook
+**Result:** 8 test areas, 15 test cases, 14 PASS, 1 FAIL (93% pass rate)
+
+**17A — Storage Management Dashboard**
+- Storage Management Dashboard (/Storage/samples) renders comprehensive UI:
+  - Summary cards: Total Sample Items (2), Active (2), Disposed (0)
+  - Storage Locations: 12 rooms, 14 devices, 12 shelves, 4 racks
+  - 6 tab navigation: Sample Items, Rooms, Devices, Shelves, Racks, Boxes
+  - Search by sample ID or location, filter by locations, filter by status
+  - Data table with real data: Blood Film, Sputum, Plasma samples with accession numbers, hierarchical locations
+  - 67 total data rows across all tabs
+- Cold Storage Dashboard (/FreezerMonitoring?tab=0) renders fully:
+  - System Status: Online with live timestamp
+  - 5 tabs: Dashboard, Corrective Actions, Historical Trends, Reports, Settings
+  - Status cards: Total Storage Units, Normal Status, Warnings, Critical Alerts
+  - Search by Unit ID or Name, filter by Status and Device Type
+  - Storage Units table with proper column headers
+  - "No storage units found" empty state (no monitoring configured)
+
+**17B — Pathology/IHC/Cytology Dashboards**
+- Pathology Dashboard (/PathologyDashboard) — PASS:
+  - Status cards: In Progress, Awaiting Pathology Review, Additional Pathology Requests, Complete (weekly)
+  - Search by Family Name, "My cases" filter, "In Progress" dropdown
+  - Table: Stage, Last Name, First Name, Technician Assigned, Pathologist Assigned, Lab Number
+- Immunohistochemistry Dashboard (/ImmunohistochemistryDashboard) — PASS:
+  - Same structure as Pathology with IHC-specific labels
+  - Status: Cases in Progress, Awaiting Immunohistochemistry Review, Complete (weekly)
+- Cytology Dashboard (/CytologyDashboard) — PASS:
+  - Similar structure with cytology-specific labels
+  - "Select Technician" and "CytoPathologist Assigned" columns
+  - "Items per page" selector with pagination
+
+**17C — Billing**
+- **NOTE-18 (NEW, Medium):** Billing sidebar link has `href=null` — clicking it does nothing. No Billing page exists in the React SPA. This is a stub/placeholder sidebar entry with no implemented page behind it.
+
+**17D — Aliquot**
+- Aliquot page (/Aliquot) — PASS:
+  - "Search Sample" with "Enter Accession Number" input (0/23 max length)
+  - "Search" button
+  - Clean, minimal UI appropriate for aliquot management
+
+**17E — NoteBook**
+- **NOTE-19 (NEW, Medium):** NoteBook Dashboard (/NotebookDashboard) renders a completely blank page — no header, no sidebar, no content. Page title is just "OpenELIS" (not the full LIMS title). The route exists but the component renders nothing. This is a broken page.
+
+**Phase 17 Key Findings:**
+- **NOTE-18 (NEW, Medium):** Billing sidebar link is a stub (href=null) with no page implemented
+- **NOTE-19 (NEW, Medium):** NoteBook Dashboard renders blank page — broken route/component
+- Storage module is surprisingly comprehensive with real data and 6-tab management interface
+- Cold Storage Monitoring is a fully-featured temperature monitoring module
+- All 3 specialty dashboards (Pathology, IHC, Cytology) follow consistent design patterns
+
+---
+
+### Phase 18 — Non-Conform, Analyzers Deep, Help Menu (2026-03-29)
+
+| Sub-phase | Scope | Suites | TCs | Pass Rate |
+|-----------|-------|--------|-----|-----------|
+| 18A | Non-Conform module (3 sub-pages) | DR-DT | 3 | 100% |
+| 18B | Analyzers deep (List, Error Dashboard, Types) | DU-DW | 3 | 100% |
+| 18C | Help menu (User Manual, Video Tutorials, Release Notes) | DX-DZ | 3 | 67% |
+| **Total** | | **9 suites** | **9 TCs** | **89%** |
+
+**18A — Non-Conform Module**
+- **Report Non-Conforming Event** (`/ReportNonConformingEvent`): Fully functional search form with Search By dropdown (Last Name, First Name, Patient ID Code, Lab Number), Text Value input, Search button. Validation works ("Please Enter Value"), search returns "No data found" for non-matches. PASS.
+- **View New Non-Conforming Events** (`/ViewNonConformingEvent`): Same search form pattern. Renders correctly. PASS.
+  - **NOTE-20 (NEW, Low):** Heading reads "View New Non Conform Event" — inconsistent naming: missing hyphen and "-ing" suffix vs sidebar label "View New Non-Conforming Events". Also "Nonconforming Events Corrective Action" heading on the corrective actions page uses yet another naming style (one word, no hyphen).
+- **Corrective Actions** (`/NCECorrectiveAction`): Same search form pattern. Renders correctly. PASS.
+
+**18B — Analyzers Deep**
+- **Analyzers List** (`/analyzers`): Rich management dashboard with summary cards (Total=1, Active=0, Inactive=0, Plugin Warnings=1), search bar, Status filter, data table (Name, Type, Connection, Test Units, Status, Last Modified, Actions). Real data: "Test Analyzer Alpha" — HEMATOLOGY, 192.168.1.100:5000, Plugin Missing badge. "Add Analyzer +" button. PASS.
+- **Error Dashboard** (`/analyzers/errors`): Comprehensive error tracking with summary cards (Total Errors=0, Unacknowledged=0, Critical=0, Last 24 Hours=0), 3 filter dropdowns (Error Type, Severity, Analyzer), data table (Timestamp, Analyzer, Type, Severity, Message, Status, Actions), "Acknowledge All" button. PASS.
+- **Analyzer Types** (`/analyzers/types`): Type management with search, "Create New Analyzer Type +" button, data table (Name, Description, Protocol, Plugin Class, Identifier Pattern, Generic Plugin, Plugin Loaded, Instances, Status). 2 real rows: "Test Analyzer Type" and "Test Type ASTM", both ASTM protocol, Active. PASS.
+
+**18C — Help Menu**
+- **User Manual** (sidebar Help > User Manual, header Help panel > User Manual): Opens `/docs/UserManual` → redirects to `/OpenELIS-Global/documentation/OEGlobal_UserManual_en.pdf` in new tab. 196-page PDF with proper OpenELIS Global branding. PASS.
+- **NOTE-21 (NEW, Medium):** Video Tutorials and Release Notes buttons in header Help panel are non-functional stubs — `<button>` elements with no href, no onclick handler, no navigation. Clicking them does nothing. They appear in the header Help dropdown but not in the sidebar Help menu.
+
+**Phase 18 Key Findings:**
+- **NOTE-20 (NEW, Low):** Non-Conform heading naming inconsistencies across pages
+- **NOTE-21 (NEW, Medium):** Video Tutorials and Release Notes Help buttons are non-functional stubs
+- Analyzers module is surprisingly comprehensive with real analyzer data and full CRUD interface
+- Non-Conform module follows consistent search-form pattern across all 3 sub-pages
+- Help architecture split: sidebar has only User Manual; header panel has all 3 items
+
+---
+
+### Phase 19 — Deeper Interaction Testing (2026-03-29)
+
+| Sub-phase | Scope | Suites | TCs | Pass Rate |
+|-----------|-------|--------|-----|-----------|
+| 19A | Analyzer Actions Menu (kebab, 6 actions) | EA-EB | 2 | 50% |
+| 19B | Analyzer Search + Type Creation | EC-ED | 2 | 100% |
+| 19C | Notifications + User panels | EE-EF | 2 | 100% |
+| 19D | Global Search (match + no-match) | EG-EH | 2 | 100% |
+| **Total** | | **8 suites** | **8 TCs** | **88%** |
+
+**19A — Analyzer Actions Menu Deep**
+- Kebab menu on Analyzers List has 6 actions: Field Mappings, Test Connection, Configure File Import, Copy Mappings, Edit, Delete
+- **Field Mappings** (`/analyzers/2/mappings`): Full mapping config page with stats cards, Pending Unmapped Codes, Query Analyzer / Test Mapping / Save Mappings buttons, Analyzer Fields table, Mappings Summary panel. PASS.
+- **Edit**: Opens pre-populated modal with all analyzer fields (Name, Status, Plugin Type, Analyzer Type, Protocol Version, IP, Port). PASS.
+- **Configure File Import**: Opens "Add File Import Configuration" modal with Analyzer, File Format (CSV), Import Directory, File Pattern, Archive Directory, Error Directory, Column Mappings (JSON). PASS.
+- **Copy Mappings**: Opens modal with Source Analyzer info, Target Analyzer dropdown, overwrite warning. PASS.
+- **Delete**: Opens confirmation dialog but shows literal `{name}` placeholder instead of actual analyzer name. FAIL.
+  - **NOTE-22 (NEW, Low):** Delete Analyzer confirmation dialog text shows `{name}` template variable instead of interpolated analyzer name ("Test Analyzer Alpha").
+
+**19B — Analyzer Search & Type Creation**
+- **Analyzer List Search**: Search box filters table in real-time, URL updates with `?search=` param. "Test" matches, "zzzzz" returns empty table with 0 counts. PASS.
+- **Create New Analyzer Type**: Modal with Name (required), Description, Protocol (ASTM default), Plugin Class Name, Identifier Pattern (regex helper text), Generic Plugin checkbox, Active checkbox (default checked). "Name is required" validation fires correctly. PASS.
+
+**19C — Notifications & User Panels**
+- **Notifications Panel**: Slide-in from right with Reload, Subscribe on this Device, Mark all as Read, Show read buttons. Empty state illustration with "You're all caught up" message. Arrow button for full notifications page. PASS.
+- **User Panel**: Shows Open ELIS link, Logout button, Select Locale dropdown (English), Version: 3.2.1.3. PASS.
+
+**19D — Global Search**
+- **Matching Search**: Searching "patient" returns instant dropdown with "Results: 1" badge, patient card showing "QANEWPATIENT Test ♀ Female 15/06/1990, National ID: QA-NP-001" with avatar initials "QT". PASS.
+- **Non-Matching Search**: "xyznonexistent" returns no dropdown, no results, no empty state message.
+  - **NOTE-23 (NEW, Low):** Global search shows no "No results found" empty state message for non-matching queries — just nothing happens. Minor UX gap.
+
+**Phase 19 Key Findings:**
+- **NOTE-22 (NEW, Low):** Delete Analyzer dialog shows `{name}` placeholder — template variable not interpolated
+- **NOTE-23 (NEW, Low):** Global search has no empty state for zero results
+- Analyzer module has comprehensive CRUD with 6 kebab actions including File Import Config and Copy Mappings
+- Notifications panel supports push subscription ("Subscribe on this Device")
+- Global search is patient-centric with instant results and rich patient cards
+
+---
+
+### Phase 20 — Deep Form Submission, CRUD, Calculated Values & Reflex Tests (Completed 2026-03-30)
+
+**Suites added:** 12 | **Test cases added:** 27 | **Pass rate:** ~93% (25/27)
+
+**Phase 20A — Add Order CRUD:**
+- TC-ORD-CREATE-01: Order creation via 4-step wizard (Patient→Program→Sample→Order) — PASS
+- TC-ORD-CREATE-02: Auto-generated lab number format validation (YY-SITE-NNN-NNL) — PASS
+- TC-ORD-READ-01: Edit Order loads persisted data by accession number — PASS
+- TC-ORD-UPDATE-01: Edit Order allows field modification and re-save — PASS
+- TC-ORD-CANCEL-01: Sample step has removeSample/canceled checkboxes — PASS
+- **NOTE-24 (OGC-510, Low):** Typo "Succesfuly saved" on order success page
+- **NOTE-25 (OGC-511, Medium):** Submit button enables despite "Requester Last Name is required" validation error
+
+**Phase 20B-C — Reflex & Calculated Values Admin:**
+- TC-REFLEX-API-01: 14 active reflex rules returned via REST API — PASS
+- TC-REFLEX-ADMIN-01: Reflex Tests Management link redirects to legacy page (not yet migrated to React) — PASS (expected)
+- TC-CALC-ADMIN-01: Calculated Value Tests link redirects to legacy page (not yet migrated to React) — PASS (expected)
+
+**Phase 20D — Patient CRUD:**
+- TC-PAT-CREATE-01: New Patient form — create with National ID, name, gender, DOB, phone — PASS
+- TC-PAT-READ-01: Search patient by last name, view in results table — PASS
+- TC-PAT-READ-02: Select patient from results, form populates all saved fields — PASS
+- TC-PAT-UPDATE-01: Modify first name and save, verify update persists — PASS
+- TC-PAT-AGE-CALC-01: DOB auto-calculates Age/Years/Months/Days — PASS
+- TC-PAT-PHONE-VAL-01: Phone field validates xxxx-xxxx format — PASS
+- TC-PAT-HISTORY-01: Patient History page loads with search form — PASS
+- TC-PAT-MERGE-01: Patient Merge page loads with 3-step wizard — PASS
+
+**Phase 20E — Results Entry & Validation Workflow:**
+- TC-RESVAL-LOAD-01: ResultValidation page loads with test unit dropdown, shows Hematology results — PASS
+- TC-RESVAL-TABLE-01: Validation table has correct columns (Sample Info, Test Name, Normal Range, Result, Save, Retest, Notes, Past Notes) — PASS
+- TC-RESVAL-BULK-01: Bulk actions present — Save All Normal, Save All Results, Retest All Tests — PASS
+- TC-ACCVAL-SEARCH-01: AccessionValidation search by accession number returns correct result — PASS
+- TC-LOGBOOK-LOAD-01: LogbookResults (Results Entry) page loads with editable results table — PASS
+- TC-PATRES-LOAD-01: PatientResults page loads with patient search form — PASS
+- TC-ACCRES-LOAD-01: AccessionResults page loads with accession search — PASS
+- TC-RESVALDATE-LOAD-01: ResultValidationByTestDate page loads with date picker — PASS
+- TC-RESVAL-WORKFLOW-01: Full validation workflow — check Save → click Save → result removed from queue (5→4) — PASS
+- **NOTE-26 (OGC-512, Low):** Typo "Orginal Result" in Past Notes column (should be "Original Result")
+
+**Phase 20 Key Findings:**
+- **NOTE-24 (OGC-510, Low):** Typo "Succesfuly saved" on order success page heading
+- **NOTE-25 (OGC-511, Medium):** Order submit button enables despite active validation errors in React state
+- **NOTE-26 (OGC-512, Low):** Typo "Orginal Result" in validation Past Notes column
+- Reflex Tests and Calculated Values admin pages are legacy-only (not yet migrated to React)
+- Patient form phone validation blocks Save even when phone is empty (optional field triggers validation)
+- DOB→Age auto-calculation works correctly (35y 9m 14d for 15/06/1990)
+- No success toast/notification shown after patient save — form just silently clears
+- Normal Range column empty on all validation/results rows (no reference ranges configured)
+- Dashboard metrics: 105 awaiting result entry, 142 awaiting review
+
+**Phase 21 — Report Generation, Data Export, Electronic Orders, Referrals, Audit Trail (7 suites, 12 TCs — 12 PASS, 0 FAIL):**
+- TC-RPT-PATIENT-01: Patient Status Report page loads with 3 parameter sections (By Patient/Lab Number/Site) — PASS
+- TC-RPT-PATIENT-PDF-01: Patient Status Report PDF generation by lab number — PASS (NOTE-27: null values in Contact Tracing fields)
+- TC-RPT-STATS-01: Statistics Report page loads with lab unit/priority/timeframe/year parameters — PASS
+- TC-RPT-STATS-PDF-01: Statistics Report PDF generation (Hematology, 2026) — PASS
+- TC-RPT-SUMMARY-01: Test Report Summary page loads with date range pickers — PASS
+- TC-RPT-SUMMARY-PDF-01: Test Report Summary PDF generation (3-page report with real data) — PASS (NOTE-28: report.labName.two i18n key leak)
+- TC-RPT-AUDIT-01: Audit Trail page loads with Lab No search and results table — PASS
+- TC-RPT-AUDIT-02: Audit Trail search returns 21 audit items with full order lifecycle — PASS
+- TC-RPT-CSV-01: WHONET/CSV Export page loads with date/study type/date type parameters — PASS
+- TC-EORDER-01: Electronic Orders (Incoming Test Requests) page loads with dual search modes — PASS
+- TC-REFERRAL-01: Referrals page loads with patient search, results table, date/test/unit filtering — PASS
+- TC-RPT-MENU-01: Report menu tree — 11 report pages across 4 categories (Routine, Aggregate, Management, WHONET) — PASS
+- **NOTE-27 (OGC-513, Low):** Patient Status Report PDF shows literal "null" for Contact Tracing Index Name/Record Number
+- **NOTE-28 (OGC-514, Low):** Summary of All Tests report header shows raw i18n key `report.labName.two` instead of resolved lab name
+
+**Phase 22 — Management Reports Complete, Batch Entry, Barcode, Batch Reassignment (6 suites, 12 TCs — 12 PASS, 0 FAIL):**
+- TC-RPT-REJECT-01: Rejection Report page loads with date range pickers — PASS
+- TC-RPT-ACTIVITY-TEST-01: Activity Report By Test — date range + test type dropdown — PASS
+- TC-RPT-ACTIVITY-PANEL-01: Activity Report By Panel — date range + panel type dropdown — PASS
+- TC-RPT-ACTIVITY-UNIT-01: Activity Report By Test Section — date range + unit type dropdown — PASS
+- TC-RPT-REFERRED-01: External Referrals Report — date range + referral center dropdown — PASS
+- TC-RPT-NC-DATE-01: Non Conformity Report by Date — date range pickers — PASS
+- TC-RPT-NC-UNIT-01: Non Conformity Report by Unit and Reason — date range pickers — PASS
+- TC-RPT-DELAYED-01: Delayed Validation — auto-generates PDF with 141 tests across 14 sections — PASS
+- TC-BATCH-ENTRY-01: Batch Order Entry Setup — order fields, barcode config, optional fields — PASS
+- TC-BARCODE-01: Print Bar Code Labels — label sets, specimen labels, site name, sample type — PASS
+- TC-BATCH-REASSIGN-01: Batch Test Reassignment — sample type, current/replacement test dropdowns — PASS
+- TC-SAMPLE-ENTRY-01: Add Order / SamplePatientEntry 4-step wizard — PASS
+- Observation: "Non ConformityReport by Date" title missing space (cosmetic, same as "StatisticsReport")
+- All 3 Activity Report sub-pages follow consistent date range + type dropdown pattern
+- Delayed Validation is parameterless — directly generates PDF (unique among report pages)
+
+---
+
+### Phase 23 — E2E Rejection Workflow Verification (30 Mar 2026)
+
+**Objective**: Verify that samples rejected via Order Entry and Edit Order appear in the Rejection Report and Non-Conforming Events.
+
+**Test Steps Executed**:
+1. **Reject at Order Entry** — Created order 26CPHL00009M, rejected Whole Blood sample with reason "Incorrect quantity of the sample", selected HGB test. Saved successfully. ✅
+2. **Reject via Edit Order** — Modified existing order 26CPHL00008L, added new Whole Blood sample with "Reject Sample" checked, reason "The sample received is coagulated", selected HGB test. Saved successfully. ✅
+3. **Rejection Report PDF** — Navigated to Reports > Management Reports > Rejection Report, set date range 01/03/2026–30/03/2026, clicked Generate Printable Version. **HTTP 503 "Check server logs"**. ❌ FAIL
+4. **Non-Conforming Events** — Searched View New Non-Conforming Events by Lab Number for both 26CPHL00009M and 26CPHL00008L. **"No Data Found"** for both. ❌ FAIL
+5. **Dashboard Counter** — "Orders Rejected: Rejected By Lab Today" remained at 0 after both rejections. ❌ FAIL
+
+**Bugs Found**:
+- **OGC-515** (High): Rejected samples not appearing in Rejection Report or Non-Conforming Events; Report PDF returns 503. Samples rejected via "Reject Sample" checkbox are stored in sample_item fields but NOT created as qa_event/NCE records, making them invisible to reporting and quality management workflows.
+
+**Phase 23 Results**: 5 test steps, 2 PASS (rejection saves), 3 FAIL (report/NCE/dashboard)
+**Cumulative**: 328 TCs, 150+ suites, ~92% pass rate across Phases 1-23
+
+---
+
+### Phase 23B — Admin Configuration Deep Testing (2026-03-30)
+
+**Objective**: Deep test all General Configuration sub-pages, Provider Management, and Organization Management under the Admin section (`/MasterListsPage`). Document page structure, form types, field inventories, and interaction patterns.
+
+**Pages Tested (10 General Config sub-pages + 2 CRUD management)**:
+
+| # | Page | Route | Items | Form Types |
+|---|------|-------|-------|------------|
+| 1 | Site Information | `/SiteInformationMenu` | 20 | Boolean, Text |
+| 2 | Site Branding | `/SiteBrandingMenu` | N/A | File upload, Color picker, Checkbox |
+| 3 | NonConformity Configuration | `/NonConformityConfigurationMenu` | 4 | Boolean |
+| 4 | MenuStatement Configuration | `/MenuStatementConfigMenu` | 0 | (empty) |
+| 5 | WorkPlan Configuration | `/WorkPlanConfigurationMenu` | 3 | Boolean |
+| 6 | Result Entry Configuration | `/ResultConfigurationMenu` | 13 | Boolean, Text |
+| 7 | Patient Entry Configuration | `/PatientConfigurationMenu` | 7 | Boolean |
+| 8 | Printed Report Configuration | `/PrintedReportsConfigurationMenu` | 9 | Boolean, Text, Image |
+| 9 | Order Entry Configuration | `/SampleEntryConfigurationMenu` | 14 | Boolean, Text, Numeric |
+| 10 | Validation Configuration | `/ValidationConfigurationMenu` | 4 | Text (charset regex) |
+| 11 | Provider Management | `/providerMenu` | 40 providers | CRUD modal (Add/Modify/Deactivate) |
+| 12 | Organization Management | `/organizationManagement` | 4726 orgs | CRUD full-page form |
+
+**Three Config Edit Form Types Discovered**:
+1. **Boolean**: True/False radio buttons (e.g., "24 hour clock")
+2. **Text**: Standard text input (e.g., "Address line 1 label" = "Street")
+3. **Image**: File upload + preview + "Remove Image" checkbox (e.g., headerLeftImage)
+
+**Bugs Found**:
+- **BUG-30** (Medium): bannerHeading Modify causes indefinite loading spinner — selecting the bannerHeading config item and clicking Modify results in a permanent loading spinner. Reproduced twice. Likely caused by the bilingual text value format.
+
+**Phase 23B Results**: 20 TCs (Suites FJ + FK), 19 PASS, 1 FAIL (bannerHeading hang)
+**Cumulative**: 348 TCs, 152+ suites, ~92% pass rate across Phases 1-23B
+
+---
+
+### Phase EQA-DEEP — EQA Module Deep Testing (March 31, 2026)
+
+**Scope:** Comprehensive deep testing of all EQA module pages in v3.2.1.3, cross-referenced against the EQA FRS v1.0 (targeting v3.2.3.0) and the Enrollment Addendum v3.0. Explored live pages, documented all UI elements, form fields, dropdown options, and mapped implementation against spec.
+
+**Pages Tested:**
+
+| # | Page | Route | Key Elements | Status |
+|---|------|-------|-------------|--------|
+| 1 | EQA Distribution Dashboard | `/EQADistribution` | 4 stat cards, shipment filter, Create/Manage buttons, Shipments section, Participant Network | PASS |
+| 2 | Create New Shipment Wizard | `/EQADistribution/create` | 3-step stepper, Distribution Name/Program/Deadline fields | PASS |
+| 3 | Alerts Dashboard | `/Alerts` | 4 summary cards, 3 filter dropdowns, search, 6-column data table | PASS |
+| 4 | Admin Program Management | `/MasterListsPage/eqaProgram` | 3 stat cards, 3 tabs (Programs/Participants/Settings) | PASS |
+| 5 | Add Program Modal | (modal on eqaProgram) | 5 fields: Name, Provider (6 opts), Category (14 opts), Frequency (4 opts), Description | PASS |
+| 6 | Participants Tab | (tab on eqaProgram) | Select Program dropdown, empty state | PASS |
+| 7 | System Settings Tab | (tab on eqaProgram) | Notification (3 toggles), Integration (FHIR), Performance (Z-Score), Save | PASS |
+
+**Spec-vs-Implementation Gap Analysis:**
+
+| Spec Feature | Spec Reference | v3.2.1.3 Status | Notes |
+|-------------|---------------|-----------------|-------|
+| EQA Tests sidebar parent | Addendum §1 | NOT IMPLEMENTED | Targets v3.2.3.0 |
+| EQA Management sidebar parent | Addendum §1 | NOT IMPLEMENTED | Targets v3.2.3.0 |
+| EQA Tests → Orders (listing) | FR-010 | NOT IMPLEMENTED | Targets v3.2.3.0 |
+| EQA Tests → My Programs (self-enrollment) | FR-013 | NOT IMPLEMENTED | Targets v3.2.3.0 |
+| EQA toggle on Order Entry | FR-001, BR-001 | NOT IMPLEMENTED | eqaEnabled=false in config |
+| Results & Analysis views | FR-006, FR-007 | NOT IMPLEMENTED | Statistical analysis not built |
+| EQA sample visual indicators | FR-002 | NOT IMPLEMENTED | No EQA badges in work queues |
+| Provider as typeahead text | BR-012 | DIVERGENT | Live uses fixed dropdown (6 options) vs spec's free-text typeahead |
+| Alert severity levels | FR-009 | PARTIAL | Live has 2 (Warning, Critical) vs spec's 4 (Critical, High, Medium, Low) |
+| Alert table columns | FR-009 | PARTIAL | Live has 6 columns vs spec's 8 (missing Lab Section, Due Date, Lab Number, Assigned To) |
+| Program modal fields | FR-011.1 | EXTENDED | Live adds Category and Frequency beyond spec |
+| Alerts Dashboard | FR-009, FR-012 | IMPLEMENTED | Fully functional standalone dashboard |
+| EQA Distribution | FR-004, FR-005 | IMPLEMENTED | Dashboard + Create wizard functional |
+| Admin EQA Programs | FR-008, FR-011.1 | IMPLEMENTED | Full CRUD with 3 tabs |
+| System Settings (Notifications/Integration/Perf) | BR-008, FR-010 | IMPLEMENTED | Toggles, thresholds, Z-Score config |
+
+**Phase EQA-DEEP Results**: 44 TCs (Suites FK + FL + FM + FN + FO + FP), FK pending live validation, FL–FP: 41 PASS, 0 FAIL
+**Jira Tickets Filed then CANCELLED**: 7 issues (OGC-518 through OGC-524) were created and then cancelled. Reason: EQA module requires enabling via Admin → General Configuration → EQA Enabled before features appear. Testing was against an incomplete version (v3.2.1.3) without this config toggle enabled. All tickets transitioned to Done with cancellation comments. Re-test needed after enabling EQA configuration.
+**Cumulative**: 389 TCs, 157+ suites, ~92% pass rate across Phases 1-EQA-DEEP
+
+---
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `openelis-e2e.spec.ts` | Playwright test spec (389 TCs, 157+ suites) |
+| `master-test-cases.md` | Full test case catalog (Phases 1-EQA-DEEP) |
+| `qa-report-20260325-1430.md` | Main QA report with all findings |
+| `SKILL-v4.md` | QA skill definition for Claude automation |
+| `testing-constitution-compliance.md` | Compliance analysis vs repo conventions |
+| `ROADMAP.md` | This file — roadmap and next steps |
