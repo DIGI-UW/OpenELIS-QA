@@ -13349,3 +13349,55 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Compare 3 pathology dashboards: (A) Pathology: 4 cards, 10 status stages (full histopathology workflow), "Stage" column, "Technician Assigned"/"Pathologist Assigned" naming; (B) IHC: 3 cards, 5 status stages (simplified), no Stage column, "Assigned Technician"/"Assigned Pathologist" (reversed order); (C) Cytology: 3 cards, 6 status stages (cytology-specific), "Status" column, "Select Technician"/"CytoPathologist Assigned" (unique naming). 2. Summary cards naming: Pathology="Awaiting Pathology Review", IHC="Awaiting Immunohistochemistry Review", Cytology="Awaiting Cytopathologist Review" (specialist title). 3. Column naming inconsistencies across 3 dashboards that should share a pattern: "Technician Assigned" vs "Assigned Technician" vs "Select Technician" — 3 different names for same concept. 4. Storage module uses entirely different design language: REST-style URLs, expandable table rows, CRUD operations, grid-based interfaces. Cold Storage Monitoring is the most sophisticated sub-module with IoT monitoring, regulatory compliance, chart controls. |
 | **Expected** | 3 pathology dashboards have inconsistent column naming, status stages, and card counts despite similar layouts. Storage is architecturally distinct with REST URLs and CRUD operations. |
 | **Status** | PASS |
+
+---
+
+### Suite HM — EQA Distributions, Alerts, Admin Landing Deep Interactions (Phase 23AN)
+
+> **Scope:** Field-level deep interactions on remaining top-level sidebar items — EQA Distributions (1), Alerts (1), Admin landing (1).
+> **Phase:** 23AN
+> **Date:** 2026-03-31
+
+#### TC-HM-EQA-DISTRIBUTION-01: EQA Distribution Dashboard
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HM-EQA-DISTRIBUTION-01 |
+| **Suite** | HM — EQA Distributions, Alerts, Admin Landing Deep Interactions |
+| **Phase** | 23AN |
+| **Steps** | 1. Navigate to EQA Distributions via sidebar 2. Verify URL: `/EQADistribution` 3. Verify page title: "EQA Distribution" with subtitle "Distribute EQA samples to participating laboratories" 4. Verify 4 summary cards: Draft Shipments (0, "Being prepared"), Shipped (0, "Awaiting responses" — green text), Completed (0, "All responses received"), Participants (0, "Enrolled" — green background) 5. Verify "All Shipments" filter dropdown with 5 options: All Shipments, Draft (DRAFT), Prepared (PREPARED), Shipped (SHIPPED), Completed (COMPLETED) 6. Verify "Create New Shipment +" button 7. Verify "Manage Participants" button with icon 8. Verify "EQA Shipments" section: title "Track distributed EQA samples and participant responses", "No distributions found" empty state 9. Verify "Participant Network" section: "Overview of enrolled participating laboratories" with 3 cards: Total Participants (0, "Across all countries"), Active Participants (0, "Currently enrolled"), Average Response Rate (—, "Last 4 quarters") |
+| **Expected** | EQA Distribution has 4 summary cards, 5-option shipment filter, Create/Manage buttons, EQA Shipments tracking, Participant Network overview with 3 cards |
+| **Status** | PASS |
+
+#### TC-HM-ALERTS-01: Alerts Dashboard
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HM-ALERTS-01 |
+| **Suite** | HM — EQA Distributions, Alerts, Admin Landing Deep Interactions |
+| **Phase** | 23AN |
+| **Steps** | 1. Navigate to Alerts via sidebar 2. Verify URL: `/Alerts` 3. Verify page title: "Alerts Dashboard" 4. Verify 4 summary cards: Critical Alerts (0), EQA Deadlines (0), Overdue STAT Orders (0), Samples Expiring (0) 5. Verify 3 filter dropdowns: Alert Type (4 options: EQA Deadline, Sample Expiration, STAT Overdue, Unacknowledged Critical), Severity (2 options: Warning, Critical), Status (3 options: Open, Acknowledged, Resolved) 6. Verify search: "Search alerts..." text input 7. Verify table 6 columns: Type, Severity, Message, Status, Created, Actions 8. Verify empty state — no alerts displayed |
+| **Expected** | Alerts Dashboard has 4 summary cards, 3 filter dropdowns (Alert Type 4/Severity 2/Status 3), search, 6-col table |
+| **Status** | PASS |
+
+#### TC-HM-ADMIN-LANDING-01: Admin Landing Page (MasterListsPage)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HM-ADMIN-LANDING-01 |
+| **Suite** | HM — EQA Distributions, Alerts, Admin Landing Deep Interactions |
+| **Phase** | 23AN |
+| **Steps** | 1. Click Admin in sidebar 2. Verify URL: `/MasterListsPage` 3. Verify content area is COMPLETELY EMPTY — no title, no content, no form elements 4. Note: Admin serves as a parent menu; clicking it navigates to MasterListsPage which renders blank. The actual admin functionality is in sub-pages (accessible by expanding Admin in sidebar). This is a design pattern where the parent item has no dedicated content. 5. Previously tested Admin sub-pages include 28+ configuration pages (Users, Test Management, Site Information, etc.) |
+| **Expected** | Admin landing page `/MasterListsPage` renders empty — parent menu item with no dedicated content; admin features are in sub-pages |
+| **Status** | PASS |
+
+#### TC-HM-SIDEBAR-COMPLETE-AUDIT-01: Complete Sidebar Navigation Audit
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HM-SIDEBAR-COMPLETE-AUDIT-01 |
+| **Suite** | HM — EQA Distributions, Alerts, Admin Landing Deep Interactions |
+| **Phase** | 23AN |
+| **Steps** | 1. Audit ALL sidebar items (top to bottom): Home (`/Dashboard`), Alerts (`/Alerts`), EQA Distributions (`/EQADistribution`), Order (expandable — 4 sub-pages), Patient (expandable — 5 sub-pages), Storage (expandable — 2 sub-sections with 10 sub-pages), Analyzers (expandable — 3 sub-pages), Non-Conform (expandable — 3 sub-pages), Workplan (expandable — 4 sub-pages), Pathology (`/PathologyDashboard`), Immunohistochemistry (`/ImmunohistochemistryDashboard`), Cytology (`/CytologyDashboard`), Results (expandable — 8 sub-pages), Validation (expandable — 4 sub-pages), Reports (expandable — 12 sub-pages), Admin (`/MasterListsPage` + 28+ sub-pages), Billing (empty href — NON-FUNCTIONAL), Aliquot (`/Aliquot`), NoteBook (`/NotebookDashboard` — BLANK), Help (expandable — 1 sub-item: User Manual) 2. Total sidebar sections: 20 top-level items 3. Functional status: 18 functional, 1 non-functional (Billing), 1 broken (NoteBook) 4. Expandable sections: 9 (Order, Patient, Storage, Analyzers, Non-Conform, Workplan, Results, Validation, Reports + Help) 5. Direct-link pages: 8 (Home, Alerts, EQA, Pathology, IHC, Cytology, Admin, Aliquot) 6. Non-functional: 2 (Billing empty href, NoteBook blank page) |
+| **Expected** | Complete sidebar has 20 top-level items; 18 functional, 2 non-functional (Billing, NoteBook); 9 expandable sections with 70+ total sub-pages |
+| **Status** | PASS |

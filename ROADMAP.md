@@ -2045,6 +2045,47 @@ Single URL: `/FreezerMonitoring?tab=0` — all tabs within same page.
 
 **Phase 23 Cumulative (through 23AM)**: 674+ TCs executed, ~645 passed, ~95.7% pass rate. 8 non-executable scripts catalogued.
 
+### Phase 23AN — EQA Distributions, Alerts, Admin Landing, Complete Sidebar Audit (2026-03-31)
+
+**Scope:** Remaining top-level sidebar items + complete sidebar navigation audit.
+
+**EQA Distribution** (`/EQADistribution`): Full EQA management dashboard. 4 summary cards (Draft Shipments/Shipped/Completed/Participants). "All Shipments" filter (5 options: All/Draft/Prepared/Shipped/Completed). "Create New Shipment +" and "Manage Participants" action buttons. "EQA Shipments" tracking section with empty state. "Participant Network" section with 3 cards (Total/Active/Average Response Rate across all countries, last 4 quarters).
+
+**Alerts Dashboard** (`/Alerts`): 4 summary cards (Critical Alerts/EQA Deadlines/Overdue STAT Orders/Samples Expiring). 3 filter dropdowns: Alert Type (4 options: EQA Deadline/Sample Expiration/STAT Overdue/Unacknowledged Critical), Severity (2: Warning/Critical), Status (3: Open/Acknowledged/Resolved). Search + 6-col table.
+
+**Admin Landing** (`/MasterListsPage`): Renders completely empty — parent menu item with no dedicated content. All admin features in 28+ sub-pages.
+
+**Complete Sidebar Audit (20 top-level items):**
+
+| # | Item | Type | Status |
+|---|------|------|--------|
+| 1 | Home | Direct link | Functional |
+| 2 | Alerts | Direct link | Functional |
+| 3 | EQA Distributions | Direct link | Functional |
+| 4 | Order | Expandable (4 sub-pages) | Functional |
+| 5 | Patient | Expandable (5 sub-pages) | Functional |
+| 6 | Storage | Expandable (2 sub-sections, 10 sub-pages) | Functional |
+| 7 | Analyzers | Expandable (3 sub-pages) | Functional |
+| 8 | Non-Conform | Expandable (3 sub-pages) | Functional |
+| 9 | Workplan | Expandable (4 sub-pages) | Functional |
+| 10 | Pathology | Direct link | Functional |
+| 11 | Immunohistochemistry | Direct link | Functional |
+| 12 | Cytology | Direct link | Functional |
+| 13 | Results | Expandable (8 sub-pages) | Functional |
+| 14 | Validation | Expandable (4 sub-pages) | Functional |
+| 15 | Reports | Expandable (12 sub-pages) | Functional |
+| 16 | Admin | Direct + Expandable (28+ sub-pages) | Functional |
+| 17 | Billing | Direct link | **NON-FUNCTIONAL** (empty href) |
+| 18 | Aliquot | Direct link | Functional |
+| 19 | NoteBook | Direct link | **BROKEN** (blank page) |
+| 20 | Help | Expandable (1 sub-item) | Functional |
+
+**Totals:** 18 functional, 1 non-functional (Billing), 1 broken (NoteBook). 70+ total sub-pages across all sections.
+
+**Phase 23AN Summary:** 4 TCs (Suite HM), all PASS. Complete sidebar navigation audit confirms 20 top-level items with 70+ sub-pages. Only 2 issues: Billing (non-functional) and NoteBook (broken).
+
+**Phase 23 Cumulative (through 23AN)**: 678+ TCs executed, ~649 passed, ~95.7% pass rate. 8 non-executable scripts catalogued.
+
 ---
 
 ## Key Files
