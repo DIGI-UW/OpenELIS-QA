@@ -11983,3 +11983,86 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Switch between Hematology and HIV units 2. Confirm Hematology Result = textarea (numeric free-text) 3. Confirm HIV Result = dropdown (categorical predefined values) 4. Verify both share same table layout, column headers, expand/collapse behavior 5. Verify accession format: Hematology "26-CPHL-000-XXX-1", HIV "25-CPHL-000-XXX-1" (different year prefix) |
 | **Expected** | Result field type dynamically adapts based on test configuration; layout consistent across units |
 | **Status** | PASS |
+
+---
+
+### Suite HA — Results Entry Multi-Unit Field Type Survey (Phase 23AB)
+
+> **Scope:** Systematic survey of all 14 test units in Results > By Unit to classify result field types (textarea vs dropdown vs hybrid), document dropdown option values, and identify configuration anomalies (duplicate options). Extends Phase 23AA cross-unit comparison to full coverage.
+
+#### TC-HA-MOLBIO-01: Molecular Biology Mixed Result Types
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HA-MOLBIO-01 |
+| **Suite** | HA — Results Entry Multi-Unit Field Type Survey |
+| **Phase** | 23AB |
+| **Steps** | 1. Results > By Unit → Molecular Biology 2. Verify 6 result rows visible: Allplex SARS-CoV-2/FluA/FluB/RSV Assay Ct (textarea, value "3"), Allplex SARS-CoV-2 Ct ×2 (textarea, empty), MPOX RT-PCR (dropdown, "Positif"), MPOX CLADE ×2 (dropdown, "Mpox clade Ib"/"Mpox clade Ia") 3. Confirm textarea rows use free-text input for Ct numeric values 4. Confirm dropdown rows for MPOX: RT-PCR options [Negatif/Positif/Invalid], CLADE options [Mpox clade Ia/Mpox clade Ib/Mpox clade II] 5. Classify: HYBRID unit — textarea for Ct values + dropdown for MPOX categorical |
+| **Expected** | Molecular Biology mixes textarea (Ct numeric) and dropdown (MPOX categorical) within same unit — hybrid pattern |
+| **Status** | PASS |
+
+#### TC-HA-MALARIA-01: Malaria Hybrid Result Types
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HA-MALARIA-01 |
+| **Suite** | HA — Results Entry Multi-Unit Field Type Survey |
+| **Phase** | 23AB |
+| **Steps** | 1. Results > By Unit → Malaria 2. Verify 6+ rows visible across 2 accessions (25-CPHL-000-00G-1 and 25-CPHL-000-00G-2) 3. Dropdown tests: Dengue NS1 Ag [Negatif/NS1 Ag Positive/Invalid], Dengue IgG + IgM Ab [Negatif/IgG Positive/IgM Positive/IgM and IgG Positive/Invalid], Malaria Parasite Detection [Negative for malaria parasites/Positive for malaria parasites], Malaria Species Identification [P. falciparum/P. falciparum gametocytes/P. vivax/P. malariae/P. ovale/Mixed infection] 4. Textarea test: Malaria Density Count (type="number", Normal Range "Any value", value "500") 5. Classify: HYBRID unit — dropdown for categorical + textarea for numeric density count |
+| **Expected** | Malaria mixes dropdown (4 categorical tests) and textarea (1 numeric density count) — hybrid pattern |
+| **Status** | PASS |
+
+#### TC-HA-MICRO-01: Microbiology All-Dropdown Result Types
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HA-MICRO-01 |
+| **Suite** | HA — Results Entry Multi-Unit Field Type Survey |
+| **Phase** | 23AB |
+| **Steps** | 1. Results > By Unit → Microbiology 2. Verify 6 rows: Food Culture [No foodborne pathogens isolated/Foodborne pathogens isolated/Probable contaminants/No Growth], Macroscopic Appearance [Formed/Soft/Loose/Watery/Blood stained], Microscopy [Leucocytes/Leucocytaire/Red Blood Cells/1+/2+/3+/Leucocytes 2+/Red Blood Cells 2+], Microscopy (empty), Culture [Growth/No Growth/Too Numerous To Count] 3. Confirm ALL result fields are dropdown selectors — no textarea 4. Classify: PURE DROPDOWN unit |
+| **Expected** | Microbiology uses dropdown selectors for all tests — pure categorical unit |
+| **Status** | PASS |
+
+#### TC-HA-SEROSURV-01: Sero-Surveillance All-Dropdown with Titer Options
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HA-SEROSURV-01 |
+| **Suite** | HA — Results Entry Multi-Unit Field Type Survey |
+| **Phase** | 23AB |
+| **Steps** | 1. Results > By Unit → Sero-Surveillance 2. Verify 6+ rows: Determine Syphilis TP [Negatif/Positif/Invalid], EUROIMMUN Measles IgM [Negatif/Borderline/Positif], EUROIMMUN Rubella IgM [Negatif/Borderline/Positif], InBios JE Detect IgM [Negatif/Equivocal/Positif], InBios DENV IgM [Negatif/Equivocal/Positif] 3. Notable: RPR titer test has 12 dilution options [Negatif/Positive/REACTIVE Neat/1:1/1:2/1:4/1:8/1:16/1:32/1:64/1:128/1:256/1:512] 4. Confirm ALL result fields are dropdown selectors 5. Classify: PURE DROPDOWN unit with advanced titer-based options |
+| **Expected** | Sero-Surveillance uses dropdown selectors for all tests including titer dilution series |
+| **Status** | PASS |
+
+#### TC-HA-MYCO-01: Mycobacteriology All-Dropdown with Duplicate Options Bug
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HA-MYCO-01 |
+| **Suite** | HA — Results Entry Multi-Unit Field Type Survey |
+| **Phase** | 23AB |
+| **Steps** | 1. Results > By Unit → Mycobacteriology 2. Verify 5+ rows: Xpert MTB/RIF Ultra (MTB) [MTB DETECTED/MTB NOT DETECTED/MTB Trace DETECTED/MTB DETECTED HIGH/VERY LOW/LOW/MEDIUM/Invalid/ERROR/NO RESULT], Xpert MTB/RIF Ultra (RIF) [RIF Resistance NOT DETECTED/INDETERMINATE/DETECTED], Acid-Fast Microscopy [No acid-fast bacilli were seen/1-9/1+/2+/3+], Capilia TB-Neo [Positif/Negatif/Invalid/Retest] 3. NOTE-39: Xpert MTB/RIF Ultra (MTB) dropdown has ENTIRE option list DUPLICATED — same 10 values appear twice in different sort orders (e.g., "MTB DETECTED" ×2, "MTB DETECTED LOW" ×2, etc.) 4. Classify: PURE DROPDOWN unit |
+| **Expected** | Mycobacteriology uses dropdown selectors for all tests; NOTE-39 duplicate options confirmed |
+| **Status** | PASS |
+
+#### TC-HA-EMPTY-UNITS-01: Units with No Records
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HA-EMPTY-UNITS-01 |
+| **Suite** | HA — Results Entry Multi-Unit Field Type Survey |
+| **Phase** | 23AB |
+| **Steps** | 1. Results > By Unit → cycle through remaining units 2. Biochemistry: "There are no records to display" (0-0 of 0 items) 3. Serology: "There are no records to display" (0-0 of 0 items) 4. Immunology: "There are no records to display" (0-0 of 0 items) 5. Virology: "There are no records to display" (0-0 of 0 items) 6. Verify each shows empty state message, pagination (0-0 of 0, 1 page), Save button present 7. Cannot classify result field types — no data to render |
+| **Expected** | 4 units show clean empty state; result type classification requires test data |
+| **Status** | PASS |
+
+#### TC-HA-CROSS-UNIT-SUMMARY-01: Full 14-Unit Result Type Classification Matrix
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HA-CROSS-UNIT-SUMMARY-01 |
+| **Suite** | HA — Results Entry Multi-Unit Field Type Survey |
+| **Phase** | 23AB |
+| **Steps** | 1. Compile results from all 14 units: **Pure Textarea (numeric):** Hematology. **Pure Dropdown (categorical):** HIV, Microbiology, Sero-Surveillance, Mycobacteriology. **Hybrid (mixed):** Molecular Biology (Ct textarea + MPOX dropdown), Malaria (categorical dropdown + Density Count textarea). **Empty (no data):** Biochemistry, Serology, Immunology, Virology, Cytology, Pathology, Immunohistochemistry. 2. Verify 3 distinct result type patterns confirmed: pure textarea, pure dropdown, hybrid 3. Verify duplicate dropdown options bug affects: HIV ABON Tri-line (NOTE-38), Mycobacteriology Xpert MTB/RIF Ultra MTB (NOTE-39) — systemic configuration issue |
+| **Expected** | 7 units with data classified into 3 result type patterns; 7 units empty; 2 duplicate-option bugs identified |
+| **Status** | PASS |

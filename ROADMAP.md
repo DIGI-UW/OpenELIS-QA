@@ -1557,7 +1557,48 @@ HIV test data observed: Accessions 25-CPHL-000-008-1 (3 tests: Abbott Duo, Genie
 
 **Phase 23AA Summary:** 5 TCs, all PASS. Discovered dynamic result field types (textarea vs dropdown), documented full expanded row detail view with 8+ interactive elements including referral workflow, file upload, and storage location assignment. Cross-unit comparison confirms Result column adapts to test type.
 
-**Phase 23 Cumulative (through 23AA)**: 552+ TCs executed, ~525 passed, ~95.1% pass rate. 8 non-executable scripts catalogued.
+### Phase 23AB: Results Entry Multi-Unit Field Type Survey
+
+Systematic survey of all 14 test units in Results > By Unit to classify result field types.
+
+#### Unit Classification Matrix
+
+| Unit | Has Data | Result Type | Pattern |
+|------|----------|-------------|---------|
+| Hematology | Yes | Textarea (numeric) | Pure textarea |
+| HIV | Yes | Dropdown (categorical) | Pure dropdown |
+| Molecular Biology | Yes | Textarea (Ct) + Dropdown (MPOX) | **Hybrid** |
+| Malaria | Yes | Dropdown (4 tests) + Textarea (Density Count) | **Hybrid** |
+| Microbiology | Yes | Dropdown (all) | Pure dropdown |
+| Sero-Surveillance | Yes | Dropdown (all, incl. titer dilutions) | Pure dropdown |
+| Mycobacteriology | Yes | Dropdown (all) | Pure dropdown |
+| Biochemistry | No | — | Empty |
+| Serology | No | — | Empty |
+| Immunology | No | — | Empty |
+| Virology | No | — | Empty |
+| Cytology | No | — | Empty |
+| Pathology | No | — | Empty |
+| Immunohistochemistry | No | — | Empty |
+
+#### Key Findings
+
+1. **3 distinct result type patterns:** Pure textarea (Hematology), Pure dropdown (HIV, Microbiology, Sero-Surveillance, Mycobacteriology), Hybrid (Molecular Biology, Malaria)
+2. **Hybrid units** mix textarea for numeric values (Ct values, density counts) with dropdowns for categorical results within the same table
+3. **Sero-Surveillance RPR titer** test has 12 dilution-level options (Neat through 1:512) — most complex dropdown discovered
+4. **NOTE-38:** HIV ABON Tri-line HIV 1/2/0 dropdown has duplicate option values (Nonreactive ×3, Invalid ×3, Reactive HIV-1 ×3)
+5. **NOTE-39:** Mycobacteriology Xpert MTB/RIF Ultra (MTB) dropdown has ENTIRE option list duplicated — 10 values appear twice in different sort orders. Systemic configuration bug matching NOTE-38 pattern
+
+#### Dropdown Option Catalogs (Selected)
+
+- **Malaria Species Identification:** P. falciparum, P. falciparum gametocytes, P. vivax, P. malariae, P. ovale, Mixed infection
+- **Microbiology Macroscopic Appearance:** Formed, Soft, Loose, Watery, Blood stained
+- **Microbiology Microscopy:** Leucocytes, Leucocytaire, Red Blood Cells, 1+, 2+, 3+, Leucocytes 2+, Red Blood Cells 2+
+- **Mycobacteriology Xpert MTB (deduplicated):** MTB DETECTED, MTB NOT DETECTED, MTB Trace DETECTED, MTB DETECTED HIGH, MTB DETECTED VERY LOW, MTB DETECTED LOW, MTB DETECTED MEDIUM, Invalid, ERROR, NO RESULT
+- **Sero-Surveillance RPR:** Negatif, Positive, REACTIVE Neat, REACTIVE 1:1 through 1:512
+
+**Phase 23AB Summary:** 7 TCs, all PASS. Complete 14-unit survey: 7 units with data (3 result type patterns), 7 empty. 2 new duplicate-option bugs (NOTE-38, NOTE-39).
+
+**Phase 23 Cumulative (through 23AB)**: 559+ TCs executed, ~532 passed, ~95.2% pass rate. 8 non-executable scripts catalogued.
 
 ---
 
