@@ -2098,3 +2098,69 @@ Single URL: `/FreezerMonitoring?tab=0` — all tabs within same page.
 | `SKILL-v4.md` | QA skill definition for Claude automation |
 | `testing-constitution-compliance.md` | Compliance analysis vs repo conventions |
 | `ROADMAP.md` | This file — roadmap and next steps |
+
+---
+
+## Phase 23AO — Admin Sub-Pages Deep Interaction Testing (Suite HN)
+
+**Date**: 2026-03-31
+**Scope**: Deep field-level testing of 12 Admin sub-pages within `/MasterListsPage/*`
+**Test Cases**: 20 TCs (TC-HN-USERMGMT-01 through TC-HN-RESULTREPORT-01)
+**Results**: 19 PASS, 1 PARTIAL (Lab Unit Roles dropdown filter)
+
+### Admin Sub-Pages Tested
+
+| # | Page Name | URL Path | Page Type | Key Data |
+|---|-----------|----------|-----------|----------|
+| 1 | User Management | `/MasterListsPage/userManagement` | CRUD table | 24 users, 8 columns, search + 3 filters |
+| 2 | Test Management | `/MasterListsPage/testManagementConfigMenu` | Menu cards | 7 "Spelling corrections" rename cards |
+| 3 | Test Names (rename) | `/MasterListsPage/TestRenameEntry` | Searchable grid | 4-column grid, i18n rename modal (EN/FR) |
+| 4 | Organization Management | `/MasterListsPage/organizationManagement` | CRUD table | 4726 orgs, 8 columns |
+| 5 | Site Information | `/MasterListsPage/SiteInformationMenu` | Config table | 20 key-value settings, radio select |
+| 6 | Barcode Configuration | `/MasterListsPage/barcodeConfiguration` | Config form | 4 sections, 5 label types, Save/Cancel |
+| 7 | Provider Management | `/MasterListsPage/providerMenu` | CRUD table | 40 providers, 6 columns |
+| 8 | Lab Number Management | `/MasterListsPage/labNumber` | Config form | Format dropdown, prefix, preview |
+| 9 | Dictionary Menu | `/MasterListsPage/DictionaryMenu` | CRUD table | 1273 entries, LOINC column |
+| 10 | Analyzer Test Name | `/MasterListsPage/AnalyzerTestName` | CRUD table | 0 mappings, analyzer dropdown |
+| 11 | Batch Test Reassignment | `/MasterListsPage/batchTestReassignment` | Workflow form | Sample type + current/replace test selectors |
+| 12 | Result Reporting Config | `/MasterListsPage/resultReportingConfiguration` | Config form | 3 endpoints, all disabled, queue sizes |
+
+### Admin Page Pattern Analysis
+
+**CRUD Table Pattern** (User Mgmt, Org Mgmt, Provider Mgmt, Dictionary, Analyzer Test Name):
+- Consistent UI: Modify (disabled) / Deactivate (disabled) / Add (blue) buttons
+- Exception: Dictionary Menu has Add first (Add/Modify/Deactivate order)
+- All have search bars, paginated tables, select checkboxes
+- Selection activates Modify + Deactivate buttons
+
+**Config Form Pattern** (Site Info, Barcode, Lab Number, Result Reporting):
+- Key-value or section-based forms with Save/Cancel buttons
+- Site Information uses radio selection + Modify button (unique)
+- Barcode Config is the most complex (4 sections, 5 types × 5 dimensions)
+
+**Entity Counts**:
+- Users: 24 (18 active, 1 admin)
+- Organizations: 4726
+- Providers: 40
+- Dictionary Entries: 1273
+- Analyzer Mappings: 0
+
+### UX Issues Found
+
+1. **Lab Unit Roles dropdown filter non-functional**: Selecting "Hematology" from the "By Lab Unit Roles" dropdown in User Management did not filter the user table — still showed all 24 users. May need additional implementation or the filter may work differently than expected.
+
+2. **Admin inner sidebar hidden by main sidebar**: The Admin sub-pages are in a second sidebar that's only visible when the main left sidebar is collapsed. Users must close the main sidebar first to navigate Admin sub-pages.
+
+3. **Button order inconsistency**: Most CRUD pages use Modify/Deactivate/Add order, but Dictionary Menu uses Add/Modify/Deactivate order.
+
+4. **Typo in Barcode Configuration**: Description says "theorder" (missing space) — "should appear on theorder and sample bar code labels."
+
+5. **Typo in Result Reporting Configuration**: Description says "troubling shootingshould" (missing space) — "a sign that troubling shootingshould be done."
+
+6. **Content scrolling issue**: When the left sidebar is open, scrolling in the content area sometimes doesn't work — the sidebar consumes scroll events.
+
+### Cumulative Progress
+- **Total Test Cases**: 698+ TCs executed
+- **Pass Rate**: ~96% (669+ passed)
+- **Admin Coverage**: 12 of ~22 Admin sub-pages now deeply tested at field level
+

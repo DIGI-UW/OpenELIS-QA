@@ -13401,3 +13401,113 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Audit ALL sidebar items (top to bottom): Home (`/Dashboard`), Alerts (`/Alerts`), EQA Distributions (`/EQADistribution`), Order (expandable — 4 sub-pages), Patient (expandable — 5 sub-pages), Storage (expandable — 2 sub-sections with 10 sub-pages), Analyzers (expandable — 3 sub-pages), Non-Conform (expandable — 3 sub-pages), Workplan (expandable — 4 sub-pages), Pathology (`/PathologyDashboard`), Immunohistochemistry (`/ImmunohistochemistryDashboard`), Cytology (`/CytologyDashboard`), Results (expandable — 8 sub-pages), Validation (expandable — 4 sub-pages), Reports (expandable — 12 sub-pages), Admin (`/MasterListsPage` + 28+ sub-pages), Billing (empty href — NON-FUNCTIONAL), Aliquot (`/Aliquot`), NoteBook (`/NotebookDashboard` — BLANK), Help (expandable — 1 sub-item: User Manual) 2. Total sidebar sections: 20 top-level items 3. Functional status: 18 functional, 1 non-functional (Billing), 1 broken (NoteBook) 4. Expandable sections: 9 (Order, Patient, Storage, Analyzers, Non-Conform, Workplan, Results, Validation, Reports + Help) 5. Direct-link pages: 8 (Home, Alerts, EQA, Pathology, IHC, Cytology, Admin, Aliquot) 6. Non-functional: 2 (Billing empty href, NoteBook blank page) |
 | **Expected** | Complete sidebar has 20 top-level items; 18 functional, 2 non-functional (Billing, NoteBook); 9 expandable sections with 70+ total sub-pages |
 | **Status** | PASS |
+
+---
+
+## Suite HN — Admin Sub-Pages Deep Interaction Testing (Phase 23AO)
+
+**Scope**: Deep field-level interaction testing of 12 Admin sub-pages under `/MasterListsPage/*`. Tests cover User Management, Test Management, Organization Management, Site Information, Barcode Configuration, Provider Management, Lab Number Management, Dictionary Menu, Analyzer Test Name, Batch Test Reassignment, and Result Reporting Configuration.
+
+**Environment**: OpenELIS Global v3.2.1.3 at `https://www.jdhealthsolutions-openelis.com` (admin/adminADMIN!)
+
+### TC-HN-USERMGMT-01: User Management page loads with full table and controls
+- **Precondition**: Logged in as admin, navigated to Admin > User Management
+- **Steps**: 1) Click User Management in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/userManagement` with breadcrumb "Home > Admin Management > User Management", Modify (disabled), Deactivate (disabled), Add (blue/active) buttons, search bar "Search By User Names...", "By Lab Unit Roles" dropdown, "Only Active" and "Only Administrator" checkboxes, table with 8 columns (Select, First Name, Last Name, Login Name, Password Expiration Date, Account Locked, Account Disabled, Is Active, User Time Out), "Showing 1-20 of 24" pagination
+- **Result**: PASS — 24 users displayed with all expected controls
+
+### TC-HN-USERMGMT-02: User search filters by name in real time
+- **Steps**: 1) Type "admin" in search bar
+- **Expected**: Table filters immediately to show only matching users, pagination updates to "Showing 1-1 of 24", clear (X) button appears
+- **Result**: PASS — Filtered to 1 result (Open ELIS / admin), pagination updated, bottom shows "1-1 of 1 items"
+
+### TC-HN-USERMGMT-03: Only Active checkbox filter works
+- **Steps**: 1) Check "Only Active" checkbox
+- **Expected**: Table filters to show only users with Is Active = Y
+- **Result**: PASS — Filtered from 24 to 18 active users, all showing Y in Is Active column
+
+### TC-HN-USERMGMT-04: Only Administrator checkbox filter works
+- **Steps**: 1) Check "Only Administrator" checkbox
+- **Expected**: Table filters to show only administrator users
+- **Result**: PASS — Filtered to 1 user (Open ELIS / admin), pagination shows "1-1 of 1 items"
+
+### TC-HN-USERMGMT-05: Selecting user activates Modify and Deactivate buttons
+- **Steps**: 1) Click checkbox on admin user row
+- **Expected**: Modify and Deactivate buttons change from disabled/grey to active/blue
+- **Result**: PASS — Both buttons activated, row highlighted with checked checkbox
+
+### TC-HN-USERMGMT-06: Lab Unit Roles dropdown contains 14 lab units
+- **Steps**: 1) Read dropdown options from By Lab Unit Roles combobox
+- **Expected**: 14 lab units matching those seen in Validation/Results/Workplan sections
+- **Result**: PASS — 14 options: HIV, Malaria, Microbiology, Molecular Biology, Mycobacteriology, Sero-Surveillance, Biochemistry, Hematology, Immunology, Cytology, Serology, Virology, Pathology, Immunohistochemistry
+
+### TC-HN-USERMGMT-07: Lab Unit Roles dropdown filter application
+- **Steps**: 1) Select "Hematology" from By Lab Unit Roles dropdown
+- **Expected**: Table should filter to show only users with Hematology role
+- **Result**: PARTIAL — Dropdown selection did not visibly filter the user list; still showing all 24 users. Possible UX bug: filter may require additional action or may not be fully implemented.
+
+### TC-HN-TESTMGMT-01: Test Management page shows Spelling Corrections menu
+- **Steps**: 1) Click Test Management in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/testManagementConfigMenu` with "Spelling corrections" heading and 7 clickable cards
+- **Result**: PASS — 7 rename cards displayed: Rename existing test names, Rename Existing Panels, Rename Existing Sample Types, Rename Existing Test Sections, Rename Existing Unit of Measure Entries, Rename existing result list options, Rename existing method names
+
+### TC-HN-TESTMGMT-02: Test Names page loads with searchable grid
+- **Steps**: 1) Click "Rename existing test names" card
+- **Expected**: Page loads at `/MasterListsPage/TestRenameEntry` with search bar and 4-column grid of test names
+- **Result**: PASS — Grid shows alphabetically sorted test names in 4 columns, search bar labeled "Search testName Here"
+
+### TC-HN-TESTMGMT-03: Test name search filters grid in real time
+- **Steps**: 1) Type "HIV" in search bar
+- **Expected**: Grid filters to show only HIV-related tests
+- **Result**: PASS — ~22 HIV tests displayed including ABON Tri-line HIV, Abbott HIV/Syphilis Duo, Genie Fast HIV, HIV Diagnosis, HIV Serology, MERISCREEN HIV, MUREX HIV, Xpert HIV-1 variants
+
+### TC-HN-TESTMGMT-04: Test name rename modal with i18n fields
+- **Steps**: 1) Click "HIV Diagnosis" test name tile
+- **Expected**: Modal opens with title "Test : HIV Diagnosis", Test Name section with English and French editable fields, Reporting Test Name section with English and French fields, Cancel and Save buttons
+- **Result**: PASS — Modal shows 4 text input fields (2 for Test Name EN/FR, 2 for Reporting Test Name EN/FR), all pre-filled with "HIV Diagnosis", X close button, Cancel/Save buttons
+
+### TC-HN-ORGMGMT-01: Organization Management page loads with 4726 organizations
+- **Steps**: 1) Click Organization Management in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/organizationManagement` with table showing organizations
+- **Result**: PASS — "Showing 1-20 of 4726" organizations, table with 8 columns (Select, Org Name, Parent Org, Org prefix, Is Active, Internet Address, Street Address, City, CLIA Number), Modify/Deactivate/Add buttons, search bar "Search By Org Name..."
+
+### TC-HN-SITEINFO-01: Site Information displays 20 configuration settings
+- **Steps**: 1) Expand General Configurations > Click Site Information
+- **Expected**: Page loads at `/MasterListsPage/SiteInformationMenu` with radio-button selectable settings table
+- **Result**: PASS — 20 settings displayed including: 24 hour clock=true, Address labels (Street/Village/Town), allowLanguageChange=false, bannerHeading (EN/FR), BarCodeType=BARCODE, default date locale=fr-FR, default language locale=en-US, enableClientRegistry=true, freezer ports (47808/502), Geographic labels (Province/District), phone format=xxxx-xxxx, requireLabUnitAtLogin=false, TrainingInstallation=true
+
+### TC-HN-BARCODE-01: Barcode Configuration shows 4 sections with editable fields
+- **Steps**: 1) Click Barcode Configuration in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/barcodeConfiguration` with Number Bar Code Label, Bar Code Label Elements, Preprinted Bar Code, and Dimensions sections
+- **Result**: PASS — 4 sections: Default Bar Code Labels (Order=1, Specimen=1, Slide=1, Block=1, Freezer=1), Maximum Bar Code Labels (Order=10, rest=1), Mandatory/Optional label elements with checkboxes, Preprinted Bar Code prefix config, Dimensions in mm for all 5 types, Save/Cancel buttons
+
+### TC-HN-PROVIDER-01: Provider Management page loads with 40 providers
+- **Steps**: 1) Click Provider Management in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/providerMenu` with provider table
+- **Result**: PASS — "Showing 1-20 of 40" providers, table with 6 columns (Select Provider, Provider Lastname, Provider Firstname, Is Active, Telephone, Fax), all visible providers active=true, Modify/Deactivate/Add buttons, search bar
+
+### TC-HN-LABNUM-01: Lab Number Management shows format configuration
+- **Steps**: 1) Click Lab Number Management in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/labNumber` with lab number format config
+- **Result**: PASS — Lab Number Type dropdown (Alpha Numeric), Prefix field (CPHL, 0/5 chars), Use Prefix checkbox (checked), Current Format: 26-CPHL-000-09N, New Format: 26-CPHL-000-000, Submit button
+
+### TC-HN-DICTIONARY-01: Dictionary Menu loads with 1273 entries
+- **Steps**: 1) Click Dictionary Menu in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/DictionaryMenu` with dictionary entries table
+- **Result**: PASS — "Showing 1-20 of 1273" entries, 6 columns (Select, Category, Dictionary Entry, Local Abbreviation, Is Active, LOINC), Add/Modify/Deactivate buttons (Add first — different button order from other pages), search bar, all visible entries Category=CG, some inactive (gram +/- rod = N)
+
+### TC-HN-ANALYZER-TESTNAME-01: Analyzer Test Name page with empty mapping table
+- **Steps**: 1) Click Analyzer Test Name in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/AnalyzerTestName` with analyzer dropdown and mapping table
+- **Result**: PASS — "Select Analyzer" dropdown defaulting to "All", table with columns (Analyzer - Analyzer test name, Actual test Name), "0-0 of 0 items" (empty), Modify/Deactivate/Add buttons
+
+### TC-HN-BATCH-01: Batch Test Reassignment shows sample type and test selection form
+- **Steps**: 1) Click Batch test reassignment in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/batchTestReassignment` with form controls
+- **Result**: PASS — Sample Type dropdown, Current test section with "Include inactive tests" checkbox (checked) and "Select Current Test" dropdown, Replace with section with "Cancel test..." checkbox (checked) and "Select Multi Tests" dropdown (greyed when cancel checked), Ok (disabled) and Cancel buttons
+
+### TC-HN-RESULTREPORT-01: Result Reporting Configuration shows 3 disabled endpoints
+- **Steps**: 1) Click Result Reporting Configuration in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/resultReportingConfiguration` with reporting endpoint configs
+- **Result**: PASS — 3 sections (Result Reporting, Malaria Surveillance, Malaria Case Report), each with Enabled/Disabled radio buttons (all Disabled), URL field, queue size display (all 0), Save/Cancel buttons
+
