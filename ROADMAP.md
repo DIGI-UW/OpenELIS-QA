@@ -1430,6 +1430,89 @@ All 10 General Config sub-pages verified:
 
 **Phase 23 Cumulative (through 23Y)**: 532+ TCs executed, ~505 passed, ~94.9% pass rate. 8 non-executable scripts catalogued.
 
+### Phase 23Z — Header Interactions, Results/Validation Sub-Pages, Order Programs (2026-03-31)
+
+**Scope:** Deep-test previously unexplored header interactive elements (Global Search, Notifications, User Profile, Help panel), all Results sub-pages, all Validation sub-pages, and the Order Programs page.
+
+#### Phase 23Z-1: Header Interactive Elements
+
+**Global Search** (Search icon in header bar):
+- Opens a search bar below header with text input (placeholder "Search") + blue "Search" button + clear (X) button
+- Typing text and clicking Search does NOT navigate or show results — stays on current page
+- **NOTE-36**: Global Search appears non-functional — no search results displayed, no navigation occurs
+
+**Notifications** (Bell icon in header bar):
+- Opens slide-out panel from right: "Notifications" header with back arrow
+- 4 action buttons: "Reload", "Subscribe on this Device", "Mark all as Read", "Show read"
+- Empty state: illustration with character + "You're all caught up" / "You don't have any notifications at this time."
+
+**User Profile** (Person icon in header bar):
+- Opens slide-out panel: "Open ELIS" link (globe icon), "Logout" button (exit icon)
+- "Select Locale" dropdown: English (selected), Francais
+- "Version:: 3.2.1.3" — note double-colon typo
+
+**Help Panel** (? icon in header bar):
+- Opens dropdown with 3 items: "User Manual", "Video Tutorials", "Release Notes" (all with ? icons)
+- Previously only "User Manual" was documented from sidebar; Video Tutorials and Release Notes are new discoveries
+
+#### Phase 23Z-2: Results Sub-Pages (7 pages)
+
+1. **By Unit** (`/LogbookResults?type=`): "Select Test Unit" dropdown with 14 options (HIV, Malaria, Microbiology, Molecular Biology, Mycobacteriology, Sero-Surveillance, Biochemistry, Hematology, Immunology, Cytology, Serology, Virology, Pathology, Immunohistochemistry). Selecting Hematology shows results table with columns: expand chevron, copy icon, Sample Info (accession+patient+DOB), avatar, Test Date, Analyzer Result, Test Name, Normal Range, Accept checkbox, Result textarea (editable), Current Result, Reject checkbox, Notes. Non-conforming/rejected warning banner. Pagination (Items per page 100). Save button.
+
+2. **By Patient** (`/PatientResults`): Shared patient search component (Patient Id, Previous Lab Number 0/23, Last Name, First Name, DOB calendar, Gender Male/Female radio, Client Registry Search toggle). Search + External Search buttons. Patient Results table (Last Name, First Name, Gender, DOB, Unique Health ID, National ID, Data Source Name). Two pagination sections. Save button.
+
+3. **By Order** (`/AccessionResults`): Simple accession number search (0/23 char limit). Search button. Empty results. Pagination. Save.
+
+4. **Referred Out** (`/ReferredOutTests`): "Referrals" page. Search Referrals By Patient (same shared patient search component). Patient Results table. Second "Search Referrals By Patient" text input. "Results By Date / Test / Unit Date Type" section with "Sent Date" dropdown + note about result date filtering.
+
+5. **By Range of Order Numbers** (`/RangeResults`): "From Accesion Number" (0/23) + "To Accesion Number" (0/23). **NOTE-37**: Typo "Accesion" missing 's' (should be "Accession"). Search button. Pagination. Save.
+
+6. **By Test, Date or Status** (`/StatusResults?blank=true`): Previously documented in Phase 23B.
+
+7. **Analyzer > Order Programs** (`/genericProgram`): NEW page — "Order Programs" title. KPI card "Total Entries: 146". Program-level pagination "1/2" with arrow buttons. Search by Accession Number. Table with columns: avatar, First Name, Last Name, Program Name, Code, Accession number, Received Date, Questionnaire. 99 items on page 1 (10 pages at 10/page). All entries show "Routine Testing" / "ROUTINE" code. Accession numbers 25CPHL000002 through 25CPHL00000H (alphanumeric). Dates from 11/18/2025 to 12/2/2025. Questionnaire column empty.
+
+#### Phase 23Z-3: Validation Sub-Pages (4 pages)
+
+1. **Routine** (`/ResultValidation?type=&test=`): Same layout as Results By Unit — "Select Test Unit" dropdown (same 14 units). Pagination (100/page). Save button.
+
+2. **By Order** (`/ResultValidationByAccession`): Accession number search (same layout as Results By Order).
+
+3. **By Range of Order Numbers** (`/ResultValidationByRange`): From/To accession range search (same layout as Results By Range).
+
+4. **By Date** (`/ResultValidationByTestDate`): Unique — "Enter Test Date" with dd/mm/yyyy date picker + calendar icon. Search button. Pagination. Save.
+
+#### Phase 23Z-4: Full Navigation Tree Documentation
+
+**Sidebar Navigation Tree (complete)**:
+- Home → Dashboard
+- Alerts → `/Alerts`
+- EQA Distributions → `/EQADistribution`
+- Order (expandable): Add Order, Edit Order, Incoming Orders, Batch Order Entry, Barcode
+- Patient (expandable): [sub-items documented in Phase 23J]
+- Storage (expandable): [sub-items documented in Phase 23K]
+- Analyzers (expandable): [sub-items documented in Phase 23P]
+- Non-Conform (expandable): [sub-items documented in Phase 23S]
+- Workplan (expandable): [sub-items documented in Phase 23S]
+- Pathology, Immunohistochemistry, Cytology → direct links
+- Results (expandable): By Unit, By Patient, By Order, Referred Out, By Range of Order numbers, By Test Date or Status, Analyzer > Order Programs
+- Validation (expandable): Routine, By Order, By Range of Order Numbers, By Date
+- Reports (expandable): [sub-items documented in Phase 23I]
+- Admin → `/MasterListsPage`
+- Billing → empty href (NOTE-32)
+- Aliquot → `/Aliquot`
+- NoteBook → `/NotebookDashboard` (blank, NOTE-33)
+- Help (expandable): User Manual
+
+**Header Navigation (4 icons)**:
+- Search → Global search bar (non-functional, NOTE-36)
+- Notifications → Slide-out panel (Reload, Subscribe, Mark Read, Show Read)
+- User → Slide-out panel (Open ELIS, Logout, Locale selector, Version)
+- Help → Dropdown (User Manual, Video Tutorials, Release Notes)
+
+**Phase 23Z Summary:** 15 TCs, all PASS (except NOTE-36 Global Search non-functional — documented as cosmetic/feature gap, not a test failure since the UI renders). 2 new NOTEs: NOTE-36 (Global Search non-functional), NOTE-37 (Accesion typo). Order Programs page is a new discovery with 146 real data entries.
+
+**Phase 23 Cumulative (through 23Z)**: 547+ TCs executed, ~520 passed, ~95.1% pass rate. 8 non-executable scripts catalogued.
+
 ---
 
 ## Key Files

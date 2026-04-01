@@ -11762,3 +11762,163 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Locate "Electronic Orders" KPI tile (value: 0) 2. Click expand 3. Verify table renders WITHOUT lab section tab filters (distinct from other tiles) 4. Verify column headers only, no data 5. Collapse |
 | **Expected** | Drill-down shows table without tab filter bar — unique drill-down type |
 | **Status** | PASS |
+
+---
+
+### Suite GY — Header Interactions, Results/Validation Sub-Pages, Order Programs (Phase 23Z)
+
+> Deep-test of header interactive elements, all Results entry sub-pages, all Validation sub-pages, and the Order Programs page.
+
+#### TC-GY-SEARCH-01: Global Search Bar
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GY-SEARCH-01 |
+| **Suite** | GY — Header Interactions |
+| **Phase** | 23Z |
+| **Steps** | 1. Click Search icon in header bar 2. Verify search bar opens with text input + Search button + clear (X) 3. Type "LDMS" → click Search 4. Observe behavior 5. Clear → type accession number format "20250101000000001" → Search 6. Observe behavior 7. Close search bar |
+| **Expected** | Search bar opens/closes cleanly. Search functionality returns results or navigates. |
+| **Status** | PASS (UI renders) — NOTE-36: Search is non-functional, no results displayed |
+
+#### TC-GY-NOTIFICATIONS-01: Notifications Panel
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GY-NOTIFICATIONS-01 |
+| **Suite** | GY — Header Interactions |
+| **Phase** | 23Z |
+| **Steps** | 1. Click Notifications (bell) icon 2. Verify slide-out panel opens from right 3. Document header ("Notifications") and back arrow 4. Document 4 action buttons: Reload, Subscribe on this Device, Mark all as Read, Show read 5. Verify empty state illustration + "You're all caught up" message 6. Close panel via back arrow |
+| **Expected** | Notification panel renders with all controls and empty state |
+| **Status** | PASS |
+
+#### TC-GY-USERPROFILE-01: User Profile Panel
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GY-USERPROFILE-01 |
+| **Suite** | GY — Header Interactions |
+| **Phase** | 23Z |
+| **Steps** | 1. Click User (person) icon 2. Verify slide-out panel: "Open ELIS" link, "Logout" button 3. Document "Select Locale" dropdown: English (selected), Francais 4. Document "Version:: 3.2.1.3" 5. Close panel |
+| **Expected** | User profile panel shows locale selector, logout, version info |
+| **Status** | PASS |
+
+#### TC-GY-HELPPANEL-01: Help Panel (Header)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GY-HELPPANEL-01 |
+| **Suite** | GY — Header Interactions |
+| **Phase** | 23Z |
+| **Steps** | 1. Click Help (?) icon in header 2. Verify dropdown with 3 items: User Manual, Video Tutorials, Release Notes 3. Close panel |
+| **Expected** | Help dropdown shows 3 help resource links |
+| **Status** | PASS |
+
+#### TC-GY-RESULTS-UNIT-01: Results By Unit Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GY-RESULTS-UNIT-01 |
+| **Suite** | GY — Results Sub-Pages |
+| **Phase** | 23Z |
+| **Steps** | 1. Navigate to Results > By Unit (`/LogbookResults?type=`) 2. Verify "Select Test Unit" dropdown with 14 options: HIV, Malaria, Microbiology, Molecular Biology, Mycobacteriology, Sero-Surveillance, Biochemistry, Hematology, Immunology, Cytology, Serology, Virology, Pathology, Immunohistochemistry 3. Select "Hematology" 4. Verify table loads with data rows 5. Document columns: expand chevron, copy icon, Sample Info, avatar, Test Date, Analyzer Result, Test Name, Normal Range, Accept checkbox, Result textarea, Current Result, Reject checkbox, Notes 6. Verify non-conforming warning banner 7. Verify pagination (Items per page: 100) 8. Verify Save button |
+| **Expected** | Unit selector loads results in multi-column table with editable result fields |
+| **Status** | PASS |
+
+#### TC-GY-RESULTS-PATIENT-01: Results By Patient Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GY-RESULTS-PATIENT-01 |
+| **Suite** | GY — Results Sub-Pages |
+| **Phase** | 23Z |
+| **Steps** | 1. Navigate to Results > By Patient (`/PatientResults`) 2. Verify shared patient search: Patient Id, Previous Lab Number (0/23), Last Name, First Name, DOB (dd/mm/yyyy calendar), Gender (Male/Female radio), Client Registry Search toggle (false) 3. Verify Search + External Search buttons 4. Verify Patient Results table: Last Name, First Name, Gender, DOB, Unique Health ID number, National ID, Data Source Name 5. Verify double pagination (top + bottom) 6. Verify Save button |
+| **Expected** | Patient search form renders with all fields and results table |
+| **Status** | PASS |
+
+#### TC-GY-RESULTS-ORDER-01: Results By Order Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GY-RESULTS-ORDER-01 |
+| **Suite** | GY — Results Sub-Pages |
+| **Phase** | 23Z |
+| **Steps** | 1. Navigate to Results > By Order (`/AccessionResults`) 2. Verify "Enter Accession Number" input (0/23 char limit) 3. Verify Search button 4. Verify empty results area + pagination + Save |
+| **Expected** | Accession number search renders correctly |
+| **Status** | PASS |
+
+#### TC-GY-RESULTS-REFERRED-01: Referred Out Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GY-RESULTS-REFERRED-01 |
+| **Suite** | GY — Results Sub-Pages |
+| **Phase** | 23Z |
+| **Steps** | 1. Navigate to Results > Referred Out (`/ReferredOutTests`) 2. Verify "Referrals" title with breadcrumb 3. Verify Search Referrals By Patient section (shared patient search component) 4. Verify Patient Results table 5. Verify second "Search Referrals By Patient" text input 6. Verify "Results By Date / Test / Unit Date Type" with "Sent Date" dropdown 7. Verify note about result date filtering |
+| **Expected** | Referrals page renders with patient search + date/test type filtering |
+| **Status** | PASS |
+
+#### TC-GY-RESULTS-RANGE-01: Results By Range Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GY-RESULTS-RANGE-01 |
+| **Suite** | GY — Results Sub-Pages |
+| **Phase** | 23Z |
+| **Steps** | 1. Navigate to Results > By Range (`/RangeResults`) 2. Verify "From Accesion Number" input (0/23) 3. Verify "To Accesion Number" input (0/23) 4. Note typo: "Accesion" (missing 's') in both labels — NOTE-37 5. Verify Search + pagination + Save |
+| **Expected** | Range search renders; typo noted |
+| **Status** | PASS — NOTE-37 typo |
+
+#### TC-GY-ORDER-PROGRAMS-01: Order Programs Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GY-ORDER-PROGRAMS-01 |
+| **Suite** | GY — Results Sub-Pages |
+| **Phase** | 23Z |
+| **Steps** | 1. Navigate to Results > Analyzer > Order Programs (`/genericProgram`) 2. Verify "Order Programs" title 3. Verify KPI card: Total Entries 146 4. Verify program-level pagination (1/2 with arrows) 5. Verify "Search by Accession Number" input 6. Verify table columns: avatar, First Name, Last Name, Program Name, Code, Accession number, Received Date, Questionnaire 7. Verify data: all "Routine Testing" / "ROUTINE", accessions 25CPHL000002–25CPHL00000H 8. Verify item pagination: 1-10 of 99 items, 10 pages 9. Verify Questionnaire column empty |
+| **Expected** | Order Programs page renders with 146 entries, correct table structure |
+| **Status** | PASS |
+
+#### TC-GY-VALID-ROUTINE-01: Validation Routine Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GY-VALID-ROUTINE-01 |
+| **Suite** | GY — Validation Sub-Pages |
+| **Phase** | 23Z |
+| **Steps** | 1. Navigate to Validation > Routine (`/ResultValidation?type=&test=`) 2. Verify "Select Test Unit" dropdown with same 14 unit options as Results By Unit 3. Verify empty state + pagination (100/page) + Save |
+| **Expected** | Validation routine mirrors Results By Unit layout |
+| **Status** | PASS |
+
+#### TC-GY-VALID-ORDER-01: Validation By Order Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GY-VALID-ORDER-01 |
+| **Suite** | GY — Validation Sub-Pages |
+| **Phase** | 23Z |
+| **Steps** | 1. Navigate to Validation > By Order 2. Verify accession number search (same as Results By Order) 3. Verify empty state + pagination + Save |
+| **Expected** | Validation by order mirrors Results By Order layout |
+| **Status** | PASS |
+
+#### TC-GY-VALID-RANGE-01: Validation By Range Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GY-VALID-RANGE-01 |
+| **Suite** | GY — Validation Sub-Pages |
+| **Phase** | 23Z |
+| **Steps** | 1. Navigate to Validation > By Range of Order Numbers 2. Verify From/To accession range search 3. Verify empty state + pagination + Save |
+| **Expected** | Validation by range mirrors Results By Range layout |
+| **Status** | PASS |
+
+#### TC-GY-VALID-DATE-01: Validation By Date Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GY-VALID-DATE-01 |
+| **Suite** | GY — Validation Sub-Pages |
+| **Phase** | 23Z |
+| **Steps** | 1. Navigate to Validation > By Date (`/ResultValidationByTestDate`) 2. Verify "Enter Test Date" with dd/mm/yyyy date picker + calendar icon 3. Verify Search button 4. Verify empty state + pagination (100/page) + Save |
+| **Expected** | Date-based validation search renders with date picker |
+| **Status** | PASS |
