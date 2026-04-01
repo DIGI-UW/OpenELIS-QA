@@ -12366,3 +12366,73 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Verify complete sidebar top-level menu items (19 total): Home, Alerts, EQA Distributions, Order (5 sub), Patient (3 sub), Storage (2 sub-menus with 5+5 sub), Analyzers (3 sub), Non-Conform (3 sub), Workplan (4 sub), Pathology, Immunohistochemistry, Cytology, Results (7 sub + 1 nested), Validation (4 sub), Reports (1 sub-menu + WHONET), Admin, Billing (dead link), Aliquot, NoteBook, Help (1 sub) 2. Verify total navigable pages: ~55+ unique routes 3. Verify Billing is the ONLY sidebar item with no href 4. Verify Aliquot and NoteBook open in new tabs (not SPA navigation) |
 | **Expected** | Complete sidebar has 19 top-level items with ~55+ navigable routes; Billing is only dead link |
 | **Status** | PASS |
+
+---
+
+### Suite HE — Alerts, EQA Distribution & Pathology Dashboards
+
+#### TC-HE-ALERTS-01: Alerts Dashboard Layout & Filters
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HE-ALERTS-01 |
+| **Suite** | HE — Alerts, EQA Distribution & Pathology Dashboards |
+| **Phase** | 23AF |
+| **Steps** | 1. Navigate to Alerts (`/Alerts`) 2. Verify page title "Alerts Dashboard" 3. Verify 4 dashboard stat cards: Critical Alerts (0), EQA Deadlines (0), Overdue STAT Orders (0), Samples Expiring (0) 4. Verify Alert Type dropdown options: EQA Deadline (value="EQA_DEADLINE"), Sample Expiration (value="SAMPLE_EXPIRATION"), STAT Overdue (value="STAT_OVERDUE"), Unacknowledged Critical (value="CRITICAL_UNACKNOWLEDGED") 5. Verify Severity dropdown: Warning (value="WARNING"), Critical (value="CRITICAL") 6. Verify Status dropdown: Open (value="OPEN"), Acknowledged (value="ACKNOWLEDGED"), Resolved (value="RESOLVED") 7. Verify search input "Search alerts..." 8. Verify table columns: Type, Severity, Message, Status, Created, Actions 9. Verify empty table |
+| **Expected** | Alerts Dashboard renders with 4 stat cards, 3 filter dropdowns (4+2+3 options), and 6-column table |
+| **Status** | PASS |
+
+#### TC-HE-EQA-01: EQA Distribution Dashboard
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HE-EQA-01 |
+| **Suite** | HE — Alerts, EQA Distribution & Pathology Dashboards |
+| **Phase** | 23AF |
+| **Steps** | 1. Navigate to EQA Distributions (`/EQADistribution`) 2. Verify page title "EQA Distribution" with subtitle "Distribute EQA samples to participating laboratories" 3. Verify 4 dashboard cards: Draft Shipments (0, "Being prepared"), Shipped (0, "Awaiting responses"), Completed (0, "All responses received"), Participants (0, "Enrolled") 4. Verify "All Shipments" filter dropdown 5. Verify "Create New Shipment +" button 6. Verify "Manage Participants" button with icon 7. Verify "EQA Shipments" section: subtitle "Track distributed EQA samples and participant responses", "No distributions found" 8. Verify "Participant Network" section: subtitle "Overview of enrolled participating laboratories", Total Participants 0 (Across all countries), Active Participants 0 (Currently enrolled), Average Response Rate — (Last 4 quarters) |
+| **Expected** | EQA Distribution shows shipment tracking dashboard and participant network overview |
+| **Status** | PASS |
+
+#### TC-HE-PATHOLOGY-01: Pathology Dashboard
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HE-PATHOLOGY-01 |
+| **Suite** | HE — Alerts, EQA Distribution & Pathology Dashboards |
+| **Phase** | 23AF |
+| **Steps** | 1. Navigate to Pathology (`/PathologyDashboard`) 2. Verify page title "Pathology" 3. Verify 4 dashboard cards: Cases in Progress (0), Awaiting Pathology Review (0), Additional Pathology Requests (0), Complete(Week 24/03/2026 - 31/03/2026) (0) 4. Verify search input "Search by LabNo or Family Name" 5. Verify "My cases" checkbox filter 6. Verify status dropdown: "In Progress" 7. Verify table columns: Request Date, Stage, Last Name, First Name, Technician Assigned, Pathologist Assigned, Lab Number 8. Verify pagination: Items per page 100, 0-0 of 0 items, page 1 of 1 |
+| **Expected** | Pathology Dashboard shows 4 stat cards (unique: Additional Pathology Requests), 7-column case table with pagination |
+| **Status** | PASS |
+
+#### TC-HE-IHC-01: Immunohistochemistry Dashboard
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HE-IHC-01 |
+| **Suite** | HE — Alerts, EQA Distribution & Pathology Dashboards |
+| **Phase** | 23AF |
+| **Steps** | 1. Navigate to Immunohistochemistry (`/ImmunohistochemistryDashboard`) 2. Verify page title "Immunohistochemistry" 3. Verify 3 dashboard cards (not 4 — no "Additional Requests"): Cases in Progress (0), Awaiting Immunohistochemistry Review (0), Complete(Week 24/03/2026 - 31/03/2026) (0) 4. Verify same search/filter layout as Pathology 5. Verify table columns: Request Date, Stage, Last Name, First Name, Assigned Technician, Assigned Pathologist, Lab Number — NOTE: column names differ from Pathology ("Assigned Technician" vs "Technician Assigned") |
+| **Expected** | IHC Dashboard has 3 cards (no Additional Requests), different column naming from Pathology |
+| **Status** | PASS |
+
+#### TC-HE-CYTOLOGY-01: Cytology Dashboard
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HE-CYTOLOGY-01 |
+| **Suite** | HE — Alerts, EQA Distribution & Pathology Dashboards |
+| **Phase** | 23AF |
+| **Steps** | 1. Navigate to Cytology (`/CytologyDashboard`) 2. Verify page title "Cytology" 3. Verify 3 dashboard cards: Cases in Progress (0), Awaiting Cytopathologist Review (0), Complete(Week 24/03/2026 - 31/03/2026) (0) 4. Verify table columns: Request Date, Status, Last Name, First Name, Select Technician, CytoPathologist Assigned, Lab Number — NOTE: "Status" replaces "Stage", "Select Technician" replaces "Assigned/Technician Assigned", "CytoPathologist Assigned" is unique naming |
+| **Expected** | Cytology Dashboard has unique column naming (Status/Select Technician/CytoPathologist) compared to Pathology/IHC |
+| **Status** | PASS |
+
+#### TC-HE-DASHBOARD-COMPARE-01: Three Pathology Dashboard Comparison
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HE-DASHBOARD-COMPARE-01 |
+| **Suite** | HE — Alerts, EQA Distribution & Pathology Dashboards |
+| **Phase** | 23AF |
+| **Steps** | 1. Compare Pathology vs IHC vs Cytology dashboards: Pathology has 4 stat cards (unique: "Additional Pathology Requests"), IHC and Cytology have 3 cards each 2. Review card wording: "Awaiting Pathology Review" vs "Awaiting Immunohistochemistry Review" vs "Awaiting Cytopathologist Review" — each uses domain-specific terminology 3. Compare column naming inconsistencies across 3 dashboards: Stage/Stage/Status, Technician Assigned/Assigned Technician/Select Technician, Pathologist Assigned/Assigned Pathologist/CytoPathologist Assigned 4. All 3 share: search by LabNo/Family Name, My cases checkbox, In Progress status dropdown, Items per page 100, same pagination format |
+| **Expected** | Three dashboards share common layout but have inconsistent column naming (potential UX cleanup opportunity) |
+| **Status** | PASS |

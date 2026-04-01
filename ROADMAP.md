@@ -1693,6 +1693,40 @@ Home, Alerts, EQA Distributions, Order (5), Patient (3), Storage (5+5), Analyzer
 
 ---
 
+### Phase 23AF — Alerts, EQA Distribution & Pathology Dashboards (Suite HE)
+
+**Scope:** Alerts Dashboard, EQA Distribution, and all 3 Pathology-family dashboards (Pathology, Immunohistochemistry, Cytology). Cross-dashboard comparison analysis.
+
+**Findings:**
+
+- **Alerts Dashboard** (`/Alerts`): 4 stat cards (Critical Alerts/EQA Deadlines/Overdue STAT Orders/Samples Expiring, all 0). 3 filter dropdowns — Alert Type (4 options: EQA_DEADLINE, SAMPLE_EXPIRATION, STAT_OVERDUE, CRITICAL_UNACKNOWLEDGED), Severity (2: WARNING, CRITICAL), Status (3: OPEN, ACKNOWLEDGED, RESOLVED). Search input + 6-column table (Type/Severity/Message/Status/Created/Actions). Empty state.
+
+- **EQA Distribution** (`/EQADistribution`): 4 dashboard cards (Draft Shipments/Shipped/Completed/Participants, all 0 with descriptive subtitles). "Create New Shipment +" and "Manage Participants" buttons. Two sections: EQA Shipments (tracking distributed samples) and Participant Network (Total/Active Participants + Average Response Rate). "All Shipments" filter dropdown. Empty state with "No distributions found."
+
+- **Pathology Dashboard** (`/PathologyDashboard`): 4 stat cards (Cases in Progress/Awaiting Pathology Review/Additional Pathology Requests/Complete with week range). Search by LabNo or Family Name, "My cases" checkbox, "In Progress" status dropdown. 7-column table: Request Date, Stage, Last Name, First Name, Technician Assigned, Pathologist Assigned, Lab Number. Pagination: Items per page 100.
+
+- **Immunohistochemistry Dashboard** (`/ImmunohistochemistryDashboard`): Only 3 stat cards (no "Additional Requests" card — differs from Pathology). Column naming differs: "Assigned Technician" (vs "Technician Assigned" in Pathology), "Assigned Pathologist" (vs "Pathologist Assigned").
+
+- **Cytology Dashboard** (`/CytologyDashboard`): 3 stat cards. Most naming differences: "Status" replaces "Stage", "Select Technician" replaces assignee columns, "CytoPathologist Assigned" is unique naming.
+
+**Three-Dashboard Comparison:**
+
+| Aspect | Pathology | IHC | Cytology |
+|--------|-----------|-----|----------|
+| Stat cards | 4 (incl. Additional Requests) | 3 | 3 |
+| Column 2 | Stage | Stage | Status |
+| Technician col | Technician Assigned | Assigned Technician | Select Technician |
+| Pathologist col | Pathologist Assigned | Assigned Pathologist | CytoPathologist Assigned |
+| Awaiting review | Awaiting Pathology Review | Awaiting Immunohistochemistry Review | Awaiting Cytopathologist Review |
+
+Column naming inconsistency across the 3 dashboards is a UX cleanup opportunity — not a bug, but worth harmonizing in a future sprint.
+
+**Phase 23AF Summary:** 7 TCs (Suite HE), all PASS. Three pathology dashboards share layout but differ in stat card count and column naming.
+
+**Phase 23 Cumulative (through 23AF)**: 593+ TCs executed, ~566 passed, ~95.4% pass rate. 8 non-executable scripts catalogued.
+
+---
+
 ## Key Files
 
 | File | Purpose |
