@@ -13143,3 +13143,209 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Audit URL patterns across all 14 pages: VALIDATION: `/ResultValidation?type=&test=`, `/AccessionValidation`, `/AccessionValidationRange`, `/ResultValidationByTestDate`. ANALYZERS: `/analyzers`, `/analyzers/errors`, `/analyzers/types`. NON-CONFORM: `/ReportNonConformingEvent`, `/ViewNonConformingEvent`, `/NCECorrectiveAction`. WORKPLAN: `/WorkPlanByTest?type=test`, `/WorkPlanByPanel?type=panel`, `/WorkPlanByTestSection?type=`, `/WorkPlanByPriority?type=priority` 2. Naming inconsistencies found: (A) Workplan "By Unit" URL uses "TestSection" internally; (B) Non-Conform 3 different naming styles across 3 pages; (C) Analyzers uses lowercase REST-style paths vs PascalCase for other sections; (D) Validation uses mixed "ResultValidation" and "AccessionValidation" prefixes 3. Note: Analyzers section uses modern REST-style URL structure (`/analyzers/errors`) while older sections use PascalCase SPA routes (`/WorkPlanByTest`) |
 | **Expected** | 4 distinct URL naming conventions across 4 sections; Analyzers uses modern REST-style, others use legacy PascalCase; "TestSection" vs "Unit" internal naming mismatch |
 | **Status** | PASS |
+
+---
+
+### Suite HL — Pathology Dashboards, Storage, Aliquot, NoteBook, Billing, Help Deep Interactions (Phase 23AM)
+
+> **Scope:** Field-level deep interactions across remaining sidebar sections — Pathology (1), Immunohistochemistry (1), Cytology (1), Storage Management (5 sub-pages + 6 tabs), Cold Storage Monitoring (5 tabs with 4 settings sub-tabs), Aliquot (1), NoteBook (1), Billing (1), Help (1).
+> **Phase:** 23AM
+> **Date:** 2026-03-31
+
+#### TC-HL-PATHOLOGY-01: Pathology Dashboard
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HL-PATHOLOGY-01 |
+| **Suite** | HL — Pathology Dashboards, Storage, Aliquot, NoteBook, Billing, Help Deep Interactions |
+| **Phase** | 23AM |
+| **Steps** | 1. Navigate to Pathology via sidebar 2. Verify URL: `/PathologyDashboard` 3. Verify page title: "Pathology" 4. Verify 4 summary cards: Cases in Progress (0), Awaiting Pathology Review (0), Additional Pathology Requests (0), Complete(Week 25/03/2026 - 01/04/2026) (0) — Pathology has 4 cards (most of 3 dashboards) 5. Verify search: "Search by LabNo or Family Name" 6. Verify filters: "My cases" checkbox + status dropdown (default "In Progress") 7. Verify status dropdown 10 options: All, In Progress, Grossing, Cutting, Processing, Slicing for Slides, Staining, Ready for Pathologist, Additional Pathologist Request, Completed — 10 stages reflecting full histopathology workflow 8. Verify table 7 columns: Request Date, Stage, Last Name, First Name, Technician Assigned, Pathologist Assigned, Lab Number 9. Verify pagination: Items per page 100, "0-0 of 0 items", page selector |
+| **Expected** | Pathology Dashboard has 4 summary cards, 10-stage status workflow, 7-col table; most detailed of 3 pathology dashboards |
+| **Status** | PASS |
+
+#### TC-HL-IHC-01: Immunohistochemistry Dashboard
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HL-IHC-01 |
+| **Suite** | HL — Pathology Dashboards, Storage, Aliquot, NoteBook, Billing, Help Deep Interactions |
+| **Phase** | 23AM |
+| **Steps** | 1. Navigate to Immunohistochemistry via sidebar 2. Verify URL: `/ImmunohistochemistryDashboard` 3. Verify page title: "Immunohistochemistry" 4. Verify 3 summary cards (NOT 4): Cases in Progress (0), Awaiting Immunohistochemistry Review (0), Complete(Week 25/03/2026 - 01/04/2026) (0) — MISSING "Additional Requests" card vs Pathology 5. Verify same search/filter layout as Pathology 6. Verify status dropdown 5 options only: All, In Progress, Ready for Pathologist, Completed — MUCH SIMPLER than Pathology's 10 stages (missing Grossing/Cutting/Processing/Slicing/Staining/Additional Request) 7. Verify table 7 columns — NAMING DIFFERS from Pathology: "Assigned Technician" (not "Technician Assigned"), "Assigned Pathologist" (not "Pathologist Assigned") — adjective/noun order swapped 8. Verify pagination: Items per page 100 |
+| **Expected** | IHC has 3 cards (not 4), 5 status options (not 10), column naming differs from Pathology (adjective/noun order swapped) |
+| **Status** | PASS |
+
+#### TC-HL-CYTOLOGY-01: Cytology Dashboard
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HL-CYTOLOGY-01 |
+| **Suite** | HL — Pathology Dashboards, Storage, Aliquot, NoteBook, Billing, Help Deep Interactions |
+| **Phase** | 23AM |
+| **Steps** | 1. Navigate to Cytology via sidebar 2. Verify URL: `/CytologyDashboard` 3. Verify page title: "Cytology" 4. Verify 3 summary cards: Cases in Progress (0), Awaiting Cytopathologist Review (0), Complete(Week 25/03/2026 - 01/04/2026) (0) — uses "Cytopathologist" (domain-specific specialist title) 5. Verify status dropdown 6 options: All, In Progress, Preparing slides, Screening, Ready for Cytopathologist, Completed — cytology-specific workflow stages 6. Verify table 7 columns — YET ANOTHER naming variant: "Status" column (not "Stage"), "Select Technician" (not "Assigned"/"Technician Assigned"), "CytoPathologist Assigned" (concatenated "Cyto" prefix, appears without space) 7. Cross-dashboard comparison: Pathology (4 cards, 10 stages, "Stage"), IHC (3 cards, 5 stages, no "Stage" col), Cytology (3 cards, 6 stages, "Status" col). Each has different column naming for technician/pathologist. |
+| **Expected** | Cytology has 3 cards, 6 status options (cytology-specific), unique column naming ("Status" not "Stage", "CytoPathologist Assigned"), uses specialist "Cytopathologist" title |
+| **Status** | PASS |
+
+#### TC-HL-STORAGE-SAMPLES-01: Storage Management — Sample Items
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HL-STORAGE-SAMPLES-01 |
+| **Suite** | HL — Pathology Dashboards, Storage, Aliquot, NoteBook, Billing, Help Deep Interactions |
+| **Phase** | 23AM |
+| **Steps** | 1. Navigate to Storage > Storage Management > Sample Items 2. Verify URL: `/Storage/samples` (REST-style lowercase) 3. Verify page title: "Storage Management Dashboard" 4. Verify 3 summary cards: TOTAL SAMPLE ITEMS (2), ACTIVE (2), DISPOSED (0) 5. Verify STORAGE LOCATIONS panel: 12 rooms, 14 devices, 12 shelves, 4 racks (color-coded badges) 6. Verify 6 tabs: Sample Items (active), Rooms, Devices, Shelves, Racks, Boxes 7. Verify search: "Search by sample ID or location..." 8. Verify filters: "Filter by locations..." + "Filter by Status" dropdown 9. Verify "Sample Items" table 8 columns: SampleItem ID, Sample Accession, Sample Type, Status, Location, Assigned By, Assigned Date, Actions 10. Verify data: Blood Film, Sputum, Plasma, Whole Blood samples with Active status badges, location paths (e.g., "Lab > Freezer1 > 1"), three-dot action menus |
+| **Expected** | Storage Management Dashboard has 3 summary cards, STORAGE LOCATIONS panel (4 badges), 6 tabs, 8-col table with real sample data, REST-style URLs |
+| **Status** | PASS |
+
+#### TC-HL-STORAGE-DEVICES-01: Storage Management — Devices
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HL-STORAGE-DEVICES-01 |
+| **Suite** | HL — Pathology Dashboards, Storage, Aliquot, NoteBook, Billing, Help Deep Interactions |
+| **Phase** | 23AM |
+| **Steps** | 1. Navigate to Storage > Storage Management > Devices 2. Verify URL: `/Storage/devices` 3. Verify search: "Search by device name or code..." 4. Verify filters: "Filter by Room" + "Filter by Status" (2 dropdowns) 5. Verify "Add Device" button (green) 6. Verify table 8 columns: expand arrow, Name, Code, Room, Type, Occupancy, Status, Actions 7. Verify device entries: TB PC2 (refrigerator), CUPBOARD 1 (cabinet), BENCH (other), UNDER BENCH (FLOOR), TB SHELF, REFRIGERATOR, RE, Fridge 8. Verify occupancy display: "0/1,000 (0%)" format with "Manual Limit" label and green checkmark 9. Verify expand arrows and three-dot action menus per row |
+| **Expected** | Devices tab has 2 filter dropdowns, Add Device button, 8-col table with expandable rows, occupancy percentages, device type badges |
+| **Status** | PASS |
+
+#### TC-HL-STORAGE-SHELVES-01: Storage Management — Shelves
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HL-STORAGE-SHELVES-01 |
+| **Suite** | HL — Pathology Dashboards, Storage, Aliquot, NoteBook, Billing, Help Deep Interactions |
+| **Phase** | 23AM |
+| **Steps** | 1. Navigate to Storage > Storage Management > Shelves 2. Verify URL: `/Storage/shelves` 3. Verify search: "Search by shelf label..." 4. Verify 3 filter dropdowns: Filter by Room, Filter by Device, Filter by Status 5. Verify "Add Shelf" button 6. Verify table 6 columns: Shelf, Device, Room, Occupancy, Status, Actions 7. Verify entries: TRAY 1, TOP SHELF A, SHELF B, SHELF C, TOP SHELF, TB SHELF 1, SHELF 1, TOPSHELF, HIV_VL 8. Verify varying occupancy limits (0/500 vs 0/1,000) 9. Note: Shelves has 3 filter dropdowns (most of any Storage sub-page) |
+| **Expected** | Shelves has 3 filter dropdowns (most filters), Add Shelf button, 6-col table, variable occupancy limits |
+| **Status** | PASS |
+
+#### TC-HL-STORAGE-RACKS-01: Storage Management — Racks
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HL-STORAGE-RACKS-01 |
+| **Suite** | HL — Pathology Dashboards, Storage, Aliquot, NoteBook, Billing, Help Deep Interactions |
+| **Phase** | 23AM |
+| **Steps** | 1. Navigate to Storage > Storage Management > Racks 2. Verify URL: `/Storage/racks` 3. Verify search: "Search by rack label..." 4. Verify 3 filter dropdowns: Filter by Room, Filter by Device, Filter by Status 5. Verify "Add Rack" button 6. Verify table 8 columns: Rack, Room, Shelf, Device, Dimensions, Occupancy, Status, Actions 7. Verify entries: 4 "RACK 1" entries across different shelves/devices, all 0/0 (0%) occupancy 8. Note: Racks table has most columns (8) of any Storage sub-page; includes Dimensions column (shows "-" for all) |
+| **Expected** | Racks has 3 filters, Add Rack button, 8-col table (most columns), includes Dimensions column |
+| **Status** | PASS |
+
+#### TC-HL-STORAGE-BOXES-01: Storage Management — Boxes (Grid Assignment)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HL-STORAGE-BOXES-01 |
+| **Suite** | HL — Pathology Dashboards, Storage, Aliquot, NoteBook, Billing, Help Deep Interactions |
+| **Phase** | 23AM |
+| **Steps** | 1. Navigate to Storage > Storage Management > Boxes 2. Verify URL: `/Storage/boxes` 3. Verify Boxes tab content is UNIQUE — grid-based assignment interface, not a standard table 4. Verify description: "Manage boxes/plates, or select a rack and box to assign samples to coordinates." 5. Verify "Grid Assignment" section with instruction text 6. Verify left panel: "Select rack" dropdown + "Select box/plate" dropdown (disabled until rack selected) + "Add Box/Plate" button 7. Verify center: Grid area with "Select a box to view its grid." placeholder 8. Verify right panel: "Assign sample to box" with "Sample item ID or barcode" input + "Notes (optional)" textarea + "Assign" button (disabled) 9. Note: Only Storage page with grid-based UI instead of standard table — designed for coordinate-based sample placement |
+| **Expected** | Boxes uses unique grid-based assignment interface (not standard table); 3-panel layout: rack/box selection, grid view, sample assignment |
+| **Status** | PASS |
+
+#### TC-HL-COLD-STORAGE-DASHBOARD-01: Cold Storage Monitoring — Dashboard
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HL-COLD-STORAGE-DASHBOARD-01 |
+| **Suite** | HL — Pathology Dashboards, Storage, Aliquot, NoteBook, Billing, Help Deep Interactions |
+| **Phase** | 23AM |
+| **Steps** | 1. Navigate to Storage > Cold Storage Monitoring > Dashboard 2. Verify URL: `/FreezerMonitoring?tab=0` — NOTE: URL uses "FreezerMonitoring" internally 3. Verify breadcrumb: Home > Cold Storage Dashboard 4. Verify title: "Cold Storage Dashboard" with subtitle "Real-time temperature monitoring & compliance" 5. Verify System Status banner: green checkmark + "System Status: Online" + timestamp 6. Verify "Refresh" link 7. Verify 5 tabs: Dashboard, Corrective Actions, Historical Trends, Reports, Settings 8. Verify 4 summary cards: Total Storage Units (0), Normal Status (0), Warnings (0), Critical Alerts (0) 9. Verify search: "Search by Unit ID or Name" 10. Verify 2 filter dropdowns: "All Status" + "All Device Types" 11. Verify "Storage Units" table 9 columns: Unit ID, Status, Unit Name, Device Type, Location, Current Temp, Target Temp, Protocol, Last Reading 12. Verify "Active Alerts (0)" section below table |
+| **Expected** | Cold Storage Dashboard is comprehensive IoT-connected monitoring module; 5 tabs, system status banner, 9-col storage units table, active alerts section |
+| **Status** | PASS |
+
+#### TC-HL-COLD-STORAGE-CORRECTIVE-01: Cold Storage Monitoring — Corrective Actions
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HL-COLD-STORAGE-CORRECTIVE-01 |
+| **Suite** | HL — Pathology Dashboards, Storage, Aliquot, NoteBook, Billing, Help Deep Interactions |
+| **Phase** | 23AM |
+| **Steps** | 1. Click Corrective Actions tab within Cold Storage Dashboard 2. Verify description: "Track maintenance and repair actions for cold storage devices" 3. Verify search icon + "All" filter dropdown 4. Verify "Add New Action +" button (green) 5. Verify table 8 columns: Action ID, Status, Device, Summary, Performed By, Created, Last Updated By, Actions 6. Verify "No corrective actions found." empty state 7. Verify pagination: Items per page **5** (different from standard 100 default across most other pages) |
+| **Expected** | Corrective Actions has Add New Action button, 8-col table, unique pagination default of 5 (not 100) |
+| **Status** | PASS |
+
+#### TC-HL-COLD-STORAGE-TRENDS-01: Cold Storage Monitoring — Historical Trends
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HL-COLD-STORAGE-TRENDS-01 |
+| **Suite** | HL — Pathology Dashboards, Storage, Aliquot, NoteBook, Billing, Help Deep Interactions |
+| **Phase** | 23AM |
+| **Steps** | 1. Click Historical Trends tab 2. Verify title: "Historical Temperature Trends" 3. Verify "Freezer" dropdown (All Freezers) + "Time Range" dropdown (Last 24 Hours) 4. Verify chart controls: Zoom In, Zoom Out, Reset buttons + "Export CSV" download button 5. Verify "No readings available for the selected filters." message 6. Verify 4 summary cards: Average Temperature (-), Min Temperature (-), Max Temperature (-), Data Points (0) 7. Verify footer: "Cold Storage Monitoring v2.1.0 | Compliant with CAP, CLIA, FDA, and WHO guidelines | HIPAA Compliant Data Handling" — compliance info with version number |
+| **Expected** | Historical Trends has chart controls (zoom/reset/export), temperature statistics cards, regulatory compliance footer with version v2.1.0 |
+| **Status** | PASS |
+
+#### TC-HL-COLD-STORAGE-REPORTS-01: Cold Storage Monitoring — Reports
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HL-COLD-STORAGE-REPORTS-01 |
+| **Suite** | HL — Pathology Dashboards, Storage, Aliquot, NoteBook, Billing, Help Deep Interactions |
+| **Phase** | 23AM |
+| **Steps** | 1. Click Reports tab 2. Verify title: "Regulatory Reports" 3. Verify 3 dropdowns: Report Type (Daily Log), Freezer (All Freezers), Export Format (PDF) 4. Verify date range: Start date + End date with calendar icons 5. NOTE: Date format is mm/dd/yyyy — DIFFERS from dd/mm/yyyy used elsewhere in OpenELIS (UX inconsistency) 6. Verify "Generate Report" button (blue) 7. Verify Regulatory Compliance info box: mentions CAP, CLIA, FDA, WHO 8. Verify 2 sub-tabs at bottom: "Temperature Exc..." (Temperature Excursions) and "Audit Trail" |
+| **Expected** | Reports tab has 3 dropdowns + date range + Generate Report; uses mm/dd/yyyy (inconsistent with rest of app's dd/mm/yyyy); Regulatory compliance callout |
+| **Status** | PASS |
+
+#### TC-HL-COLD-STORAGE-SETTINGS-01: Cold Storage Monitoring — Settings
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HL-COLD-STORAGE-SETTINGS-01 |
+| **Suite** | HL — Pathology Dashboards, Storage, Aliquot, NoteBook, Billing, Help Deep Interactions |
+| **Phase** | 23AM |
+| **Steps** | 1. Click Settings tab 2. Verify title: "System Configuration" with gear icon 3. Verify 4 sub-tabs: Device Management (active), Temperature Thresholds, Alert Settings, System Settings 4. Verify Device Management > "Configured Devices" section 5. Verify search + "All Devices" filter + "Add New Device +" button 6. Verify table 9 columns: Device ID, Status, Name, Type, IP Address, Port, Protocol, Room/Facility, Actions 7. Verify 2 entries: QA_AUTO_Freezer (INACTIVE, freezer, 502, TCP, TB PC2) and TB PC2 (INACTIVE, refrigerator, 502, TCP, TB PC2) 8. Verify action icons per row: edit (pencil), power (circle), delete (trash) — 3 actions 9. Verify pagination: Items per page 5 (matches Corrective Actions) 10. Note: Settings has 4 sub-tabs making Cold Storage the deepest nested section (sidebar > section > tab > sub-tab) |
+| **Expected** | Settings has 4 sub-tabs (deepest nesting), Device Management shows 2 configured devices with CRUD actions, pagination 5 |
+| **Status** | PASS |
+
+#### TC-HL-ALIQUOT-01: Aliquot Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HL-ALIQUOT-01 |
+| **Suite** | HL — Pathology Dashboards, Storage, Aliquot, NoteBook, Billing, Help Deep Interactions |
+| **Phase** | 23AM |
+| **Steps** | 1. Navigate to Aliquot via sidebar 2. Verify URL: `/Aliquot` 3. Verify page title: "Aliquot" 4. Verify "Search Sample" header 5. Verify "Enter Accession Number" text field with 0/23 character counter 6. Verify Search button (blue) 7. Note: Simplest standalone page — single search field, same accession number pattern (0/23) as Validation By Order and Results By Order. No table/results displayed without search. Opens in NEW TAB when clicked from sidebar (unique behavior). |
+| **Expected** | Aliquot is a minimal page with single accession number search (0/23 counter); opens in new tab from sidebar |
+| **Status** | PASS |
+
+#### TC-HL-NOTEBOOK-01: NoteBook Dashboard
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HL-NOTEBOOK-01 |
+| **Suite** | HL — Pathology Dashboards, Storage, Aliquot, NoteBook, Billing, Help Deep Interactions |
+| **Phase** | 23AM |
+| **Steps** | 1. Navigate to NoteBook via sidebar 2. Verify URL: `/NotebookDashboard` 3. Verify page renders as COMPLETELY BLANK white page — no sidebar, no header, no content at all 4. Wait 3 seconds — still blank 5. Note: This appears to be an unimplemented or broken feature. The SPA shell does not render at all, suggesting the component fails to mount or does not exist yet. This is the only page in the entire application that renders completely blank. |
+| **Expected** | NoteBook Dashboard renders blank white page — unimplemented or broken component; no UI elements at all |
+| **Status** | FAIL |
+
+#### TC-HL-BILLING-01: Billing Sidebar Entry
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HL-BILLING-01 |
+| **Suite** | HL — Pathology Dashboards, Storage, Aliquot, NoteBook, Billing, Help Deep Interactions |
+| **Phase** | 23AM |
+| **Steps** | 1. Click Billing in sidebar 2. Verify link has EMPTY href (confirmed via read_page: `link [ref_30]` with no href attribute) 3. Verify clicking does NOT navigate — stays on current page 4. Note: Billing is a placeholder sidebar entry with no destination. The link element exists but has no URL. This is a non-functional feature stub. |
+| **Expected** | Billing sidebar link has empty href — non-functional placeholder; clicking does nothing |
+| **Status** | FAIL |
+
+#### TC-HL-HELP-01: Help Section
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HL-HELP-01 |
+| **Suite** | HL — Pathology Dashboards, Storage, Aliquot, NoteBook, Billing, Help Deep Interactions |
+| **Phase** | 23AM |
+| **Steps** | 1. Expand Help section in sidebar 2. Verify single sub-item: "User Manual" 3. Note: Top-right header Help button (?) opens a separate dropdown with: User Manual, Video Tutorials, Release Notes buttons + Language combobox (English/Francais). The sidebar Help section only exposes User Manual. |
+| **Expected** | Sidebar Help has 1 sub-item (User Manual); top-right Help button has additional options (Video Tutorials, Release Notes, Language selector) |
+| **Status** | PASS |
+
+#### TC-HL-PATHOLOGY-DASHBOARD-COMPARISON-01: Cross-Dashboard Comparison
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HL-PATHOLOGY-DASHBOARD-COMPARISON-01 |
+| **Suite** | HL — Pathology Dashboards, Storage, Aliquot, NoteBook, Billing, Help Deep Interactions |
+| **Phase** | 23AM |
+| **Steps** | 1. Compare 3 pathology dashboards: (A) Pathology: 4 cards, 10 status stages (full histopathology workflow), "Stage" column, "Technician Assigned"/"Pathologist Assigned" naming; (B) IHC: 3 cards, 5 status stages (simplified), no Stage column, "Assigned Technician"/"Assigned Pathologist" (reversed order); (C) Cytology: 3 cards, 6 status stages (cytology-specific), "Status" column, "Select Technician"/"CytoPathologist Assigned" (unique naming). 2. Summary cards naming: Pathology="Awaiting Pathology Review", IHC="Awaiting Immunohistochemistry Review", Cytology="Awaiting Cytopathologist Review" (specialist title). 3. Column naming inconsistencies across 3 dashboards that should share a pattern: "Technician Assigned" vs "Assigned Technician" vs "Select Technician" — 3 different names for same concept. 4. Storage module uses entirely different design language: REST-style URLs, expandable table rows, CRUD operations, grid-based interfaces. Cold Storage Monitoring is the most sophisticated sub-module with IoT monitoring, regulatory compliance, chart controls. |
+| **Expected** | 3 pathology dashboards have inconsistent column naming, status stages, and card counts despite similar layouts. Storage is architecturally distinct with REST URLs and CRUD operations. |
+| **Status** | PASS |

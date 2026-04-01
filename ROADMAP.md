@@ -1989,6 +1989,62 @@ All 4 pages share identical layout: header bar + single dropdown + label + loadi
 
 **Phase 23 Cumulative (through 23AL)**: 655+ TCs executed, ~628 passed, ~95.9% pass rate. 8 non-executable scripts catalogued.
 
+### Phase 23AM — Pathology Dashboards, Storage, Aliquot, NoteBook, Billing, Help Deep Interactions (2026-03-31)
+
+**Scope:** Remaining untested sidebar sections — 3 pathology dashboards, Storage module (10 sub-pages), Aliquot, NoteBook, Billing, Help.
+
+**Pathology Dashboards (3 pages — cross-comparison):**
+
+| Feature | Pathology | Immunohistochemistry | Cytology |
+|---------|-----------|---------------------|----------|
+| URL | `/PathologyDashboard` | `/ImmunohistochemistryDashboard` | `/CytologyDashboard` |
+| Summary Cards | 4 (includes Additional Requests) | 3 | 3 |
+| Status Stages | 10 (full histopathology) | 5 (simplified) | 6 (cytology-specific) |
+| Stage/Status Col | "Stage" | (none) | "Status" |
+| Technician Col | "Technician Assigned" | "Assigned Technician" | "Select Technician" |
+| Pathologist Col | "Pathologist Assigned" | "Assigned Pathologist" | "CytoPathologist Assigned" |
+| Review Card | "Awaiting Pathology Review" | "Awaiting Immunohistochemistry Review" | "Awaiting Cytopathologist Review" |
+
+Key finding: 3 dashboards that should share a pattern have inconsistent column naming, status stages, and card counts.
+
+**Storage Management (5 sidebar sub-pages, 6 tabs):**
+
+All use REST-style lowercase URLs (`/Storage/samples`, `/Storage/devices`, etc.).
+
+- **Sample Items** (`/Storage/samples`): Storage Management Dashboard with 3 summary cards (TOTAL SAMPLE ITEMS 2, ACTIVE 2, DISPOSED 0) + STORAGE LOCATIONS panel (12 rooms/14 devices/12 shelves/4 racks). 6 tabs. 8-col table with real sample data (Blood Film, Sputum, Plasma, Whole Blood).
+- **Devices** (`/Storage/devices`): 2 filter dropdowns + "Add Device" button. 8-col expandable table with occupancy tracking (0/1,000 format). Types: refrigerator, cabinet, other.
+- **Shelves** (`/Storage/shelves`): 3 filter dropdowns (most filters of any Storage page). "Add Shelf" button. Variable occupancy limits (500 vs 1,000).
+- **Racks** (`/Storage/racks`): 3 filter dropdowns. 8-col table (most columns). Includes Dimensions column.
+- **Boxes** (`/Storage/boxes`): UNIQUE grid-based assignment interface. 3-panel layout: rack/box selection, coordinate grid view, sample assignment with barcode input.
+
+**Cold Storage Monitoring (5 tabs, 4 settings sub-tabs):**
+
+Single URL: `/FreezerMonitoring?tab=0` — all tabs within same page.
+
+- **Dashboard**: System Status banner (Online), 4 summary cards (Total/Normal/Warnings/Critical), 9-col storage units table, Active Alerts section.
+- **Corrective Actions**: Track maintenance/repair. 8-col table. Pagination default 5 (not 100).
+- **Historical Trends**: Temperature charting with Zoom/Reset/Export CSV. 4 temperature statistic cards. Footer: "Cold Storage Monitoring v2.1.0 | Compliant with CAP, CLIA, FDA, and WHO guidelines | HIPAA Compliant Data Handling".
+- **Reports**: "Regulatory Reports" with Report Type/Freezer/Export Format dropdowns + date range (mm/dd/yyyy — INCONSISTENT with dd/mm/yyyy elsewhere). "Generate Report" button. Compliance info box. Sub-tabs: Temperature Excursions, Audit Trail.
+- **Settings**: "System Configuration" with 4 sub-tabs (Device Management, Temperature Thresholds, Alert Settings, System Settings). Device Management shows 2 configured devices (QA_AUTO_Freezer, TB PC2), both INACTIVE, TCP port 502. CRUD actions (edit/power/delete).
+
+**Other Pages:**
+
+- **Aliquot** (`/Aliquot`): Minimal page — single "Enter Accession Number" search (0/23 counter). Opens in new tab from sidebar (unique behavior).
+- **NoteBook** (`/NotebookDashboard`): **BLANK WHITE PAGE** — no sidebar, no header, no content. Unimplemented or broken component.
+- **Billing**: **NON-FUNCTIONAL** — sidebar link has empty href, clicking does nothing. Placeholder entry.
+- **Help**: Sidebar Help has 1 sub-item (User Manual). Top-right Help button has additional: Video Tutorials, Release Notes, Language selector (English/Francais).
+
+**UX Issues Found:**
+1. 3 pathology dashboards have inconsistent column naming for same concepts (3 different technician column names, 3 different pathologist column names)
+2. Cold Storage Reports uses mm/dd/yyyy date format vs dd/mm/yyyy used everywhere else in OpenELIS
+3. NoteBook Dashboard is completely broken — renders blank white page
+4. Billing sidebar entry is non-functional (empty href)
+5. Cold Storage pagination defaults to 5 items (vs 100 everywhere else)
+
+**Phase 23AM Summary:** 19 TCs (Suite HL), 17 PASS, 2 FAIL (NoteBook blank page, Billing non-functional). Storage module is the most architecturally sophisticated section with REST URLs, CRUD operations, grid-based UI, IoT monitoring, and regulatory compliance features.
+
+**Phase 23 Cumulative (through 23AM)**: 674+ TCs executed, ~645 passed, ~95.7% pass rate. 8 non-executable scripts catalogued.
+
 ---
 
 ## Key Files
