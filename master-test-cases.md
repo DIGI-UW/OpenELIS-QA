@@ -11646,3 +11646,119 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Activate all 6 Measles calculations 2. Create 3 orders: (a) High positive IgG+IgM → expect Positive + IgM Positive (b) Negative IgG+IgM → expect Negative + IgM Negative (c) Borderline IgG+IgM → expect Borderline + IgM Borderline 3. Enter results for each 4. Verify correct calculations fire per scenario 5. Deactivate all 6 |
 | **Expected** | Each Measles calculation fires for appropriate result range, no cross-contamination |
 | **Status** | NOT EXECUTED — Script only |
+
+---
+
+### Suite GX — Dashboard KPI Drill-Downs (Phase 23Y)
+
+> Field-level testing of all 10 Dashboard KPI tile drill-down behaviors. Three distinct drill-down types discovered.
+
+#### TC-GX-KPI-INPROGRESS-01: Orders In Progress Drill-Down
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GX-KPI-INPROGRESS-01 |
+| **Suite** | GX — Dashboard KPI Drill-Downs |
+| **Phase** | 23Y |
+| **Steps** | 1. Navigate to Home Dashboard 2. Locate "Orders In Progress" KPI tile (value: 105) 3. Click expand/drill-down 4. Verify table renders with lab section tab filters 5. Document columns: checkbox, Lab No, Patient Info, Sample Type, Tests, Status, Art, Edit pencil 6. Verify tab filters: Molecular Biology, Parasitology, Immuno-serology, Hematology, VCT, HIV, Malaria, Mycobacteriology, Microbiology, Biochemistry, Cytobacteriology, Serology-Immunology 7. Verify pagination (105 rows) 8. Collapse tile → verify clean collapse |
+| **Expected** | Drill-down shows paginated table with 105 items and lab section tab filters |
+| **Status** | PASS |
+
+#### TC-GX-KPI-VALIDATION-01: Ready For Validation Drill-Down
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GX-KPI-VALIDATION-01 |
+| **Suite** | GX — Dashboard KPI Drill-Downs |
+| **Phase** | 23Y |
+| **Steps** | 1. Locate "Ready For Validation" KPI tile (value: 141) 2. Click expand 3. Verify table with lab section tab filters 4. Verify 141 items with same column structure 5. Collapse |
+| **Expected** | Drill-down shows paginated table with 141 items and lab section tab filters |
+| **Status** | PASS |
+
+#### TC-GX-KPI-TURNAROUND-01: Average Turn Around Time Drill-Down (Sub-KPI Cards)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GX-KPI-TURNAROUND-01 |
+| **Suite** | GX — Dashboard KPI Drill-Downs |
+| **Phase** | 23Y |
+| **Steps** | 1. Locate "Average Turn Around Time" KPI tile 2. Click expand 3. Verify 3 sub-KPI metric cards render: (a) Receptions → Results: 24h (b) Results → Validation: 24h (c) Validation → Results: 24h 4. Click each sub-KPI to verify it has its own expand behavior 5. Collapse parent tile |
+| **Expected** | Drill-down shows 3 sub-KPI metric cards, each with own expand capability |
+| **Status** | PASS |
+
+#### TC-GX-KPI-RECEPTION2RESULT-01: Receptions → Results Sub-KPI Drill-Down
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GX-KPI-RECEPTION2RESULT-01 |
+| **Suite** | GX — Dashboard KPI Drill-Downs |
+| **Phase** | 23Y |
+| **Steps** | 1. Expand "Average Turn Around Time" 2. Expand "Receptions → Results" sub-KPI (24h) 3. Verify drill-down table with lab section tab filters 4. Collapse |
+| **Expected** | Sub-KPI expands to table with lab section tabs |
+| **Status** | PASS |
+
+#### TC-GX-KPI-RESULT2VALID-01: Results → Validation Sub-KPI Drill-Down
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GX-KPI-RESULT2VALID-01 |
+| **Suite** | GX — Dashboard KPI Drill-Downs |
+| **Phase** | 23Y |
+| **Steps** | 1. Expand "Average Turn Around Time" 2. Expand "Results → Validation" sub-KPI (24h) 3. Verify drill-down table with lab section tab filters 4. Collapse |
+| **Expected** | Sub-KPI expands to table with lab section tabs |
+| **Status** | PASS |
+
+#### TC-GX-KPI-VALID2RESULT-01: Validation → Results Sub-KPI Drill-Down
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GX-KPI-VALID2RESULT-01 |
+| **Suite** | GX — Dashboard KPI Drill-Downs |
+| **Phase** | 23Y |
+| **Steps** | 1. Expand "Average Turn Around Time" 2. Expand "Validation → Results" sub-KPI (24h) 3. Verify drill-down table with lab section tab filters 4. Collapse |
+| **Expected** | Sub-KPI expands to table with lab section tabs |
+| **Status** | PASS |
+
+#### TC-GX-KPI-ENTERED-01: Orders Entered By User Today Drill-Down
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GX-KPI-ENTERED-01 |
+| **Suite** | GX — Dashboard KPI Drill-Downs |
+| **Phase** | 23Y |
+| **Steps** | 1. Locate "Orders Entered By User Today" KPI tile (value: 0) 2. Click expand 3. Verify table renders with lab section tab filters 4. Verify empty state (0 items) 5. Collapse |
+| **Expected** | Drill-down shows empty table with lab section tab filters |
+| **Status** | PASS |
+
+#### TC-GX-KPI-REJECTED-01: Orders Rejected Today Drill-Down
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GX-KPI-REJECTED-01 |
+| **Suite** | GX — Dashboard KPI Drill-Downs |
+| **Phase** | 23Y |
+| **Steps** | 1. Locate "Orders Rejected Today" KPI tile (value: 0) 2. Click expand 3. Verify table renders with lab section tab filters 4. Verify empty state 5. Collapse |
+| **Expected** | Drill-down shows empty table with lab section tab filters |
+| **Status** | PASS |
+
+#### TC-GX-KPI-UNPRINTED-01: Un-Printed Results Drill-Down
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GX-KPI-UNPRINTED-01 |
+| **Suite** | GX — Dashboard KPI Drill-Downs |
+| **Phase** | 23Y |
+| **Steps** | 1. Locate "Un-Printed Results" KPI tile (value: 0) 2. Click expand 3. Verify table renders with lab section tab filters 4. Verify empty state 5. Collapse |
+| **Expected** | Drill-down shows empty table with lab section tab filters |
+| **Status** | PASS |
+
+#### TC-GX-KPI-ELECTRONIC-01: Electronic Orders Drill-Down (No Tabs)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GX-KPI-ELECTRONIC-01 |
+| **Suite** | GX — Dashboard KPI Drill-Downs |
+| **Phase** | 23Y |
+| **Steps** | 1. Locate "Electronic Orders" KPI tile (value: 0) 2. Click expand 3. Verify table renders WITHOUT lab section tab filters (distinct from other tiles) 4. Verify column headers only, no data 5. Collapse |
+| **Expected** | Drill-down shows table without tab filter bar — unique drill-down type |
+| **Status** | PASS |

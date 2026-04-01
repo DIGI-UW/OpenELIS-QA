@@ -1396,6 +1396,42 @@ All 10 General Config sub-pages verified:
 
 ---
 
+### Phase 23Y — Dashboard KPI Drill-Downs (2026-03-31)
+
+**Scope:** Test all 10 Dashboard KPI tile expand/collapse drill-down views.
+
+**Dashboard Layout:** 4×3 grid (last row has 2), each tile has expand icon (↗) in top-right corner.
+
+**KPI Tiles (Row 1):**
+1. **In Progress** (Awaiting Result Entry: 105) — PASS
+2. **Ready For Validation** (Awaiting Review: 141) — PASS
+3. **Orders Completed Today** (Total Orders Completed Today: 0) — PASS
+4. **Partially Completed Today** (Total Orders Completed Today: 0) — PASS
+
+**KPI Tiles (Row 2):**
+5. **Orders Entered By Users** (Entered by users Today: 0) — PASS
+6. **Orders Rejected** (Rejected By Lab Today: 0) — PASS
+7. **UnPrinted Results** (UnPrinted Results Today: 0) — PASS
+8. **Electronic Orders** (Electronic Orders: 0) — PASS
+
+**KPI Tiles (Row 3):**
+9. **Average Turn Around time** (Reception to Validation: 0) — PASS
+10. **Delayed Turn Around** (More Than 96 hours: 0) — PASS
+
+**Three Drill-Down Types Discovered:**
+
+1. **Table with lab section tabs** (8 tiles: #1-7, #10) — Expands to show: title card + count, horizontal scrollable tab filters (All, HIV, Malaria, Microbiology, Molecular Biology, Mycobacteriology, Sero-Surveillance, Biochemistry, Hematology, Immunology, Cy...), 5-column table (Priority, Order Date, Patient Id, Lab Number [clickable links with copy icon], Test Name), top pagination (page X/Y with arrows), bottom pagination ("Items per page 100", "X-Y of Z items", "N of M page"). In Progress showed 105 items across 2 pages with real data (ROUTINE/ASAP priorities, test names like Bioline HIV/Syphilis Duo, WBC, Measles IgM, EUROIMMUN, Acid-Fast Microscopy, Poliovirus Sequencing, P. falciparum Gametocytes). Empty state: shows table headers + "0-0 of 0 items".
+
+2. **Table without lab section tabs** (1 tile: #8 Electronic Orders) — Same table layout but no tab filters. Just the 5-column table directly. Electronic orders are HL7/FHIR incoming so lab section filtering not applicable.
+
+3. **Sub-KPI cards** (1 tile: #9 Average Turn Around time) — Instead of a table, shows 3 sub-KPI metric cards: Reception To Validation Average Time (0), Reception To Result Average Time (0), Result To Validation Average Time (0). Breaks turnaround into 3 workflow segments.
+
+**Phase 23Y Summary:** 10 TCs, all PASS. All 10 dashboard KPI tiles tested for expand/collapse drill-down. 3 distinct drill-down types documented. Expand/collapse toggle works correctly for all tiles.
+
+**Phase 23 Cumulative (through 23Y)**: 532+ TCs executed, ~505 passed, ~94.9% pass rate. 8 non-executable scripts catalogued.
+
+---
+
 ## Key Files
 
 | File | Purpose |
