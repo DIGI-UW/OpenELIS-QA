@@ -12182,3 +12182,128 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. After extended testing (~30+ min), observe "Still There?" modal dialog 2. Verify dialog content: "User session is about to time out. Click anywhere to stay logged in." 3. Verify close (×) button dismisses dialog 4. Verify any click on page extends session |
 | **Expected** | Session timeout warning renders correctly with dismissible dialog |
 | **Status** | PASS |
+
+---
+
+### Suite HC — Non-Conform, Analyzers & Storage Pages
+
+#### TC-HC-NCE-REPORT-01: Report Non-Conforming Event Page Layout & Search
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HC-NCE-REPORT-01 |
+| **Suite** | HC — Non-Conform, Analyzers & Storage Pages |
+| **Phase** | 23AD |
+| **Steps** | 1. Non-Conform > Report Non-Conforming Event (`/ReportNonConformingEvent`) 2. Verify page title "Report Non-Conforming Event (NCE)" 3. Verify "Search By" dropdown options: Last Name (value="lastName"), First Name (value="firstName"), Patient Identification Code (value="STNumber"), Lab Number (value="labNumber") 4. Verify "Text Value" text input 5. Verify "Search" button 6. Select "Lab Number", enter "AROHS2500000", click Search → "No data found" red message 7. Clear text, click Search with empty value → "Please Enter Value" red validation message |
+| **Expected** | NCE Report page renders with 4 search-by options and proper validation |
+| **Status** | PASS |
+
+#### TC-HC-NCE-REPORT-02: NCE Search Results & Specimen Selection
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HC-NCE-REPORT-02 |
+| **Suite** | HC — Non-Conform, Analyzers & Storage Pages |
+| **Phase** | 23AD |
+| **Steps** | 1. Select "Last Name", enter "Test", click Search 2. Verify results table with columns: Lab Number, Specimen type 3. Verify 50+ lab numbers returned (25CPHL*, 26CPHL*) 4. Verify specimen types as checkboxes: Sputum, Serum, Plasma, Whole Blood, Concentrated Sediment, FNA, Isolate, CSF, Treated Water, Pus/Wound Swab, Food (Cooked), Faeces 5. Verify some lab numbers have multiple specimen types (e.g., 25CPHL00000F has Serum, Plasma, Whole Blood) 6. Verify "Go to NCE Reporting Form" button at bottom of table |
+| **Expected** | Search returns specimen selection table with 12+ specimen types and multi-select checkboxes |
+| **Status** | PASS |
+
+#### TC-HC-NCE-REPORT-03: NCE Reporting Form Fields
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HC-NCE-REPORT-03 |
+| **Suite** | HC — Non-Conform, Analyzers & Storage Pages |
+| **Phase** | 23AD |
+| **Steps** | 1. Check specimen checkbox for 25CPHL000002 Sputum, click "Go to NCE Reporting Form" 2. Verify read-only header: Report Date (01/04/2026), Name (Open ELIS), NCE Number (1775025570620), Lab Number (25CPHL000002), Prescriber Name and Site (Mabone, Seluia \| Central Public Health Laboratory) 3. Verify editable fields: "Name of person reporting NCE (if different)" (text), "Date of Event" (date picker dd/mm/yyyy), "Reporting Unit" dropdown (14 units: HIV, Malaria, Microbiology, Molecular Biology, Mycobacteriology, Sero-Surveillance, Biochemistry, Hematology, Immunology, Cytology, Serology, Virology, Pathology, Immunohistochemistry), "Description of NCE" (textarea), "Suspected Cause of NCE" (textarea), "Proposed Action" (textarea) 4. Verify "Submit" button |
+| **Expected** | NCE form displays read-only header with auto-populated data and 6 editable fields with 14-unit dropdown |
+| **Status** | PASS |
+
+#### TC-HC-NCE-VIEW-01: View New Non-Conforming Events Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HC-NCE-VIEW-01 |
+| **Suite** | HC — Non-Conform, Analyzers & Storage Pages |
+| **Phase** | 23AD |
+| **Steps** | 1. Non-Conform > View New Non-Conforming Events (`/ViewNonConformingEvent`) 2. Verify page title "View New Non Conform Event" 3. Verify "Search By" dropdown options: NCE Number (value="nceNumber"), Lab Number (value="labNumber") — only 2 options (different from Report page which has 4) 4. Search by NCE Number "1775025570620" → "No Data Found" (expected since NCE was not submitted) |
+| **Expected** | View NCE page renders with 2 search-by options (NCE Number, Lab Number) |
+| **Status** | PASS |
+
+#### TC-HC-NCE-CORRECTIVE-01: Corrective Actions Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HC-NCE-CORRECTIVE-01 |
+| **Suite** | HC — Non-Conform, Analyzers & Storage Pages |
+| **Phase** | 23AD |
+| **Steps** | 1. Non-Conform > Corrective actions (`/NCECorrectiveAction`) 2. Verify page title "Nonconforming Events Corrective Action" 3. Verify "Search By" dropdown: NCE Number (value="nceNumber"), Lab Number (value="labNumber") — same 2 options as View page 4. Verify Text Value input and Search button present |
+| **Expected** | Corrective Action page renders with same search interface as View NCE page |
+| **Status** | PASS |
+
+#### TC-HC-ANALYZER-LIST-01: Analyzers List Dashboard
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HC-ANALYZER-LIST-01 |
+| **Suite** | HC — Non-Conform, Analyzers & Storage Pages |
+| **Phase** | 23AD |
+| **Steps** | 1. Analyzers > Analyzers List (`/analyzers`) 2. Verify breadcrumb "Analyzers > Analyzer List" 3. Verify subtitle "Manage laboratory analyzers and field mappings" 4. Verify dashboard cards: Total Analyzers (1), Active (0), Inactive (0), Plugin Warnings (1, red) 5. Verify search input "Search analyzers..." 6. Verify Status filter dropdown with options: All Statuses, Inactive, Setup, Validation, Active, Error Pending, Offline (7 options) 7. Verify table columns: Name, Type, Connection, Test Units, Status, Last Modified, Actions 8. Verify row: "Test Analyzer Alpha" with "Plugin Missing" red badge, Type=HEMATOLOGY, Connection=192.168.1.100:5000, Test Units=1 unit(s), Status=Setup, Actions=⋮ 9. Verify "Add Analyzer +" button (top right) |
+| **Expected** | Analyzers List shows dashboard stats, 7-option status filter, and 1 configured analyzer with Plugin Missing warning |
+| **Status** | PASS |
+
+#### TC-HC-ANALYZER-ERRORS-01: Error Dashboard Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HC-ANALYZER-ERRORS-01 |
+| **Suite** | HC — Non-Conform, Analyzers & Storage Pages |
+| **Phase** | 23AD |
+| **Steps** | 1. Analyzers > Error Dashboard (`/analyzers/errors`) 2. Verify breadcrumb "Analyzers > Error Dashboard" 3. Verify subtitle "View and manage analyzer errors and alerts" 4. Verify dashboard cards: Total Errors (0), Unacknowledged (0), Critical (0), Last 24 Hours (0) 5. Verify filters: search "Search errors...", Error Type dropdown "All Types", Severity dropdown "All Severities", Analyzer dropdown "All" 6. Verify table columns: Timestamp, Analyzer, Type, Severity, Message, Status, Actions 7. Verify empty table (no errors) 8. Verify "Acknowledge All" button (top right) |
+| **Expected** | Error Dashboard renders with 4 stat cards, 3 filter dropdowns, and empty error table |
+| **Status** | PASS |
+
+#### TC-HC-ANALYZER-TYPES-01: Analyzer Types Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HC-ANALYZER-TYPES-01 |
+| **Suite** | HC — Non-Conform, Analyzers & Storage Pages |
+| **Phase** | 23AD |
+| **Steps** | 1. Analyzers > Analyzer Types (`/analyzers/types`) 2. Verify page title "Analyzer Types" 3. Verify search input "Search analyzer types..." 4. Verify table columns: Name, Description, Protocol, Plugin Class, Identifier Pattern, Generic Plugin, Plugin Loaded, Instances, Status 5. Verify 2 rows: "Test Analyzer Type" (ASTM, Generic=Yes, Loaded=No, Instances=0, Active) and "Test Type ASTM" (ASTM, Generic=Yes, Loaded=No, Instances=0, Active) 6. Verify "Create New Analyzer Type +" button (top right) |
+| **Expected** | Analyzer Types page shows 2 ASTM-protocol types with 9-column table |
+| **Status** | PASS |
+
+#### TC-HC-STORAGE-MGMT-01: Storage Management Dashboard
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HC-STORAGE-MGMT-01 |
+| **Suite** | HC — Non-Conform, Analyzers & Storage Pages |
+| **Phase** | 23AD |
+| **Steps** | 1. Storage > Storage Management > Sample Items (`/Storage/samples`) 2. Verify page title "Storage Management Dashboard" 3. Verify dashboard cards: TOTAL SAMPLE ITEMS (2), ACTIVE (2), DISPOSED (0) 4. Verify STORAGE LOCATIONS summary badges: 12 rooms (blue), 14 devices (blue), 12 shelves (green), 4 racks (red) 5. Verify 6-tab navigation: Sample Items, Rooms, Devices, Shelves, Racks, Boxes 6. Verify Sample Items tab active with search "Search by sample ID or location...", "Filter by locations..." input, "Filter by Status" dropdown 7. Verify table columns: SampleItem ID, Sample Accession, Sample Type, Status, Location, Assigned By, Assigned Date, Actions 8. Verify 4 sample rows including: 26CPHL000085-1/Blood Film/Active/Lab>Freezer1>1, 26CPHL000084-1/Sputum/Active/TB PC2>Fridge>TOPSHELF, 25CPHL00000D-2/Plasma/Active, 26CPHL00003G-1/Whole Blood/Active |
+| **Expected** | Storage Management Dashboard shows 6-tab hierarchy, location summary badges, and 4 active sample items |
+| **Status** | PASS |
+
+#### TC-HC-COLD-STORAGE-01: Cold Storage Monitoring Dashboard
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HC-COLD-STORAGE-01 |
+| **Suite** | HC — Non-Conform, Analyzers & Storage Pages |
+| **Phase** | 23AD |
+| **Steps** | 1. Storage > Cold Storage Monitoring > Dashboard (`/FreezerMonitoring?tab=0`) 2. Verify page title "Cold Storage Dashboard" with subtitle "Real-time temperature monitoring & compliance" 3. Verify system status banner: green checkmark, "System Status: Online", last update timestamp 4. Verify "Refresh" link 5. Verify 5-tab navigation: Dashboard, Corrective Actions, Historical Trends, Reports, Settings 6. Verify dashboard cards: Total Storage Units (0), Normal Status (0), Warnings (0), Critical Alerts (0) 7. Verify filters: "Search by Unit ID or Name", Status dropdown "All Status", Device Type dropdown "All Device Types" 8. Verify Storage Units table columns: Unit ID, Status, Unit Name, Device Type, Location, Current Temp, Target Temp, Protocol, Last Reading 9. Verify "No storage units found." message 10. Verify "Active Alerts (0)" section |
+| **Expected** | Cold Storage Dashboard shows real-time monitoring interface with system status, 5 tabs, temperature columns, and alert tracking |
+| **Status** | PASS |
+
+#### TC-HC-SIDEBAR-STRUCTURE-01: Storage & Analyzers Sidebar Structure Verification
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HC-SIDEBAR-STRUCTURE-01 |
+| **Suite** | HC — Non-Conform, Analyzers & Storage Pages |
+| **Phase** | 23AD |
+| **Steps** | 1. Verify Storage sidebar has 2 sub-menus: Storage Management (expandable) and Cold Storage Monitoring (expandable) 2. Verify Storage Management sub-items: Sample Items (`/Storage/samples`), Devices (`/Storage/devices`), Shelves (`/Storage/shelves`), Racks (`/Storage/racks`), Boxes (`/Storage/boxes`) — 5 pages 3. Verify Cold Storage Monitoring sub-items: Dashboard (`/FreezerMonitoring?tab=0`), Corrective Actions (`/FreezerMonitoring?tab=1`), Historical Trends (`/FreezerMonitoring?tab=2`), Reports (`/FreezerMonitoring?tab=3`), Settings (`/FreezerMonitoring?tab=4`) — 5 tabs 4. Verify Analyzers has 3 direct sub-items: Analyzers List (`/analyzers`), Error Dashboard (`/analyzers/errors`), Analyzer Types (`/analyzers/types`) 5. Verify Non-Conform has 3 direct sub-items: Report Non-Conforming Event, View New Non-Conforming Events, Corrective actions |
+| **Expected** | Storage (10 sub-pages), Analyzers (3 sub-pages), Non-Conform (3 sub-pages) all render with correct sidebar hierarchy |
+| **Status** | PASS |

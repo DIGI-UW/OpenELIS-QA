@@ -1636,6 +1636,44 @@ Deep testing of all Validation and Workplan sub-pages.
 
 **Phase 23 Cumulative (through 23AC)**: 569+ TCs executed, ~542 passed, ~95.3% pass rate. 8 non-executable scripts catalogued.
 
+### Phase 23AD — Non-Conform, Analyzers & Storage Pages (Suite HC)
+
+**Scope:** Deep interaction testing of all 3 Non-Conform pages, all 3 Analyzer pages, and Storage (Storage Management + Cold Storage Monitoring).
+
+**Non-Conform Section (3 pages):**
+- Report Non-Conforming Event (`/ReportNonConformingEvent`): Search By has 4 options (Last Name, First Name, Patient ID Code, Lab Number). Returns specimen selection table with checkboxes — 12+ specimen types discovered (Sputum, Serum, Plasma, Whole Blood, Concentrated Sediment, FNA, Isolate, CSF, Treated Water, Pus/Wound Swab, Food (Cooked), Faeces). NCE Reporting Form has read-only header (Report Date, Name, NCE Number, Lab Number, Prescriber) + 6 editable fields including 14-unit Reporting Unit dropdown. Validation: empty search shows "Please Enter Value", invalid search shows "No data found"
+- View New Non-Conforming Events (`/ViewNonConformingEvent`): Search By has only 2 options (NCE Number, Lab Number) — different from Report page
+- Corrective Actions (`/NCECorrectiveAction`): Same 2-option search as View page
+
+**Non-Conform page comparison:**
+
+| Feature | Report NCE | View NCE | Corrective Action |
+|---------|-----------|----------|-------------------|
+| Search By options | 4 (Last Name, First Name, Patient ID, Lab Number) | 2 (NCE Number, Lab Number) | 2 (NCE Number, Lab Number) |
+| Results display | Specimen selection table with checkboxes | TBD (no data) | TBD (no data) |
+| Action button | "Go to NCE Reporting Form" | TBD | TBD |
+
+**Analyzers Section (3 pages):**
+- Analyzers List (`/analyzers`): Dashboard with 4 stat cards (Total/Active/Inactive/Plugin Warnings). Status filter has 7 options (All Statuses, Inactive, Setup, Validation, Active, Error Pending, Offline). Table has 7 columns. 1 analyzer configured: "Test Analyzer Alpha" (HEMATOLOGY, 192.168.1.100:5000, Setup status, Plugin Missing warning). "Add Analyzer +" button
+- Error Dashboard (`/analyzers/errors`): 4 stat cards (Total Errors/Unacknowledged/Critical/Last 24 Hours — all 0). 3 filter dropdowns (Error Type, Severity, Analyzer). 7-column error table (empty). "Acknowledge All" button
+- Analyzer Types (`/analyzers/types`): 9-column table. 2 types configured: "Test Analyzer Type" and "Test Type ASTM" (both ASTM protocol, Generic=Yes, Plugin Loaded=No, Active). "Create New Analyzer Type +" button
+
+**Storage Section (10 sub-pages):**
+- Storage Management (5 sub-pages): Sample Items, Devices, Shelves, Racks, Boxes
+  - Dashboard shows 3 stat cards: TOTAL SAMPLE ITEMS (2), ACTIVE (2), DISPOSED (0)
+  - STORAGE LOCATIONS badges: 12 rooms, 14 devices, 12 shelves, 4 racks
+  - 6-tab navigation in content area matches sidebar sub-items + Rooms tab
+  - Sample Items table: 8 columns, 4 active samples (Blood Film, Sputum, Plasma, Whole Blood) with hierarchical locations (Lab > Freezer1 > 1, TB PC2 > Fridge > TOPSHELF)
+- Cold Storage Monitoring (5 tabs via query parameter): Dashboard, Corrective Actions, Historical Trends, Reports, Settings
+  - All accessed via `/FreezerMonitoring?tab=0` through `?tab=4`
+  - Dashboard shows real-time system status (Online), 4 stat cards (Total Storage Units/Normal/Warnings/Critical — all 0)
+  - Storage Units table: 9 columns including Current Temp, Target Temp, Protocol, Last Reading
+  - Active Alerts section (0 alerts)
+
+**Phase 23AD Summary:** 12 TCs, all PASS. Complete coverage of Non-Conform (3 pages), Analyzers (3 pages), and Storage (10 sub-pages). Discovered 12+ specimen types, 14-unit NCE reporting dropdown, 7 analyzer status options, hierarchical storage locations, and real-time cold storage monitoring.
+
+**Phase 23 Cumulative (through 23AD)**: 581+ TCs executed, ~554 passed, ~95.3% pass rate. 8 non-executable scripts catalogued.
+
 ---
 
 ## Key Files
