@@ -12642,3 +12642,51 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Navigate to `/PrintBarcode` 2. Verify page title "Print Bar Code Labels" 3. Verify "Pre-Print Barcodes" section: Number of label sets (number input with ± buttons, default 1), Number of order labels per set (default 1), Number of specimen labels per set (default 1), Total Labels to Print (calculated=2, with clear button) 4. Verify "Search Site Name" text input 5. Verify Sample section: Sample Type dropdown (2 options: Select sample type, Whole Blood) 6. Verify note: "If a facility and/or sample and test are added, they will be printed on EVERY label" 7. Verify "Pre-Print Labels" button (disabled) 8. Note: Only "Whole Blood" available as sample type — limited configuration |
 | **Expected** | Barcode page has label set calculator (sets × order labels + specimen labels), site search, limited sample type (Whole Blood only) |
 | **Status** | PASS |
+
+---
+
+### Suite HH — Patient Pages Deep Interactions
+
+#### TC-HH-ADDPATIENT-01: Add/Edit Patient Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HH-ADDPATIENT-01 |
+| **Suite** | HH — Patient Pages Deep Interactions |
+| **Phase** | 23AI |
+| **Steps** | 1. Navigate to `/PatientManagement` 2. Verify breadcrumb: Home > Add Or Modify Patient 3. Verify page title "Add Or Modify Patient" 4. Verify 2 tab buttons: "Search for Patient" (active, blue) and "New Patient" (outline) — matches Add Order layout 5. Verify search fields: Patient Id, Previous Lab Number (0/23 counter), Last Name, First Name, Date of Birth (dd/mm/yyyy), Gender (Male/Female radio), Client Registry Search toggle (default false) 6. Verify Search + External Search buttons 7. Verify "Patient Results" table: 7 cols (Last Name/First Name/Gender/Date of Birth/Unique Health ID number/National ID/Data Source Name), Items per page 100 |
+| **Expected** | Add/Edit Patient uses same patient search pattern as Add Order with Search for Patient/New Patient tabs, 0/23 counter, CRS toggle |
+| **Status** | PASS |
+
+#### TC-HH-HISTORY-01: Patient History Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HH-HISTORY-01 |
+| **Suite** | HH — Patient Pages Deep Interactions |
+| **Phase** | 23AI |
+| **Steps** | 1. Navigate to `/PatientHistory` 2. Verify breadcrumb: Home > Patient History 3. Verify page title "Patient History" 4. Note: NO "Search for Patient"/"New Patient" tab buttons — search fields are displayed directly (differs from Add/Edit Patient and Add Order) 5. Verify search fields: Patient Id, Previous Lab Number (0/23 counter), Last Name, First Name, DOB, Gender, Client Registry Search toggle, Search + External Search buttons 6. Verify same 7-col Patient Results table |
+| **Expected** | Patient History has same search fields but omits the tab buttons — search fields shown directly without tab navigation |
+| **Status** | PASS |
+
+#### TC-HH-MERGE-01: Merge Patient Records Wizard
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HH-MERGE-01 |
+| **Suite** | HH — Patient Pages Deep Interactions |
+| **Phase** | 23AI |
+| **Steps** | 1. Navigate to `/PatientMerge` 2. Verify breadcrumb: Home > Merge Patient Records 3. Verify page title "Merge Patient Records" 4. Verify 3-step wizard: Select Patients → Select Primary → Confirm Merge 5. Verify "Select First Patient" section: Patient Id, First Name, Last Name, Gender (Male/Female radio), DOB (dd/mm/yyyy), Search + External Search buttons (both grayed/disabled initially) 6. Verify "No patient selected" state below first search 7. Verify "Select Second Patient" section: identical fields to first patient 8. Verify "No patient selected" state below second search 9. Note: Simplified search compared to other patient pages — NO Previous Lab Number field, NO Client Registry Search toggle |
+| **Expected** | Merge Patient is a 3-step wizard with dual patient search (simplified: no Prev Lab Number, no CRS toggle), "No patient selected" states |
+| **Status** | PASS |
+
+#### TC-HH-PATIENT-SEARCH-COMPARISON-01: Patient Search Pattern Comparison
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HH-PATIENT-SEARCH-COMPARISON-01 |
+| **Suite** | HH — Patient Pages Deep Interactions |
+| **Phase** | 23AI |
+| **Steps** | 1. Compare patient search across 6 pages: Add Order, Edit Order, Incoming Orders, Add/Edit Patient, Patient History, Merge Patient 2. Common fields (all 6): Patient Id, Last Name, First Name, DOB, Gender (Male/Female radio), Search + External Search buttons 3. Previous Lab Number (0/23 counter): Present in Add Order, Edit Order, Add/Edit Patient, Patient History — ABSENT in Merge Patient and Incoming Orders 4. Client Registry Search toggle: Present in Add Order, Edit Order, Add/Edit Patient, Patient History — ABSENT in Merge Patient 5. "Search for Patient"/"New Patient" tabs: Only in Add Order and Add/Edit Patient — ABSENT in Edit Order (has different dual-search), Patient History (direct fields), Merge Patient (direct fields) 6. Incoming Orders has completely different search pattern (text-based + date/status rather than patient fields) |
+| **Expected** | 6 pages share patient search but with 3 variations: full (with tabs+counter+CRS), partial (counter+CRS but no tabs), simplified (Merge: no counter, no CRS) |
+| **Status** | PASS |

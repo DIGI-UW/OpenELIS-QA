@@ -1781,6 +1781,36 @@ Column naming inconsistency across the 3 dashboards is a UX cleanup opportunity 
 
 ---
 
+### Phase 23AI — Patient Pages Deep Interactions (Suite HH)
+
+**Scope:** Field-level testing of all 3 Patient sub-pages and cross-page patient search pattern comparison.
+
+**Findings:**
+
+- **Add/Edit Patient** (`/PatientManagement`): "Add Or Modify Patient" — uses same "Search for Patient"/"New Patient" tab pattern as Add Order. Full search fields: Patient Id, Previous Lab Number (0/23), Last Name, First Name, DOB, Gender, Client Registry Search toggle, Search/External Search. 7-col Patient Results table.
+
+- **Patient History** (`/PatientHistory`): Same search fields as Add/Edit Patient but WITHOUT the "Search for Patient"/"New Patient" tab buttons — fields displayed directly. Still has Previous Lab Number counter and Client Registry Search.
+
+- **Merge Patient** (`/PatientMerge`): "Merge Patient Records" with 3-step wizard (Select Patients → Select Primary → Confirm Merge). Dual patient search ("Select First Patient" + "Select Second Patient") with SIMPLIFIED fields: no Previous Lab Number, no Client Registry Search toggle. "No patient selected" state below each search.
+
+**Patient Search Pattern Comparison (6 pages):**
+
+| Feature | Add Order | Edit Order | Add/Edit Patient | Patient History | Merge Patient | Incoming Orders |
+|---------|-----------|------------|-----------------|-----------------|---------------|-----------------|
+| Tab buttons | ✓ | ✗ | ✓ | ✗ | ✗ | N/A |
+| Prev Lab Number (0/23) | ✓ | ✓ | ✓ | ✓ | ✗ | N/A |
+| Client Registry Search | ✓ | ✓ | ✓ | ✓ | ✗ | N/A |
+| External Search | ✓ | ✓ | ✓ | ✓ | ✓ | N/A |
+| Patient Results table | ✓ | ✓ | ✓ | ✓ | ✗ | N/A |
+
+3 search variations: Full (tabs+counter+CRS), Partial (counter+CRS, no tabs), Simplified (Merge: no counter, no CRS).
+
+**Phase 23AI Summary:** 4 TCs (Suite HH), all PASS. Patient search pattern is mostly consistent but with 3 variation levels across 6 pages. Merge Patient uses simplified search without Previous Lab Number or Client Registry Search toggle.
+
+**Phase 23 Cumulative (through 23AI)**: 616+ TCs executed, ~589 passed, ~95.6% pass rate. 8 non-executable scripts catalogued.
+
+---
+
 ## Key Files
 
 | File | Purpose |
