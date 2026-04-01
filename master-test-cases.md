@@ -11922,3 +11922,64 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Navigate to Validation > By Date (`/ResultValidationByTestDate`) 2. Verify "Enter Test Date" with dd/mm/yyyy date picker + calendar icon 3. Verify Search button 4. Verify empty state + pagination (100/page) + Save |
 | **Expected** | Date-based validation search renders with date picker |
 | **Status** | PASS |
+
+---
+
+### Suite GZ — Results Entry Deep Interactions (Phase 23AA)
+
+> Deep interaction testing of Results row expansion, referral workflow fields, and cross-unit result type comparison.
+
+#### TC-GZ-ROW-EXPAND-01: Results Row Expansion — Hematology
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GZ-ROW-EXPAND-01 |
+| **Suite** | GZ — Results Entry Deep Interactions |
+| **Phase** | 23AA |
+| **Steps** | 1. Results > By Unit → select Hematology 2. Click "Expand Row" chevron on row 26-CPHL-000-08M-1 (WBC, result 8.5) 3. Verify expanded detail section: Methods dropdown, Upload file button (blue), "Refer test to a reference lab" checkbox, Referral Reason dropdown, Institute dropdown, Test to Perform dropdown ("WBC(Whole Blood)"), Sent Date (dd/mm/yyyy), Storage Location ("Not assigned" + "Search for location..." + "Expand" link) 4. Collapse row → verify clean collapse |
+| **Expected** | Expanded row shows 8+ interactive elements: referral workflow, file upload, storage assignment |
+| **Status** | PASS |
+
+#### TC-GZ-ROW-FIELDS-01: Results Row Column Fields — Hematology
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GZ-ROW-FIELDS-01 |
+| **Suite** | GZ — Results Entry Deep Interactions |
+| **Phase** | 23AA |
+| **Steps** | 1. Verify full column set: Sample Info (accession+patient+ID+gender+DOB), avatar (initials), Test Date, Analyzer Result ("MANUAL"), Test Name, Normal Range, Accept checkbox, Result textarea (editable), Current Result, Reject checkbox, Notes textarea 2. Verify 5 visible rows: 08L-1 (WBC, empty result), 08M-1 (WBC, 8.5), 08N-1 (HGB, 42), 08T-1 (HGB, 42), 08V-1 (partial) 3. Verify each row has Expand Row, Copy, Accept checkbox, Result field |
+| **Expected** | 10+ columns with row-level interactive controls per result |
+| **Status** | PASS |
+
+#### TC-GZ-RESULT-TYPE-NUMERIC-01: Numeric Result Entry (Hematology)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GZ-RESULT-TYPE-NUMERIC-01 |
+| **Suite** | GZ — Results Entry Deep Interactions |
+| **Phase** | 23AA |
+| **Steps** | 1. Results > By Unit → Hematology 2. Verify Result column uses textarea (free-text input) 3. Verify existing values: WBC row has "8.5", HGB rows have "42" 4. Verify Current Result column shows same values (8.5, 42) confirming persistence |
+| **Expected** | Numeric tests use free-text textarea for result entry |
+| **Status** | PASS |
+
+#### TC-GZ-RESULT-TYPE-DROPDOWN-01: Dropdown Result Entry (HIV)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GZ-RESULT-TYPE-DROPDOWN-01 |
+| **Suite** | GZ — Results Entry Deep Interactions |
+| **Phase** | 23AA |
+| **Steps** | 1. Results > By Unit → switch to HIV 2. Verify Result column uses DROPDOWN SELECTOR (not textarea) 3. Document result values: "HIV-1/2 and Syphilis Reactive" (Abbott HIV/Syphilis Duo), "Positif" (Genie Fast HIV 1/2), "Reactive HIV-1" (ABON Tri-line HIV 1/2/0), "HIV-1 DETECTED" (Xpert HIV-1 Qual XC), "Syphilis Reactive" (Abbott Duo) 4. Verify Current Result column mirrors dropdown selection 5. Verify same table structure (columns, expand, copy, accept) |
+| **Expected** | Categorical HIV tests use dropdown selectors with predefined result values |
+| **Status** | PASS |
+
+#### TC-GZ-CROSS-UNIT-01: Dynamic Result Field Type Based on Test Configuration
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GZ-CROSS-UNIT-01 |
+| **Suite** | GZ — Results Entry Deep Interactions |
+| **Phase** | 23AA |
+| **Steps** | 1. Switch between Hematology and HIV units 2. Confirm Hematology Result = textarea (numeric free-text) 3. Confirm HIV Result = dropdown (categorical predefined values) 4. Verify both share same table layout, column headers, expand/collapse behavior 5. Verify accession format: Hematology "26-CPHL-000-XXX-1", HIV "25-CPHL-000-XXX-1" (different year prefix) |
+| **Expected** | Result field type dynamically adapts based on test configuration; layout consistent across units |
+| **Status** | PASS |

@@ -1513,6 +1513,52 @@ All 10 General Config sub-pages verified:
 
 **Phase 23 Cumulative (through 23Z)**: 547+ TCs executed, ~520 passed, ~95.1% pass rate. 8 non-executable scripts catalogued.
 
+### Phase 23AA — Results Entry Deep Interactions (2026-03-31)
+
+**Scope:** Deep interaction testing of the Results By Unit page — row expansion detail view, field-level documentation, and cross-unit result type comparison.
+
+#### Phase 23AA-1: Results Row Expansion Detail View (Hematology)
+
+Expanded row for accession 26-CPHL-000-08M-1 (WBC Whole Blood, result 8.5):
+
+**Row-level controls (per result row):**
+- Expand Row chevron button
+- Copy button (clipboard icon)
+- Accept checkbox
+- Result field (editable — textarea for numeric tests)
+- Reject checkbox (visible when scrolled right)
+- Notes field (visible when scrolled right)
+
+**Expanded detail section contains:**
+1. **Methods** dropdown (test methodology)
+2. **Upload file** button (blue) — for attaching supporting documents/images
+3. **"Refer test to a reference lab"** checkbox — enables referral workflow
+4. **Referral Reason** dropdown — conditional on referral checkbox
+5. **Institute** dropdown — reference laboratory selection
+6. **Test to Perform** dropdown — pre-filled with current test (e.g., "WBC(Whole Blood)(Whole Blood)")
+7. **Sent Date** — dd/mm/yyyy date picker for referral sent date
+8. **Storage Location** section:
+   - Shows current: "Not assigned" (green monospace)
+   - "Search for location..." dropdown
+   - "Expand" link — expands storage location tree
+
+#### Phase 23AA-2: Cross-Unit Result Type Comparison
+
+**Key finding: Result field is DYNAMIC based on test type.**
+
+- **Hematology** (numeric tests: WBC, HGB): Result field = **textarea** (free-text numeric entry, e.g., "8.5", "42")
+- **HIV** (categorical tests): Result field = **dropdown selector** with predefined values:
+  - Abbott HIV/Syphilis Duo → "HIV-1/2 and Syphilis Reactive", "Syphilis Reactive"
+  - Genie Fast HIV 1/2 → "Positif"
+  - ABON Tri-line HIV 1/2/0 → "Reactive HIV-1"
+  - Xpert HIV-1 Qual XC → "HIV-1 DETECTED"
+
+HIV test data observed: Accessions 25-CPHL-000-008-1 (3 tests: Abbott Duo, Genie Fast, ABON Tri-line), 25-CPHL-000-008-2 (Xpert), 25-CPHL-000-00G-1 (Abbott Duo with "Syphilis Reactive"). Dates: 01/12/2025 and 03/02/2026.
+
+**Phase 23AA Summary:** 5 TCs, all PASS. Discovered dynamic result field types (textarea vs dropdown), documented full expanded row detail view with 8+ interactive elements including referral workflow, file upload, and storage location assignment. Cross-unit comparison confirms Result column adapts to test type.
+
+**Phase 23 Cumulative (through 23AA)**: 552+ TCs executed, ~525 passed, ~95.1% pass rate. 8 non-executable scripts catalogued.
+
 ---
 
 ## Key Files
