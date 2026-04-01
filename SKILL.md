@@ -710,7 +710,9 @@ These results come from 6 rounds of live validation on the jdhealthsolutions ins
 
 | 32 (Phase 23G) | 2026-03-31 | 2 suites (15 TCs) | 15 | 0 | 0 | Workplan (4 pages): By Test Type (302 tests), By Panel (41 panels), By Unit (14 units), By Priority (5 priorities). Non-Conform (3 pages): Report NCE, View New NCE, Corrective Actions — all share Search By (4 options) + Text Value form. ALL PASS. |
 
-**Cumulative:** 454 TCs executed, 429 passed, ~94% pass rate (3 resolved bugs + 1 retracted false positive improve effective quality). 7 EQA Jira tickets (OGC-518–524) cancelled — need to re-test with EQA config enabled.
+| 33 (Phase 23H) | 2026-03-31 | 1 suite (4 TCs) | 4 | 0 | 0 | Add Order 4-step wizard (`/SamplePatientEntry`): Step 1 Patient Info (2 tabs: Search 7 fields + results table, New Patient 15+ fields including Emergency Contact 4 fields + Additional Info 7 fields with 21 health regions, 294 nationalities, 4 education levels, 7 marital statuses). Step 2 Program Selection (15 programs). Step 3 Add Sample (sample type, 45 UOM units, labels, panel/test search, referral checkbox). Step 4 Add Order (Lab Number with Generate, 5 priorities, 4 payment statuses, 8 sampling codes, site/requester search, Result Reporting section). NOTE-32: "maritialStatus" HTML id typo + "Enter Martial Status" helper text typo. ALL PASS. |
+
+**Cumulative:** 458 TCs executed, 433 passed, ~94% pass rate (3 resolved bugs + 1 retracted false positive improve effective quality). 7 EQA Jira tickets (OGC-518–524) cancelled — need to re-test with EQA config enabled.
 
 **Key takeaway:** Read operations, admin pages, granular interactions, i18n, session security,
 accessibility, pathology modules, end-to-end workflows, and cross-module data flows are rock-solid.

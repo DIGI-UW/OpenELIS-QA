@@ -895,7 +895,110 @@ All 10 General Config sub-pages verified:
    - "Nonconforming Events Corrective Action" heading
    - Same search form (Search By + Text Value + Search)
 
-**Phase 23 Cumulative**: 419+ TCs + ~65 new field-level verifications (30 from 23C-E + 20 from 23F + 15 from 23G), ~94% pass rate
+### Phase 23H — Add Order Wizard (Full 4-Step) Field-Level Verification
+**Date:** 2026-03-31
+**Focus:** Complete field inventory of the Add Order 4-step wizard at `/SamplePatientEntry`
+
+**Step 1 — Patient Info** (2 tabs):
+
+*Search for Patient tab:*
+- Patient Id (text, placeholder "Enter Patient Id")
+- Previous Lab Number (text, 0/23 counter)
+- Last Name (text)
+- First Name (text)
+- Date of Birth (date picker dd/mm/yyyy)
+- Gender (radio: Male, Female)
+- Search button, External Search button
+- Client Registry Search toggle (default: false)
+- Patient Results table: 7 columns (Last Name, First Name, Gender, Date of Birth, Unique Health ID number, National ID, Data Source Name)
+- Pagination: Items per page 100
+
+*New Patient tab:*
+- Add Photo (upload area)
+- Unique Health ID number (text)
+- National ID* (required, red validation "National ID Required")
+- Last Name (text)
+- First Name (text)
+- Primary phone:xxxx-xxxx (text)
+- Gender* (required, radio: Male, Female)
+- Date of Birth* (required, date picker dd/mm/yyyy)
+- Age/Years, Months, Days (numeric calculators)
+- **Emergency Contact Info** (expandable accordion):
+  - Contact last name, Contact first name, Contact Email, Contact Phone:xxxx-xxxx
+- **Additional Information** (expandable accordion):
+  - Quick Address Search (search field, "type at least 2 characters")
+  - Health Region dropdown: 21 regions (Papua New Guinea provinces: Autonomous Region of Bougainville, Central, Chimbu, East New Britain, East Sepik, Eastern Highlands, Enga, Gulf, Hela, Jiwaka, Madang, Manus, Milne Bay, Morobe, New Ireland, Northern, Southern Highlands, West New Britain, West Sepik, Western, Western Highlands)
+  - Health District dropdown: cascading (dependent on Health Region selection)
+  - Education dropdown: 4 options (none, primary, secondary, upper)
+  - Marital Status dropdown: 7 options (Defacto, Never married, divorced, livingWith, married, single, widowed) — **NOTE-32:** HTML id="maritialStatus" (typo, should be "maritalStatus"); helper text "Enter Martial Status" (typo, should be "Marital")
+  - Nationality dropdown: 294 nationalities (AFGHAN through ZIMBABWEAN)
+  - Specify Other nationality (text)
+
+**Step 2 — Program Selection:**
+- Program dropdown (id="additionalQuestionsSelect"): 15 programs
+  1. Routine Testing
+  2. People living with HIV Program - Initial Visit
+  3. People living with HIV Program - Follow-up Visit
+  4. Cytology
+  5. Immunohistochemistry
+  6. Histopathology
+  7. National Tuberculosis Program
+  8. HIV Program Early Infant Diagnosis
+  9. HIV Viral Load
+  10. AFR Case Investigation Form
+  11. SLIDE BANK COLLECTION DATA
+  12. Water Testing
+  13. Food Testing
+  14. Polio Environmental Surveillance
+  15. Acute Flaccid Paralysis CIF
+
+**Step 3 — Add Sample:**
+- Sample 1* (required section with "Remove Sample" link)
+- Select sample type dropdown: 1 type visible for Routine Testing ("Whole Blood") — NOTE: likely program-dependent
+- Reject Sample checkbox
+- Quantity (numeric text)
+- Sample Unit Of Measure dropdown: 45 units (ppl, %, ppm, mm3, mg/dl, mlU/ml, u/L, ug/dL, g/dl, million/uL, mille/mm^3, K/mm^3, pg, mns, micron^3, cp/mL, ui/ml, mU/ml, mm/h, Vol%, million/mm^3, g/l, Ul/l, mg/L, ug/l, UI/L, copies/ml, mille/mm3, fl, /mm3, copies/mL, μl, million/mm3, g/dL, 10^3/µl, 10^6/µl, Cell/µl, parasites/uL blood, Ratio, ISR, cfu/100ml, ºC, ntu, FAC, copies)
+- Collection Date (date picker dd/mm/yyyy)
+- Collection Time (auto-populated, e.g., 08:41)
+- Collector (text)
+- Storage Location: Not assigned / Expand
+- **Label quantities:**
+  - Order labels (numeric, default 1, +/- controls)
+  - Specimen labels sample 1 (numeric, default 1, +/- controls)
+  - Running total: 2
+- **Order Panels:**
+  - Search through available panels (search field, "Choose Available panel")
+  - Search through available tests (search field, "Choose Available Test")
+- Refer test to a reference lab (checkbox)
+- Add Sample + (button to add additional samples)
+- Back / Next navigation
+
+**Step 4 — Add Order:**
+- Lab Number* (required, 0/23 counter, "Scan OR Enter Manually OR Generate" link)
+- Priority dropdown: 5 options (ROUTINE, ASAP, STAT, Timed, Future STAT)
+- Request Date (date picker dd/mm/yyyy)
+- Received Date (date picker dd/mm/yyyy)
+- Reception Time (hh:mm, auto-populated)
+- Date of next visit (date picker dd/mm/yyyy)
+- Search Site Name* (required, search/autocomplete)
+- ward/dept/unit dropdown: cascading (dependent on Site selection)
+- Search Requester* (required, search/autocomplete)
+- Provisional Clinical Diagnosis (text)
+- Requester's FirstName* (required)
+- Requester's LastName* (required)
+- Requester Phone (text)
+- Requester's Fax Number (text)
+- Requester's Email (text)
+- Patient payment status dropdown: 4 options (normalCash, normalInsurance, reducedCash, reducedInsurance)
+- Sampling performed for analysis dropdown: 8 options (B1, J0, J15, M1, M3, M6, M12, Other)
+- if Other specify: (text, conditional on "Other" selection)
+- Remember site and requester (checkbox)
+- **RESULT REPORTING** section (heading visible)
+- Back / Submit buttons (Submit disabled until form complete)
+
+**Phase 23H Summary:** 4-step wizard with ~60+ fields verified. 15 programs, 21 health regions, 294 nationalities, 45 units of measure, 5 priorities. NOTE-32 new (marital status typo in HTML id and helper text). All 4 steps render correctly and navigation works.
+
+**Phase 23 Cumulative**: 419+ TCs + ~80 new field-level verifications (30 from 23C-E + 20 from 23F + 15 from 23G + 15 from 23H), ~94% pass rate
 
 ---
 

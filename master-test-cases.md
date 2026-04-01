@@ -10736,3 +10736,61 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Navigate to Non-Conform → Corrective actions 2. Verify heading "Nonconforming Events Corrective Action" 3. Verify same Search By + Text Value + Search form |
 | **Expected** | Corrective action page with same search structure |
 | **Status** | PASS |
+
+### Suite FX — Add Order Wizard Field-Level Verification
+
+#### TC-FX-STEP1-SEARCH-01: Step 1 Search for Patient Tab
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FX-STEP1-SEARCH-01 |
+| **Suite** | FX — Add Order Wizard |
+| **Phase** | 23H |
+| **Steps** | 1. Navigate to Order → Add Order (`/SamplePatientEntry`) 2. Verify 4-step wizard: Patient Info → Program Sel... → Add Sample → Add Order 3. Verify EQA Sample checkbox 4. Verify "Search for Patient" tab is active by default 5. Verify fields: Patient Id, Previous Lab Number (0/23), Last Name, First Name, Date of Birth (dd/mm/yyyy), Gender (Male/Female radios) 6. Verify Search button and External Search button 7. Verify Client Registry Search toggle (default: false) 8. Verify Patient Results table (7 columns: Last Name, First Name, Gender, Date of Birth, Unique Health ID number, National ID, Data Source Name) 9. Verify pagination (Items per page 100) |
+| **Expected** | Search tab with 6 search fields, 2 buttons, 1 toggle, results table with 7 columns |
+| **Status** | PASS |
+
+#### TC-FX-STEP1-NEWPAT-01: Step 1 New Patient Tab — Core Fields
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FX-STEP1-NEWPAT-01 |
+| **Suite** | FX — Add Order Wizard |
+| **Phase** | 23H |
+| **Steps** | 1. Click "New Patient" tab 2. Verify Add Photo upload area 3. Verify fields: Unique Health ID number, National ID* (required, red validation), Last Name, First Name, Primary phone:xxxx-xxxx, Gender* (Male/Female radios), Date of Birth* (dd/mm/yyyy), Age/Years + Months + Days calculators 4. Verify Emergency Contact Info expandable accordion (4 fields: Contact last name, Contact first name, Contact Email, Contact Phone:xxxx-xxxx) 5. Verify Additional Information expandable accordion (Quick Address Search, Health Region dropdown 21 regions, Health District cascading dropdown, Education dropdown 4 options, Marital Status dropdown 7 options, Nationality dropdown 294 options, Specify Other nationality text) |
+| **Expected** | New Patient form with 9 core fields, 4 emergency contact fields, 7 additional info fields |
+| **Notes** | NOTE-32: HTML id="maritialStatus" (typo); helper text "Enter Martial Status" (typo) |
+| **Status** | PASS |
+
+#### TC-FX-STEP2-01: Step 2 Program Selection
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FX-STEP2-01 |
+| **Suite** | FX — Add Order Wizard |
+| **Phase** | 23H |
+| **Steps** | 1. Navigate to Step 2 (Program Selection) 2. Verify "Program" heading and Program dropdown (id="additionalQuestionsSelect") 3. Verify 15 program options: Routine Testing, People living with HIV Program - Initial Visit, People living with HIV Program - Follow-up Visit, Cytology, Immunohistochemistry, Histopathology, National Tuberculosis Program, HIV Program Early Infant Diagnosis, HIV Viral Load, AFR Case Investigation Form, SLIDE BANK COLLECTION DATA, Water Testing, Food Testing, Polio Environmental Surveillance, Acute Flaccid Paralysis CIF 4. Verify Back/Next navigation |
+| **Expected** | Program dropdown with 15 programs, default "Routine Testing" |
+| **Status** | PASS |
+
+#### TC-FX-STEP3-01: Step 3 Add Sample — Full Field Inventory
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FX-STEP3-01 |
+| **Suite** | FX — Add Order Wizard |
+| **Phase** | 23H |
+| **Steps** | 1. Navigate to Step 3 (Add Sample) 2. Verify Sample 1* section with Remove Sample link 3. Verify Select sample type dropdown (program-dependent; Routine Testing shows "Whole Blood") 4. Verify Reject Sample checkbox 5. Verify Quantity text field and Sample Unit Of Measure dropdown (45 units: ppl, %, ppm, mm3, mg/dl, ..., copies) 6. Verify Collection Date (dd/mm/yyyy), Collection Time (auto-populated), Collector (text) 7. Verify Storage Location (Not assigned / Expand) 8. Verify Label quantities: Order labels (1, +/-), Specimen labels sample 1 (1, +/-), Running total: 2 9. Verify Order Panels: Search panels (Choose Available panel), Search tests (Choose Available Test) 10. Verify Refer test to a reference lab checkbox 11. Verify Add Sample + button 12. Verify Back/Next navigation |
+| **Expected** | Sample form with type, quantity, 45 UOM, dates, storage, labels, panel/test search |
+| **Status** | PASS |
+
+#### TC-FX-STEP4-01: Step 4 Add Order — Full Field Inventory
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FX-STEP4-01 |
+| **Suite** | FX — Add Order Wizard |
+| **Phase** | 23H |
+| **Steps** | 1. Navigate to Step 4 (Add Order) 2. Verify ORDER heading 3. Verify Lab Number* (0/23 counter, "Scan OR Enter Manually OR Generate" link) 4. Verify Priority dropdown (5: ROUTINE, ASAP, STAT, Timed, Future STAT) 5. Verify Request Date, Received Date (dd/mm/yyyy), Reception Time (hh:mm auto), Date of next visit 6. Verify Search Site Name* (required autocomplete), ward/dept/unit cascading dropdown 7. Verify Search Requester* (required autocomplete), Provisional Clinical Diagnosis 8. Verify Requester's FirstName*, Requester's LastName*, Requester Phone, Requester's Fax Number, Requester's Email 9. Verify Patient payment status dropdown (4: normalCash, normalInsurance, reducedCash, reducedInsurance) 10. Verify Sampling performed for analysis dropdown (8: B1, J0, J15, M1, M3, M6, M12, Other) + if Other specify field 11. Verify Remember site and requester checkbox 12. Verify RESULT REPORTING section heading 13. Verify Back/Submit buttons (Submit disabled until form complete) |
+| **Expected** | Order form with lab number generation, 5 priorities, 4 payment statuses, 8 sampling codes, site/requester search, result reporting |
+| **Status** | PASS |
