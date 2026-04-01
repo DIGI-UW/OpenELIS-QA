@@ -1331,7 +1331,68 @@ All 10 General Config sub-pages verified:
 
 **Phase 23U-W Summary:** 10 TCs, all pass. Batch Order Entry shows form-specific conditional rendering (3 distinct sample sections for Routine/EID/Viral Load). Alerts Dashboard has 4 KPIs and 3 filter dimensions. 7 Admin sub-pages verified with full field inventories.
 
-**Phase 23 Cumulative (through 23W)**: 506+ TCs, ~479 passed, ~94.7% pass rate
+---
+
+### Phase 23X — Remaining Admin Sub-Pages + Non-Executable Test Scripts (2026-03-31)
+
+**Scope:** Test Management, Menu Configuration (5 sub-types), Reflex Tests Configuration (2 sub-pages), Localization (2 sub-pages), Application Properties, Program Entry, EQA Program Management, Legacy Admin. Plus non-executable detailed test scripts for Add Program, Reflex Tests CRUD, and Calculated Value Tests CRUD.
+
+**Executed Test Cases (read-only verification):**
+
+1. **Test Management** (`/MasterListsPage/testManagementConfigMenu`) — PASS
+   - "Spelling corrections" section with 7 rename options: test names, panels, sample types (NOTE-34: description copy-paste error says "panels"), test sections, unit of measure entries, result list options, method names
+   - Each is a clickable link card
+
+2. **Global Menu Configuration** (`/MasterListsPage/globalMenuManagement`) — PASS
+   - "Show Child Elements" toggle (default On), "Side Nav Active" master checkbox
+   - Hierarchical checkbox tree with ~80+ menu items spanning: Home, Alerts, EQA Programs, Generic Sample, EQA Distributions, Order (7 sub), Patient (4 sub), Storage (Storage Mgmt 5 sub + Cold Storage 5 sub), Analyzers (3 sub), Non-Conform (3 sub), Workplan (4 sub), Pathology, IHC, Cytology, Results (8+ sub), Validation (Routine + Study sub-tree), Reports (Routine/Aggregate/Management/Study/WHONET), Admin, Billing, Aliquot, NoteBook, Inventory, Help
+   - Submit button at bottom
+   - Menu Configuration has 5 sub-types: Global, Billing, Non-Conform, Patient, Study
+
+3. **Reflex Tests Management** (`/MasterListsPage/reflex`) — PASS
+   - ~12 reflex rule cards: HIV Antibody S, Organism ID (T/U), MPN (Treated/Untreated), MPOX RT-PCR, Xpert MTB/RIF, Cryptococcus A, Malaria PCR/Detection, P.falciparum, Faeces Culture, HIV Antibody C
+   - Each card: Rule Name (clickable link), Toggle Rule (Off/On), Active: true checkbox, "Deactivate Rule" button
+   - All rules: Toggle Off, Active true
+   - "+ Rule" button at bottom
+
+4. **Calculated Value Tests Management** (`/MasterListsPage/calculatedValue`) — PASS
+   - 6 Measles calculations: Positive, Negative, Borderline, IgM Positive, IgM Negative, IgM Borderline
+   - All: Toggle Off, Active false
+   - Same card layout as Reflex Tests
+   - "+ Rule" button at bottom
+
+5. **Language Management** (`/MasterListsPage/languageManagement`) — PASS
+   - 2 languages: en (Fallback, Active, Sort 1) and fr (Francais, Active, Sort 2)
+   - Table with Locale Code, Display Name, Status, Sort Order, Actions (edit/star/delete)
+   - "Add Language +" button
+
+6. **Translation Management** (`/MasterListsPage/translationManagement`) — PASS
+   - Translation Progress: 2180 total entries, English 100%, Francais 51.4% (1060 missing)
+   - Select Language dropdown, "Show Missing Only" + "Export CSV" buttons, search
+   - Editable table: ID, Description, Fallback (English), Translation, Actions
+
+7. **Application Properties** (`/MasterListsPage/commonproperties`) — PASS
+   - 34 key-value property inputs (paging sizes all 99, FHIR config, poll frequencies, etc.)
+
+8. **Program Entry** (`/MasterListsPage/program`) — PASS
+   - 16 programs in dropdown, 15 test sections, FHIR Questionnaire JSON editor with Edit Json toggle
+
+9. **EQA Program Management** (`/MasterListsPage/eqaProgram`) — PASS
+   - 3 KPIs (Active Programs 0, Enrolled Participants 0, Total Participants 0), 3 tabs, "Add Program +" button, "No EQA programs found"
+
+10. **Legacy Admin** (opens new tab: `/api/OpenELIS-Global/MasterListsPage`) — PASS
+    - Old JSP-style 2.x interface with top nav and 21 admin links
+    - Orange "training installation" banner
+    - NOTE-35: "banner.menu.aliquot" and "sidenav.label.notebook" raw i18n keys in top nav
+
+**Non-Executable Test Scripts Written (Suites GU, GV, GW):**
+- **Suite GU** — Add New Program (2 TCs): Create program + verify in Order Entry + Batch Order Entry; Create programs for all 15 test sections
+- **Suite GV** — Reflex Tests CRUD (3 TCs): Create new rule + verify fires on trigger result; Toggle existing rule On/Off; Edit rule details
+- **Suite GW** — Calculated Value Tests CRUD (3 TCs): Create new calculation + verify computes; Activate existing Measles calculation; Full 6-rule Measles matrix test
+
+**Phase 23X Summary:** 16 executed TCs (all PASS) + 8 non-executable scripted TCs (NOT EXECUTED). 2 new NOTEs: NOTE-34 (copy-paste description error in Test Management), NOTE-35 (untranslated i18n keys in Legacy Admin).
+
+**Phase 23 Cumulative (through 23X)**: 522+ TCs executed, ~495 passed, ~94.8% pass rate. 8 additional non-executable scripts catalogued.
 
 ---
 

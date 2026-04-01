@@ -11383,3 +11383,266 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Navigate to Admin → Logging Configuration (/MasterListsPage/loggingManagement) 2. Verify Log Level dropdown with 8 options: ALL, TRACE, DEBUG, INFO, WARN, ERROR, FATAL, OFF (default INFO) 3. Verify Logger Name text input (default "org.openelisglobal", hint: org.openelisglobal, root) 4. Verify "Apply Log Level" button |
 | **Expected** | Runtime logging config with 8 log levels and configurable logger name |
 | **Status** | PASS |
+
+---
+
+### Suite GO — Test Management (Phase 23X)
+
+#### TC-GO-TESTMGMT-01: Test Management Spelling Corrections Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GO-TESTMGMT-01 |
+| **Suite** | GO — Test Management |
+| **Phase** | 23X |
+| **Steps** | 1. Navigate to Admin → Test Management (/MasterListsPage/testManagementConfigMenu) 2. Verify page title "Test Management" with breadcrumb Home > Admin Management > Test Management 3. Verify "Spelling corrections" section heading 4. Verify 7 rename card options: (a) Rename existing test names (b) Rename Existing Panels (c) Rename Existing Sample Types [NOTE-34: description says "panels" instead of "sample types"] (d) Rename Existing Test Sections (e) Rename Existing Unit of Measure Entries (f) Rename existing result list options (g) Rename existing method names 5. Verify each card is a clickable link |
+| **Expected** | 7 spelling correction/rename options for test metadata entities |
+| **Status** | PASS |
+| **Notes** | NOTE-34: "Rename Existing Sample Types" description copy-paste error says "existing panels" |
+
+---
+
+### Suite GP — Menu Configuration (Phase 23X)
+
+#### TC-GP-GLOBAL-MENU-01: Global Menu Configuration Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GP-GLOBAL-MENU-01 |
+| **Suite** | GP — Menu Configuration |
+| **Phase** | 23X |
+| **Steps** | 1. Navigate to Admin → Menu Configuration → Global Menu Configuration (/MasterListsPage/globalMenuManagement) 2. Verify "Global Menu Management" heading 3. Verify "Show Child Elements" toggle (default: On) 4. Verify "Side Nav Active" master checkbox 5. Verify hierarchical checkbox tree with ~80+ menu items across all modules including: Home, Alerts, EQA Programs, Generic Sample, EQA Distributions, Order (with 7 sub-items), Patient (4 sub-items), Storage (with Storage Management 5 sub-items + Cold Storage Monitoring 5 sub-items), Analyzers (3 sub-items), Non-Conform (3 sub-items), Workplan (4 sub-items), Pathology, Immunohistochemistry, Cytology, Results (8 sub-items + Analyzer sub-tree), Validation (Routine + Study sub-tree + 3 more), Reports (Routine/Aggregate/Management/Study sub-trees + WHONET), Admin, Billing, Aliquot, NoteBook, Inventory, Help (User Manual + Process Documentation) 6. Verify Submit button at bottom |
+| **Expected** | Hierarchical checkbox tree controlling sidebar menu visibility with ~80+ configurable items |
+| **Status** | PASS |
+
+#### TC-GP-MENU-SUBTYPES-01: Menu Configuration Sub-Types (Billing, Non-Conform, Patient, Study)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GP-MENU-SUBTYPES-01 |
+| **Suite** | GP — Menu Configuration |
+| **Phase** | 23X |
+| **Steps** | 1. Verify Menu Configuration expandable has 5 sub-items: Global Menu Configuration, Billing Menu Configuration, Non-Conform Menu Config, Patient Menu Configuration, Study Menu Configuration 2. Click each sub-item and verify page loads with module-specific menu configuration checkbox tree |
+| **Expected** | 5 menu configuration sub-pages for different modules |
+| **Status** | PASS |
+
+---
+
+### Suite GQ — Reflex Tests Configuration (Phase 23X)
+
+#### TC-GQ-REFLEX-MGMT-01: Reflex Tests Management Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GQ-REFLEX-MGMT-01 |
+| **Suite** | GQ — Reflex Tests Configuration |
+| **Phase** | 23X |
+| **Steps** | 1. Navigate to Admin → Reflex Tests Configuration → Reflex Tests Management (/MasterListsPage/reflex) 2. Verify "Reflex Tests Management" heading with breadcrumb 3. Verify ~12 reflex rule cards each with: Rule Name (clickable link), Toggle Rule (Off/On switch), Active: true checkbox, "Deactivate Rule" button 4. Verify rules include: HIV Antibody S, Organism ID (T...), Organism ID (U...), MPN (Treated), MPN (Untreated), MPOX RT-PCR, Xpert MTB/RIF, Cryptococcus A, Malaria PCR Po, Malaria Detecti, P.falciparum De, Faeces Culture, HIV Antibody C 5. Verify all rules: Toggle = Off, Active = true 6. Verify "+ Rule" button at bottom |
+| **Expected** | ~12 reflex rules listed with toggle, active status, deactivate button, and add capability |
+| **Status** | PASS |
+
+#### TC-GQ-CALCVALUE-MGMT-01: Calculated Value Tests Management Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GQ-CALCVALUE-MGMT-01 |
+| **Suite** | GQ — Reflex Tests Configuration |
+| **Phase** | 23X |
+| **Steps** | 1. Navigate to Admin → Reflex Tests Configuration → Calculated Value Tests Management (/MasterListsPage/calculatedValue) 2. Verify "Calculated Value Tests Management" heading 3. Verify 6 calculation rule cards: Measles Positive, Measles Negative, Measles Borderline, Measles IgM Positive, Measles IgM Negative, Measles IgM Borderline 4. Each has: Calculation Name (clickable link), Toggle Rule Off/On, Active: false checkbox, Deactivate Rule button 5. All 6: Toggle = Off, Active = false 6. Verify "+ Rule" button at bottom |
+| **Expected** | 6 Measles calculated value rules, all inactive, with add capability |
+| **Status** | PASS |
+
+---
+
+### Suite GR — Localization (Phase 23X)
+
+#### TC-GR-LANG-MGMT-01: Language Management Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GR-LANG-MGMT-01 |
+| **Suite** | GR — Localization |
+| **Phase** | 23X |
+| **Steps** | 1. Navigate to Admin → Localization → Language Management (/MasterListsPage/languageManagement) 2. Verify "Language Management" heading and description 3. Verify "Add Language +" button 4. Verify table: Locale Code, Display Name, Status, Sort Order, Actions 5. Row 1: en (Fallback badge), English, Active, Sort 1, edit/star(filled)/delete 6. Row 2: fr, Francais, Active, Sort 2, edit/star(empty)/delete(red) 7. Verify 2 languages total |
+| **Expected** | Language table with en (fallback) and fr, both active, with CRUD actions |
+| **Status** | PASS |
+
+#### TC-GR-TRANSLATION-MGMT-01: Translation Management Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GR-TRANSLATION-MGMT-01 |
+| **Suite** | GR — Localization |
+| **Phase** | 23X |
+| **Steps** | 1. Navigate to Admin → Localization → Translation Management (/MasterListsPage/translationManagement) 2. Verify "Translation Management" heading 3. Verify Translation Progress: Total 2180, English 2180/2180 (100%), Francais 1120/2180 (51.4%) with 1060 Missing badge 4. Verify Select Language dropdown (Francais default) 5. Verify "Show Missing Only" and "Export CSV" buttons 6. Verify search icon 7. Verify table: ID, Description, Fallback (English), Translation, Actions(edit) 8. Sample rows: ID 1 "URAP Number"→"N° URAP", ID 3 "GPT/ALAT"→"Transaminases GPT (37°C)" |
+| **Expected** | Translation management with progress tracking, 2180 entries, export, search, editable table |
+| **Status** | PASS |
+
+---
+
+### Suite GS — Application Properties, Program Entry & EQA Program (Phase 23X)
+
+#### TC-GS-APP-PROPS-01: Application Properties Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GS-APP-PROPS-01 |
+| **Suite** | GS — App Properties & Program Entry |
+| **Phase** | 23X |
+| **Steps** | 1. Navigate to Admin → Application Properties (/MasterListsPage/commonproperties) 2. Verify "Common Properties" heading 3. Verify 34 key-value property inputs including: paging pageSize (all 99), fhir.subscriber/allowHTTP/resources, poll frequencies, odoo settings, facilitylist config 4. Verify Save button |
+| **Expected** | 34 configurable application properties |
+| **Status** | PASS |
+
+#### TC-GS-PROGRAM-ENTRY-01: Program Entry Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GS-PROGRAM-ENTRY-01 |
+| **Suite** | GS — App Properties & Program Entry |
+| **Phase** | 23X |
+| **Steps** | 1. Navigate to Admin → Program Entry (/MasterListsPage/program) 2. Verify "Add/Edit Program" heading 3. Verify program dropdown (16 options including New Program, Routine Testing, HIV programs, Cytology, EID/VL variants, DBS, RTK) 4. Verify fields: Program Name, UUID, program.name.code, Test Section (15 options), Questionnaire JSON editor with Edit Json toggle, Example, Submit |
+| **Expected** | Program form with 16 programs, 15 test sections, FHIR Questionnaire JSON editor |
+| **Status** | PASS |
+
+#### TC-GS-EQA-PROGRAM-01: EQA Program Management Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GS-EQA-PROGRAM-01 |
+| **Suite** | GS — App Properties & Program Entry |
+| **Phase** | 23X |
+| **Steps** | 1. Navigate to Admin → EQA Program Management (/MasterListsPage/eqaProgram) 2. Verify "Program Administration" heading 3. Verify 3 KPIs: Active Programs 0, Enrolled Participants 0, Total Participants 0 4. Verify 3 tabs: EQA Programs, Participants, System Settings 5. Verify "Add Program +" button 6. Verify "No EQA programs found" empty state |
+| **Expected** | EQA program admin with 3 KPIs, 3 tabs, add capability |
+| **Status** | PASS |
+
+---
+
+### Suite GT — Legacy Admin (Phase 23X)
+
+#### TC-GT-LEGACY-ADMIN-01: Legacy Admin Interface
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GT-LEGACY-ADMIN-01 |
+| **Suite** | GT — Legacy Admin |
+| **Phase** | 23X |
+| **Steps** | 1. Click "Legacy Admin" in admin sidebar 2. Verify opens in new tab (URL: /api/OpenELIS-Global/MasterListsPage) 3. Verify old JSP-style interface with top nav: Visit OE 3x, Order, Patient, Non-Conforming Events, Workplan, Results, Validation, Reports, Admin, banner.menu.aliquot, sidenav.label.notebook, Help 4. Verify orange banner "This is a training installation, all data will be DELETED every night" 5. Verify 21 admin links including: Analyzer Test Names, Barcode Configuration, Delete Patient and Test Data, Dictionary, External Connections, Field Validation Configuration, Order Entry Configuration, Printed Reports Configuration, Site Information, Workplan Configuration 6. Note "banner.menu.aliquot" and "sidenav.label.notebook" are raw i18n keys (NOTE-35) 7. Close new tab |
+| **Expected** | Legacy 2.x admin accessible from 3.x, new tab, 21 admin links |
+| **Status** | PASS |
+| **Notes** | NOTE-35: Two untranslated i18n keys in legacy top nav |
+
+---
+
+### Suite GU — Add New Program (NON-EXECUTABLE Script) (Phase 23X)
+
+> **⚠️ DO NOT EXECUTE on test server** — Write-operation test script for dedicated QA environment only.
+
+#### TC-GU-ADD-PROGRAM-01: Create New Program and Verify in Order Entry
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GU-ADD-PROGRAM-01 |
+| **Suite** | GU — Add New Program (NON-EXECUTABLE) |
+| **Phase** | 23X |
+| **Preconditions** | Logged in as admin. Baseline: 16 programs in Program Entry dropdown. |
+| **Steps** | **Step 1 — Navigate** 1. Admin → Program Entry (/MasterListsPage/program) 2. Screenshot baseline **Step 2 — Fill Form** 3. Select "New Program" from dropdown 4. Program Name = "QA_AUTO_TestProgram" 5. Leave UUID blank (auto-generated) 6. Code = "QATP" 7. Test Section = "Biochemistry" 8. Edit Json toggle → paste: `{"resourceType":"Questionnaire","id":"qa-auto-test","title":"QA Test Questionnaire","status":"draft","item":[{"linkId":"1","text":"Sample collection method","type":"choice","answerOption":[{"valueCoding":{"display":"Venipuncture"}},{"valueCoding":{"display":"Capillary"}}]}]}` **Step 3 — Submit** 9. Click Submit 10. Verify success notification **Step 4 — Verify Persistence** 11. Refresh page 12. Select "QA_AUTO_TestProgram" from dropdown 13. Verify all fields match **Step 5 — Verify in Order Entry** 14. Navigate to Add Order (/SamplePatientEntry) 15. Verify "QA_AUTO_TestProgram" in Program dropdown 16. Select it 17. Verify questionnaire fields render **Step 6 — Verify in Batch Order Entry** 18. Navigate to Batch Order Entry (/BatchOrderEntry) 19. Verify program appears **Step 7 — Cleanup** 20. Delete/deactivate QA_AUTO_TestProgram |
+| **Expected** | Program created, persists, appears in Order Entry and Batch Order Entry dropdowns |
+| **Status** | NOT EXECUTED — Script only |
+| **Pass Criteria** | Steps 10 (save), 13 (persist), 15-16 (Order Entry), 19 (Batch) all pass |
+| **Failure Modes** | Submit error → check required fields; Not in Order Entry → check activation vs creation; JSON rejected → check validation; Questionnaire fields don't render → check React conditional rendering |
+
+#### TC-GU-ADD-PROGRAM-02: Create Programs for All 15 Test Sections
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GU-ADD-PROGRAM-02 |
+| **Suite** | GU — Add New Program (NON-EXECUTABLE) |
+| **Phase** | 23X |
+| **Preconditions** | TC-GU-ADD-PROGRAM-01 completed or reset |
+| **Steps** | For each of 15 Test Sections (HIV, Malaria, Microbiology, Molecular Biology, Virology, Immunology, Serology, Parasitology, Biochemistry, Hematology, Cytobacteriologie, Mycobacteriology, Mycology, Ecbu, user): 1. Program Entry → New Program 2. Name = "QA_AUTO_{Section}", Code = "QA{3chars}" 3. Select Test Section 4. Submit → verify success 5. Add Order → verify in Program dropdown. After all 15: verify all QA_AUTO_ programs listed. Cleanup: delete all. |
+| **Expected** | All 15 test sections assignable to programs, all visible in Order Entry |
+| **Status** | NOT EXECUTED — Script only |
+
+---
+
+### Suite GV — Reflex Tests CRUD (NON-EXECUTABLE Script) (Phase 23X)
+
+> **⚠️ DO NOT EXECUTE on test server** — Write-operation test script for dedicated QA environment only.
+
+#### TC-GV-REFLEX-CREATE-01: Create New Reflex Test Rule
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GV-REFLEX-CREATE-01 |
+| **Suite** | GV — Reflex Tests CRUD (NON-EXECUTABLE) |
+| **Phase** | 23X |
+| **Preconditions** | Logged in as admin. Baseline: ~12 reflex rules. Know trigger/reflex test pair (e.g., HIV Antibody Screening → HIV Antibody Confirmatory). |
+| **Steps** | **Step 1 — Baseline** 1. Reflex Tests Management (/MasterListsPage/reflex) 2. Count rules, screenshot **Step 2 — Add Rule** 3. Click "+ Rule" at bottom 4. Verify creation form appears 5. Document all form fields **Step 3 — Configure** 6. Rule Name = "QA_AUTO_Reflex_Test" 7. Trigger test = HIV Antibody Screening 8. Trigger condition = result "Reactive" (or > threshold) 9. Reflex test = HIV Antibody Confirmatory 10. Set any additional conditions **Step 4 — Save** 11. Click Save 12. Verify success 13. Verify new card: Name = "QA_AUTO_Reflex_Test", Toggle = Off, Active = true **Step 5 — Activate** 14. Toggle to On 15. Verify On state **Step 6 — Verify Rule Fires** 16. Create order with trigger test 17. Results → By Order → enter "Reactive" 18. Save result 19. Verify reflex test auto-added to order 20. Edit Order → verify reflex test in sample test list **Step 7 — Deactivate** 21. Back to Reflex Tests Management 22. Click "Deactivate Rule" for QA_AUTO_Reflex_Test 23. Confirm deactivation 24. Verify removed/inactive **Step 8 — Cleanup** 25. Remove any orphaned test orders |
+| **Expected** | Reflex rule created, activated, fires on trigger result, reflex test auto-added, deactivation works |
+| **Status** | NOT EXECUTED — Script only |
+| **Pass Criteria** | Steps 12-13 (create), 14-15 (activate), 19-20 (reflex fires), 23-24 (deactivate) |
+| **Failure Modes** | "+ Rule" no-op → JS console errors; Missing trigger/reflex dropdowns → incomplete component; Rule saves but doesn't fire → rule engine issue; Deactivate fails → API endpoint issue |
+
+#### TC-GV-REFLEX-TOGGLE-01: Toggle Existing Reflex Rule On/Off
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GV-REFLEX-TOGGLE-01 |
+| **Suite** | GV — Reflex Tests CRUD (NON-EXECUTABLE) |
+| **Phase** | 23X |
+| **Steps** | 1. Reflex Tests Management 2. Locate "HIV Antibody S" (Toggle Off, Active true) 3. Toggle On → verify visual change 4. Create order with trigger test → enter trigger result → verify reflex fires 5. Toggle Off → verify 6. Create another order → enter trigger result → verify reflex does NOT fire |
+| **Expected** | Toggle controls whether reflex fires; Off = dormant, On = active |
+| **Status** | NOT EXECUTED — Script only |
+
+#### TC-GV-REFLEX-EDIT-01: Edit Existing Reflex Rule Details
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GV-REFLEX-EDIT-01 |
+| **Suite** | GV — Reflex Tests CRUD (NON-EXECUTABLE) |
+| **Phase** | 23X |
+| **Steps** | 1. Reflex Tests Management 2. Click rule name link (e.g., "HIV Antibody S") 3. Verify detail/edit form opens 4. Document all fields: trigger test, condition, reflex test, parameters 5. Modify one field 6. Save → verify success 7. Re-open → verify change persisted 8. Revert → save → verify |
+| **Expected** | Rule details viewable and editable, changes persist |
+| **Status** | NOT EXECUTED — Script only |
+
+---
+
+### Suite GW — Calculated Value Tests CRUD (NON-EXECUTABLE Script) (Phase 23X)
+
+> **⚠️ DO NOT EXECUTE on test server** — Write-operation test script for dedicated QA environment only.
+
+#### TC-GW-CALCVALUE-CREATE-01: Create New Calculated Value Rule
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GW-CALCVALUE-CREATE-01 |
+| **Suite** | GW — Calculated Value Tests CRUD (NON-EXECUTABLE) |
+| **Phase** | 23X |
+| **Preconditions** | Logged in as admin. Baseline: 6 Measles calculations (all Active: false). Know numeric test names for inputs (e.g., WBC, RBC). |
+| **Steps** | **Step 1 — Baseline** 1. Calculated Value Tests Management (/MasterListsPage/calculatedValue) 2. Count 6 rules, all inactive, screenshot **Step 2 — Add Rule** 3. Click "+ Rule" 4. Verify creation form 5. Document all fields (name, formula, input tests, output, conditions) **Step 3 — Configure** 6. Calculation Name = "QA_AUTO_Calc_Test" 7. Input tests = WBC + RBC 8. Formula = WBC/RBC (ratio) 9. Output = calculated result field **Step 4 — Save** 10. Submit 11. Verify success 12. Verify card: Name = "QA_AUTO_Calc_Test", Toggle Off, Active false **Step 5 — Activate** 13. Check Active checkbox → true 14. Toggle On 15. Verify both states **Step 6 — Verify Calculation** 16. Create order with WBC + RBC 17. Results → enter WBC=5.0, RBC=4.5 18. Save 19. Verify calculated value = 1.11 (ratio) 20. Screenshot **Step 7 — Deactivate + Cleanup** 21. Deactivate Rule 22. Verify deactivation |
+| **Expected** | Calculated value rule created, activated, computes correctly, deactivation works |
+| **Status** | NOT EXECUTED — Script only |
+| **Pass Criteria** | Steps 11-12 (create), 14-15 (activate), 19 (correct computation), 22 (deactivate) |
+| **Failure Modes** | Form lacks formula builder → code-only config; Active doesn't persist → API issue; Calculation doesn't fire → engine needs restart; Wrong result → formula/mapping error |
+
+#### TC-GW-CALCVALUE-ACTIVATE-01: Activate Existing Measles Calculation
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GW-CALCVALUE-ACTIVATE-01 |
+| **Suite** | GW — Calculated Value Tests CRUD (NON-EXECUTABLE) |
+| **Phase** | 23X |
+| **Steps** | 1. Calculated Value Tests Management 2. "Measles Positive": Active false, Toggle Off 3. Check Active → true, Toggle On 4. Create order with Measles input tests 5. Enter results triggering "Positive" 6. Save → verify calculated result appears 7. Toggle Off, uncheck Active → verify baseline restored |
+| **Expected** | Measles Positive calculation activates, computes, deactivates cleanly |
+| **Status** | NOT EXECUTED — Script only |
+
+#### TC-GW-CALCVALUE-ALL-MEASLES-01: Full Measles Calculation Matrix Test
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GW-CALCVALUE-ALL-MEASLES-01 |
+| **Suite** | GW — Calculated Value Tests CRUD (NON-EXECUTABLE) |
+| **Phase** | 23X |
+| **Steps** | 1. Activate all 6 Measles calculations 2. Create 3 orders: (a) High positive IgG+IgM → expect Positive + IgM Positive (b) Negative IgG+IgM → expect Negative + IgM Negative (c) Borderline IgG+IgM → expect Borderline + IgM Borderline 3. Enter results for each 4. Verify correct calculations fire per scenario 5. Deactivate all 6 |
+| **Expected** | Each Measles calculation fires for appropriate result range, no cross-contamination |
+| **Status** | NOT EXECUTED — Script only |
