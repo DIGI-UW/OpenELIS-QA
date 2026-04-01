@@ -12307,3 +12307,62 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Verify Storage sidebar has 2 sub-menus: Storage Management (expandable) and Cold Storage Monitoring (expandable) 2. Verify Storage Management sub-items: Sample Items (`/Storage/samples`), Devices (`/Storage/devices`), Shelves (`/Storage/shelves`), Racks (`/Storage/racks`), Boxes (`/Storage/boxes`) — 5 pages 3. Verify Cold Storage Monitoring sub-items: Dashboard (`/FreezerMonitoring?tab=0`), Corrective Actions (`/FreezerMonitoring?tab=1`), Historical Trends (`/FreezerMonitoring?tab=2`), Reports (`/FreezerMonitoring?tab=3`), Settings (`/FreezerMonitoring?tab=4`) — 5 tabs 4. Verify Analyzers has 3 direct sub-items: Analyzers List (`/analyzers`), Error Dashboard (`/analyzers/errors`), Analyzer Types (`/analyzers/types`) 5. Verify Non-Conform has 3 direct sub-items: Report Non-Conforming Event, View New Non-Conforming Events, Corrective actions |
 | **Expected** | Storage (10 sub-pages), Analyzers (3 sub-pages), Non-Conform (3 sub-pages) all render with correct sidebar hierarchy |
 | **Status** | PASS |
+
+---
+
+### Suite HD — Billing, Aliquot, NoteBook & Help Pages
+
+#### TC-HD-BILLING-01: Billing Sidebar Link
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HD-BILLING-01 |
+| **Suite** | HD — Billing, Aliquot, NoteBook & Help Pages |
+| **Phase** | 23AE |
+| **Steps** | 1. Scroll to bottom of sidebar, locate "Billing" menu item 2. Verify Billing link element (ref_28/ref_23) has NO href attribute — empty anchor tag 3. Click Billing → no navigation occurs, page remains unchanged 4. Compare: Admin link has href="/MasterListsPage", Aliquot has href="/Aliquot", but Billing has no href |
+| **Expected** | Billing link is non-functional — empty href (NOTE-41) |
+| **Status** | PASS |
+
+#### TC-HD-ALIQUOT-01: Aliquot Page Layout & Search
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HD-ALIQUOT-01 |
+| **Suite** | HD — Billing, Aliquot, NoteBook & Help Pages |
+| **Phase** | 23AE |
+| **Steps** | 1. Click Aliquot link (`/Aliquot`) — NOTE: opens in new browser tab (not SPA navigation) 2. Verify page title "Aliquot" with breadcrumb Home > 3. Verify "Search Sample" section with "Enter Accession Number" input (0/23 character counter), Search button 4. Enter "25CPHL000002" → auto-formats to "25-CPHL-000-002" (15/23 chars) 5. Click Search → "Sample items for accession number:" table appears 6. Verify table columns: Sample Information, External ID, Sample Type, Collection Date, Collector, Quantity, Analysis Count, Aliquoting 7. Verify result row: 25CPHL000002 / External ID 25CPHL000002-1 (link) / Sputum / Collector "Not specified" / Quantity 1 / Analysis Count 1 / "Show Aliquoting +" button 8. Verify row expansion chevron present |
+| **Expected** | Aliquot page renders with accession search, 23-char max input, and 8-column sample items table |
+| **Status** | PASS |
+
+#### TC-HD-NOTEBOOK-01: NoteBook Dashboard Blank Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HD-NOTEBOOK-01 |
+| **Suite** | HD — Billing, Aliquot, NoteBook & Help Pages |
+| **Phase** | 23AE |
+| **Steps** | 1. Click NoteBook link (`/NotebookDashboard`) 2. Page navigates to correct URL 3. Verify page renders completely BLANK — no header, no sidebar, no content area 4. Verify DOM contains only Chrome extension overlay elements (no application elements) 5. Wait 3 seconds and re-check — still blank 6. This is a critical rendering failure (NOTE-42) |
+| **Expected** | NoteBook Dashboard should render content but renders completely blank |
+| **Status** | PASS (documents blank page behavior — NOTE-42) |
+
+#### TC-HD-HELP-MANUAL-01: Help User Manual PDF
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HD-HELP-MANUAL-01 |
+| **Suite** | HD — Billing, Aliquot, NoteBook & Help Pages |
+| **Phase** | 23AE |
+| **Steps** | 1. Expand Help section in sidebar → "User Manual" sub-item visible 2. Click User Manual → opens in new browser tab 3. Verify PDF loads: "OEGlobal_UserManual_User sections" at `/OpenELIS-Global/documentation/OEGlobal_UserManual_en.pdf` 4. Verify 196-page document with cover page: "OpenELIS Global — Laboratory Information System Software — User Manual" 5. Verify PDF viewer shows page thumbnails, zoom controls, print/download buttons |
+| **Expected** | User Manual PDF loads successfully with 196 pages |
+| **Status** | PASS |
+
+#### TC-HD-SIDEBAR-COMPLETE-01: Complete Sidebar Navigation Inventory
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HD-SIDEBAR-COMPLETE-01 |
+| **Suite** | HD — Billing, Aliquot, NoteBook & Help Pages |
+| **Phase** | 23AE |
+| **Steps** | 1. Verify complete sidebar top-level menu items (19 total): Home, Alerts, EQA Distributions, Order (5 sub), Patient (3 sub), Storage (2 sub-menus with 5+5 sub), Analyzers (3 sub), Non-Conform (3 sub), Workplan (4 sub), Pathology, Immunohistochemistry, Cytology, Results (7 sub + 1 nested), Validation (4 sub), Reports (1 sub-menu + WHONET), Admin, Billing (dead link), Aliquot, NoteBook, Help (1 sub) 2. Verify total navigable pages: ~55+ unique routes 3. Verify Billing is the ONLY sidebar item with no href 4. Verify Aliquot and NoteBook open in new tabs (not SPA navigation) |
+| **Expected** | Complete sidebar has 19 top-level items with ~55+ navigable routes; Billing is only dead link |
+| **Status** | PASS |

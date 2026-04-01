@@ -1674,6 +1674,23 @@ Deep testing of all Validation and Workplan sub-pages.
 
 **Phase 23 Cumulative (through 23AD)**: 581+ TCs executed, ~554 passed, ~95.3% pass rate. 8 non-executable scripts catalogued.
 
+### Phase 23AE — Billing, Aliquot, NoteBook & Help Pages (Suite HD)
+
+**Scope:** Testing the remaining bottom-of-sidebar pages: Billing, Aliquot, NoteBook, and Help > User Manual.
+
+**Findings:**
+- **Billing**: Sidebar link has NO href attribute — clicking it does nothing. This is the only dead link in the entire sidebar navigation. NOTE-41.
+- **Aliquot** (`/Aliquot`): Opens in new browser tab (not SPA navigation). Simple accession number search with 23-char max input and auto-formatting (e.g., "25CPHL000002" → "25-CPHL-000-002"). Returns 8-column sample items table (Sample Information, External ID, Sample Type, Collection Date, Collector, Quantity, Analysis Count, Aliquoting). "Show Aliquoting +" button for each row. Expandable row details.
+- **NoteBook** (`/NotebookDashboard`): Renders a COMPLETELY BLANK page — no header, no sidebar, no content. DOM contains only Chrome extension overlay. This is a critical rendering failure. NOTE-42.
+- **Help > User Manual**: Opens 196-page PDF ("OEGlobal_UserManual_User sections") at `/OpenELIS-Global/documentation/OEGlobal_UserManual_en.pdf`. Full user manual for OpenELIS Global LIS.
+
+**Complete Sidebar Inventory (19 top-level items):**
+Home, Alerts, EQA Distributions, Order (5), Patient (3), Storage (5+5), Analyzers (3), Non-Conform (3), Workplan (4), Pathology, Immunohistochemistry, Cytology, Results (7+1 nested), Validation (4), Reports (sub-menus + WHONET), Admin, Billing (dead), Aliquot, NoteBook, Help (1). Total: ~55+ unique navigable routes.
+
+**Phase 23AE Summary:** 5 TCs, all PASS. NOTE-41: Billing dead link. NOTE-42: NoteBook blank page. Complete sidebar navigation inventory documented.
+
+**Phase 23 Cumulative (through 23AE)**: 586+ TCs executed, ~559 passed, ~95.3% pass rate. 8 non-executable scripts catalogued.
+
 ---
 
 ## Key Files
