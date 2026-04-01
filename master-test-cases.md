@@ -13759,3 +13759,60 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 - **Expected**: Each row shows English fallback and current translation with Edit action
 - **Result**: PASS — Each row shows: ID number, Description (e.g., "test name" or "test report name"), Fallback English text, current Translation text, and Edit button. Example: ID 1 "Billing reference label" — Fallback "URAP Number", Translation "N° URAP". Edit opens modal with Cancel/Save. This enables in-app translation management without external tools.
 
+---
+
+## Suite HQ — Config Modify Workflow & MenuStatement Deep Testing (Phase 23AR)
+
+**Scope**: Deep interaction testing of the Config Table Modify workflow (3 edit form types: boolean, text, image), the newly discovered MenuStatement Configuration page, and additional Printed Report Configuration field-level details.
+
+**Environment**: OpenELIS Global v3.2.1.3 at `https://www.jdhealthsolutions-openelis.com` (admin/adminADMIN!)
+
+### TC-HQ-MODIFY-BOOL-01: Config table Modify workflow — boolean setting shows True/False radios
+- **Precondition**: Logged in as admin, on WorkPlan Configuration page
+- **Steps**: 1) Click radio button on "next visit on workplan" row 2) Verify Modify button activates 3) Click Modify
+- **Expected**: Edit Record form loads with Name, Description, Value (True/False radio buttons), Save/Exit buttons
+- **Result**: PASS — "Edit Record" page shows: Name="next visit on workplan" (read-only), Description="Set to true if the date of the next visit should be printed on the workplan" (expanded from table's shorter description), Value with True and False radio buttons (False currently selected), Save (blue) and Exit (blue) buttons. Selecting row activated Modify button from grey/disabled to blue/active.
+
+### TC-HQ-MODIFY-BOOL-02: Config table Modify Exit returns to table without changes
+- **Steps**: 1) On Edit Record form 2) Click Exit without changing value
+- **Expected**: Returns to config table with original values unchanged
+- **Result**: PASS — Clicking Exit returns to WorkPlan Configuration table. "next visit on workplan" still shows "false". No data mutation occurred.
+
+### TC-HQ-MODIFY-TEXT-01: Config table Modify workflow — text setting shows editable text field
+- **Precondition**: On Printed Report Configuration page
+- **Steps**: 1) Click radio on "lab director" row 2) Verify Modify activates 3) Click Modify
+- **Expected**: Edit Record form with editable text field for the value
+- **Result**: PASS — Edit Record shows: Name="lab director" (read-only), Description="instructions.site.lab.director" (i18n key — different from table display text "The lab directors name for the reports"), Value text input field containing "Mr Willie Porau" (editable), Save/Exit buttons. Note: Description shows the i18n message key rather than the human-readable description from the table view.
+
+### TC-HQ-MODIFY-IMAGE-01: Config table Modify workflow — image setting shows file upload + preview
+- **Precondition**: On Printed Report Configuration page
+- **Steps**: 1) Click radio on "headerLeftImage" row 2) Click Modify
+- **Expected**: Edit Record form with file upload, image preview, and remove option
+- **Result**: PASS — Edit Record shows: Name="headerLeftImage" (read-only), Description="Use file upload to set the lab logo for the left side of report header. The file must be either a jpg, png or gif." (full description), Value section with "Choose file" button (blue, file upload), current image preview (Papua New Guinea National Department of Health logo — coat of arms), "Remove Image" checkbox, Save/Exit buttons. This is the 3rd distinct edit form type in the config table pattern.
+
+### TC-HQ-MODIFY-TYPES-01: Three config edit form types confirmed across all config tables
+- **Steps**: 1) Compare edit forms for boolean, text, and image settings
+- **Expected**: Three distinct Value input types
+- **Result**: PASS — Config table Modify workflow has 3 edit form types: (1) **Boolean**: True/False radio buttons (used by WorkPlan, Result Entry, Patient Entry, Order Entry, NonConformity settings), (2) **Text**: Editable text input field (used by lab director name, site name, custom messages, charset patterns), (3) **Image**: File upload button + image preview + Remove Image checkbox (used by headerLeftImage, headerRightImage, labDirectorSignature, labDirectorName, labDirectorTitle). All share same layout: Name (read-only), Description (expanded), Value (type-specific), Save/Exit buttons.
+
+### TC-HQ-MENUSTATEMENT-01: MenuStatement Configuration page loads with empty config table
+- **Precondition**: Logged in as admin, navigated to Admin > General Configurations > MenuStatement Configuration
+- **Steps**: 1) Click MenuStatement Configuration in expanded General Configurations sidebar
+- **Expected**: Page loads at `/MasterListsPage/MenuStatementConfigMenu` with config table
+- **Result**: PASS — Page loads with heading "Menu Statement Configuration Menu", subheading "MenuStatement Configuration", Modify Select button (disabled — no rows to select), table with Name/Description/Value column headers but empty body, pagination shows "0-0 of 0 items", "1 of 1 page". Standard config table pattern with zero entries. This is a previously undocumented admin sub-page.
+
+### TC-HQ-PRINTREPORT-DETAIL-01: Printed Report Configuration additional site info has text value
+- **Steps**: 1) Read "additional site info" row value in Printed Report Config
+- **Expected**: Text value for report header
+- **Result**: PASS — Value = "Central Public Health Laboratory". Description = "additional information for report header". This text appears in printed report headers alongside the site name and lab director.
+
+### TC-HQ-PRINTREPORT-DETAIL-02: Printed Report Configuration shows 2 image thumbnails in table
+- **Steps**: 1) Visually inspect Value column for image rows
+- **Expected**: Image thumbnails visible for rows that have uploaded images
+- **Result**: PASS — 2 image thumbnails visible in the table: labDirectorSignature (small signature image) and headerLeftImage (Papua New Guinea coat of arms logo). Other image rows (labDirectorName, labDirectorTitle, headerRightImage) show empty Value cells — no images uploaded. File format restriction: jpg, png, or gif only.
+
+### TC-HQ-GENCONFIG-EXPANDED-01: General Configurations sidebar shows 10 sub-pages
+- **Steps**: 1) Expand General Configurations in Admin inner sidebar 2) Count all visible sub-pages
+- **Expected**: All General Configuration sub-pages listed
+- **Result**: PASS — 10 sub-pages visible: NonConformity Configuration, MenuStatement Configuration, WorkPlan Configuration, Site Information, Site Branding, Result Entry Configuration, Patient Entry Configuration, Printed Report Configuration, Order Entry Configuration, Validation Configuration. Note: MenuStatement Configuration was not listed in the original admin URL table (rows 22-34) — it's a newly discovered 10th General Config sub-page.
+

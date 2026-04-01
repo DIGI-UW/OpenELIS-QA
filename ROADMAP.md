@@ -2293,8 +2293,30 @@ All General Configuration sub-pages share a consistent pattern:
 7. **Global Menu Config** exposes the entire application menu structure — ~80+ items can be toggled on/off
 8. **eqaEnabled=true** confirmed in Order Entry Config — EQA features active on this instance
 
-### Cumulative Progress
+### Cumulative Progress (after Phase 23AQ)
 - **Total Test Cases**: 743+ TCs executed (720 + 23 new)
 - **Pass Rate**: ~96% (714+ passed)
 - **Admin Coverage**: COMPLETE — all admin sub-pages, General Config, Menu Config, and Localization pages tested
+
+---
+
+## Phase 23AR — Config Modify Workflow & MenuStatement Deep Testing (Suite HQ)
+
+**Date**: 2026-03-31
+**Scope**: Config Table Modify workflow interaction testing (3 edit form types), newly discovered MenuStatement Configuration page, Printed Report Configuration field details
+**Test Cases**: 9 TCs (TC-HQ-MODIFY-BOOL-01 through TC-HQ-GENCONFIG-EXPANDED-01)
+**Results**: 9 PASS, 0 FAIL
+
+### Key Findings
+
+1. **Three Config Edit Form Types**: Boolean (True/False radios), Text (text input), Image (file upload + preview + Remove checkbox). All share common layout: Name (read-only), Description (expanded), Value (type-specific), Save/Exit buttons.
+2. **MenuStatement Configuration discovered**: 10th General Config sub-page at `/MasterListsPage/MenuStatementConfigMenu` — empty config table (0 items). Not in original admin URL table.
+3. **Description expansion**: Edit Record form shows expanded/different description text compared to table view. Text settings show i18n message keys (e.g., "instructions.site.lab.director") instead of human-readable descriptions.
+4. **Image upload with preview**: Image settings show current image thumbnail in Edit Record, "Choose file" for upload, "Remove Image" checkbox. Accepted formats: jpg, png, gif.
+5. **Printed Report Config details**: "additional site info" = "Central Public Health Laboratory", 2 of 5 image fields populated (labDirectorSignature, headerLeftImage with PNG coat of arms).
+
+### Cumulative Progress
+- **Total Test Cases**: 752+ TCs executed (743 + 9 new)
+- **Pass Rate**: ~96% (723+ passed)
+- **Admin Coverage**: COMPLETE + Modify workflow interaction patterns documented
 
