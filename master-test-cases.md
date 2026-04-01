@@ -11261,3 +11261,125 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Click Help in sidebar to expand 2. Verify 1 sub-item: "User Manual" 3. Click User Manual 4. Verify opens new tab with external PDF: /OpenELIS-Global/documentation/OEGlobal_UserManual_en.pdf 5. Verify PDF title "OEGlobal_UserManual_User sections" |
 | **Expected** | Help menu with User Manual link to external PDF documentation |
 | **Status** | PASS |
+
+---
+
+## Suite GL — Batch Order Entry Deep (Phase 23U)
+
+#### TC-GL-ROUTINE-01: Routine Form Conditional Rendering
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GL-ROUTINE-01 |
+| **Suite** | GL — Batch Order Entry Deep |
+| **Phase** | 23U |
+| **Steps** | 1. Navigate to Batch Order Entry (/SampleBatchEntrySetup) 2. Verify ORDER section: Current Date (dd/mm/yyyy), Current Time (hh:mm), Received Date, Reception Time 3. Select Form = "Routine" (value="routine") 4. Verify Sample section appears with Sample Type dropdown (only "Whole Blood" value=4) 5. Select Whole Blood 6. Verify Panels section with search "Search panels..." and 3 checkboxes: NFS, Typage lymphocytaire, Dengue Serology 7. Verify Available Tests section with search "Search tests..." and 16 CBC checkboxes: WBC, RBC, HGB, HCT, MCV, MCH, MCHC, PLT, RDW, MPV, LYM#, MON#, MXD#, NEU#, EOS#, BAS# (all with "(Whole Blood)" suffix) |
+| **Expected** | Routine form shows Sample Type → Panels + Available Tests with 16 CBC tests |
+| **Status** | PASS |
+
+#### TC-GL-EID-01: EID Form Conditional Rendering
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GL-EID-01 |
+| **Suite** | GL — Batch Order Entry Deep |
+| **Phase** | 23U |
+| **Steps** | 1. Select Form = "EID" (value="EID") 2. Verify Sample section shows "Specimen Collected" (not Sample Type dropdown) 3. Verify 2 specimen checkboxes: Dry Tube, Dry Blood Spot 4. Verify Tests section with 1 checkbox: DNA PCR |
+| **Expected** | EID form shows specimen collection types (2) and single DNA PCR test |
+| **Status** | PASS |
+
+#### TC-GL-VL-01: Viral Load Form Conditional Rendering
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GL-VL-01 |
+| **Suite** | GL — Batch Order Entry Deep |
+| **Phase** | 23U |
+| **Steps** | 1. Select Form = "Viral Load" (value="viralLoad") 2. Verify Sample section shows "Specimen Collected" 3. Verify 3 specimen checkboxes: Dry Tube, EDTA Tube, Dry Blood Spot 4. Verify Tests section with 1 checkbox: Viral Load Test |
+| **Expected** | Viral Load form shows 3 specimen types (adds EDTA Tube vs EID) and Viral Load Test |
+| **Status** | PASS |
+
+---
+
+## Suite GM — Alerts Dashboard (Phase 23V)
+
+#### TC-GM-ALERTS-01: Alerts Dashboard Full Field Inventory
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GM-ALERTS-01 |
+| **Suite** | GM — Alerts Dashboard |
+| **Phase** | 23V |
+| **Steps** | 1. Navigate to Alerts (/Alerts) 2. Verify "Alerts Dashboard" heading 3. Verify 4 KPI cards: Critical Alerts 0, EQA Deadlines 0, Overdue STAT Orders 0, Samples Expiring 0 4. Verify Alert Type filter dropdown: (blank), EQA Deadline, Sample Expiration, STAT Overdue, Unacknowledged Critical 5. Verify Severity filter: (blank), Warning, Critical 6. Verify Status filter: (blank), Open, Acknowledged, Resolved 7. Verify search "Search alerts..." 8. Verify 6-col table: Type, Severity, Message, Status, Created, Actions |
+| **Expected** | Alerts dashboard with 4 KPIs, 3 filter dropdowns (4+2+3 options), search, and 6-col table |
+| **Status** | PASS |
+
+---
+
+## Suite GN — Admin Deep Pages (Phase 23W)
+
+#### TC-GN-BARCODE-CONFIG-01: Barcode Configuration Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GN-BARCODE-CONFIG-01 |
+| **Suite** | GN — Admin Deep Pages |
+| **Phase** | 23W |
+| **Steps** | 1. Navigate to Admin → Barcode Configuration (/MasterListsPage/barcodeConfiguration) 2. Verify "Number Bar Code Label" section with Default labels (Order=1, Specimen=1, Slide=1, Block=1, Freezer=1) and Maximum labels (Order=10, Specimen=1, Slide=1, Block=1, Freezer=1) 3. Verify "Bar Code Label Elements" section with 5 label types: Order (25×45mm), Specimen (25×45mm), Block (10×25mm), Slide (20×30mm), Freezer (25.4×76.2mm) 4. Verify Save/Cancel buttons |
+| **Expected** | Barcode config with default/max counts and label dimensions for 5 types |
+| **Status** | PASS |
+
+#### TC-GN-PLUGINS-01: List Plugins Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GN-PLUGINS-01 |
+| **Suite** | GN — Admin Deep Pages |
+| **Phase** | 23W |
+| **Steps** | 1. Navigate to Admin → List Plugins (/MasterListsPage/PluginFile) 2. Verify "Plugin Files" heading 3. Verify single-column table with "Plugin Name" header 4. Verify "No plugins found" empty state |
+| **Expected** | Plugin files page with empty plugin list |
+| **Status** | PASS |
+
+#### TC-GN-RESULT-REPORTING-01: Result Reporting Configuration Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GN-RESULT-REPORTING-01 |
+| **Suite** | GN — Admin Deep Pages |
+| **Phase** | 23W |
+| **Steps** | 1. Navigate to Admin → Result Reporting Configuration (/MasterListsPage/resultReportingConfiguration) 2. Verify 3 reporting sections: Result Reporting, Malaria Surveillance, Malaria Case Report 3. Verify each has Enabled/Disabled radio (all Disabled), URL text input, Queue Size display (all 0) 4. Verify Result Reporting URL = "disable", Malaria Surveillance has placeholder URL |
+| **Expected** | 3 reporting endpoints with enable/disable toggles, URL config, and queue monitoring |
+| **Status** | PASS |
+
+#### TC-GN-TEST-NOTIF-01: Test Notification Configuration Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GN-TEST-NOTIF-01 |
+| **Suite** | GN — Admin Deep Pages |
+| **Phase** | 23W |
+| **Steps** | 1. Navigate to Admin → Test Notification Configuration (/MasterListsPage/testNotificationConfigMenu) 2. Verify 7-col table: Test Id, Test names, Patient Email, Patient SMS, Provider Email, Provider SMS, Edit 3. Verify 25+ test rows (ABON Tri-line HIV 1/2/0, Acid-Fast Microscopy, Allplex SARS-CoV-2, Amikacin, etc.) 4. Verify each row has 4 notification checkboxes and gear Edit icon 5. Verify Save/Exit buttons |
+| **Expected** | Test notification config with per-test email/SMS notification toggles |
+| **Status** | PASS |
+
+#### TC-GN-NOTIFY-USER-01: Notify User Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GN-NOTIFY-USER-01 |
+| **Suite** | GN — Admin Deep Pages |
+| **Phase** | 23W |
+| **Steps** | 1. Navigate to Admin → Notify User (/MasterListsPage/NotifyUser) 2. Verify "Notify User" heading 3. Verify Message textarea 4. Verify "User to be notified *" required text input 5. Verify Submit button |
+| **Expected** | Notify user form with message and recipient fields |
+| **Status** | PASS |
+
+#### TC-GN-LOGGING-01: Logging Configuration Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GN-LOGGING-01 |
+| **Suite** | GN — Admin Deep Pages |
+| **Phase** | 23W |
+| **Steps** | 1. Navigate to Admin → Logging Configuration (/MasterListsPage/loggingManagement) 2. Verify Log Level dropdown with 8 options: ALL, TRACE, DEBUG, INFO, WARN, ERROR, FATAL, OFF (default INFO) 3. Verify Logger Name text input (default "org.openelisglobal", hint: org.openelisglobal, root) 4. Verify "Apply Log Level" button |
+| **Expected** | Runtime logging config with 8 log levels and configurable logger name |
+| **Status** | PASS |

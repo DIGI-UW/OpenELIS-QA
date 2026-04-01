@@ -1275,6 +1275,66 @@ All 10 General Config sub-pages verified:
 
 ---
 
+### Phase 23U-W — Batch Order Entry Deep, Alerts Dashboard, Admin Deep Pages (2026-03-31)
+
+**Goal:** Deep field-level verification of Batch Order Entry form-specific rendering, Alerts Dashboard filters, and 6 untested Admin sub-pages.
+
+#### Phase 23U: Batch Order Entry — Form-Specific Conditional Rendering
+- **Route:** `/SampleBatchEntrySetup`
+- **ORDER section:** Current Date (dd/mm/yyyy) + Current Time (hh:mm), Received Date + Reception Time
+- **Form dropdown (required *):** Routine, EID, Viral Load — each reveals different Sample section:
+  - **Routine** → Sample Type dropdown (Whole Blood) → Panels (NFS, Typage lymphocytaire, Dengue Serology with search) + Available Tests (16 CBC tests: WBC, RBC, HGB, HCT, MCV, MCH, MCHC, PLT, RDW, MPV, LYM#, MON#, MXD#, NEU#, EOS#, BAS# with search)
+  - **EID** → Specimen Collected (Dry Tube, Dry Blood Spot) + Tests (DNA PCR)
+  - **Viral Load** → Specimen Collected (Dry Tube, EDTA Tube, Dry Blood Spot) + Tests (Viral Load Test)
+- **Configure Barcode Entry:** Methods (On Demand, Pre-Printed)
+- **Optional Fields:** Facility (checkbox + Site Name), Patient Info (checkbox + Ward/Dept/Unit dropdown)
+- **Actions:** Next (disabled until form selected), Cancel
+
+#### Phase 23V: Alerts Dashboard
+- **Route:** `/Alerts`
+- 4 KPI cards: Critical Alerts (0), EQA Deadlines (0), Overdue STAT Orders (0), Samples Expiring (0)
+- 3 filter dropdowns:
+  - Alert Type: (blank), EQA Deadline, Sample Expiration, STAT Overdue, Unacknowledged Critical
+  - Severity: (blank), Warning, Critical
+  - Status: (blank), Open, Acknowledged, Resolved
+- Search: "Search alerts..."
+- 6-column table: Type, Severity, Message, Status, Created, Actions
+
+#### Phase 23W: Admin Sub-Pages Deep Verification (6 pages)
+1. **Barcode Configuration** (`/MasterListsPage/barcodeConfiguration`) — PASS
+   - "Number Bar Code Label" — Default (Order=1, Specimen=1, Slide=1, Block=1, Freezer=1), Maximum (Order=10, Specimen=1, Slide=1, Block=1, Freezer=1)
+   - "Bar Code Label Elements" — 5 label types with Height×Width in mm: Order (25×45), Specimen (25×45), Block (10×25), Slide (20×30), Freezer (25.4×76.2)
+   - Save/Cancel buttons
+
+2. **List Plugins** (`/MasterListsPage/PluginFile`) — PASS
+   - Single-column table (Plugin Name), "No plugins found"
+
+3. **Result Reporting Configuration** (`/MasterListsPage/resultReportingConfiguration`) — PASS
+   - 3 reporting endpoints: Result Reporting (Disabled, URL="disable", Queue=0), Malaria Surveillance (Disabled, placeholder URL, Queue=0), Malaria Case Report (Disabled)
+   - Each with Enabled/Disabled radio buttons, URL text input, Queue Size display
+
+4. **Test Notification Configuration** (`/MasterListsPage/testNotificationConfigMenu`) — PASS
+   - 7-column table: Test Id, Test names, Patient Email (checkbox), Patient SMS (checkbox), Provider Email (checkbox), Provider SMS (checkbox), Edit (gear icon)
+   - 25+ test rows (ABON Tri-line HIV, Acid-Fast Microscopy, Allplex SARS-CoV-2, Amikacin, etc.)
+   - Save/Exit buttons
+
+5. **Notify User** (`/MasterListsPage/NotifyUser`) — PASS
+   - Message textarea, "User to be notified *" (required) text input, Submit button
+
+6. **Search Index Management** (`/MasterListsPage/SearchIndexManagement`) — PASS
+   - "Start Reindexing" heading with explanatory text, "Start Reindexing" button
+
+7. **Logging Configuration** (`/MasterListsPage/loggingManagement`) — PASS
+   - Log Level dropdown: ALL, TRACE, DEBUG, INFO, WARN, ERROR, FATAL, OFF (default: INFO)
+   - Logger Name text input (default: "org.openelisglobal", examples: org.openelisglobal, root)
+   - "Apply Log Level" button
+
+**Phase 23U-W Summary:** 10 TCs, all pass. Batch Order Entry shows form-specific conditional rendering (3 distinct sample sections for Routine/EID/Viral Load). Alerts Dashboard has 4 KPIs and 3 filter dimensions. 7 Admin sub-pages verified with full field inventories.
+
+**Phase 23 Cumulative (through 23W)**: 506+ TCs, ~479 passed, ~94.7% pass rate
+
+---
+
 ## Key Files
 
 | File | Purpose |
