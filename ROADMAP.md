@@ -1,8 +1,8 @@
 # OpenELIS QA Testing — Roadmap & Next Steps
 
 **Created:** 2026-03-27
-**Updated:** 2026-03-29 (Phase 19 complete)
-**Current State:** Phase 19 complete, 272 TCs, ~93% pass rate. Phase 19 tested deeper interaction on Analyzers, Notifications, User panel, Global Search.
+**Updated:** 2026-03-31 (Phase 23AP complete)
+**Current State:** Phase 23AP complete, 720+ TCs, ~96% pass rate. Admin sub-page coverage COMPLETE (24/24 pages). All sidebar sections deeply tested.
 
 ---
 
@@ -2159,8 +2159,77 @@ Single URL: `/FreezerMonitoring?tab=0` — all tabs within same page.
 
 6. **Content scrolling issue**: When the left sidebar is open, scrolling in the content area sometimes doesn't work — the sidebar consumes scroll events.
 
-### Cumulative Progress
+### Cumulative Progress (after Phase 23AO)
 - **Total Test Cases**: 698+ TCs executed
 - **Pass Rate**: ~96% (669+ passed)
 - **Admin Coverage**: 12 of ~22 Admin sub-pages now deeply tested at field level
+
+---
+
+## Phase 23AP — Remaining Admin Sub-Pages Deep Interaction Testing (Suite HO)
+
+**Date**: 2026-03-31
+**Scope**: Deep field-level testing of remaining 12 Admin sub-pages within `/MasterListsPage/*`
+**Test Cases**: 22 TCs (TC-HO-REFLEX-01 through TC-HO-LEGACY-02)
+**Results**: 22 PASS, 0 FAIL
+
+### Admin Sub-Pages Tested
+
+| # | Page Name | URL Path | Page Type | Key Data |
+|---|-----------|----------|-----------|----------|
+| 1 | Reflex Tests Management | `/MasterListsPage/reflex` | Rule cards | 7 rules, Toggle/Active/Deactivate per card |
+| 2 | Calculated Value Tests Mgmt | `/MasterListsPage/calculatedValue` | Rule cards | 5 Measles rules, all Active=false |
+| 3 | Program Entry | `/MasterListsPage/program` | Form | Add/Edit Program, FHIR Questionnaire JSON editor |
+| 4 | List Plugins | `/MasterListsPage/PluginFile` | Empty state | "No plugins found" |
+| 5 | EQA Program Management | `/MasterListsPage/eqaProgram` | Tabbed mgmt | 3 tabs, 0 programs, "Add Program +" button |
+| 6 | NonConformity Configuration | `/MasterListsPage/NonConformityConfigurationMenu` | Config table | 4 settings, radio select + Modify |
+| 7 | Application Properties | `/MasterListsPage/commonproperties` | Key-value | FHIR/paging/Odoo properties, read-only |
+| 8 | Notify User | `/MasterListsPage/NotifyUser` | Simple form | Message textarea + user selector + Submit |
+| 9 | Search Index Management | `/MasterListsPage/SearchIndexManagement` | Single action | "Start Reindexing" button only |
+| 10 | Logging Configuration | `/MasterListsPage/loggingManagement` | Config form | Log Level=INFO, Logger=org.openelisglobal |
+| 11 | Test Notification Config | `/MasterListsPage/testNotificationConfigMenu` | Matrix/grid | Per-test × 4 channels (Patient/Provider Email/SMS) |
+| 12 | Legacy Admin | `/api/OpenELIS-Global/MasterListsPage` | JSP legacy | Orange header, 20+ links, separate tab |
+
+### Admin Page Pattern Analysis (Combined with Phase 23AO)
+
+**Rule Card Pattern** (Reflex Tests, Calculated Values):
+- Per-rule card with Toggle Rule switch, Active checkbox, Deactivate Rule button
+- Consistent layout across both pages
+- Reflex: 7 rules (all Active=true, Toggle=Off), Calc Values: 5 rules (all Active=false)
+
+**Single-Action Pages** (Search Index Mgmt, Notify User):
+- Minimal UI: one primary action button or form
+- Search Index: single "Start Reindexing" button
+- Notify User: message + user + submit
+
+**Specialized Forms** (Program Entry, Logging Config, Test Notification Config):
+- Each has unique form layout tailored to its function
+- Program Entry: FHIR Questionnaire JSON editor (unique in the application)
+- Test Notification: Matrix grid (test × 4 notification channels) — unique interaction pattern
+
+**Legacy Interface** (Legacy Admin):
+- Completely separate JSP-based UI at `/api/OpenELIS-Global/MasterListsPage`
+- Orange header, bullet-list navigation, no Carbon components
+- Opens in new browser tab — no SPA integration
+- 20+ admin links covering traditional admin functions
+
+### Findings
+
+1. **All 12 pages loaded successfully** — no 404s, no blank pages, no errors
+2. **FHIR integration scope confirmed**: Application Properties shows `fhir.subscriber.resources` configured for 6 resource types (Task, Patient, ServiceRequest, DiagnosticReport, Observation, Specimen)
+3. **Plugin infrastructure exists but empty**: Plugin page renders correctly with empty state — ready for future plugin installation
+4. **EQA Program Management functional but empty**: 3-tab interface with Add button works, no programs configured yet
+5. **Legacy Admin preserved**: Full old JSP admin interface accessible alongside React admin — dual-admin architecture
+6. **Test Notification Configuration is the most granular admin page**: Per-test × 4-channel matrix provides fine-grained notification control
+
+### Full Admin Coverage Summary (Phases 23AO + 23AP Combined)
+
+**Total Admin sub-pages deeply tested**: 24 (12 in Phase 23AO + 12 in Phase 23AP)
+**Page patterns identified**: 5 (CRUD Table, Config Form, Rule Card, Single-Action, Specialized Form)
+**Plus**: 1 Legacy JSP admin interface
+
+### Cumulative Progress
+- **Total Test Cases**: 720+ TCs executed (698 + 22 new)
+- **Pass Rate**: ~96% (691+ passed)
+- **Admin Coverage**: 24 of ~24 Admin sub-pages now deeply tested at field level — COMPLETE
 

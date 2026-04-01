@@ -13511,3 +13511,123 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 - **Expected**: Page loads at `/MasterListsPage/resultReportingConfiguration` with reporting endpoint configs
 - **Result**: PASS — 3 sections (Result Reporting, Malaria Surveillance, Malaria Case Report), each with Enabled/Disabled radio buttons (all Disabled), URL field, queue size display (all 0), Save/Cancel buttons
 
+---
+
+## Suite HO — Remaining Admin Sub-Pages Deep Interaction Testing (Phase 23AP)
+
+**Scope**: Deep field-level interaction testing of 12 remaining Admin sub-pages under `/MasterListsPage/*`. Tests cover Reflex Tests Management, Calculated Value Tests Management, Program Entry, List Plugins, EQA Program Management, NonConformity Configuration, Application Properties, Notify User, Search Index Management, Logging Configuration, Test Notification Configuration, and Legacy Admin.
+
+**Environment**: OpenELIS Global v3.2.1.3 at `https://www.jdhealthsolutions-openelis.com` (admin/adminADMIN!)
+
+### TC-HO-REFLEX-01: Reflex Tests Management page loads with 7 rules
+- **Precondition**: Logged in as admin, navigated to Admin > Reflex Tests Configuration > Reflex Tests Management
+- **Steps**: 1) Expand "Reflex Tests Configuration" in Admin inner sidebar 2) Click "Reflex Tests Management"
+- **Expected**: Page loads at `/MasterListsPage/reflex` with a list of reflex test rules
+- **Result**: PASS — 7 reflex rules displayed, each with rule description, "Toggle Rule" switch (all Off), "Active" checkbox (all checked/true), and "Deactivate Rule" button. Rules include sample-type/test/result → triggered-test mappings.
+
+### TC-HO-REFLEX-02: Reflex rule card structure has Toggle, Active, and Deactivate controls
+- **Steps**: 1) Inspect any reflex rule card for control layout
+- **Expected**: Each rule card shows: rule description text, Toggle Rule switch, Active checkbox, Deactivate Rule button
+- **Result**: PASS — All 7 rule cards follow identical layout: description at top, Toggle Rule switch (Off position), Active checkbox (checked), Deactivate Rule button (red/danger style). Consistent "Rule Card" pattern.
+
+### TC-HO-CALCVALUE-01: Calculated Value Tests Management page loads with 5 Measles rules
+- **Precondition**: Logged in as admin, navigated to Admin > Reflex Tests Configuration > Calculated Value Tests Management
+- **Steps**: 1) Click "Calculated Value Tests Management" under Reflex Tests Configuration
+- **Expected**: Page loads at `/MasterListsPage/calculatedValue` with calculated value rules
+- **Result**: PASS — 5 Measles-related rules displayed. All rules have Active=false (unchecked). Same card layout as Reflex Tests: Toggle Rule switch, Active checkbox, Deactivate Rule button per card.
+
+### TC-HO-CALCVALUE-02: All Calculated Value rules are inactive
+- **Steps**: 1) Check Active status of all 5 calculated value rules
+- **Expected**: Active status clearly indicated per rule
+- **Result**: PASS — All 5 rules show Active=false (unchecked checkboxes). Rules cover Measles IgG/IgM calculated interpretations. Toggle switches all in Off position.
+
+### TC-HO-PROGRAM-01: Program Entry page loads with Add/Edit Program form
+- **Precondition**: Logged in as admin, navigated to Admin > Program Entry
+- **Steps**: 1) Click "Program Entry" in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/program` with program management form
+- **Result**: PASS — Page shows "Add Program" and "Edit Program" sections. Add Program form has: Program Name text input, FHIR Questionnaire JSON editor (large textarea), Submit button. Edit Program section has: program selector dropdown, same fields for editing.
+
+### TC-HO-PROGRAM-02: Program Entry FHIR Questionnaire JSON editor is present
+- **Steps**: 1) Inspect the Add Program form for JSON editor field
+- **Expected**: JSON editor/textarea for FHIR Questionnaire resource is present and editable
+- **Result**: PASS — Large textarea labeled for FHIR Questionnaire JSON input is present, accepts free-text JSON. Submit button below. This allows defining custom questionnaire resources per program.
+
+### TC-HO-PLUGINS-01: List Plugins page shows empty state
+- **Precondition**: Logged in as admin, navigated to Admin > List Plugins
+- **Steps**: 1) Click "List Plugins" in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/PluginFile` with plugin listing or empty state
+- **Result**: PASS — Page loads with "No plugins found" empty state message. No table or list rendered. This confirms the plugin infrastructure exists but no plugins are currently installed.
+
+### TC-HO-EQA-PROGRAM-01: EQA Program Management page loads with 3 tabs
+- **Precondition**: Logged in as admin, navigated to Admin > EQA Program Management
+- **Steps**: 1) Click "EQA Program Management" in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/eqaProgram` with program management interface
+- **Result**: PASS — Page shows 3 tabs for EQA program organization. 0 programs currently configured. "Add Program +" button present for creating new EQA programs.
+
+### TC-HO-EQA-PROGRAM-02: EQA Program Management Add Program button is present
+- **Steps**: 1) Verify Add Program button is visible and clickable
+- **Expected**: "Add Program +" button is active and ready for use
+- **Result**: PASS — Blue "Add Program +" button displayed prominently. Tabs allow organizing programs by category. Empty state handled gracefully with no error.
+
+### TC-HO-NONCONFORM-01: NonConformity Configuration shows 4 settings
+- **Precondition**: Logged in as admin, navigated to Admin > General Configurations > NonConformity Configuration
+- **Steps**: 1) Expand "General Configurations" 2) Click "NonConformity Configuration"
+- **Expected**: Page loads at `/MasterListsPage/NonConformityConfigurationMenu` with configuration settings
+- **Result**: PASS — 4 NonConformity configuration settings displayed in a key-value table with radio-button selection and Modify capability. Settings control non-conformity workflow behavior.
+
+### TC-HO-APPPROPS-01: Application Properties shows two-column key-value pairs
+- **Precondition**: Logged in as admin, navigated to Admin > Application Properties
+- **Steps**: 1) Click "Application Properties" in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/commonproperties` with application-wide property settings
+- **Result**: PASS — Two-column key-value layout showing system-wide properties. Includes FHIR configuration settings (fhir.subscriber.resources: Task, Patient, ServiceRequest, DiagnosticReport, Observation, Specimen), paging/pagination settings, Odoo integration configuration, and other system properties. Read-only display with property names and their current values.
+
+### TC-HO-APPPROPS-02: Application Properties includes FHIR subscriber resource configuration
+- **Steps**: 1) Locate FHIR-related properties in the list
+- **Expected**: fhir.subscriber.resources property is visible with list of FHIR resource types
+- **Result**: PASS — `fhir.subscriber.resources` property shows 6 configured resource types: Task, Patient, ServiceRequest, DiagnosticReport, Observation, Specimen. Confirms FHIR integration scope at application property level.
+
+### TC-HO-NOTIFY-01: Notify User page shows message form
+- **Precondition**: Logged in as admin, navigated to Admin > Notify User
+- **Steps**: 1) Click "Notify User" in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/NotifyUser` with notification form
+- **Result**: PASS — Form with Message textarea (large, multi-line), User field/selector for choosing recipient, and Submit button. Simple single-purpose admin utility for sending notifications to specific users.
+
+### TC-HO-SEARCHINDEX-01: Search Index Management shows single reindex button
+- **Precondition**: Logged in as admin, navigated to Admin > Search Index Management
+- **Steps**: 1) Click "Search Index Management" in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/SearchIndexManagement` with reindexing control
+- **Result**: PASS — Single-action page with "Start Reindexing" button. No other controls or configuration. Purpose: triggers full re-indexing of search indices (patient search, order search, etc.) for the application.
+
+### TC-HO-LOGGING-01: Logging Configuration shows log level and logger fields
+- **Precondition**: Logged in as admin, navigated to Admin > Logging Configuration
+- **Steps**: 1) Click "Logging Configuration" in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/loggingManagement` with logging settings
+- **Result**: PASS — Log Level dropdown (currently set to "INFO"), Logger text field (currently "org.openelisglobal"), Apply button. Allows runtime adjustment of logging verbosity for specific Java packages without server restart.
+
+### TC-HO-LOGGING-02: Logging Configuration log level dropdown has standard levels
+- **Steps**: 1) Inspect Log Level dropdown options
+- **Expected**: Standard log levels (TRACE, DEBUG, INFO, WARN, ERROR) available
+- **Result**: PASS — Dropdown contains standard Java logging levels. Current selection: INFO. Logger field pre-populated with "org.openelisglobal" (main application package).
+
+### TC-HO-TESTNOTIF-01: Test Notification Configuration shows per-test notification matrix
+- **Precondition**: Logged in as admin, navigated to Admin > Test Notification Configuration
+- **Steps**: 1) Click "Test Notification Configuration" in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/testNotificationConfigMenu` with notification configuration matrix
+- **Result**: PASS — Per-test notification configuration with 4 notification channels per test: Patient Email, Patient SMS, Provider Email, Provider SMS. Each channel has a checkbox to enable/disable. Tests listed with their notification preferences in a matrix/grid layout. Save/Cancel buttons at bottom.
+
+### TC-HO-TESTNOTIF-02: Test Notification Configuration has 4 channels per test
+- **Steps**: 1) Verify notification channels for any test entry
+- **Expected**: 4 checkboxes per test row: Patient Email, Patient SMS, Provider Email, Provider SMS
+- **Result**: PASS — All test entries show 4 notification channel checkboxes. Allows granular control of which notifications are sent for which tests. Channels: Patient Email, Patient SMS, Provider Email, Provider SMS.
+
+### TC-HO-LEGACY-01: Legacy Admin page loads in separate tab with JSP interface
+- **Precondition**: Logged in as admin, clicked Legacy Admin link from Admin sidebar
+- **Steps**: 1) Click "Legacy Admin" link in Admin inner sidebar
+- **Expected**: New browser tab opens with old-style JSP admin interface at `/api/OpenELIS-Global/MasterListsPage`
+- **Result**: PASS — New tab (210550615) opened at `/api/OpenELIS-Global/MasterListsPage`. Old JSP-style interface with orange header bar, "training installation" warning banner, and bullet-list navigation with 20+ administrative links. Completely different UI from the React/Carbon admin pages.
+
+### TC-HO-LEGACY-02: Legacy Admin has distinct UI from React admin
+- **Steps**: 1) Compare Legacy Admin UI elements to React admin
+- **Expected**: Visually distinct interface: no Carbon Design System components, old-style navigation
+- **Result**: PASS — Orange header (not Carbon blue), bullet-list link navigation (not sidebar cards), "training installation" warning text, traditional page-reload navigation. No Carbon UI components. 20+ admin links covering: Analyzer Test Name, Master Lists, Menu Management, Test Management, User Administration, and more. This is the pre-React admin interface preserved for backward compatibility.
+
