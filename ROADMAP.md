@@ -1065,7 +1065,176 @@ All 10 General Config sub-pages verified:
 
 **Phase 23J Summary:** All 3 Patient pages verified. Patient search component is shared/reused across Add Order, Patient Status Report, Add/Edit Patient, and Patient History. Merge Patient uses a simplified 3-step wizard variant.
 
-**Phase 23 Cumulative**: 419+ TCs + ~100 new field-level verifications (30 from 23C-E + 20 from 23F + 15 from 23G + 15 from 23H + 10 from 23I + 10 from 23J), ~94% pass rate
+**Phase 23 Cumulative (through 23J)**: 419+ TCs + ~100 new field-level verifications (30 from 23C-E + 20 from 23F + 15 from 23G + 15 from 23H + 10 from 23I + 10 from 23J), ~94% pass rate
+
+### Phase 23K — Storage (2 modules, 11 tabs/sub-tabs) — ALL PASS
+
+**Storage Management Dashboard** (`/Storage/samples`)
+
+1. **Dashboard KPIs** — PASS
+   - 3 stat cards: TOTAL SAMPLE ITEMS: 2, ACTIVE: 2, DISPOSED: 0
+   - STORAGE LOCATIONS badge: 12 rooms, 14 devices, 12 shelves, 4 racks
+
+2. **Sample Items tab** (`/Storage/samples`) — PASS
+   - Search: "Search by sample ID or location..."
+   - Filters: "Filter by locations..." text input, "Filter by Status" dropdown (All, Active, Disposed)
+   - Table 8 columns: SampleItem ID, Sample Accession, Sample Type, Status, Location, Assigned By, Assigned Date, Actions
+   - Sample types: Blood Film, Sputum, Plasma, Whole Blood
+   - Location format: "Lab > Freezer1 > 1", "TB PC2 > Fridge > TOPSHELF"
+   - Status: green "Active" badges, Actions: 3-dot menu
+
+3. **Rooms tab** (`/Storage/rooms`) — PASS
+   - Search: "Search by room name or code..."
+   - Filter: "Filter by Status" dropdown
+   - "Add Room" button (blue)
+   - Table 6 columns: Name (sortable ↕), Code, Devices, Samples, Status, Actions
+   - 12 rooms: TB PC2 (TBPC2, 4 devices), TB PC3, STORE ROOM 1/2 (CPHLSR-1/2), REPOSITORY ROOM (CPHLRR, 1 device), COLD ROOM (CPHLCR, 2 devices), STORAGE CONTAINER, TRAINING ROOM (2 devices), TB PC2 (TBPC2-1, 2 devices), VL_Freezer, Lab (LAB, 3 devices), -40 (40 devices)
+   - Each row expandable (chevron), Actions: 3-dot menu
+
+4. **Devices tab** (`/Storage/devices`) — PASS
+   - Search: "Search by device name or code..."
+   - Filters: "Filter by Room" dropdown, "Filter by Status" dropdown
+   - "Add Device" button (blue)
+   - Table 7 columns: Name, Code, Room, Type, Occupancy, Status, Actions
+   - Device types: refrigerator (blue badge), cabinet (grey badge), other (grey badge)
+   - Occupancy: "0/1,000 (0%)" with "Manual Limit" label and progress bar + green checkmark
+   - Visible devices: TB PC2 (refrigerator), CUPBOARD 1 (cabinet), BENCH (other), UNDER BENCH (FLOOR) (other)
+
+5. **Shelves tab** (`/Storage/shelves`) — PASS
+   - Search: "Search by shelf label..."
+   - Filters: Filter by Room, Filter by Device, Filter by Status (3 dropdowns)
+   - "Add Shelf" button (blue)
+   - Table 5 columns: Shelf, Device, Room, Occupancy, Status, Actions
+   - Shelves: TRAY 1 (0/1,000), TOP SHELF A (0/500), SHELF B (0/500), SHELF C (0/500), TOP SHELF (0/1,000)
+   - All with "Manual Limit" labels, progress bars, green checkmarks
+
+6. **Racks tab** (`/Storage/racks`) — PASS
+   - Search: "Search by rack label..."
+   - Filters: Filter by Room, Filter by Device, Filter by Status (3 dropdowns)
+   - "Add Rack" button (blue)
+   - Table 8 columns: Rack, Room, Shelf, Device, Dimensions, Occupancy, Status, Actions
+   - 4 racks (all named "RACK 1" in different locations), Dimensions: "-", Occupancy: 0/0 (0%)
+
+7. **Boxes tab** (`/Storage/boxes`) — PASS
+   - Unique grid-based assignment UI (not a table like other tabs)
+   - Description: "Manage boxes/plates, or select a rack and box to assign samples to coordinates."
+   - **Grid Assignment** section: "Select rack" dropdown → "Select box/plate" dropdown + "Add Box/Plate" button
+   - Grid preview: "Select a box to view its grid."
+   - **Assign sample to box** panel: "Sample item ID or barcode" text input, "Notes (optional)" text input, "Assign" button (disabled until selection)
+
+**Cold Storage Monitoring** (`/FreezerMonitoring?tab=0`) — Cold Storage Monitoring v2.1.0
+
+8. **Dashboard tab** — PASS
+   - Header: "Cold Storage Dashboard — Real-time temperature monitoring & compliance"
+   - System Status: Online (green checkmark), last update timestamp, "Refresh" link
+   - 4 KPI cards: Total Storage Units: 0, Normal Status: 0, Warnings: 0, Critical Alerts: 0
+   - Search: "Search by Unit ID or Name", Filters: Status (All Status), Device Type (All Device Types)
+   - Storage Units table 9 columns: Unit ID, Status, Unit Name, Device Type, Location, Current Temp, Target Temp, Protocol, Last Reading — "No storage units found."
+   - Active Alerts (0): "No active alerts"
+
+9. **Corrective Actions tab** — PASS
+   - Description: "Track maintenance and repair actions for cold storage devices"
+   - Search icon + "All" filter dropdown, "Add New Action +" button (blue)
+   - Table 8 columns: Action ID, Status, Device, Summary, Performed By, Created, Last Updated By, Actions
+   - Pagination: Items per page: 5, 0-0 of 0 items
+
+10. **Historical Trends tab** — PASS
+    - Title: "Historical Temperature Trends"
+    - Filters: Freezer ("All Freezers"), Time Range ("Last 24 Hours")
+    - Chart controls: Zoom In, Zoom Out, Reset, Export CSV (download icon)
+    - Chart area: "No readings available for the selected filters."
+    - Stats: Average Temperature (-), Min Temperature (- blue), Max Temperature (- red), Data Points (0)
+
+11. **Reports tab** — PASS
+    - Title: "Regulatory Reports"
+    - Form: Report Type ("Daily Log"), Freezer ("All Freezers"), Export Format ("PDF"), Start/End date pickers
+    - "Generate Report" button (blue)
+    - Regulatory Compliance info: CAP, CLIA, FDA, WHO compliance noted
+    - Sub-tabs: "Temperature Excursions" (Temperature Excursion History), "Audit Trail"
+
+12. **Settings tab** — PASS
+    - Title: "System Configuration" (gear icon)
+    - 4 sub-tabs: Device Management, Temperature Thresholds, Alert Settings, System Settings
+    - **Device Management**: 2 configured devices (QA_AUTO_Freezer ID 2, freezer, INACTIVE, port 502 TCP, TB PC2; TB PC2 ID 1, refrigerator, INACTIVE, port 502 TCP, TB PC2). Actions: edit/power/delete icons. Pagination.
+    - **Temperature Thresholds**: QA_AUTO_Freezer (Target -20°C, Warning -18°C, Critical -15°C, Poll 60s), TB PC2 (Target 2°C, Warning -18°C, Critical -15°C, Poll 60s)
+    - **Alert Settings**: "Alert Configuration" — Email/SMS checkboxes for 3 alert types: Temperature Alerts, Equipment Failure, Inventory Alerts (all unchecked)
+    - **System Settings**: Read-only mode (deprecation notice). Protocol Config: Modbus TCP 502, BACnet UDP 47808. Security: 2FA toggle (off), Session Timeout 30 min. System Info: v2.1.0, PostgreSQL 14.5, Uptime 0d 0h 0m
+    - Footer: "Cold Storage Monitoring v2.1.0 | Compliant with CAP, CLIA, FDA, and WHO guidelines | HIPAA Compliant Data Handling"
+
+**Phase 23K Summary:** Both Storage modules fully verified — Storage Management (6 tabs with hierarchical room→device→shelf→rack→box structure and grid-based sample assignment) and Cold Storage Monitoring (5 tabs covering real-time monitoring, corrective actions, historical trends, regulatory reports, and granular system configuration). Total ~120 fields/controls verified.
+
+**Phase 23 Cumulative (through 23K)**: 476+ TCs, ~451 passed, ~94% pass rate
+
+### Phase 23L — Edit Order — PASS
+
+**Edit Order / Modify Order** (`/SampleEdit?type=readwrite`)
+- "Modify Order" heading, breadcrumb "Home /"
+- **Section 1 — Search By Accession Number**: "Enter Accession Number" label with 0/23 counter, "Enter Lab No" text input, "Submit" button (blue)
+- **Section 2 — Search By Patient**: Reusable patient search component (Patient Id, Previous Lab Number 0/23, Last Name, First Name, Date of Birth dd/mm/yyyy, Gender Male/Female radio, Search/External Search buttons, Client Registry Search toggle false)
+- Patient Results table 7 columns: Last Name, First Name, Gender, Date of Birth, Unique Health ID number, National ID, Data Source Name
+- Pagination: Items per page 100, page navigation
+
+### Phase 23M — Barcode — PASS
+
+**Print Bar Code Labels** (`/PrintBarcode`)
+- "Print Bar Code Labels" heading, breadcrumb "Home /"
+- **Pre-Print Barcodes section**: Number of label sets (1, -/+ stepper), Number of order labels per set (1, -/+ stepper), Number of specimen labels per set (1, -/+ stepper), Total Labels to Print (2, editable with clear X), Search Site Name text input
+- **Sample section**: Sample Type dropdown ("Select sample type"), NOTE about facility/sample/test printing on every label, "Pre-Print Labels" button (disabled until configured)
+- **Print Barcodes for Existing Orders section**: Enter Accession Number (0/23 counter), "Enter Lab No" text input, "Submit" button (blue)
+
+### Phase 23N — Incoming Orders — PASS
+
+**Search Incoming Test Requests** (`/ElectronicOrders`)
+- "Search Incoming Test Requests" heading, breadcrumb "Home /"
+- **Search by value**: "Search by family name, national ID number, lab number from referring lab, or passport number", Search Value text input, "All Info" checkbox, Search button (blue)
+- **Search by Date, and Status**: Description about date range for referrals/electronic requests, Start Date (dd/mm/yyyy calendar), End Date (dd/mm/yyyy calendar), Status dropdown (All Statuses, Cancelled, Entered, NonConforming, Realized — 4 statuses), "All Info" checkbox, Search button (blue)
+
+### Phase 23O — Pathology / IHC / Cytology — ALL PASS
+
+1. **Pathology** (`/PathologyDashboard`) — PASS
+   - 4 KPI cards: Cases in Progress: 0, Awaiting Pathology Review: 0, Additional Pathology Requests: 0, Complete (Week 24/03/2026 - 31/03/2026): 0
+   - Search: "Search by LabNo or Family Name", Filters: "My cases" checkbox, Status dropdown
+   - **10-stage workflow** status filter: Status, All, In Progress, Grossing, Cutting, Processing, Slicing for Slides, Staining, Ready for Pathologist, Additional Pathologist Request, Completed
+   - Table 7 columns: Request Date, Stage, Last Name, First Name, Technician Assigned, Pathologist Assigned, Lab Number
+
+2. **Immunohistochemistry** (`/ImmunohistochemistryDashboard`) — PASS
+   - 3 KPI cards (no "Additional Requests"): Cases in Progress: 0, Awaiting Immunohistochemistry Review: 0, Complete (weekly): 0
+   - Same search/filter UI, but **4-stage workflow**: Status, All, In Progress, Ready for Pathologist, Completed
+   - Table 7 columns: Request Date, Stage, Last Name, First Name, Assigned Technician, Assigned Pathologist, Lab Number
+
+3. **Cytology** (`/CytologyDashboard`) — PASS
+   - 3 KPI cards: Cases in Progress: 0, Awaiting Cytopathologist Review: 0, Complete (weekly): 0
+   - Same search/filter UI, but **5-stage workflow**: Status, All, In Progress, Preparing slides, Screening, Ready for Cytopathologist, Completed
+   - Table 7 columns (different naming): Request Date, Status (not Stage), Last Name, First Name, Select Technician, CytoPathologist Assigned, Lab Number
+
+**Key architectural finding:** All three dashboards (Pathology/IHC/Cytology) share the same layout pattern (KPI cards + search/filter + table) but differ in: KPI count (4 vs 3), workflow stages (10 vs 4 vs 5), and column naming conventions.
+
+### Phase 23P — Analyzers (3 pages) — ALL PASS
+
+1. **Analyzers List** (`/analyzers`) — PASS
+   - "Analyzers > Analyzer List" heading, subtitle "Manage laboratory analyzers and field mappings"
+   - "Add Analyzer +" button (blue)
+   - 4 KPI cards: Total Analyzers: 1, Active: 0, Inactive: 0, Plugin Warnings: 1 (red text)
+   - Search: "Search analyzers...", Filter: Status ("All Statuses")
+   - Table 7 columns: Name, Type, Connection, Test Units, Status, Last Modified, Actions
+   - 1 analyzer: Test Analyzer Alpha ("Plugin Missing" red badge), HEMATOLOGY, 192.168.1.100:5000, 1 unit(s), Setup status
+
+2. **Error Dashboard** (`/analyzers/errors`) — PASS
+   - "Analyzers > Error Dashboard", subtitle "View and manage analyzer errors and alerts"
+   - "Acknowledge All" button (blue)
+   - 4 KPI cards: Total Errors: 0, Unacknowledged: 0, Critical: 0, Last 24 Hours: 0
+   - Search: "Search errors...", 3 Filters: Error Type ("All Types"), Severity ("All Severities"), Analyzer ("All")
+   - Table 7 columns: Timestamp, Analyzer, Type, Severity, Message, Status, Actions
+
+3. **Analyzer Types** (`/analyzers/types`) — PASS
+   - "Analyzer Types" heading
+   - Search: "Search analyzer types...", "Create New Analyzer Type +" button (blue)
+   - Table 8 columns: Name, Description, Protocol, Plugin Class, Identifier Pattern, Generic Plugin, Plugin Loaded, Instances, Status
+   - 2 types: Test Analyzer Type (ASTM, generic, not loaded, 0 instances, Active), Test Type ASTM (ASTM, generic, not loaded, 0 instances, Active)
+
+**Phase 23L-P Summary:** 8 pages verified across Edit Order, Barcode, Incoming Orders, Pathology/IHC/Cytology, and Analyzers. Key findings: Pathology has 10 workflow stages vs IHC (4) vs Cytology (5), all three share layout pattern. Analyzer Types use ASTM protocol with plugin architecture. Edit Order reuses the shared patient search component.
+
+**Phase 23 Cumulative (through 23P)**: 484+ TCs, ~459 passed, ~94% pass rate
 
 ---
 

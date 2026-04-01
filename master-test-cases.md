@@ -10919,3 +10919,197 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Navigate to Patient → Merge Patient (/PatientMerge) 2. Verify "Merge Patient Records" heading 3. Verify 3-step wizard (Select Patients → Select Primary → Confirm Merge) 4. Verify Step 1 "Select First Patient" form (Patient Id, First Name, Last Name, Gender, Date of Birth, Search/External Search buttons) 5. Verify "No patient selected" placeholder 6. Verify "Select Second Patient" section below |
 | **Expected** | 3-step merge wizard with dual patient selection |
 | **Status** | PASS |
+
+---
+
+## Suite GA — Storage Management Dashboard (Phase 23K)
+
+#### TC-GA-DASHBOARD-01: Storage Management Dashboard KPIs and Tabs
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GA-DASHBOARD-01 |
+| **Suite** | GA — Storage Management |
+| **Phase** | 23K |
+| **Steps** | 1. Navigate to Storage → Storage Management → Sample Items (/Storage/samples) 2. Verify "Storage Management Dashboard" heading 3. Verify 3 KPI cards (TOTAL SAMPLE ITEMS: 2, ACTIVE: 2, DISPOSED: 0) 4. Verify STORAGE LOCATIONS badge (12 rooms, 14 devices, 12 shelves, 4 racks) 5. Verify 6 tabs: Sample Items, Rooms, Devices, Shelves, Racks, Boxes |
+| **Expected** | Dashboard loads with KPI cards and 6 navigation tabs |
+| **Status** | PASS |
+
+#### TC-GA-SAMPLES-01: Sample Items Tab
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GA-SAMPLES-01 |
+| **Suite** | GA — Storage Management |
+| **Phase** | 23K |
+| **Steps** | 1. Click Sample Items tab 2. Verify search bar "Search by sample ID or location..." 3. Verify "Filter by locations..." text input 4. Verify "Filter by Status" dropdown (All, Active, Disposed) 5. Verify table 8 columns: SampleItem ID, Sample Accession, Sample Type, Status, Location, Assigned By, Assigned Date, Actions 6. Verify data rows with sample types (Blood Film, Sputum, Plasma, Whole Blood), green Active badges, location hierarchy format |
+| **Expected** | Sample Items table with search, filters, and 8-column layout |
+| **Status** | PASS |
+
+#### TC-GA-ROOMS-01: Rooms Tab
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GA-ROOMS-01 |
+| **Suite** | GA — Storage Management |
+| **Phase** | 23K |
+| **Steps** | 1. Click Rooms tab (/Storage/rooms) 2. Verify search "Search by room name or code..." 3. Verify "Filter by Status" dropdown 4. Verify "Add Room" button 5. Verify table 6 columns: Name (sortable), Code, Devices, Samples, Status, Actions 6. Verify 12 rooms (TB PC2 TBPC2 4 devices, TB PC3, STORE ROOM 1/2, REPOSITORY ROOM 1 device, COLD ROOM 2 devices, STORAGE CONTAINER, TRAINING ROOM 2 devices, TB PC2 TBPC2-1, VL_Freezer, Lab 3 devices, -40 40 devices) 7. Verify expandable rows (chevron) and 3-dot actions |
+| **Expected** | 12 rooms with codes, device counts, and expandable rows |
+| **Status** | PASS |
+
+#### TC-GA-DEVICES-01: Devices Tab
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GA-DEVICES-01 |
+| **Suite** | GA — Storage Management |
+| **Phase** | 23K |
+| **Steps** | 1. Click Devices tab (/Storage/devices) 2. Verify search "Search by device name or code..." 3. Verify 2 filter dropdowns: Filter by Room, Filter by Status 4. Verify "Add Device" button 5. Verify table 7 columns: Name, Code, Room, Type, Occupancy, Status, Actions 6. Verify device types: refrigerator (blue badge), cabinet (grey), other (grey) 7. Verify occupancy format "0/1,000 (0%)" with "Manual Limit" label and progress bar |
+| **Expected** | Devices table with type badges, occupancy percentages, and dual filters |
+| **Status** | PASS |
+
+#### TC-GA-SHELVES-RACKS-BOXES-01: Shelves, Racks, and Boxes Tabs
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GA-SHELVES-RACKS-BOXES-01 |
+| **Suite** | GA — Storage Management |
+| **Phase** | 23K |
+| **Steps** | 1. Click Shelves tab — verify search "Search by shelf label...", 3 filters (Room/Device/Status), "Add Shelf" button, 5-col table (Shelf, Device, Room, Occupancy, Status), occupancy with Manual Limit labels 2. Click Racks tab — verify search "Search by rack label...", 3 filters, "Add Rack" button, 8-col table (Rack, Room, Shelf, Device, Dimensions, Occupancy, Status, Actions), 4 racks all RACK 1 3. Click Boxes tab — verify unique grid assignment UI: description text, "Select rack" dropdown, "Select box/plate" dropdown + "Add Box/Plate" button, grid preview "Select a box to view its grid", "Assign sample to box" panel with barcode input + Notes + Assign button |
+| **Expected** | Shelves/Racks tables with hierarchical filters; Boxes tab has unique grid-based coordinate assignment |
+| **Status** | PASS |
+
+## Suite GB — Cold Storage Monitoring (Phase 23K)
+
+#### TC-GB-DASHBOARD-01: Cold Storage Dashboard
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GB-DASHBOARD-01 |
+| **Suite** | GB — Cold Storage Monitoring |
+| **Phase** | 23K |
+| **Steps** | 1. Navigate to Storage → Cold Storage Monitoring → Dashboard (/FreezerMonitoring?tab=0) 2. Verify "Cold Storage Dashboard" heading with "Real-time temperature monitoring & compliance" subtitle 3. Verify System Status: Online (green check), timestamp, Refresh link 4. Verify 5 tabs: Dashboard, Corrective Actions, Historical Trends, Reports, Settings 5. Verify 4 KPI cards: Total Storage Units 0, Normal Status 0, Warnings 0, Critical Alerts 0 6. Verify search "Search by Unit ID or Name", filters: Status, Device Type 7. Verify Storage Units table 9 columns (Unit ID through Last Reading), "No storage units found" 8. Verify Active Alerts (0) section |
+| **Expected** | Cold Storage Dashboard with real-time monitoring UI and 5 navigation tabs |
+| **Status** | PASS |
+
+#### TC-GB-SETTINGS-01: Cold Storage Settings (4 Sub-tabs)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GB-SETTINGS-01 |
+| **Suite** | GB — Cold Storage Monitoring |
+| **Phase** | 23K |
+| **Steps** | 1. Click Settings tab 2. Verify "System Configuration" heading 3. Verify 4 sub-tabs: Device Management, Temperature Thresholds, Alert Settings, System Settings 4. Device Management: 2 devices (QA_AUTO_Freezer freezer INACTIVE port 502 TCP, TB PC2 refrigerator INACTIVE), edit/power/delete actions, pagination 5. Temperature Thresholds: QA_AUTO_Freezer Target -20°C Warning -18°C Critical -15°C Poll 60s; TB PC2 Target 2°C Warning -18°C Critical -15°C Poll 60s 6. Alert Settings: 3 alert types (Temperature Alerts, Equipment Failure, Inventory Alerts) with Email/SMS checkboxes 7. System Settings: Read-only deprecation notice, Protocol Config (Modbus TCP 502, BACnet UDP 47808), Security (2FA off, Session 30min), System Info (v2.1.0, PostgreSQL 14.5) |
+| **Expected** | Full system configuration with device management, temperature thresholds, alert configuration, and system info |
+| **Status** | PASS |
+
+---
+
+## Suite GC — Edit Order (Phase 23L)
+
+#### TC-GC-EDIT-ORDER-01: Modify Order Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GC-EDIT-ORDER-01 |
+| **Suite** | GC — Edit Order |
+| **Phase** | 23L |
+| **Steps** | 1. Navigate to Order → Edit Order (/SampleEdit?type=readwrite) 2. Verify "Modify Order" heading 3. Verify Section 1 "Search By Accession Number": Enter Accession Number label with 0/23 counter, "Enter Lab No" text input, Submit button (blue) 4. Verify Section 2 "Search By Patient": reusable patient search component (Patient Id, Previous Lab Number 0/23, Last Name, First Name, Date of Birth dd/mm/yyyy, Gender Male/Female radio, Search/External Search buttons, Client Registry Search toggle false) 5. Verify Patient Results table 7 columns (Last Name, First Name, Gender, Date of Birth, Unique Health ID number, National ID, Data Source Name) with pagination Items per page 100 |
+| **Expected** | Modify Order page with dual search (accession number + patient) and reusable patient search component |
+| **Status** | PASS |
+
+## Suite GD — Barcode (Phase 23M)
+
+#### TC-GD-BARCODE-01: Print Bar Code Labels Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GD-BARCODE-01 |
+| **Suite** | GD — Barcode |
+| **Phase** | 23M |
+| **Steps** | 1. Navigate to Order → Barcode (/PrintBarcode) 2. Verify "Print Bar Code Labels" heading 3. Verify Pre-Print Barcodes section: Number of label sets (1, -/+ stepper), Number of order labels per set (1, -/+ stepper), Number of specimen labels per set (1, -/+ stepper), Total Labels to Print (2, editable with clear X), Search Site Name text input 4. Verify Sample section: Sample Type dropdown "Select sample type", NOTE about facility/sample/test on EVERY label, Pre-Print Labels button (disabled) 5. Verify Print Barcodes for Existing Orders section: Enter Accession Number 0/23 counter, Enter Lab No text input, Submit button (blue) |
+| **Expected** | Barcode page with pre-print configuration (3 steppers) and existing order barcode reprint |
+| **Status** | PASS |
+
+## Suite GE — Incoming Orders (Phase 23N)
+
+#### TC-GE-INCOMING-01: Search Incoming Test Requests Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GE-INCOMING-01 |
+| **Suite** | GE — Incoming Orders |
+| **Phase** | 23N |
+| **Steps** | 1. Navigate to Order → Incoming Orders (/ElectronicOrders) 2. Verify "Search Incoming Test Requests" heading 3. Verify search by value section: description text about family name/national ID/lab number/passport, Search Value text input, All Info checkbox, Search button 4. Verify search by Date/Status section: Start Date dd/mm/yyyy, End Date dd/mm/yyyy, Status dropdown (All Statuses, Cancelled, Entered, NonConforming, Realized — 4 statuses), All Info checkbox, Search button |
+| **Expected** | Dual search interface (by value + by date/status) with 4 electronic order status options |
+| **Status** | PASS |
+
+## Suite GF — Pathology/IHC/Cytology (Phase 23O)
+
+#### TC-GF-PATHOLOGY-01: Pathology Dashboard with 10-Stage Workflow
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GF-PATHOLOGY-01 |
+| **Suite** | GF — Pathology/IHC/Cytology |
+| **Phase** | 23O |
+| **Steps** | 1. Navigate to Pathology (/PathologyDashboard) 2. Verify 4 KPI cards (Cases in Progress, Awaiting Pathology Review, Additional Pathology Requests, Complete weekly) 3. Verify search "Search by LabNo or Family Name", "My cases" checkbox 4. Verify 10-stage status filter: All, In Progress, Grossing, Cutting, Processing, Slicing for Slides, Staining, Ready for Pathologist, Additional Pathologist Request, Completed 5. Verify 7-col table: Request Date, Stage, Last Name, First Name, Technician Assigned, Pathologist Assigned, Lab Number |
+| **Expected** | Pathology dashboard with 4 KPIs and 10-stage workflow status filter |
+| **Status** | PASS |
+
+#### TC-GF-IHC-01: Immunohistochemistry Dashboard with 4-Stage Workflow
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GF-IHC-01 |
+| **Suite** | GF — Pathology/IHC/Cytology |
+| **Phase** | 23O |
+| **Steps** | 1. Navigate to Immunohistochemistry (/ImmunohistochemistryDashboard) 2. Verify 3 KPI cards (Cases in Progress, Awaiting Immunohistochemistry Review, Complete weekly) 3. Verify 4-stage status filter: All, In Progress, Ready for Pathologist, Completed 4. Verify 7-col table: Request Date, Stage, Last Name, First Name, Assigned Technician, Assigned Pathologist, Lab Number |
+| **Expected** | IHC dashboard with 3 KPIs and simplified 4-stage workflow |
+| **Status** | PASS |
+
+#### TC-GF-CYTOLOGY-01: Cytology Dashboard with 5-Stage Workflow
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GF-CYTOLOGY-01 |
+| **Suite** | GF — Pathology/IHC/Cytology |
+| **Phase** | 23O |
+| **Steps** | 1. Navigate to Cytology (/CytologyDashboard) 2. Verify 3 KPI cards (Cases in Progress, Awaiting Cytopathologist Review, Complete weekly) 3. Verify 5-stage status filter: All, In Progress, Preparing slides, Screening, Ready for Cytopathologist, Completed 4. Verify 7-col table with unique naming: Request Date, Status (not Stage), Last Name, First Name, Select Technician, CytoPathologist Assigned, Lab Number |
+| **Expected** | Cytology dashboard with 3 KPIs, 5-stage workflow, and unique column naming |
+| **Status** | PASS |
+
+## Suite GG — Analyzers (Phase 23P)
+
+#### TC-GG-ANALYZER-LIST-01: Analyzer List Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GG-ANALYZER-LIST-01 |
+| **Suite** | GG — Analyzers |
+| **Phase** | 23P |
+| **Steps** | 1. Navigate to Analyzers → Analyzers List (/analyzers) 2. Verify "Analyzers > Analyzer List" heading with subtitle 3. Verify "Add Analyzer +" button 4. Verify 4 KPI cards (Total Analyzers 1, Active 0, Inactive 0, Plugin Warnings 1 red) 5. Verify search "Search analyzers...", Status filter "All Statuses" 6. Verify 7-col table (Name, Type, Connection, Test Units, Status, Last Modified, Actions) 7. Verify Test Analyzer Alpha row: "Plugin Missing" red badge, HEMATOLOGY, 192.168.1.100:5000, 1 unit(s), Setup status |
+| **Expected** | Analyzer list with KPIs, plugin warning indicators, and connection details |
+| **Status** | PASS |
+
+#### TC-GG-ERROR-DASH-01: Error Dashboard Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GG-ERROR-DASH-01 |
+| **Suite** | GG — Analyzers |
+| **Phase** | 23P |
+| **Steps** | 1. Navigate to Analyzers → Error Dashboard (/analyzers/errors) 2. Verify "Analyzers > Error Dashboard" heading 3. Verify "Acknowledge All" button 4. Verify 4 KPI cards (Total Errors 0, Unacknowledged 0, Critical 0, Last 24 Hours 0) 5. Verify search and 3 filters (Error Type "All Types", Severity "All Severities", Analyzer "All") 6. Verify 7-col table (Timestamp, Analyzer, Type, Severity, Message, Status, Actions) |
+| **Expected** | Error dashboard with severity-based filtering and bulk acknowledge |
+| **Status** | PASS |
+
+#### TC-GG-TYPES-01: Analyzer Types Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GG-TYPES-01 |
+| **Suite** | GG — Analyzers |
+| **Phase** | 23P |
+| **Steps** | 1. Navigate to Analyzers → Analyzer Types (/analyzers/types) 2. Verify "Analyzer Types" heading 3. Verify search "Search analyzer types...", "Create New Analyzer Type +" button 4. Verify 8-col table (Name, Description, Protocol, Plugin Class, Identifier Pattern, Generic Plugin, Plugin Loaded, Instances, Status) 5. Verify 2 types: Test Analyzer Type (ASTM, Generic Yes, Plugin Loaded No, 0 instances, Active), Test Type ASTM (ASTM, same config) |
+| **Expected** | Analyzer types registry with ASTM protocol and plugin architecture metadata |
+| **Status** | PASS |
