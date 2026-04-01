@@ -1723,7 +1723,39 @@ Column naming inconsistency across the 3 dashboards is a UX cleanup opportunity 
 
 **Phase 23AF Summary:** 7 TCs (Suite HE), all PASS. Three pathology dashboards share layout but differ in stat card count and column naming.
 
-**Phase 23 Cumulative (through 23AF)**: 593+ TCs executed, ~566 passed, ~95.4% pass rate. 8 non-executable scripts catalogued.
+---
+
+### Phase 23AG — Storage Management & Cold Storage Deep Interactions (Suite HF)
+
+**Scope:** Field-level deep interaction testing of all 6 Storage Management tabs (Sample Items, Rooms, Devices, Shelves, Racks, Boxes) and all 5 Cold Storage Monitoring tabs (Dashboard, Corrective Actions, Historical Trends, Reports, Settings including 4 sub-tabs).
+
+**Storage Management Findings:**
+
+- **Sample Items** (`/Storage/samples`): 214 total items across 9 pages. 8-col sortable table. Filter by Status (All/Active/Disposed). 3 sample action options: Manage Location, Dispose, View Audit (disabled). Sample types: Blood Film, Sputum, Plasma, Whole Blood, Serum. Hierarchical location display ("Lab > Freezer1 > 1").
+- **Rooms** (`/Storage/rooms`): 12 rooms with expandable detail rows showing Description, Created By/Date, Last Modified By/Date. Actions: Edit, Delete Location. Add Room button.
+- **Devices** (`/Storage/devices`): 14 devices across 4 types (refrigerator, cabinet, other, freezer). Occupancy bars with "Manual Limit" or "N/A" tooltip for undefined capacity. 2 filter dropdowns (Room + Status).
+- **Shelves** (`/Storage/shelves`): 12 shelves with 3 cascading filter dropdowns (Room → Device → Status) — most complex filtering of any storage tab.
+- **Racks** (`/Storage/racks`): 4 racks. ONLY tab with Dimensions column (8 cols total — most columns). 3 cascading filters.
+- **Boxes** (`/Storage/boxes`): Unique grid assignment interface (no table). Rack → Box/Plate cascading selection → Grid view. "Assign sample to box" panel with barcode input. **UX Issue: 3 racks identically named "RACK 1 (TB PC2)" are indistinguishable in dropdown.**
+- **Modal Dialogs**: 3 preloaded dialogs — Assign Storage Location (barcode scanning + location search), Dispose Sample (safety confirmation checkbox + Disposal Reason/Method dropdowns), Print Label.
+
+**Cold Storage Monitoring Findings:**
+
+- **Dashboard** (`/FreezerMonitoring?tab=0`): Real-time monitoring with System Status: Online banner. 4 stat cards, 9-col Storage Units table (Current Temp/Target Temp/Protocol/Last Reading), Active Alerts section. Regulatory compliance footer: "Cold Storage Monitoring v2.1.0 | CAP, CLIA, FDA, WHO | HIPAA Compliant."
+- **Corrective Actions** (`?tab=1`): 8-col table. Add Corrective Action dialog with Device/Performed By/Action Type/Description fields. Retract Corrective Action dialog with danger confirmation. Different pagination options (5/10/20/30/40/50) vs Storage Management (5/25/50/100).
+- **Historical Trends** (`?tab=2`): Freezer filter + Time Range (Last 24h/7d/30d/All Time). Chart controls: Zoom In/Out/Reset/Export CSV. Statistics: Avg/Min/Max Temperature + Data Points.
+- **Reports** (`?tab=3`): Regulatory Reports with 3 report types (Daily/Weekly/Monthly Log), PDF-only export, Start/End date pickers, Generate Report button. 2 sub-tabs: Temperature Excursions (8-col table) and Audit Trail (5-col table). CAP/CLIA/FDA/WHO compliance notice.
+- **Settings** (`?tab=4`): 4 sub-tabs:
+  - Device Management: 9-col table, 2 devices (both INACTIVE), Edit/Activate/Delete actions
+  - Temperature Thresholds: Per-device Target/Warning/Critical °C + Poll Interval config
+  - Alert Settings: Email + SMS notification toggles for 3 alert types (Temperature/Equipment/Inventory), Escalation Rules toggle
+  - System Settings: Modbus TCP/BACnet UDP ports, 2FA toggle, Session Timeout, System Info (v2.1.0, PostgreSQL 14.5), Read-Only Mode notice
+
+**Add New Device Dialog Detail:** 3-section form — Basic Information (Name, Type: Freezer|Refrigerator|Cabinet|Other, Room: 12 rooms), Connection Settings (Protocol: Modbus TCP|RTU, IP Address, Port), Modbus Configuration (Slave ID, Temperature Register/Scale/Base °C, optional Humidity Register/Scale/Offset).
+
+**Phase 23AG Summary:** 14 TCs (Suite HF), all PASS. Storage Management has 214 sample items across 12 rooms, 14 devices, 12 shelves, 4 racks. Cold Storage Monitoring is a full-featured regulatory-compliant temperature monitoring system with Modbus protocol integration. UX issue: duplicate rack names in Boxes dropdown.
+
+**Phase 23 Cumulative (through 23AG)**: 607+ TCs executed, ~580 passed, ~95.6% pass rate. 8 non-executable scripts catalogued.
 
 ---
 

@@ -12436,3 +12436,150 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Compare Pathology vs IHC vs Cytology dashboards: Pathology has 4 stat cards (unique: "Additional Pathology Requests"), IHC and Cytology have 3 cards each 2. Review card wording: "Awaiting Pathology Review" vs "Awaiting Immunohistochemistry Review" vs "Awaiting Cytopathologist Review" — each uses domain-specific terminology 3. Compare column naming inconsistencies across 3 dashboards: Stage/Stage/Status, Technician Assigned/Assigned Technician/Select Technician, Pathologist Assigned/Assigned Pathologist/CytoPathologist Assigned 4. All 3 share: search by LabNo/Family Name, My cases checkbox, In Progress status dropdown, Items per page 100, same pagination format |
 | **Expected** | Three dashboards share common layout but have inconsistent column naming (potential UX cleanup opportunity) |
 | **Status** | PASS |
+
+---
+
+### Suite HF — Storage Management & Cold Storage Deep Interactions
+
+#### TC-HF-SAMPLES-01: Sample Items Tab Deep Interactions
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HF-SAMPLES-01 |
+| **Suite** | HF — Storage Management & Cold Storage Deep Interactions |
+| **Phase** | 23AG |
+| **Steps** | 1. Navigate to `/Storage/samples` 2. Verify Storage Management Dashboard header: TOTAL SAMPLE ITEMS=2, ACTIVE=2, DISPOSED=0, STORAGE LOCATIONS (12 rooms, 14 devices, 12 shelves, 4 racks — color-coded badges) 3. Verify 6-tab navigation: Sample Items, Rooms, Devices, Shelves, Racks, Boxes 4. Verify Sample Items search: "Search by sample ID or location..." 5. Verify filter controls: "Filter by locations..." text input + "Filter by Status" dropdown (3 options: All, Active, Disposed) 6. Verify 8-column sortable table: SampleItem ID, Sample Accession, Sample Type, Status, Location, Assigned By, Assigned Date, Actions 7. Verify 214 total items (1-25 of 214, 9 pages), Items per page options: 5/25/50/100 8. Verify first row: 26CPHL000085-1, Blood Film, Active, "Lab > Freezer1 > 1", Assigned By=1, Date=2026-03-20 9. Verify Sample Actions overflow menu: "Manage Location", "Dispose", "View Audit" (disabled/grayed) 10. Verify sample types in data: Blood Film, Sputum, Plasma, Whole Blood, Serum |
+| **Expected** | Sample Items tab renders with 214 items, 8-column table, 3 action menu options, Filter by Status dropdown |
+| **Status** | PASS |
+
+#### TC-HF-ROOMS-01: Rooms Tab with Expandable Rows
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HF-ROOMS-01 |
+| **Suite** | HF — Storage Management & Cold Storage Deep Interactions |
+| **Phase** | 23AG |
+| **Steps** | 1. Click Rooms tab → URL changes to `/Storage/rooms` 2. Verify 6-column sortable table: Name, Code, Devices, Samples, Status, Actions 3. Verify 12 rooms: TB PC2 (TBPC2, 4 devices), TB PC3 (TBPC3), STORE ROOM 1 (CPHLSR-1), STORE ROOM 2 (CPHLSR-2), REPOSITORY ROOM (CPHLRR, 1 device), COLD ROOM (CPHLCR, 2 devices), STORAGE CONTAINER (CPHLSC), TRAINING ROOM (CPHLTR), TB PC2 (TBPC2-1), VL_Freezer (VLFREEZER), Lab (LAB), -40 4. Expand TB PC2 row: Detail shows Description="TB Section", Created By=N/A, Last Modified By=N/A, Created Date=N/A, Last Modified Date=N/A 5. Verify "Add Room" button present 6. Verify Location Actions menu: "Edit", "Delete Location" |
+| **Expected** | 12 rooms with expandable detail rows showing Description/Created/Modified metadata, 2 action options |
+| **Status** | PASS |
+
+#### TC-HF-DEVICES-01: Devices Tab with Occupancy & Types
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HF-DEVICES-01 |
+| **Suite** | HF — Storage Management & Cold Storage Deep Interactions |
+| **Phase** | 23AG |
+| **Steps** | 1. Click Devices tab → `/Storage/devices` 2. Verify 7-column table: Name, Code, Room, Type, Occupancy, Status, Actions 3. Verify 14 devices with 4 device types: refrigerator, cabinet, other, freezer 4. Verify occupancy display: "0/1,000 (0%)" with "Manual Limit" label and progress bar for devices with defined capacity; "N/A" with tooltip "Capacity cannot be calculated: some child locations lack defined capacities" for others 5. Verify filter controls: "Search by device name or code...", "Filter by Room" dropdown, "Filter by Status" dropdown 6. Verify "Add Device" button present 7. Notable devices: TB PC2 (refrigerator, TB PC2 room), CUPBOARD 1 (cabinet), QA_AUTO_Freezer (freezer, QAFRZ01) |
+| **Expected** | 14 devices with occupancy bars, N/A tooltips for undefined capacity, 4 device types across rooms |
+| **Status** | PASS |
+
+#### TC-HF-SHELVES-01: Shelves Tab with Cascading Filters
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HF-SHELVES-01 |
+| **Suite** | HF — Storage Management & Cold Storage Deep Interactions |
+| **Phase** | 23AG |
+| **Steps** | 1. Click Shelves tab → `/Storage/shelves` 2. Verify 6-column table: Shelf, Device, Room, Occupancy, Status, Actions 3. Verify 12 shelves with 3 cascading filter dropdowns: "Filter by Room", "Filter by Device", "Filter by Status" 4. Verify occupancy: Some show "0/1,000 (0%)" or "0/500 (0%)" with Manual Limit, others show "N/A" 5. Verify "Add Shelf" button present 6. Notable: TOPSHELF (Fridge, TB PC2), HIV_VL (HIVSHELF, COLD ROOM), VL_Freezer (Lab) |
+| **Expected** | 12 shelves with 3 cascading filter dropdowns (Room→Device→Status), occupancy bars |
+| **Status** | PASS |
+
+#### TC-HF-RACKS-01: Racks Tab with Dimensions Column
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HF-RACKS-01 |
+| **Suite** | HF — Storage Management & Cold Storage Deep Interactions |
+| **Phase** | 23AG |
+| **Steps** | 1. Click Racks tab → `/Storage/racks` 2. Verify 8-column table: Rack, Room, Shelf, Device, Dimensions, Occupancy, Status, Actions — this is the ONLY storage tab with a Dimensions column 3. Verify 4 racks: RACK 1 (TB PC2/TRAY 1/TB PC2), RACK 1 (TB PC2/TOP SHELF A/CUPBOARD 1), RACK 1 (TB PC2/SHELF B/CUPBOARD 1), RACK 1 (TRAINING ROOM/TOP SHELF/BENCH) 4. Verify 3 cascading filter dropdowns: "Filter by Room", "Filter by Device", "Filter by Status" 5. Verify "Add Rack" button present 6. All occupancy shows "0/0 (0%)" with progress bars |
+| **Expected** | 4 racks with unique Dimensions column, 8-column table (most columns of any storage tab) |
+| **Status** | PASS |
+
+#### TC-HF-BOXES-01: Boxes Tab Grid Assignment Interface
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HF-BOXES-01 |
+| **Suite** | HF — Storage Management & Cold Storage Deep Interactions |
+| **Phase** | 23AG |
+| **Steps** | 1. Click Boxes tab → `/Storage/boxes` 2. Verify heading "Boxes" with description "Manage boxes/plates, or select a rack and box to assign samples to coordinates." 3. Verify "Grid Assignment" section: "Select rack" dropdown → "Select box/plate" dropdown (disabled until rack selected) → Grid view area ("Select a box to view its grid.") 4. Verify "Select rack" dropdown has 4 options: "RACK 1 (TB PC2)" ×3 (DUPLICATE NAMES — indistinguishable!), "RACK 1 (TRAINING ROOM)" 5. Verify "Add Box/Plate" button 6. Verify "Assign sample to box" panel: "Sample item ID or barcode" text input (placeholder "Enter Sample Item ID"), "Notes (optional)" textarea, "Assign" button (disabled) 7. NOTE: 3 identically-named rack options "RACK 1 (TB PC2)" is a UX issue — users cannot distinguish between them |
+| **Expected** | Boxes tab has grid assignment workflow with rack→box cascading selection, but 3 duplicate rack names is a UX issue |
+| **Status** | PASS |
+
+#### TC-HF-STORAGE-DIALOGS-01: Storage Management Modal Dialogs
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HF-STORAGE-DIALOGS-01 |
+| **Suite** | HF — Storage Management & Cold Storage Deep Interactions |
+| **Phase** | 23AG |
+| **Steps** | 1. Verify "Assign Storage Location" dialog (preloaded in DOM): Quick Assign (Barcode) with "Scan barcode" input + "Ready to scan" status, Select Location search, Position input (placeholder "e.g., A5, 1-1, RED-12"), Condition Notes textarea, Cancel/Assign buttons 2. Verify "Dispose Sample" dialog: Warning "This action cannot be undone", Sample ID/Sample Type/Status display, Disposal Instructions safety notice, "Disposal Reason" dropdown, "Disposal Method" dropdown, Additional Notes textarea, confirmation checkbox "I confirm that I want to permanently dispose of this sample", Cancel/"Confirm Disposal" (danger styled) buttons 3. Verify "Print Label" dialog: "Print label for this location?" prompt, Cancel/"Print Label" buttons |
+| **Expected** | 3 modal dialogs preloaded: Assign Storage Location (with barcode scanning), Dispose Sample (with safety confirmation), Print Label |
+| **Status** | PASS |
+
+#### TC-HF-COLD-DASHBOARD-01: Cold Storage Dashboard Tab Deep Interactions
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HF-COLD-DASHBOARD-01 |
+| **Suite** | HF — Storage Management & Cold Storage Deep Interactions |
+| **Phase** | 23AG |
+| **Steps** | 1. Navigate to `/FreezerMonitoring?tab=0` 2. Verify breadcrumb: Home > Cold Storage Dashboard 3. Verify header: "Cold Storage Dashboard" with subtitle "Real-time temperature monitoring & compliance" 4. Verify System Status banner: green checkmark "System Status: Online" with timestamp 5. Verify "Refresh" button 6. Verify 5-tab navigation: Dashboard, Corrective Actions, Historical Trends, Reports, Settings 7. Verify 4 stat cards: Total Storage Units (0), Normal Status (0), Warnings (0), Critical Alerts (0) 8. Verify search: "Search by Unit ID or Name" 9. Verify 2 filter dropdowns: Status ("All Status"), Device Type ("All Device Types") 10. Verify 9-column Storage Units table: Unit ID, Status, Unit Name, Device Type, Location, Current Temp, Target Temp, Protocol, Last Reading 11. Verify "No storage units found." empty state 12. Verify "Active Alerts (0)" section 13. Verify footer: "Cold Storage Monitoring v2.1.0 | Compliant with CAP, CLIA, FDA, and WHO guidelines | HIPAA Compliant" |
+| **Expected** | Cold Storage Dashboard shows real-time monitoring with 9-column unit table, regulatory compliance footer |
+| **Status** | PASS |
+
+#### TC-HF-COLD-CORRECTIVE-01: Cold Storage Corrective Actions Tab
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HF-COLD-CORRECTIVE-01 |
+| **Suite** | HF — Storage Management & Cold Storage Deep Interactions |
+| **Phase** | 23AG |
+| **Steps** | 1. Click Corrective Actions tab 2. Verify heading "Corrective Actions" with subtitle "Track maintenance and repair actions for cold storage devices" 3. Verify search: "Search by Action ID, Device, or Summary" 4. Verify "All" filter dropdown + "Add New Action" button 5. Verify 8-column table: Action ID, Status, Device, Summary, Performed By, Created, Last Updated By, Actions 6. Verify "No corrective actions found." empty state 7. Verify Items per page: 5/10/20/30/40/50 (different options than Storage Management which uses 5/25/50/100) 8. Verify "Add Corrective Action" dialog: Device dropdown (with "No Devices Available" warning + "Create a new device" link), Performed By dropdown (pre-filled "Open ELIS"), Action Type dropdown, Description textarea, Cancel/Add Action buttons 9. Verify "Retract Corrective Action" dialog: Warning "Retracting an action marks it as invalid. This action cannot be undone.", Retraction Reason textarea, Cancel/"Retract Action" (danger) buttons |
+| **Expected** | Corrective Actions has 8-col table, Add/Retract dialogs with safety warnings, different pagination options |
+| **Status** | PASS |
+
+#### TC-HF-COLD-TRENDS-01: Cold Storage Historical Trends Tab
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HF-COLD-TRENDS-01 |
+| **Suite** | HF — Storage Management & Cold Storage Deep Interactions |
+| **Phase** | 23AG |
+| **Steps** | 1. Click Historical Trends tab 2. Verify heading "Historical Temperature Trends" 3. Verify "Freezer" dropdown (default "All Freezers") 4. Verify "Time Range" dropdown with 4 options: Last 24 Hours (default), Last 7 Days, Last 30 Days, All Time 5. Verify chart controls: Zoom In, Zoom Out, Reset, Export CSV buttons 6. Verify "No readings available for the selected filters." empty state 7. Verify statistics: Average Temperature, Min Temperature, Max Temperature, Data Points |
+| **Expected** | Historical Trends has Freezer/Time Range filters, chart zoom controls, Export CSV, 4 statistics readouts |
+| **Status** | PASS |
+
+#### TC-HF-COLD-REPORTS-01: Cold Storage Regulatory Reports Tab
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HF-COLD-REPORTS-01 |
+| **Suite** | HF — Storage Management & Cold Storage Deep Interactions |
+| **Phase** | 23AG |
+| **Steps** | 1. Click Reports tab 2. Verify heading "Regulatory Reports" 3. Verify 3 filter dropdowns: Report Type (Daily Log/Weekly Log/Monthly Log), Freezer (All Freezers), Export Format (PDF only — single option) 4. Verify Start date/End date mm/dd/yyyy DatePicker inputs with calendar icon 5. Verify "Generate Report" button 6. Verify Regulatory Compliance notice: "Reports follow CAP, CLIA, FDA, and WHO guidance for temperature-controlled storage." 7. Verify 2 nested sub-tabs: "Temperature Excursions" (8-col table: Excursion ID/Freezer/Location/Start Time/Duration/Temperature Range/Severity/Status) and "Audit Trail" (5-col table: Timestamp/User/Action/Details/Freezer ID) 8. Both sub-tabs show empty states |
+| **Expected** | Reports has 3 report types, PDF-only export, regulatory compliance notice, 2 sub-tabs with excursion+audit tables |
+| **Status** | PASS |
+
+#### TC-HF-COLD-SETTINGS-01: Cold Storage Settings Tab (4 Sub-tabs)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HF-COLD-SETTINGS-01 |
+| **Suite** | HF — Storage Management & Cold Storage Deep Interactions |
+| **Phase** | 23AG |
+| **Steps** | 1. Click Settings tab 2. Verify heading "System Configuration" 3. Verify 4 sub-tabs: Device Management, Temperature Thresholds, Alert Settings, System Settings 4. Device Management: "Configured Devices" table (9 cols: Device ID/Status/Name/Type/IP Address/Port/Protocol/Room/Facility/Actions), 2 devices (QA_AUTO_Freezer freezer + TB PC2 refrigerator, both INACTIVE), actions: Edit/Activate/Delete 5. Temperature Thresholds: Per-device config form with Target Temperature °C, Warning Threshold °C, Critical Threshold °C, Poll Interval (seconds), "Save Threshold Configuration" button 6. Alert Settings: "Email Notifications & SMS Notifications" table with 3 alert types (Temperature Alerts/Equipment Failure/Inventory Alerts) each with Email+SMS toggle checkboxes (all ON), Escalation Rules toggle (Off), notification workflow explanation 7. System Settings: Protocol Configuration (Modbus TCP Port + BACnet UDP Port), Security (Two-Factor Authentication toggle, Session Timeout "30 minutes" dropdown), System Information (Version 2.1.0, PostgreSQL 14.5, uptime), Read-Only Mode notice directing to Admin → System Configuration 8. Verify "Add New Device" dialog: Basic Information (Name/Type: Freezer|Refrigerator|Cabinet|Other/Room dropdown 12 rooms), Connection Settings (Protocol: Modbus TCP|RTU, IP Address, Port), Modbus Configuration (Slave ID, Temperature Register/Scale/Base °C, Humidity Register/Scale/Offset optional) |
+| **Expected** | Settings has 4 sub-tabs covering device management, thresholds, alerts (email+SMS), and system config with Modbus protocol support |
+| **Status** | PASS |
+
+#### TC-HF-COLUMN-COMPARISON-01: Storage Tab Column Comparison
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HF-COLUMN-COMPARISON-01 |
+| **Suite** | HF — Storage Management & Cold Storage Deep Interactions |
+| **Phase** | 23AG |
+| **Steps** | 1. Compare columns across all 5 Storage Management data tabs: Sample Items (8 cols), Rooms (6 cols), Devices (7 cols), Shelves (6 cols), Racks (8 cols), Boxes (no table — grid interface) 2. Compare filter controls: Sample Items has 2 (text + Status), Rooms has 1 (Status), Devices has 2 (Room + Status), Shelves has 3 (Room + Device + Status), Racks has 3 (Room + Device + Status) 3. Compare Add buttons: Add Room, Add Device, Add Shelf, Add Rack, Add Box/Plate 4. Compare pagination: Sample Items uses 5/25/50/100, Cold Storage Corrective Actions uses 5/10/20/30/40/50 (different options!) 5. Verify expandable rows: Rooms and Devices have expand arrows, showing metadata details 6. Verify occupancy display: Devices and Shelves show occupancy with progress bars, Racks show "0/0 (0%)" |
+| **Expected** | Storage tabs have progressive filter complexity (1→2→3 filters), different pagination options between modules |
+| **Status** | PASS |
