@@ -10522,3 +10522,132 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Verify Optional Fields: Facility (Site Name + Ward/Dept/Unit), Patient Info 2. Verify Next button disabled until ≥1 test selected 3. Verify Cancel button always active |
 | **Expected** | Optional fields present; Next enables on test selection |
 | **Status** | PASS |
+
+---
+
+## Phase 23F — Results & Validation Pages Field-Level Verification
+
+### Suite FT — Results Pages Field-Level Verification
+
+#### TC-FT-BYUNIT-01: Results By Unit Page Structure
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FT-BYUNIT-01 |
+| **Suite** | FT — Results Pages |
+| **Phase** | 23F |
+| **Steps** | 1. Navigate to Results → By Unit 2. Verify Select Test Unit dropdown (14 units) 3. Select Hematology 4. Verify table columns: expand, copy, Sample Info, avatar, Test Date, Analyzer Result, Test Name, Normal Range, Accept, Result 5. Verify NC alert banner 6. Verify 14 items, pagination |
+| **Expected** | By Unit page loads with 14 test units and correct table structure |
+| **Status** | PASS |
+
+#### TC-FT-BYUNIT-EXPAND-01: Expanded Row Detail
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FT-BYUNIT-EXPAND-01 |
+| **Suite** | FT — Results Pages |
+| **Phase** | 23F |
+| **Steps** | 1. Click expand arrow on result row 2. Verify Methods dropdown (27 options) 3. Verify Upload file button 4. Verify "Refer test to a reference lab" checkbox 5. Verify Referral Reason dropdown (10 options) 6. Verify Institute field 7. Verify Storage Location |
+| **Expected** | Expanded row shows all detail fields with correct dropdown options |
+| **Status** | PASS |
+
+#### TC-FT-BYPATIENT-01: Results By Patient Page Structure
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FT-BYPATIENT-01 |
+| **Suite** | FT — Results Pages |
+| **Phase** | 23F |
+| **Steps** | 1. Navigate to Results → By Patient 2. Verify search fields: Patient Id, Previous Lab Number (0/23), Last Name, First Name, DOB, Gender (Male/Female), Client Registry Search toggle, Search + External Search 3. Verify Patient Results table: Last Name, First Name, Gender, DOB, Unique Health ID, National ID, Data Source Name |
+| **Expected** | By Patient page renders all search fields and table columns |
+| **Status** | PASS |
+
+#### TC-FT-BYORDER-01: Results By Order Page Structure
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FT-BYORDER-01 |
+| **Suite** | FT — Results Pages |
+| **Phase** | 23F |
+| **Steps** | 1. Navigate to Results → By Order 2. Verify Enter Accession Number (0/23), Search button 3. Verify empty table, pagination, Save |
+| **Expected** | By Order page with accession search |
+| **Status** | PASS |
+
+#### TC-FT-REFERRED-01: Referred Out Page (3 Search Methods)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FT-REFERRED-01 |
+| **Suite** | FT — Results Pages |
+| **Phase** | 23F |
+| **Steps** | 1. Navigate to Results → Referred Out 2. Verify Search Referrals By Patient section 3. Verify Results By Date/Test/Unit: Date Type (Sent Date/Result Date), Start/End Date, Select Test Unit, Select Test Name 4. Verify Results By Lab Number: Scan OR Enter Manually (0/23) 5. Verify bottom actions: Print Selected Patient Reports, Select None |
+| **Expected** | Three search methods all present and functional |
+| **Status** | PASS |
+
+#### TC-FT-RANGE-01: Results By Range (with typo note)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FT-RANGE-01 |
+| **Suite** | FT — Results Pages |
+| **Phase** | 23F |
+| **Steps** | 1. Navigate to Results → By Range of Order numbers 2. Verify From/To Accession Number fields (0/23 each) 3. Note typo: "Accesion" instead of "Accession" in both labels (NOTE-30) |
+| **Expected** | Range search page with two accession fields |
+| **Status** | PASS (NOTE-30: typo) |
+
+#### TC-FT-STATUS-01: Results By Test, Date or Status
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FT-STATUS-01 |
+| **Suite** | FT — Results Pages |
+| **Phase** | 23F |
+| **Steps** | 1. Navigate to Results → By Test, Date or Status 2. Verify Enter Collection Date, Enter Recieved Date (NOTE-31 typo), Select Test Name (200+ tests), Select Analysis Status (5 options), Select Sample Status (2 options) 3. Verify Search button |
+| **Expected** | Multi-criteria search with all dropdowns populated |
+| **Status** | PASS (NOTE-31: typo "Recieved") |
+
+### Suite FU — Validation Pages Field-Level Verification
+
+#### TC-FU-ROUTINE-01: Validation Routine Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FU-ROUTINE-01 |
+| **Suite** | FU — Validation Pages |
+| **Phase** | 23F |
+| **Steps** | 1. Navigate to Validation → Routine 2. Verify Select Test Unit dropdown (same 14 units as Results By Unit) 3. Verify empty table, pagination, Save |
+| **Expected** | Routine validation with 14 test units |
+| **Status** | PASS |
+
+#### TC-FU-BYORDER-01: Validation By Order Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FU-BYORDER-01 |
+| **Suite** | FU — Validation Pages |
+| **Phase** | 23F |
+| **Steps** | 1. Navigate to Validation → By Order 2. Verify Enter Accession Number (0/23), placeholder "Enter Lab No" 3. Verify Search, empty table, pagination, Save |
+| **Expected** | Accession-based validation search |
+| **Status** | PASS |
+
+#### TC-FU-RANGE-01: Validation By Range of Order Numbers
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FU-RANGE-01 |
+| **Suite** | FU — Validation Pages |
+| **Phase** | 23F |
+| **Steps** | 1. Navigate to Validation → By Range of Order Numbers 2. Verify "Load Next 99 Records Starting at Lab Number" (0/23) 3. Verify Search, empty table, pagination, Save |
+| **Expected** | Range-based validation with 99-record batch loading |
+| **Status** | PASS |
+
+#### TC-FU-BYDATE-01: Validation By Date Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FU-BYDATE-01 |
+| **Suite** | FU — Validation Pages |
+| **Phase** | 23F |
+| **Steps** | 1. Navigate to Validation → By Date 2. Verify Enter Test Date (dd/mm/yyyy with calendar picker) 3. Verify Search, empty table, pagination, Save |
+| **Expected** | Date-based validation search |
+| **Status** | PASS |

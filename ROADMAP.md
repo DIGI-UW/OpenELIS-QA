@@ -800,7 +800,66 @@ All 10 General Config sub-pages verified:
 - Optional Fields: Facility (Site Name + Ward/Dept/Unit), Patient Info
 - Next (enables after selecting ≥1 test) + Cancel buttons
 
-**Phase 23 Cumulative**: 389+ TCs + ~30 new field-level verifications, ~93% pass rate
+#### Phase 23F — Results & Validation Pages Field-Level Verification (ALL PASS)
+
+**Results sidebar sub-pages (6):**
+
+1. **By Unit** (`/LogbookResults?type=`) — PASS
+   - Select Test Unit dropdown: 14 units (HIV, Malaria, Microbiology, Molecular Biology, Mycobacteriology, Sero-Surveillance, Biochemistry, Hematology, Immunology, Cytology, Serology, Virology, Pathology, Immunohistochemistry)
+   - Results table columns: expand arrow, copy icon, Sample Info (accession, patient, ID, gender, DOB), avatar, Test Date, Analyzer Result, Test Name, Normal Range, Accept checkbox, Result (editable)
+   - NC alert banner: "⚠ = Sample or Order is nonconforming or Test has been rejected"
+   - Expanded row detail: Methods dropdown (27 options: EIA, PCR, STAIN, CULTURE, PROBE, BIOCHEMICAL, Diane Test, HPLC, DNA SEQUENCING, AUTO, MANUAL, HIV_TEST_KIT, SYPHILIS_TEST_KIT, GeneXpert, AUTOMATED, WGS, RT-PCR, Illumina MiniSeq, Multiple Tube Method, MPN Method, Membrane Filtration, Microscopy, Immunoassay, DST, AST, RDT, LPA, ID), Upload file button, "Refer test to a reference lab" checkbox, Referral Reason dropdown (10 options: Test not performed, Confirmation requested, Further testing required, Reagent expired, Reagents unavailable, Equipment failure, Verification of EQA, Specimen sent for serotyping, EQA by Repeat Testing, Other), Institute field, Storage Location
+   - Hematology: 14 results, 1 page
+   - Pagination: Items per page (10/20/30/50/100), page selector
+   - Save button
+
+2. **By Patient** (`/PatientResults`) — PASS
+   - Search: Patient Id, Previous Lab Number (0/23), Last Name, First Name, Date of Birth (dd/mm/yyyy), Gender (Male/Female radio), Client Registry Search toggle (false), Search + External Search buttons
+   - Patient Results table: Last Name, First Name, Gender, Date of Birth, Unique Health ID number, National ID, Data Source Name
+   - Pagination + Save
+
+3. **By Order** (`/AccessionResults`) — PASS
+   - Search: Enter Accession Number (0/23), placeholder "Enter Accession No.", Search button
+   - Empty results table, Pagination + Save
+
+4. **Referred Out** (`/ReferredOutTests`) — PASS
+   - 3 search methods:
+     - Search Referrals By Patient (same fields as By Patient + Patient Results table)
+     - Results By Date / Test / Unit: Date Type dropdown (Sent Date, Result Date), Start/End Date, Select Test Unit, Select Test Name, "Search Referrals By Unit(s) & Test(s)" button
+     - Results By Lab Number: "Scan OR Enter Manually" (0/23), "Search Referrals By Lab Number" button
+   - Bottom: "Referred Tests Matching Search:", "Print Selected Patient Reports" button, "Select None" button
+
+5. **By Range of Order numbers** (`/RangeResults`) — PASS
+   - Search: "From Accesion Number" (0/23), "To Accesion Number" (0/23) — **NOTE-30: typo "Accesion" instead of "Accession" in both labels**
+   - Search button, empty results table, Pagination + Save
+
+6. **By Test, Date or Status** (`/StatusResults?blank=true`) — PASS
+   - Search: Enter Collection Date (dd/mm/yyyy), Enter Recieved Date (dd/mm/yyyy) — **NOTE-31: typo "Recieved" instead of "Received"**, Select Test Name (200+ tests), Select Analysis Status (5: Not started, Canceled, Accepted by technician, Not accepted by technician, Not accepted by biologist), Select Sample Status (2: No tests have been run for this sample, Some tests have been run on this sample)
+   - Search button, empty results table, Pagination + Save
+
+**Results → Analyzer sub-menu:** Test Analyzer Alpha (1 analyzer)
+**Results → Order Programs link:** `/genericProgram`
+
+**Validation sidebar sub-pages (4):**
+
+1. **Routine** (`/ResultValidation?type=&test=`) — PASS
+   - Select Test Unit dropdown: same 14 units as Results By Unit
+   - Empty results table, Pagination + Save
+
+2. **By Order** (`/AccessionValidation`) — PASS
+   - Enter Accession Number (0/23), placeholder "Enter Lab No", Search, Pagination + Save
+
+3. **By Range of Order Numbers** (`/AccessionValidationRange`) — PASS
+   - "Load Next 99 Records Starting at Lab Number" (0/23), placeholder "Enter Lab No", Search, Pagination + Save
+
+4. **By Date** (`/ResultValidationByTestDate`) — PASS
+   - Enter Test Date (dd/mm/yyyy with calendar), Search, Pagination + Save
+
+**Phase 23F New Notes:**
+- NOTE-30: Typo "Accesion" (missing 's') on RangeResults page in both "From" and "To" labels
+- NOTE-31: Typo "Recieved" (i/e transposed) on StatusResults page date label
+
+**Phase 23 Cumulative**: 419+ TCs + ~50 new field-level verifications (30 from 23C-E + 20 from 23F), ~94% pass rate
 
 ---
 
