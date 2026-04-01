@@ -11113,3 +11113,151 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Navigate to Analyzers → Analyzer Types (/analyzers/types) 2. Verify "Analyzer Types" heading 3. Verify search "Search analyzer types...", "Create New Analyzer Type +" button 4. Verify 8-col table (Name, Description, Protocol, Plugin Class, Identifier Pattern, Generic Plugin, Plugin Loaded, Instances, Status) 5. Verify 2 types: Test Analyzer Type (ASTM, Generic Yes, Plugin Loaded No, 0 instances, Active), Test Type ASTM (ASTM, same config) |
 | **Expected** | Analyzer types registry with ASTM protocol and plugin architecture metadata |
 | **Status** | PASS |
+
+---
+
+## Suite GH — EQA Distribution (Phase 23R)
+
+#### TC-GH-EQADIST-01: EQA Distribution Dashboard
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GH-EQADIST-01 |
+| **Suite** | GH — EQA Distribution |
+| **Phase** | 23R |
+| **Steps** | 1. Navigate to EQA Distributions (/EQADistribution) 2. Verify page title "EQA Distribution" with subtitle "Distribute EQA samples to participating laboratories" 3. Verify 4 KPI cards: Draft Shipments 0 (Being prepared), Shipped 0 (Awaiting responses), Completed 0 (All responses received), Participants 0 (Enrolled) 4. Verify filter dropdown with 5 options: All Shipments, Draft (DRAFT), Prepared (PREPARED), Shipped (SHIPPED), Completed (COMPLETED) 5. Verify "Create New Shipment +" and "Manage Participants" action buttons 6. Verify EQA Shipments section shows "No distributions found" 7. Verify Participant Network section: Total Participants 0 (Across all countries), Active Participants 0 (Currently enrolled), Average Response Rate — (Last 4 quarters) |
+| **Expected** | EQA Distribution dashboard with shipment management KPIs, filter, action buttons, and participant network overview |
+| **Status** | PASS |
+
+---
+
+## Suite GI — Non-Conform (Phase 23S)
+
+#### TC-GI-REPORT-NCE-01: Report Non-Conforming Event Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GI-REPORT-NCE-01 |
+| **Suite** | GI — Non-Conform |
+| **Phase** | 23S |
+| **Steps** | 1. Navigate to Non-Conform → Report Non-Conforming Event (/ReportNonConformingEvent) 2. Verify page title "Report Non-Conforming Event (NCE)" 3. Verify Search By dropdown with options: (blank), Last Name, First Name, Patient Identification Code, Lab Number 4. Verify Text Value text input field 5. Verify Search button |
+| **Expected** | NCE report page with patient search interface (4 search criteria options) |
+| **Status** | PASS |
+
+#### TC-GI-VIEW-NCE-01: View New Non Conform Event Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GI-VIEW-NCE-01 |
+| **Suite** | GI — Non-Conform |
+| **Phase** | 23S |
+| **Steps** | 1. Navigate to Non-Conform → View New Non-Conforming Events (/ViewNonConformingEvent) 2. Verify page title "View New Non Conform Event" 3. Verify identical search interface: Search By dropdown (same 4 options), Text Value input, Search button |
+| **Expected** | View NCE page with same search interface as Report NCE |
+| **Status** | PASS |
+
+#### TC-GI-CORRECTIVE-01: Nonconforming Events Corrective Action Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GI-CORRECTIVE-01 |
+| **Suite** | GI — Non-Conform |
+| **Phase** | 23S |
+| **Steps** | 1. Navigate to Non-Conform → Corrective actions (/NCECorrectiveAction) 2. Verify page title "Nonconforming Events Corrective Action" 3. Verify identical search interface: Search By dropdown (same 4 options), Text Value input, Search button |
+| **Expected** | Corrective action page with same search interface as other NCE pages |
+| **Status** | PASS |
+
+---
+
+## Suite GJ — Workplan (Phase 23S)
+
+#### TC-GJ-BYTEST-01: Workplan By Test Type
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GJ-BYTEST-01 |
+| **Suite** | GJ — Workplan |
+| **Phase** | 23S |
+| **Steps** | 1. Navigate to Workplan → By Test Type (/WorkPlanByTest?type=test) 2. Verify "Workplan By Test" heading 3. Verify "Search By Test Type" section header 4. Verify "Select Test Type" dropdown with 303 options (10 ml (Indole) through Xpert MTB/XDR) 5. Verify "Test Type" column header in results table |
+| **Expected** | Workplan page with 303 test type options in dropdown selector |
+| **Status** | PASS |
+
+#### TC-GJ-BYPANEL-01: Workplan By Panel
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GJ-BYPANEL-01 |
+| **Suite** | GJ — Workplan |
+| **Phase** | 23S |
+| **Steps** | 1. Navigate to Workplan → By Panel (/WorkPlanByPanel?type=panel) 2. Verify "Select Panel Type" dropdown with 42 options (Xpert MTB/RIF Ultra, Xpert MTB/XDR, TB FL-DST...) 3. Verify same layout pattern as By Test Type |
+| **Expected** | Workplan panel page with 42 panel type options |
+| **Status** | PASS |
+
+#### TC-GJ-BYUNIT-01: Workplan By Unit
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GJ-BYUNIT-01 |
+| **Suite** | GJ — Workplan |
+| **Phase** | 23S |
+| **Steps** | 1. Navigate to Workplan → By Unit (/WorkPlanByTestSection?type=) 2. Verify "Select Unit Type" dropdown with 15 options (HIV, Malaria, Microbiology, Molecular Biology...) 3. Verify same layout pattern |
+| **Expected** | Workplan unit page with 15 unit type options |
+| **Status** | PASS |
+
+#### TC-GJ-BYPRIORITY-01: Workplan By Priority
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GJ-BYPRIORITY-01 |
+| **Suite** | GJ — Workplan |
+| **Phase** | 23S |
+| **Steps** | 1. Navigate to Workplan → By Priority (/WorkPlanByPriority?type=priority) 2. Verify "Workplan By Priority" heading 3. Verify "Select Priority" dropdown with 6 options: (blank), Routine, ASAP, STAT, Timed, Future STAT 4. Verify "Priority" column header in results table |
+| **Expected** | Workplan priority page with 6 priority options |
+| **Status** | PASS |
+
+---
+
+## Suite GK — Aliquot, Billing, NoteBook, Help (Phase 23T)
+
+#### TC-GK-ALIQUOT-01: Aliquot Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GK-ALIQUOT-01 |
+| **Suite** | GK — Aliquot/Billing/NoteBook/Help |
+| **Phase** | 23T |
+| **Steps** | 1. Navigate to Aliquot (/Aliquot) 2. Verify page title "Aliquot" 3. Verify "Search Sample" section heading 4. Verify "Enter Accession Number" label with text input (placeholder "Enter Accession No.") 5. Verify 0/23 character counter 6. Verify Search button |
+| **Expected** | Aliquot page with accession number search (23 char max) |
+| **Status** | PASS |
+
+#### TC-GK-BILLING-01: Billing Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GK-BILLING-01 |
+| **Suite** | GK — Aliquot/Billing/NoteBook/Help |
+| **Phase** | 23T |
+| **Steps** | 1. Locate Billing in sidebar 2. Click Billing link 3. Observe: sidebar link has empty href, clicking does nothing, URL does not change 4. No page renders — no route defined |
+| **Expected** | Billing page should load with billing management interface |
+| **Status** | FAIL — NOTE-32: Billing is a placeholder with no route. Not yet implemented. |
+
+#### TC-GK-NOTEBOOK-01: NoteBook Dashboard Page
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GK-NOTEBOOK-01 |
+| **Suite** | GK — Aliquot/Billing/NoteBook/Help |
+| **Phase** | 23T |
+| **Steps** | 1. Navigate to NoteBook (/NotebookDashboard) 2. Observe: URL navigates correctly but page renders completely blank 3. Inspect DOM: root element is empty — React component does not mount 4. No sidebar, no content, no error message |
+| **Expected** | NoteBook Dashboard should render with notebook management interface |
+| **Status** | FAIL — NOTE-33: NoteBook Dashboard component not implemented. Blank page. |
+
+#### TC-GK-HELP-01: Help Menu
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-GK-HELP-01 |
+| **Suite** | GK — Aliquot/Billing/NoteBook/Help |
+| **Phase** | 23T |
+| **Steps** | 1. Click Help in sidebar to expand 2. Verify 1 sub-item: "User Manual" 3. Click User Manual 4. Verify opens new tab with external PDF: /OpenELIS-Global/documentation/OEGlobal_UserManual_en.pdf 5. Verify PDF title "OEGlobal_UserManual_User sections" |
+| **Expected** | Help menu with User Manual link to external PDF documentation |
+| **Status** | PASS |

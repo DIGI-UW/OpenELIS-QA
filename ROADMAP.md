@@ -1238,6 +1238,43 @@ All 10 General Config sub-pages verified:
 
 ---
 
+### Phase 23Q-T — EQA Distribution, Non-Conform, Workplan, Aliquot, Billing, NoteBook, Help (2026-03-31)
+
+**Goal:** Complete field-level verification of all remaining untested sidebar pages.
+
+#### Phase 23R: EQA Distribution
+- **Route:** `/EQADistribution`
+- 4 KPI cards: Draft Shipments (0, Being prepared), Shipped (0, Awaiting responses), Completed (0, All responses received), Participants (0, Enrolled)
+- Filter dropdown: All Shipments, Draft, Prepared, Shipped, Completed
+- Action buttons: "Create New Shipment +" and "Manage Participants"
+- EQA Shipments section: "No distributions found"
+- Participant Network: Total 0, Active 0, Average Response Rate —
+
+#### Phase 23S: Non-Conform (3 pages) + Workplan (4 pages)
+
+**Non-Conform** — all 3 share identical search interface:
+1. **Report NCE** (`/ReportNonConformingEvent`) — Search By (Last Name/First Name/Patient ID Code/Lab Number), Text Value, Search button — PASS
+2. **View New NCE** (`/ViewNonConformingEvent`) — same layout — PASS
+3. **Corrective Actions** (`/NCECorrectiveAction`) — same layout — PASS
+
+**Workplan** — all 4 share same layout: single dropdown + results table:
+1. **By Test Type** (`/WorkPlanByTest?type=test`) — 303 test types — PASS
+2. **By Panel** (`/WorkPlanByPanel?type=panel`) — 42 panel types — PASS
+3. **By Unit** (`/WorkPlanByTestSection?type=`) — 15 unit types — PASS
+4. **By Priority** (`/WorkPlanByPriority?type=priority`) — 6 priorities (Routine/ASAP/STAT/Timed/Future STAT) — PASS
+
+#### Phase 23T: Aliquot, Billing, NoteBook, Help
+1. **Aliquot** (`/Aliquot`) — Accession Number search (0/23 char limit) — PASS
+2. **Billing** — Empty href, no route, no page — FAIL (NOTE-32: not implemented)
+3. **NoteBook** (`/NotebookDashboard`) — Blank page, empty root — FAIL (NOTE-33: not implemented)
+4. **Help** — "User Manual" sub-item → external PDF (`OEGlobal_UserManual_en.pdf`) — PASS
+
+**Phase 23Q-T Summary:** 12 TCs, 10 passed, 2 failed (Billing + NoteBook not implemented). EQA Distribution dashboard fully rendered with shipment management. Non-Conform and Workplan pages all functional. Aliquot and Help work correctly.
+
+**Phase 23 Cumulative (through 23T)**: 496+ TCs, ~469 passed, ~94.6% pass rate
+
+---
+
 ## Key Files
 
 | File | Purpose |
