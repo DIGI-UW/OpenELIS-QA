@@ -1811,6 +1811,68 @@ Column naming inconsistency across the 3 dashboards is a UX cleanup opportunity 
 
 ---
 
+### Phase 23AJ — Reports Pages Deep Interactions (2026-03-31)
+
+**Suite HI** — 14 TCs covering all 12 report sub-pages under the Reports sidebar section.
+
+**Reports Sidebar Hierarchy (3 categories, 12 pages):**
+
+- **Routine**: Patient Status Report
+- **Aggregate Reports**: Statistics Report, Summary of All Tests
+- **Management Reports**: Rejection Report, Activity Reports (By Test Type / By Panel / By Unit), Referred Out Tests Report, Non Conformity (By Date / By Unit and Reason), Delayed Validation, Audit Trail
+- **Standalone**: WHONET Report
+
+**Page-by-page findings:**
+
+- **Patient Status Report** (`/Report?type=patient&report=patientCILNSP_vreduit`): Unique accordion-based triple-search (Report By Patient / By Lab Number / By Site). "Generate Printable Version" button (blue/active).
+
+- **Statistics Report** (`/Report?type=indicator&report=statisticsReport`): Most complex report form. 15 lab unit checkboxes (All + 14 units) + 6 priority checkboxes (All/Routine/ASAP/STAT/Timed/Future STAT) + date range. 14 lab units match Delayed Validation test sections exactly.
+
+- **Summary of All Tests** ("Test Report Summary"): Date-range-only pattern. "Generate Printable Version" grayed out until dates entered.
+
+- **Rejection Report**: Date-range-only pattern, identical layout to Summary of All Tests.
+
+- **Activity Report By Test**: Date range + "Select Test Type" dropdown. Title uses lowercase: "Activity report By test".
+
+- **Activity Report By Panel**: Date range + "Select Panel Type" dropdown. Mirrors By Test layout.
+
+- **Activity Report By Test Section** (sidebar: "By Unit"): Date range + "Select Unit Type" dropdown. Naming inconsistency: sidebar says "By Unit" but page title says "By Test Section".
+
+- **External Referrals Report** (sidebar: "Referred Out Tests Report"): Date range with format hints in labels + "Referral Center or Laboratory" dropdown + unique descriptive heading. Generate button is ACTIVE (unlike most reports). **TYPO**: "labratory" instead of "laboratory".
+
+- **Non Conformity Report By Date**: Date-range-only. **TITLE BUG**: "Non ConformityReport by Date" — missing space.
+
+- **Non Conformity Report By Unit and Reason**: Date-range-only. Title properly spaced (inconsistent with By Date variant).
+
+- **Delayed Validation** ("Tests Awaiting Validation"): UNIQUE — no input form, opens directly as PDF in new tab. Shows 14 test sections with validation backlog counts, Lab Manager name, and timestamp.
+
+- **Audit Trail**: UNIQUE — Lab No field with 0/23 counter + "View Report" button + inline "Patient Results" table (7 cols: Time/Item/Action/Identifier/User/Old Value/New Value). Items per page: 30.
+
+- **WHONET Report** ("Export a CSV File by Date"): Date-range-only but exports CSV not PDF. "Generate Printable Version" button is misleading for CSV.
+
+**Report Input Pattern Comparison (6 patterns):**
+
+| Pattern | Reports | Count |
+|---------|---------|-------|
+| Date-range only | Summary, Rejection, NC By Date, NC By Unit/Reason, WHONET | 5 |
+| Date-range + selector | Activity By Test/Panel/Unit | 3 |
+| Date-range + referral dropdown | External Referrals | 1 |
+| Accordion multi-search | Patient Status Report | 1 |
+| Lab No lookup + inline table | Audit Trail | 1 |
+| No-input direct PDF | Delayed Validation | 1 |
+
+**UX Issues Found:**
+1. Typo "labratory" in External Referrals Report heading
+2. Missing space "ConformityReport" in Non Conformity By Date title
+3. Misleading "Generate Printable Version" button on WHONET (CSV export)
+4. Three naming inconsistencies between sidebar labels and page titles (By Unit/By Test Section, Referred Out/External Referrals, WHONET/Export CSV)
+
+**Phase 23AJ Summary:** 14 TCs (Suite HI), all PASS (3 with UX issues noted). 6 distinct input patterns identified across 12 reports. Statistics Report is most complex (21 checkboxes). Delayed Validation is unique (no form, direct PDF).
+
+**Phase 23 Cumulative (through 23AJ)**: 630+ TCs executed, ~603 passed, ~95.7% pass rate. 8 non-executable scripts catalogued.
+
+---
+
 ## Key Files
 
 | File | Purpose |

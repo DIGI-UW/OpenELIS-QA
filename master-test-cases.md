@@ -12690,3 +12690,165 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Compare patient search across 6 pages: Add Order, Edit Order, Incoming Orders, Add/Edit Patient, Patient History, Merge Patient 2. Common fields (all 6): Patient Id, Last Name, First Name, DOB, Gender (Male/Female radio), Search + External Search buttons 3. Previous Lab Number (0/23 counter): Present in Add Order, Edit Order, Add/Edit Patient, Patient History — ABSENT in Merge Patient and Incoming Orders 4. Client Registry Search toggle: Present in Add Order, Edit Order, Add/Edit Patient, Patient History — ABSENT in Merge Patient 5. "Search for Patient"/"New Patient" tabs: Only in Add Order and Add/Edit Patient — ABSENT in Edit Order (has different dual-search), Patient History (direct fields), Merge Patient (direct fields) 6. Incoming Orders has completely different search pattern (text-based + date/status rather than patient fields) |
 | **Expected** | 6 pages share patient search but with 3 variations: full (with tabs+counter+CRS), partial (counter+CRS but no tabs), simplified (Merge: no counter, no CRS) |
 | **Status** | PASS |
+
+---
+
+### Suite HI — Reports Pages Deep Interactions (Phase 23AJ)
+
+> **Scope**: Field-level audit of all 12 report sub-pages under the Reports sidebar section, documenting form layouts, UI patterns, cross-report comparison of input paradigms, and identified UX issues.
+> **Tested on**: OpenELIS v3.2.1.3 at `https://www.jdhealthsolutions-openelis.com`
+> **Date**: 2026-03-31
+
+#### TC-HI-PATIENT-STATUS-01: Patient Status Report
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HI-PATIENT-STATUS-01 |
+| **Suite** | HI — Reports Pages Deep Interactions |
+| **Phase** | 23AJ |
+| **Steps** | 1. Navigate to `/Report?type=patient&report=patientCILNSP_vreduit` 2. Verify breadcrumb: Home > 3. Verify page title "Patient Status Report" 4. Verify 3 expandable accordion sections: "Report By Patient" (closed), "Report By Lab Number" (closed), "Report By Site" (closed) 5. Each accordion has a chevron/arrow toggle 6. Verify "Generate Printable Version" button at top (blue, active without selections) 7. Sidebar shows: Reports > Routine > Patient Status Report (highlighted) |
+| **Expected** | Patient Status Report uses accordion-based triple-search paradigm (Patient/Lab Number/Site) — unique layout among all reports |
+| **Status** | PASS |
+
+#### TC-HI-STATISTICS-01: Statistics Report
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HI-STATISTICS-01 |
+| **Suite** | HI — Reports Pages Deep Interactions |
+| **Phase** | 23AJ |
+| **Steps** | 1. Navigate to `/Report?type=indicator&report=statisticsReport` 2. Verify page title "Statistics Report" 3. Verify "Lab Unit" section with 15 checkboxes: All, HIV, Malaria, Microbiology, Molecular Biology, Mycobacteriology, Sero-Surveillance, Biochemistry, Hematology, Immunology, Cytology, Serology, Virology, Pathology, Immunohistochemistry 4. Verify "Priority" section with 6 checkboxes: All, Routine, ASAP, STAT, Timed, Future STAT 5. Verify time frame section "based on the reception time" with Start Date and End Date (dd/mm/yyyy with calendar pickers) 6. Verify "Generate Printable Version" button (grayed out — requires selections) 7. Note: 14 lab units match the Delayed Validation report's 14 test sections exactly |
+| **Expected** | Statistics Report is the most complex report form with 15 lab unit checkboxes + 6 priority checkboxes + date range — unique multi-selector pattern |
+| **Status** | PASS |
+
+#### TC-HI-SUMMARY-01: Summary of All Tests (Test Report Summary)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HI-SUMMARY-01 |
+| **Suite** | HI — Reports Pages Deep Interactions |
+| **Phase** | 23AJ |
+| **Steps** | 1. Navigate to `/Report?type=indicator&report=indicatorHaitiLNSPAllTests` 2. Verify page title "Test Report Summary" 3. Verify heading "Select the Date Range you want the Report For" 4. Verify Start Date and End Date fields (dd/mm/yyyy with calendar icons) 5. Verify "Generate Printable Version" button (grayed out — requires dates) 6. Sidebar shows: Reports > Aggregate Reports > Summary of All Tests (highlighted) |
+| **Expected** | Test Report Summary uses standard date-range-only pattern with disabled Generate button until dates entered |
+| **Status** | PASS |
+
+#### TC-HI-REJECTION-01: Rejection Report
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HI-REJECTION-01 |
+| **Suite** | HI — Reports Pages Deep Interactions |
+| **Phase** | 23AJ |
+| **Steps** | 1. Navigate to `/Report?type=indicator&report=sampleRejectionReport` 2. Verify page title "Rejection Report" 3. Verify date range heading + Start Date / End Date (dd/mm/yyyy) 4. Verify "Generate Printable Version" button (grayed out) 5. Layout identical to Summary of All Tests — same date-range-only pattern |
+| **Expected** | Rejection Report uses same date-range-only pattern as Summary of All Tests |
+| **Status** | PASS |
+
+#### TC-HI-ACTIVITY-TEST-01: Activity Report By Test Type
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HI-ACTIVITY-TEST-01 |
+| **Suite** | HI — Reports Pages Deep Interactions |
+| **Phase** | 23AJ |
+| **Steps** | 1. Navigate to `/Report?type=indicator&report=activityReportByTest` 2. Verify page title "Activity report By test" (lowercase "report", "test") 3. Verify date range heading + Start Date / End Date (dd/mm/yyyy) 4. Verify "Search By" label with "Select Test Type" dropdown below 5. Verify "Generate Printable Version" button (grayed out) 6. Note: Activity Reports add a "Search By" dropdown to the base date-range pattern |
+| **Expected** | Activity Report By Test extends date-range pattern with "Select Test Type" dropdown — date+selector pattern |
+| **Status** | PASS |
+
+#### TC-HI-ACTIVITY-PANEL-01: Activity Report By Panel
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HI-ACTIVITY-PANEL-01 |
+| **Suite** | HI — Reports Pages Deep Interactions |
+| **Phase** | 23AJ |
+| **Steps** | 1. Navigate to `/Report?type=indicator&report=activityReportByPanel` 2. Verify page title "Activity report By Panel" (lowercase "report") 3. Verify date range + "Search By" label + "Select Panel Type" dropdown 4. Verify "Generate Printable Version" button (grayed out) 5. Layout matches Activity Report By Test exactly except dropdown placeholder text |
+| **Expected** | Activity Report By Panel mirrors By Test layout with "Select Panel Type" substituted for "Select Test Type" |
+| **Status** | PASS |
+
+#### TC-HI-ACTIVITY-UNIT-01: Activity Report By Unit (Test Section)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HI-ACTIVITY-UNIT-01 |
+| **Suite** | HI — Reports Pages Deep Interactions |
+| **Phase** | 23AJ |
+| **Steps** | 1. Navigate to `/Report?type=indicator&report=activityReportByTestSection` via sidebar "By Unit" link 2. Verify page title "Activity report By Test Section" (full title differs from sidebar label "By Unit") 3. Verify date range + "Search By" label + "Select Unit Type" dropdown 4. Verify "Generate Printable Version" button (grayed out) 5. Note: Sidebar label "By Unit" but page title says "By Test Section" — naming inconsistency |
+| **Expected** | Activity Report By Test Section mirrors other Activity Reports; sidebar label ("By Unit") differs from page title ("By Test Section") |
+| **Status** | PASS |
+
+#### TC-HI-REFERRED-OUT-01: Referred Out Tests Report (External Referrals)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HI-REFERRED-OUT-01 |
+| **Suite** | HI — Reports Pages Deep Interactions |
+| **Phase** | 23AJ |
+| **Steps** | 1. Navigate to `/Report?type=patient&report=referredOut` 2. Verify page title "External Referrals Report" (sidebar says "Referred Out Tests Report" — naming inconsistency) 3. Verify heading "Date range is for when the referrals were made" — unique descriptive text 4. Verify date labels include format hint: "Start Date (dd/mm/yyyy)", "End Date (dd/mm/yyyy)" — only report to show format in label 5. Verify "Referral center or labratory is required" heading — TYPO: "labratory" should be "laboratory" 6. Verify "Referral Center or Laboratory" dropdown (empty, with chevron) 7. Verify "Generate Printable Version" button (BLUE/active, unlike other reports that gray out) 8. Note: This report has unique layout compared to all others — descriptive heading, format hints, and active Generate button |
+| **Expected** | External Referrals Report has unique layout: descriptive heading, format hints in labels, Referral Center dropdown, and active Generate button; typo "labratory" found |
+| **Status** | PASS — UX issue: typo "labratory" |
+
+#### TC-HI-NONCONFORM-DATE-01: Non Conformity Report By Date
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HI-NONCONFORM-DATE-01 |
+| **Suite** | HI — Reports Pages Deep Interactions |
+| **Phase** | 23AJ |
+| **Steps** | 1. Navigate to `/Report?type=patient&report=haitiNonConformityByDate` via sidebar "By Date" under "Non Conformity..." 2. Verify page title "Non ConformityReport by Date" — TITLE BUG: missing space between "Conformity" and "Report" 3. Verify date range + "Generate Printable Version" (grayed out) 4. Uses standard date-range-only pattern |
+| **Expected** | Non Conformity Report By Date uses date-range-only pattern; title has spacing bug "ConformityReport" |
+| **Status** | PASS — UX issue: title missing space |
+
+#### TC-HI-NONCONFORM-UNIT-01: Non Conformity Report By Unit and Reason
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HI-NONCONFORM-UNIT-01 |
+| **Suite** | HI — Reports Pages Deep Interactions |
+| **Phase** | 23AJ |
+| **Steps** | 1. Navigate to `/Report?type=patient&report=haitiNonConformityBySectionReason` 2. Verify page title "Non Conformity Report by Unit and Reason" (properly spaced, unlike By Date variant) 3. Verify date range + "Generate Printable Version" (grayed out) 4. Uses standard date-range-only pattern, identical to By Date variant |
+| **Expected** | Non Conformity By Unit and Reason uses date-range-only pattern; title is properly spaced (inconsistent with By Date variant) |
+| **Status** | PASS |
+
+#### TC-HI-DELAYED-01: Delayed Validation (Tests Awaiting Validation)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HI-DELAYED-01 |
+| **Suite** | HI — Reports Pages Deep Interactions |
+| **Phase** | 23AJ |
+| **Steps** | 1. Click "Delayed Validation" in sidebar — opens NEW TAB with direct PDF output at `/api/OpenELIS-Global/ReportPrint?type=indicator&report=validationBacklog` 2. Verify PDF title "Tests Awaiting Validation" 3. Verify header: "Laboratory Manager Mr Willie Porau" + timestamp "01/04/2026 17.20" 4. Verify table with 2 columns: Test Section, Total 5. Verify 14 test sections with counts: HIV (32), Malaria (25), Microbiology (9), Molecular Biology (7), Mycobacteriology (50), Sero-Surveillance (14), Biochemistry (0), Hematology (4), Immunology (0), Cytology (0), Serology (0), Virology (0), Pathology (0), Immunohistochemistry (0) 6. Note: No input form — generates immediately on click — UNIQUE among all reports 7. Note: 14 test sections match Statistics Report lab units (minus "All" checkbox) 8. PDF viewer shows page 1 of 1 with print/download controls |
+| **Expected** | Delayed Validation is unique: no form, direct PDF generation, opens in new tab; 14 test sections match Statistics Report units; shows Lab Manager name and timestamp |
+| **Status** | PASS |
+
+#### TC-HI-AUDIT-01: Audit Trail Report
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HI-AUDIT-01 |
+| **Suite** | HI — Reports Pages Deep Interactions |
+| **Phase** | 23AJ |
+| **Steps** | 1. Navigate to `/AuditTrailReport` 2. Verify page title "Audit Trail" 3. Verify "Lab No" field with 0/23 character counter (same counter pattern as patient search Lab Number fields) 4. Verify "View Report" button (blue, active) — note: button text differs from other reports ("View Report" vs "Generate Printable Version") 5. Verify "Patient Results" section with 7-column table: Time, Item, Action, Identifier, User, Old Value, New Value 6. Verify pagination: Items per page 30 (default), "0-0 of 0 items", page 1 of 1 with navigation arrows 7. Note: Unique report pattern — uses Lab No lookup instead of date range, shows results inline in table instead of PDF |
+| **Expected** | Audit Trail is unique: Lab No field (0/23 counter) + inline results table (not PDF) with 7 columns; "View Report" button differs from standard "Generate Printable Version" |
+| **Status** | PASS |
+
+#### TC-HI-WHONET-01: WHONET Report (Export CSV File by Date)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HI-WHONET-01 |
+| **Suite** | HI — Reports Pages Deep Interactions |
+| **Phase** | 23AJ |
+| **Steps** | 1. Navigate to `/Report?type=patient&report=ExportWHONETReportByDate` 2. Verify page title "Export a CSV File by Date" (sidebar says "WHONET Report" — naming inconsistency) 3. Verify date range heading + Start Date / End Date (dd/mm/yyyy) 4. Verify "Generate Printable Version" button (grayed out) 5. Note: Exports CSV rather than PDF — button text "Generate Printable Version" is misleading for a CSV export 6. Sidebar shows: Reports > WHONET Report (highlighted, standalone section below Management Reports) |
+| **Expected** | WHONET Report uses date-range pattern but exports CSV not PDF; sidebar label differs from page title; "Generate Printable Version" is misleading for CSV |
+| **Status** | PASS — UX issue: misleading button text for CSV export |
+
+#### TC-HI-REPORT-PATTERN-COMPARISON-01: Report Input Pattern Comparison
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HI-REPORT-PATTERN-COMPARISON-01 |
+| **Suite** | HI — Reports Pages Deep Interactions |
+| **Phase** | 23AJ |
+| **Steps** | 1. Compare input patterns across all 12 report pages 2. Identify 5 distinct patterns: (A) Date-range-only: Summary of All Tests, Rejection Report, Non Conformity By Date, Non Conformity By Unit and Reason, WHONET Report — 5 reports (B) Date-range + selector dropdown: Activity By Test (Test Type), Activity By Panel (Panel Type), Activity By Unit (Unit Type) — 3 reports (C) Date-range + referral dropdown: External Referrals Report — 1 report (unique descriptive headings, format hints, active button) (D) Accordion multi-search: Patient Status Report — 1 report (3 expandable sections) (E) Lab No lookup + inline table: Audit Trail — 1 report (F) No-input direct PDF: Delayed Validation — 1 report 3. Compare Generate button behavior: Grayed-out until input (7 reports), Always active/blue (External Referrals, Patient Status Report), "View Report" text (Audit Trail only), No button (Delayed Validation) 4. Title/naming inconsistencies found: sidebar "By Unit" vs page "By Test Section", sidebar "Referred Out Tests Report" vs page "External Referrals Report", sidebar "WHONET Report" vs page "Export a CSV File by Date" 5. Typography bugs: "labratory" typo in External Referrals, missing space "ConformityReport" in Non Conformity By Date 6. Pagination only in Audit Trail (Items per page: 30) — no other report has pagination 7. Statistics Report is most complex with 21 checkboxes (15 lab units + 6 priorities) |
+| **Expected** | 12 reports use 6 distinct input patterns; 3 naming inconsistencies between sidebar and page titles; 2 typography bugs; Statistics Report most complex (21 checkboxes); Delayed Validation unique (no-input direct PDF) |
+| **Status** | PASS |
