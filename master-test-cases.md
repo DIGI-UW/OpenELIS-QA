@@ -12959,3 +12959,187 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Compare search patterns across all 8 Results sub-pages: (A) Unit selector: By Unit — "Select Test Unit" dropdown, 14 options (B) Patient search (Partial): By Patient, Referred Out — full patient fields, no tabs, dual pagination (C) Accession number: By Order — single field, 0/23 counter (D) Accession range: By Range — dual from/to fields, 0/23 counters (E) Multi-field: By Test/Date/Status — 2 dates + 3 dropdowns (F) Lab number: Analyzer — single field, 0/23 counter (G) Accession search: Order Programs — text input with search icon 2. Common elements across most pages: "Results" title (except Referrals, Analyzer, Order Programs), Items per page 100 default, Save button (except Order Programs) 3. Results table columns when populated (By Unit with HIV): expand arrow, Sample Info, avatar, Test Date, Analyzer Result, Test Name, Normal Range, Accept, Result, Current Result, Reject, Notes — 10+ columns 4. Interactive elements per result row: Result dropdown, Accept checkbox, Reject checkbox, Notes textarea 5. Typos found: "Accesion" (By Range ×2), "Recieved" (By Test/Date/Status) 6. Unique features: Referred Out has dual search sections; Order Programs has card pagination + no Save button; By Unit has nonconforming warning banner |
 | **Expected** | 8 Results pages use 7 distinct search patterns; common results table with 4 interactive elements per row; Order Programs is read-only with unique card pagination; 3 typos found |
 | **Status** | PASS |
+
+---
+
+### Suite HK — Validation, Workplan, Non-Conform, Analyzers Deep Interactions (Phase 23AL)
+
+> **Scope:** Field-level deep interactions across 14 pages in 4 sidebar sections — Validation (4 sub-pages), Analyzers (3 sub-pages), Non-Conform (3 sub-pages), Workplan (4 sub-pages).
+> **Phase:** 23AL
+> **Date:** 2026-03-31
+
+#### TC-HK-VALIDATION-ROUTINE-01: Validation Routine (By Test Unit)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HK-VALIDATION-ROUTINE-01 |
+| **Suite** | HK — Validation, Workplan, Non-Conform, Analyzers Deep Interactions |
+| **Phase** | 23AL |
+| **Steps** | 1. Navigate to Validation > Routine via sidebar 2. Verify URL: `/ResultValidation?type=&test=` 3. Verify page title area — no explicit page title displayed 4. Verify "Select Test Unit" dropdown with 14 unit options (HIV, Malaria, Microbiology, Molecular Biology, Mycobacteriology, Sero-Surveillance, Biochemistry, Hematology, Immunology, Cytology, Serology, Virology, Pathology, Immunohistochemistry) 5. Verify pagination: Items per page 100 default 6. Verify Save button present 7. Note: Same 14 units as Results By Unit and Statistics Report checkboxes |
+| **Expected** | Validation Routine uses unit selector dropdown (14 options) with pagination 100 and Save button; mirrors Results By Unit pattern |
+| **Status** | PASS |
+
+#### TC-HK-VALIDATION-ORDER-01: Validation By Order
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HK-VALIDATION-ORDER-01 |
+| **Suite** | HK — Validation, Workplan, Non-Conform, Analyzers Deep Interactions |
+| **Phase** | 23AL |
+| **Steps** | 1. Navigate to Validation > By Order via sidebar 2. Verify URL: `/AccessionValidation` 3. Verify "Enter Accession Number" text field with 0/23 character counter 4. Verify Search button 5. Verify pagination: Items per page 100 default 6. Verify Save button present 7. Note: Same accession number pattern as Results By Order but URL uses "AccessionValidation" instead of "AccessionResults" |
+| **Expected** | Validation By Order uses single accession number field (0/23 counter) with Search button, pagination 100, Save |
+| **Status** | PASS |
+
+#### TC-HK-VALIDATION-RANGE-01: Validation By Range of Order Numbers
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HK-VALIDATION-RANGE-01 |
+| **Suite** | HK — Validation, Workplan, Non-Conform, Analyzers Deep Interactions |
+| **Phase** | 23AL |
+| **Steps** | 1. Navigate to Validation > By Range of Order Numbers via sidebar 2. Verify URL: `/AccessionValidationRange` 3. Verify single input field: "Load Next 99 Records Starting at Lab Number" with 0/23 character counter 4. Verify NO separate From/To fields — DIFFERS from Results By Range which has dual From/To fields 5. Verify pagination: Items per page 100 default 6. Verify Save button present 7. Key difference: Validation By Range uses SINGLE field ("Load Next 99 Records Starting at Lab Number") while Results By Range (`/RangeResults`) uses DUAL From/To accession fields |
+| **Expected** | Validation By Range uses single "Load Next 99 Records" field (0/23 counter) — different pattern from Results By Range dual from/to fields |
+| **Status** | PASS |
+
+#### TC-HK-VALIDATION-DATE-01: Validation By Date
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HK-VALIDATION-DATE-01 |
+| **Suite** | HK — Validation, Workplan, Non-Conform, Analyzers Deep Interactions |
+| **Phase** | 23AL |
+| **Steps** | 1. Navigate to Validation > By Date via sidebar 2. Verify URL: `/ResultValidationByTestDate` 3. Verify "Enter Test Date" text field with dd/mm/yyyy format hint 4. Verify Search button 5. Verify pagination: Items per page 100 default 6. Verify Save button present 7. Note: Simplest date-based search — single date field only, unlike Reports which use date ranges |
+| **Expected** | Validation By Date uses single test date field (dd/mm/yyyy) with Search button, pagination 100, Save |
+| **Status** | PASS |
+
+#### TC-HK-ANALYZERS-LIST-01: Analyzers List
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HK-ANALYZERS-LIST-01 |
+| **Suite** | HK — Validation, Workplan, Non-Conform, Analyzers Deep Interactions |
+| **Phase** | 23AL |
+| **Steps** | 1. Navigate to Analyzers > Analyzers via sidebar 2. Verify URL: `/analyzers` 3. Verify summary cards row: Total Analyzers (1), Active (0), Inactive (0), Plugin Warnings (1, red badge) 4. Verify Search text input 5. Verify Status filter dropdown 6. Verify data table columns: Name, Type, Connection, Test Units, Status, Last Modified, Actions 7. Verify one entry: "Test Analyzer Alpha", type "HEMATOLOGY", connection "192.168.1.100:5000", status "Plugin Missing" badge, "Setup" action status 8. Verify "Add Analyzer" button |
+| **Expected** | Analyzers list shows summary cards (4), search + status filter, 7-col table with one test analyzer entry, Add Analyzer button |
+| **Status** | PASS |
+
+#### TC-HK-ANALYZERS-ERRORS-01: Analyzer Error Dashboard
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HK-ANALYZERS-ERRORS-01 |
+| **Suite** | HK — Validation, Workplan, Non-Conform, Analyzers Deep Interactions |
+| **Phase** | 23AL |
+| **Steps** | 1. Navigate to Analyzers > Error Dashboard via sidebar 2. Verify URL: `/analyzers/errors` 3. Verify summary cards row: all showing 0 (no active errors) 4. Verify Search text input 5. Verify 3 filter dropdowns: Error Type, Severity, Analyzer 6. Verify data table columns: Timestamp, Analyzer, Type, Severity, Message, Status, Actions 7. Verify "Acknowledge All" button 8. Note: Error dashboard is empty (no errors to display) |
+| **Expected** | Error Dashboard shows summary cards (all 0), search + 3 filter dropdowns, 7-col table, Acknowledge All button |
+| **Status** | PASS |
+
+#### TC-HK-ANALYZERS-TYPES-01: Analyzer Types
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HK-ANALYZERS-TYPES-01 |
+| **Suite** | HK — Validation, Workplan, Non-Conform, Analyzers Deep Interactions |
+| **Phase** | 23AL |
+| **Steps** | 1. Navigate to Analyzers > Analyzer Types via sidebar 2. Verify URL: `/analyzers/types` 3. Verify Search text input 4. Verify "Create New Analyzer Type" button 5. Verify data table with 9 columns 6. Verify 2 entries: both ASTM protocol, Active status, Generic Plugin Yes, Plugin Loaded No |
+| **Expected** | Analyzer Types shows search, Create New button, 9-col table with 2 ASTM entries |
+| **Status** | PASS |
+
+#### TC-HK-NCE-REPORT-01: Report Non-Conforming Event
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HK-NCE-REPORT-01 |
+| **Suite** | HK — Validation, Workplan, Non-Conform, Analyzers Deep Interactions |
+| **Phase** | 23AL |
+| **Steps** | 1. Navigate to Non-Conform > Report Non-Conforming Event via sidebar 2. Verify URL: `/ReportNonConformingEvent` 3. Verify page title: "Report Non-Conforming Event (NCE)" 4. Verify "Search By" dropdown with options: Last Name, First Name, Patient Identification Code, Lab Number 5. Verify "Text Value" text input field 6. Verify Search button (blue) 7. Note: Title uses full formal name with "(NCE)" abbreviation |
+| **Expected** | Report NCE has Search By dropdown (4 options) + Text Value field + Search button; title includes "(NCE)" |
+| **Status** | PASS |
+
+#### TC-HK-NCE-VIEW-01: View New Non-Conforming Events
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HK-NCE-VIEW-01 |
+| **Suite** | HK — Validation, Workplan, Non-Conform, Analyzers Deep Interactions |
+| **Phase** | 23AL |
+| **Steps** | 1. Navigate to Non-Conform > View New Non-Conforming Events via sidebar 2. Verify URL: `/ViewNonConformingEvent` 3. Verify page title: "View New Non Conform Event" — NOTE naming inconsistency: sidebar says "View New Non-Conforming Events" (plural, hyphenated), page title says "View New Non Conform Event" (singular, no hyphen, truncated "Conform") 4. Verify same search layout as Report NCE: Search By dropdown + Text Value + Search button 5. Verify same 4 dropdown options: Last Name, First Name, Patient Identification Code, Lab Number |
+| **Expected** | View NCE has identical search layout to Report NCE; naming inconsistency between sidebar label and page title (plural vs singular, "Conforming" vs "Conform") |
+| **Status** | PASS |
+
+#### TC-HK-NCE-CORRECTIVE-01: NCE Corrective Actions
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HK-NCE-CORRECTIVE-01 |
+| **Suite** | HK — Validation, Workplan, Non-Conform, Analyzers Deep Interactions |
+| **Phase** | 23AL |
+| **Steps** | 1. Navigate to Non-Conform > Corrective Actions via sidebar 2. Verify URL: `/NCECorrectiveAction` 3. Verify page title: "Nonconforming Events Corrective Action" — NOTE: yet another naming variant: "Nonconforming" (one word, no hyphen) vs "Non-Conforming" (hyphenated) vs "Non Conform" (two words, truncated) 4. Verify same search layout: Search By dropdown + Text Value + Search button 5. Verify same 4 dropdown options 6. Cross-page naming comparison: (A) Report: "Report Non-Conforming Event (NCE)" — hyphenated, singular; (B) View: "View New Non Conform Event" — no hyphen, truncated, singular; (C) Corrective: "Nonconforming Events Corrective Action" — one word, plural "Events" |
+| **Expected** | Corrective Actions has identical search layout; 3 naming variants across 3 NCE pages ("Non-Conforming" vs "Non Conform" vs "Nonconforming") |
+| **Status** | PASS |
+
+#### TC-HK-WORKPLAN-TEST-01: Workplan By Test Type
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HK-WORKPLAN-TEST-01 |
+| **Suite** | HK — Validation, Workplan, Non-Conform, Analyzers Deep Interactions |
+| **Phase** | 23AL |
+| **Steps** | 1. Navigate to Workplan > By Test Type via sidebar 2. Verify URL: `/WorkPlanByTest?type=test` 3. Verify page title: "Workplan By Test" 4. Verify header bar: "Search By Test Type" (dark background) 5. Verify "Select Test Type" dropdown with 200+ test options (CD4, Viral Load, Xpert MTB/RIF Ultra, HIV Serology, Culture, AST panels, etc.) 6. Verify label "Test Type" below dropdown 7. Verify loading/progress bar area below 8. Select CD4 — verify "No appropriate tests were found." message appears 9. Note: Dropdown auto-loads results on selection (no separate Search button) — differs from Validation which has explicit Search buttons |
+| **Expected** | Workplan By Test has single dropdown (200+ test types), auto-loads on selection, "No appropriate tests were found" empty state |
+| **Status** | PASS |
+
+#### TC-HK-WORKPLAN-PANEL-01: Workplan By Panel
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HK-WORKPLAN-PANEL-01 |
+| **Suite** | HK — Validation, Workplan, Non-Conform, Analyzers Deep Interactions |
+| **Phase** | 23AL |
+| **Steps** | 1. Navigate to Workplan > By Panel via sidebar 2. Verify URL: `/WorkPlanByPanel?type=panel` 3. Verify page title: "Workplan By Panel" 4. Verify header bar: "Search By Panel Type" 5. Verify "Select Panel Type" dropdown with ~40 panel options (Xpert MTB/RIF Ultra, Xpert MTB/XDR, TB FL-DST, TB SL-DST, AFR, NFS, Poliovirus Testing, AST panels ×14, Coliform Analysis, Water Testing, Dengue, Malaria, Measles IgM, Faeces M/C/S, M. leprae Microscopy, etc.) 6. Verify label "Panel Type" below dropdown 7. Note: Same auto-load-on-selection pattern as By Test Type |
+| **Expected** | Workplan By Panel has single dropdown (~40 panel types), auto-loads on selection; same layout pattern as By Test Type |
+| **Status** | PASS |
+
+#### TC-HK-WORKPLAN-UNIT-01: Workplan By Unit
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HK-WORKPLAN-UNIT-01 |
+| **Suite** | HK — Validation, Workplan, Non-Conform, Analyzers Deep Interactions |
+| **Phase** | 23AL |
+| **Steps** | 1. Navigate to Workplan > By Unit via sidebar 2. Verify URL: `/WorkPlanByTestSection?type=` — NOTE: URL uses "TestSection" not "Unit" despite sidebar/title saying "Unit" 3. Verify page title: "Workplan By Unit" 4. Verify header bar: "Search By Unit Type" 5. Verify "Select Unit Type" dropdown with 14 options (same 14 lab units: HIV, Malaria, Microbiology, Molecular Biology, Mycobacteriology, Sero-Surveillance, Biochemistry, Hematology, Immunology, Cytology, Serology, Virology, Pathology, Immunohistochemistry) 6. Verify label "Unit Type" below dropdown 7. Note: URL path `/WorkPlanByTestSection` reveals internal naming ("TestSection") differs from user-facing "Unit" — consistent across Validation and Results which also use 14 units |
+| **Expected** | Workplan By Unit has 14-unit dropdown (same set as Validation/Results/Statistics), URL uses "TestSection" internally |
+| **Status** | PASS |
+
+#### TC-HK-WORKPLAN-PRIORITY-01: Workplan By Priority
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HK-WORKPLAN-PRIORITY-01 |
+| **Suite** | HK — Validation, Workplan, Non-Conform, Analyzers Deep Interactions |
+| **Phase** | 23AL |
+| **Steps** | 1. Navigate to Workplan > By Priority via sidebar 2. Verify URL: `/WorkPlanByPriority?type=priority` 3. Verify page title: "Workplan By Priority" 4. Verify header bar: "Search By Priority" 5. Verify "Select Priority" dropdown with 5 options: Routine, ASAP, STAT, Timed, Future STAT 6. Verify label "Priority" below dropdown 7. Note: Only 5 priority options vs 6 in Statistics Report (Statistics Report also includes "All" option) and Order page (which has all 6 including "All") 8. Same auto-load-on-selection pattern as other Workplan pages |
+| **Expected** | Workplan By Priority has 5-option dropdown (no "All" option unlike Statistics Report's 6); same auto-load layout pattern |
+| **Status** | PASS |
+
+#### TC-HK-WORKPLAN-PATTERN-COMPARISON-01: Workplan Search Pattern Comparison
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HK-WORKPLAN-PATTERN-COMPARISON-01 |
+| **Suite** | HK — Validation, Workplan, Non-Conform, Analyzers Deep Interactions |
+| **Phase** | 23AL |
+| **Steps** | 1. Compare all 4 Workplan pages — all share identical layout pattern: header bar + single dropdown + label + loading area 2. All use auto-load-on-selection (no Search button) 3. Dropdown option counts: By Test Type (200+), By Panel (~40), By Unit (14), By Priority (5) 4. All show "No appropriate tests were found." when selection has no pending items 5. Cross-section Validation comparison (4 pages): Routine uses unit dropdown (14), By Order uses accession field (0/23 + Search), By Range uses single "Load Next 99 Records" field (0/23), By Date uses date field (dd/mm/yyyy + Search). All have pagination 100 + Save button 6. Key Validation vs Results differences: (A) Validation By Range = single field vs Results By Range = dual from/to fields; (B) Validation pages have Save button; Results pages have Save button except Order Programs 7. Non-Conform comparison (3 pages): All 3 share identical Search By dropdown (4 options) + Text Value + Search layout; naming wildly inconsistent: "Non-Conforming" / "Non Conform" / "Nonconforming" 8. Analyzers section (3 pages): Each page has distinct layout — List (summary cards + table + Add button), Errors (summary cards + 3 filters + Acknowledge All), Types (search + Create New + table) |
+| **Expected** | 4 Workplan pages share uniform dropdown+auto-load pattern; 4 Validation pages use 4 different search patterns; 3 Non-Conform pages share identical search with inconsistent naming; 3 Analyzers pages each have unique layouts. 14 pages total across 4 sections. |
+| **Status** | PASS |
+
+#### TC-HK-CROSS-SECTION-URL-NAMING-01: Cross-Section URL and Naming Audit
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HK-CROSS-SECTION-URL-NAMING-01 |
+| **Suite** | HK — Validation, Workplan, Non-Conform, Analyzers Deep Interactions |
+| **Phase** | 23AL |
+| **Steps** | 1. Audit URL patterns across all 14 pages: VALIDATION: `/ResultValidation?type=&test=`, `/AccessionValidation`, `/AccessionValidationRange`, `/ResultValidationByTestDate`. ANALYZERS: `/analyzers`, `/analyzers/errors`, `/analyzers/types`. NON-CONFORM: `/ReportNonConformingEvent`, `/ViewNonConformingEvent`, `/NCECorrectiveAction`. WORKPLAN: `/WorkPlanByTest?type=test`, `/WorkPlanByPanel?type=panel`, `/WorkPlanByTestSection?type=`, `/WorkPlanByPriority?type=priority` 2. Naming inconsistencies found: (A) Workplan "By Unit" URL uses "TestSection" internally; (B) Non-Conform 3 different naming styles across 3 pages; (C) Analyzers uses lowercase REST-style paths vs PascalCase for other sections; (D) Validation uses mixed "ResultValidation" and "AccessionValidation" prefixes 3. Note: Analyzers section uses modern REST-style URL structure (`/analyzers/errors`) while older sections use PascalCase SPA routes (`/WorkPlanByTest`) |
+| **Expected** | 4 distinct URL naming conventions across 4 sections; Analyzers uses modern REST-style, others use legacy PascalCase; "TestSection" vs "Unit" internal naming mismatch |
+| **Status** | PASS |

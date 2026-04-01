@@ -1922,6 +1922,73 @@ Column naming inconsistency across the 3 dashboards is a UX cleanup opportunity 
 
 **Phase 23 Cumulative (through 23AK)**: 639+ TCs executed, ~612 passed, ~95.8% pass rate. 8 non-executable scripts catalogued.
 
+### Phase 23AL — Validation, Workplan, Non-Conform, Analyzers Deep Interactions (2026-03-31)
+
+**Scope:** 14 pages across 4 sidebar sections — field-level deep interactions.
+
+**Validation (4 pages):**
+
+- **Routine** (`/ResultValidation?type=&test=`): "Select Test Unit" dropdown (14 units), pagination 100, Save button. Same 14 units as Results By Unit and Statistics Report.
+
+- **By Order** (`/AccessionValidation`): "Enter Accession Number" field (0/23 counter), Search button, pagination 100, Save.
+
+- **By Range of Order Numbers** (`/AccessionValidationRange`): Single "Load Next 99 Records Starting at Lab Number" field (0/23 counter). KEY DIFFERENCE: Uses single field vs Results By Range (`/RangeResults`) which has dual From/To fields.
+
+- **By Date** (`/ResultValidationByTestDate`): "Enter Test Date" (dd/mm/yyyy), Search button, pagination 100, Save. Simplest date search — single date only (not a range).
+
+**Analyzers (3 pages):**
+
+- **Analyzers List** (`/analyzers`): Summary cards (Total:1, Active:0, Inactive:0, Plugin Warnings:1 red). Search + Status filter. 7-col table (Name/Type/Connection/Test Units/Status/Last Modified/Actions). One entry: "Test Analyzer Alpha", HEMATOLOGY, 192.168.1.100:5000, "Plugin Missing" badge. "Add Analyzer" button.
+
+- **Error Dashboard** (`/analyzers/errors`): Summary cards (all 0). Search + 3 filter dropdowns (Error Type/Severity/Analyzer). 7-col table (Timestamp/Analyzer/Type/Severity/Message/Status/Actions). "Acknowledge All" button.
+
+- **Analyzer Types** (`/analyzers/types`): Search + "Create New Analyzer Type" button. 9-col table. 2 entries: both ASTM protocol, Active, Generic Plugin Yes, Plugin Loaded No.
+
+**Non-Conform (3 pages):**
+
+All 3 pages share identical search layout: "Search By" dropdown (Last Name/First Name/Patient Identification Code/Lab Number) + "Text Value" text input + Search button.
+
+- **Report Non-Conforming Event** (`/ReportNonConformingEvent`): Title "Report Non-Conforming Event (NCE)"
+- **View New Non-Conforming Events** (`/ViewNonConformingEvent`): Title "View New Non Conform Event" — naming inconsistency (singular, no hyphen, truncated)
+- **Corrective Actions** (`/NCECorrectiveAction`): Title "Nonconforming Events Corrective Action" — yet another naming variant (one word, no hyphen)
+
+**Workplan (4 pages):**
+
+All 4 pages share identical layout: header bar + single dropdown + label + loading area. Auto-load on selection (no Search button).
+
+- **By Test Type** (`/WorkPlanByTest?type=test`): "Select Test Type" dropdown, 200+ test options. "No appropriate tests were found." empty state.
+- **By Panel** (`/WorkPlanByPanel?type=panel`): "Select Panel Type" dropdown, ~40 panel options.
+- **By Unit** (`/WorkPlanByTestSection?type=`): "Select Unit Type" dropdown, 14 units. NOTE: URL uses "TestSection" internally despite user-facing "Unit" label.
+- **By Priority** (`/WorkPlanByPriority?type=priority`): "Select Priority" dropdown, 5 options (Routine/ASAP/STAT/Timed/Future STAT). Only 5 vs Statistics Report's 6 (missing "All").
+
+**Cross-Section Pattern Comparison (14 pages):**
+
+| Section | Pages | Search Pattern | Key Feature |
+|---------|-------|---------------|-------------|
+| Validation | 4 | 4 different patterns (unit dropdown, accession, load-next-99, date) | All have pagination 100 + Save |
+| Analyzers | 3 | 3 unique layouts (cards+table, cards+3-filters, search+create) | Modern REST-style URLs |
+| Non-Conform | 3 | 1 shared pattern (Search By dropdown + Text Value) | Wildly inconsistent naming |
+| Workplan | 4 | 1 shared pattern (single dropdown, auto-load) | No Search button needed |
+
+**URL Naming Conventions:**
+
+| Section | Style | Examples |
+|---------|-------|---------|
+| Validation | Mixed PascalCase | `ResultValidation`, `AccessionValidation` |
+| Analyzers | REST-style lowercase | `/analyzers`, `/analyzers/errors` |
+| Non-Conform | PascalCase | `ReportNonConformingEvent`, `NCECorrectiveAction` |
+| Workplan | PascalCase with query params | `WorkPlanByTest?type=test` |
+
+**UX Issues Found:**
+1. Non-Conform naming inconsistency: 3 different styles across 3 pages ("Non-Conforming" / "Non Conform" / "Nonconforming")
+2. Workplan By Unit URL uses "TestSection" internally — mismatch with user-facing "Unit"
+3. Validation By Range uses fundamentally different search pattern from Results By Range (single field vs dual from/to)
+4. Workplan By Priority has only 5 options (missing "All") while Statistics Report priority has 6
+
+**Phase 23AL Summary:** 16 TCs (Suite HK), all PASS (4 with UX issues noted). 14 pages across 4 sections. 4 Workplan pages share uniform dropdown pattern; 3 Non-Conform pages share search pattern with inconsistent naming; 4 Validation pages each use different search patterns; 3 Analyzers pages each have unique layouts.
+
+**Phase 23 Cumulative (through 23AL)**: 655+ TCs executed, ~628 passed, ~95.9% pass rate. 8 non-executable scripts catalogued.
+
 ---
 
 ## Key Files
