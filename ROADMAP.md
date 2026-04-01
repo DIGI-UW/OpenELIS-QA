@@ -998,7 +998,74 @@ All 10 General Config sub-pages verified:
 
 **Phase 23H Summary:** 4-step wizard with ~60+ fields verified. 15 programs, 21 health regions, 294 nationalities, 45 units of measure, 5 priorities. NOTE-32 new (marital status typo in HTML id and helper text). All 4 steps render correctly and navigation works.
 
-**Phase 23 Cumulative**: 419+ TCs + ~80 new field-level verifications (30 from 23C-E + 20 from 23F + 15 from 23G + 15 from 23H), ~94% pass rate
+### Phase 23I — Reports Pages Field-Level Verification
+**Date:** 2026-03-31
+**Focus:** Complete field inventory of all Report pages accessible from the Reports sidebar
+
+**Reports sidebar hierarchy (8 pages total):**
+
+1. **Patient Status Report** (`/Report?type=patient&report=patientCILNSP_vreduit`) — PASS
+   - 3 expandable accordion sections:
+     - **Report By Patient:** Reuses patient search component (Patient Id, Previous Lab Number 0/23, Last Name, First Name, Date of Birth, Gender, Search/External Search, Client Registry Search toggle, Patient Results table 7 columns)
+     - **Report By Lab Number:** From (0/23) and To (0/23) text fields with "Scan or Enter Manually" instructions
+     - **Report By Site:** Site Name (search), ward/dept/unit dropdown, "Only Reports with results" checkbox, Date Type dropdown (Result Date), Start Date, End Date
+   - "Generate Printable Version" button
+
+2. **Statistics Report** (`/Report?type=indicator&report=statisticsReport`) — PASS
+   - Lab unit checkboxes (15): All, HIV, Malaria, Microbiology, Molecular Biology, Mycobacteriology, Sero-Surveillance, Biochemistry, Hematology, Immunology, Cytology, Serology, Virology, Pathology, Immunohistochemistry
+   - Priority checkboxes (6): All, Routine, ASAP, STAT, Timed, Future STAT
+   - Time frame checkboxes (3): All, Normal Work hours (9h-15h30), Out of Normal Work Hours (15h31-8h59)
+   - Year dropdown (2026)
+   - "Generate Printable Version" button
+
+3. **Test Report Summary (Summary of All Tests)** (`/Report?type=indicator&report=indicatorHaitiLNSPAllTests`) — PASS
+   - Start Date, End Date, "Generate Printable Version" button (grayed until dates selected)
+
+4. **Rejection Report** (`/Report?type=indicator&report=sampleRejectionReport`) — PASS
+   - Start Date, End Date, "Generate Printable Version" button
+
+5. **External Referrals Report (Referred Out Tests)** (`/Report?type=patient&report=referredOut`) — PASS
+   - Start Date, End Date (date range for referrals)
+   - "Referral center or labratory is required" heading (known typo from Phase 16)
+   - Referral Center or Laboratory dropdown: 6 centers (Central Public Health Laboratory, Doherty Institute, Queensland Mycobacterium Reference Laboratory, Research Institute for Tropical Medicine, SYD PATH Pathology, Victorian Infectious Diseases Reference Laboratory)
+   - "Generate Printable Version" button
+
+6. **Delayed Validation** (direct API: `/api/OpenELIS-Global/ReportPrint?type=indicator&report=validationBacklog`) — PASS
+   - Opens PDF in new tab: "Tests Awaiting Validation" report
+   - Shows Lab Manager name (Mr Willie Porau), date, and all 15 lab sections with backlog totals
+   - Baseline data captured: HIV 32, Malaria 25, Microbiology 9, Molecular Biology 7, Mycobacteriology 50, Sero-Surveillance 14, Biochemistry 0, Hematology 4, Immunology 0, Cytology 0, Serology 0, Virology 0, Pathology 0, Immunohistochemistry 0
+
+7. **Audit Trail** (`/AuditTrailReport`) — PASS
+   - Lab No field (0/23), "View Report" button
+   - Patient Results table: 7 columns (Time, Item, Action, Identifier, User, Old Value, New Value)
+   - Pagination: Items per page 30
+
+8. **WHONET Report** (`/Report?type=patient&report=ExportWHONETReportByDate`) — PASS
+   - "Export a CSV File by Date" heading
+   - Start Date, End Date, "Generate Printable Version" button
+
+### Phase 23J — Patient Pages Field-Level Verification
+**Date:** 2026-03-31
+**Focus:** Complete field inventory of all Patient sidebar pages (3 pages)
+
+1. **Add/Edit Patient** (`/PatientManagement`) — PASS
+   - "Add Or Modify Patient" heading, breadcrumb "Home / Add Or Modify Patient /"
+   - Dual-tab interface: "Search for Patient" (active) / "New Patient"
+   - Search tab: Same reusable patient search component as Add Order Step 1 and Patient Status Report (Patient Id, Previous Lab Number 0/23, Last Name, First Name, Date of Birth, Gender, Search/External Search, Client Registry Search toggle, Patient Results table 7 columns)
+   - New Patient tab: Same new patient form as Add Order Step 1 (all fields including Emergency Contact Info and Additional Information accordions)
+
+2. **Patient History** (`/PatientHistory`) — PASS
+   - "Patient History" heading, breadcrumb "Home / Patient History /"
+   - Patient search form only (no tabs): Patient Id, Previous Lab Number 0/23, Last Name, First Name, Date of Birth, Gender, Search/External Search, Client Registry Search toggle, Patient Results table 7 columns
+
+3. **Merge Patient** (`/PatientMerge`) — PASS
+   - "Merge Patient Records" heading, breadcrumb "Home / Merge Patient Records /"
+   - 3-step wizard: Select Patients → Select Primary → Confirm Merge
+   - Step 1: "Select First Patient" (Patient Id, First Name, Last Name, Gender, Date of Birth, Search/External Search buttons grayed), "No patient selected" placeholder, then "Select Second Patient" section
+
+**Phase 23J Summary:** All 3 Patient pages verified. Patient search component is shared/reused across Add Order, Patient Status Report, Add/Edit Patient, and Patient History. Merge Patient uses a simplified 3-step wizard variant.
+
+**Phase 23 Cumulative**: 419+ TCs + ~100 new field-level verifications (30 from 23C-E + 20 from 23F + 15 from 23G + 15 from 23H + 10 from 23I + 10 from 23J), ~94% pass rate
 
 ---
 

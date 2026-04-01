@@ -712,7 +712,11 @@ These results come from 6 rounds of live validation on the jdhealthsolutions ins
 
 | 33 (Phase 23H) | 2026-03-31 | 1 suite (4 TCs) | 4 | 0 | 0 | Add Order 4-step wizard (`/SamplePatientEntry`): Step 1 Patient Info (2 tabs: Search 7 fields + results table, New Patient 15+ fields including Emergency Contact 4 fields + Additional Info 7 fields with 21 health regions, 294 nationalities, 4 education levels, 7 marital statuses). Step 2 Program Selection (15 programs). Step 3 Add Sample (sample type, 45 UOM units, labels, panel/test search, referral checkbox). Step 4 Add Order (Lab Number with Generate, 5 priorities, 4 payment statuses, 8 sampling codes, site/requester search, Result Reporting section). NOTE-32: "maritialStatus" HTML id typo + "Enter Martial Status" helper text typo. ALL PASS. |
 
-**Cumulative:** 458 TCs executed, 433 passed, ~94% pass rate (3 resolved bugs + 1 retracted false positive improve effective quality). 7 EQA Jira tickets (OGC-518–524) cancelled — need to re-test with EQA config enabled.
+| 34 (Phase 23I) | 2026-03-31 | 1 suite (8 TCs) | 8 | 0 | 0 | Reports (8 pages): Patient Status Report (3 accordion sections: By Patient reuses search component, By Lab Number From/To, By Site with date filters). Statistics Report (15 lab units, 6 priorities, 3 time frames, year). Test Report Summary (date range). Rejection Report (date range). External Referrals Report (6 referral centers). Delayed Validation (direct PDF — backlog totals for 15 sections). Audit Trail (Lab No search, 7-column change log). WHONET Report (CSV export by date). ALL PASS. |
+
+| 35 (Phase 23J) | 2026-03-31 | 1 suite (3 TCs) | 3 | 0 | 0 | Patient (3 pages): Add/Edit Patient (dual-tab reuses search+new patient components from Add Order). Patient History (search-only variant). Merge Patient (3-step wizard: Select Patients → Select Primary → Confirm Merge). Confirmed patient search component is shared across 4+ pages. ALL PASS. |
+
+**Cumulative:** 469 TCs executed, 444 passed, ~94% pass rate (3 resolved bugs + 1 retracted false positive improve effective quality). 7 EQA Jira tickets (OGC-518–524) cancelled — need to re-test with EQA config enabled.
 
 **Key takeaway:** Read operations, admin pages, granular interactions, i18n, session security,
 accessibility, pathology modules, end-to-end workflows, and cross-module data flows are rock-solid.

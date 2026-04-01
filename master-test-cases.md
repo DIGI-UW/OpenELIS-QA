@@ -10794,3 +10794,128 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Navigate to Step 4 (Add Order) 2. Verify ORDER heading 3. Verify Lab Number* (0/23 counter, "Scan OR Enter Manually OR Generate" link) 4. Verify Priority dropdown (5: ROUTINE, ASAP, STAT, Timed, Future STAT) 5. Verify Request Date, Received Date (dd/mm/yyyy), Reception Time (hh:mm auto), Date of next visit 6. Verify Search Site Name* (required autocomplete), ward/dept/unit cascading dropdown 7. Verify Search Requester* (required autocomplete), Provisional Clinical Diagnosis 8. Verify Requester's FirstName*, Requester's LastName*, Requester Phone, Requester's Fax Number, Requester's Email 9. Verify Patient payment status dropdown (4: normalCash, normalInsurance, reducedCash, reducedInsurance) 10. Verify Sampling performed for analysis dropdown (8: B1, J0, J15, M1, M3, M6, M12, Other) + if Other specify field 11. Verify Remember site and requester checkbox 12. Verify RESULT REPORTING section heading 13. Verify Back/Submit buttons (Submit disabled until form complete) |
 | **Expected** | Order form with lab number generation, 5 priorities, 4 payment statuses, 8 sampling codes, site/requester search, result reporting |
 | **Status** | PASS |
+
+### Suite FY — Reports Pages Field-Level Verification
+
+#### TC-FY-PATIENT-STATUS-01: Patient Status Report
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FY-PATIENT-STATUS-01 |
+| **Suite** | FY — Reports Pages |
+| **Phase** | 23I |
+| **Steps** | 1. Navigate to Reports → Routine → Patient Status Report 2. Verify 3 accordion sections: Report By Patient (reused search component), Report By Lab Number (From/To 0/23 fields), Report By Site (Site Name, ward/dept/unit, Only Reports with results checkbox, Date Type dropdown, Start/End Date) 3. Verify "Generate Printable Version" button |
+| **Expected** | Patient Status Report with 3 expandable sections and print button |
+| **Status** | PASS |
+
+#### TC-FY-STATISTICS-01: Statistics Report
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FY-STATISTICS-01 |
+| **Suite** | FY — Reports Pages |
+| **Phase** | 23I |
+| **Steps** | 1. Navigate to Reports → Routine → Aggregate Reports → Statistics Report 2. Verify 15 lab unit checkboxes (All, HIV, Malaria, Microbiology, Molecular Biology, Mycobacteriology, Sero-Surveillance, Biochemistry, Hematology, Immunology, Cytology, Serology, Virology, Pathology, Immunohistochemistry) 3. Verify 6 priority checkboxes (All, Routine, ASAP, STAT, Timed, Future STAT) 4. Verify 3 time frame checkboxes (All, Normal Work hours 9h-15h30, Out of Normal Work Hours 15h31-8h59) 5. Verify year dropdown (2026) 6. Verify Generate Printable Version button |
+| **Expected** | Statistics Report with 15 lab units, 6 priorities, 3 time frames, year selector |
+| **Status** | PASS |
+
+#### TC-FY-SUMMARY-01: Test Report Summary
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FY-SUMMARY-01 |
+| **Suite** | FY — Reports Pages |
+| **Phase** | 23I |
+| **Steps** | 1. Navigate to Reports → Routine → Aggregate Reports → Summary of All Tests 2. Verify "Test Report Summary" heading 3. Verify Start Date and End Date pickers 4. Verify Generate Printable Version button (grayed until dates selected) |
+| **Expected** | Simple date range report form |
+| **Status** | PASS |
+
+#### TC-FY-REJECTION-01: Rejection Report
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FY-REJECTION-01 |
+| **Suite** | FY — Reports Pages |
+| **Phase** | 23I |
+| **Steps** | 1. Navigate to Reports → Routine → Management Reports → Rejection Report 2. Verify "Rejection Report" heading 3. Verify Start Date, End Date, Generate Printable Version |
+| **Expected** | Date range report form |
+| **Status** | PASS |
+
+#### TC-FY-REFERRALS-01: External Referrals Report
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FY-REFERRALS-01 |
+| **Suite** | FY — Reports Pages |
+| **Phase** | 23I |
+| **Steps** | 1. Navigate to Reports → Routine → Management Reports → Activity Reports → Referred Out Tests Report 2. Verify "External Referrals Report" heading 3. Verify date range (Start Date, End Date) 4. Verify "Referral center or labratory is required" heading (known typo) 5. Verify Referral Center dropdown: 6 centers (Central Public Health Laboratory, Doherty Institute, Queensland Mycobacterium Reference Laboratory, Research Institute for Tropical Medicine, SYD PATH Pathology, Victorian Infectious Diseases Reference Laboratory) 6. Verify Generate Printable Version |
+| **Expected** | Referral report with 6 centers and date range |
+| **Status** | PASS |
+
+#### TC-FY-DELAYED-VAL-01: Delayed Validation Report
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FY-DELAYED-VAL-01 |
+| **Suite** | FY — Reports Pages |
+| **Phase** | 23I |
+| **Steps** | 1. Navigate to Reports → Routine → Management Reports → Non Conformity → Delayed Validation 2. Verify opens direct PDF in new tab 3. Verify "Tests Awaiting Validation" report with Lab Manager name, date, 15 lab sections with totals |
+| **Expected** | Direct PDF generation showing validation backlog by lab section |
+| **Status** | PASS |
+
+#### TC-FY-AUDIT-01: Audit Trail
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FY-AUDIT-01 |
+| **Suite** | FY — Reports Pages |
+| **Phase** | 23I |
+| **Steps** | 1. Navigate to Reports → Routine → Management Reports → Non Conformity → Audit Trail 2. Verify "Audit Trail" heading at /AuditTrailReport 3. Verify Lab No field (0/23) and View Report button 4. Verify Patient Results table: 7 columns (Time, Item, Action, Identifier, User, Old Value, New Value) 5. Verify pagination (Items per page 30) |
+| **Expected** | Audit Trail with Lab No search and 7-column change log table |
+| **Status** | PASS |
+
+#### TC-FY-WHONET-01: WHONET Report
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FY-WHONET-01 |
+| **Suite** | FY — Reports Pages |
+| **Phase** | 23I |
+| **Steps** | 1. Navigate to Reports → WHONET Report 2. Verify "Export a CSV File by Date" heading 3. Verify Start Date, End Date, Generate Printable Version button |
+| **Expected** | CSV export form with date range |
+| **Status** | PASS |
+
+### Suite FZ — Patient Pages Field-Level Verification
+
+#### TC-FZ-ADD-EDIT-01: Add/Edit Patient
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FZ-ADD-EDIT-01 |
+| **Suite** | FZ — Patient Pages |
+| **Phase** | 23J |
+| **Steps** | 1. Navigate to Patient → Add/Edit Patient (/PatientManagement) 2. Verify "Add Or Modify Patient" heading 3. Verify dual-tab interface (Search for Patient / New Patient) 4. Verify Search tab reuses shared patient search component (6 search fields, 2 buttons, toggle, 7-column results table) 5. Verify New Patient tab reuses full new patient form from Add Order (including Emergency Contact Info and Additional Information accordions) |
+| **Expected** | Dual-tab patient management form reusing shared components |
+| **Status** | PASS |
+
+#### TC-FZ-HISTORY-01: Patient History
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FZ-HISTORY-01 |
+| **Suite** | FZ — Patient Pages |
+| **Phase** | 23J |
+| **Steps** | 1. Navigate to Patient → Patient History (/PatientHistory) 2. Verify "Patient History" heading 3. Verify search-only form (no tabs): Patient Id, Previous Lab Number 0/23, Last Name, First Name, Date of Birth, Gender, Search/External Search, Client Registry Search toggle, Patient Results table 7 columns |
+| **Expected** | Search-only patient history form with shared search component |
+| **Status** | PASS |
+
+#### TC-FZ-MERGE-01: Merge Patient
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FZ-MERGE-01 |
+| **Suite** | FZ — Patient Pages |
+| **Phase** | 23J |
+| **Steps** | 1. Navigate to Patient → Merge Patient (/PatientMerge) 2. Verify "Merge Patient Records" heading 3. Verify 3-step wizard (Select Patients → Select Primary → Confirm Merge) 4. Verify Step 1 "Select First Patient" form (Patient Id, First Name, Last Name, Gender, Date of Birth, Search/External Search buttons) 5. Verify "No patient selected" placeholder 6. Verify "Select Second Patient" section below |
+| **Expected** | 3-step merge wizard with dual patient selection |
+| **Status** | PASS |
