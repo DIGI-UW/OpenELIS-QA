@@ -1598,7 +1598,43 @@ Systematic survey of all 14 test units in Results > By Unit to classify result f
 
 **Phase 23AB Summary:** 7 TCs, all PASS. Complete 14-unit survey: 7 units with data (3 result type patterns), 7 empty. 2 new duplicate-option bugs (NOTE-38, NOTE-39).
 
-**Phase 23 Cumulative (through 23AB)**: 559+ TCs executed, ~532 passed, ~95.2% pass rate. 8 non-executable scripts catalogued.
+### Phase 23AC: Validation Deep Interactions & Workplan Pages
+
+Deep testing of all Validation and Workplan sub-pages.
+
+#### Validation Pages (4 sub-pages)
+
+| Sub-Page | URL | Search Input | Key Finding |
+|----------|-----|-------------|-------------|
+| Routine | `/ResultValidation?type=&test=` | Select Test Unit (14 units) | Different columns from Results: Save/Retest/Notes instead of Accept/Reject, Result is read-only |
+| By Order | `/AccessionValidation` | Accession Number (0/23 chars) | Returns per-accession results, same Validation columns |
+| By Range | `/AccessionValidationRange` | "Load Next 99 Records Starting at Lab Number" | Single input (not From/To), page-based ← → navigation |
+| By Date | `/ResultValidationByTestDate` | dd/mm/yyyy DatePicker | CDS calendar widget, month/year navigation |
+
+**Key Validation vs Results differences:**
+- Validation Result is read-only text; Results Result is editable (dropdown/textarea)
+- Validation uses Save/Retest checkboxes; Results uses Accept/Reject
+- Validation has 3 bulk actions (Save All Normal / Save All Results / Retest All Tests)
+- No Expand Row, Test Date, Analyzer Result, or Current Result in Validation
+
+#### Workplan Pages (4 sub-pages)
+
+| Sub-Page | URL | Search Dropdown | Options Count |
+|----------|-----|----------------|---------------|
+| By Test Type | `/WorkPlanByTest?type=test` | Select Test Type | 200+ individual tests |
+| By Panel | `/WorkPlanByPanel?type=panel` | Select Panel Type | 40+ panels |
+| By Unit | `/WorkPlanByTestSection?type=` | Select Unit Type | 14 units |
+| By Priority | `/WorkPlanByPriority?type=priority` | Select Priority | 5 (Routine/ASAP/STAT/Timed/Future STAT) |
+
+**Key Workplan findings:**
+- By Test Type has 200+ tests including CBC, HIV assays, TB tests, AST antibiotics
+- NOTE-40: Systemic duplicate test entries in Workplan dropdown (ABON ×3, Abbott ×3, Xpert MTB ×6, etc.) — confirms NOTE-38/39 is a system-wide configuration issue
+- By Panel has 40+ panels including 13 AST antimicrobial sensitivity profiles
+- Session timeout dialog ("Still There?") observed after extended testing
+
+**Phase 23AC Summary:** 10 TCs, all PASS. Full Validation (4 pages) and Workplan (4 pages) deep testing. Discovered Validation vs Results layout differences, 5 priority levels, 200+ test types, 40+ panels. NOTE-40 confirms systemic duplicate test configuration.
+
+**Phase 23 Cumulative (through 23AC)**: 569+ TCs executed, ~542 passed, ~95.3% pass rate. 8 non-executable scripts catalogued.
 
 ---
 

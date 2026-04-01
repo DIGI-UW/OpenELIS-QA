@@ -12066,3 +12066,119 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Compile results from all 14 units: **Pure Textarea (numeric):** Hematology. **Pure Dropdown (categorical):** HIV, Microbiology, Sero-Surveillance, Mycobacteriology. **Hybrid (mixed):** Molecular Biology (Ct textarea + MPOX dropdown), Malaria (categorical dropdown + Density Count textarea). **Empty (no data):** Biochemistry, Serology, Immunology, Virology, Cytology, Pathology, Immunohistochemistry. 2. Verify 3 distinct result type patterns confirmed: pure textarea, pure dropdown, hybrid 3. Verify duplicate dropdown options bug affects: HIV ABON Tri-line (NOTE-38), Mycobacteriology Xpert MTB/RIF Ultra MTB (NOTE-39) — systemic configuration issue |
 | **Expected** | 7 units with data classified into 3 result type patterns; 7 units empty; 2 duplicate-option bugs identified |
 | **Status** | PASS |
+
+---
+
+### Suite HB — Validation Deep Interactions & Workplan Pages (Phase 23AC)
+
+> **Scope:** Deep testing of all 4 Validation sub-pages (Routine, By Order, By Range, By Date) comparing layout/columns against Results pages. Full testing of all 4 Workplan sub-pages (By Test Type, By Panel, By Unit, By Priority) including dropdown option catalogs.
+
+#### TC-HB-VAL-ROUTINE-01: Validation Routine Page Layout and Interactions
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HB-VAL-ROUTINE-01 |
+| **Suite** | HB — Validation Deep Interactions & Workplan Pages |
+| **Phase** | 23AC |
+| **Steps** | 1. Validation > Routine → Select Test Unit dropdown (same 14 units as Results) 2. Select HIV → verify table loads with data 3. Verify column layout DIFFERS from Results: Sample Info, Test Name, Normal Range, Result (read-only text, NOT editable), **Save** (checkbox), **Retest** (checkbox), **Notes** (textbox) 4. Verify 3 bulk action checkboxes: "Save All Normal", "Save All Results", "Retest All Tests" 5. Verify per-row controls: Copy button + Save checkbox + Retest checkbox + Notes textbox 6. Verify Save button at bottom 7. Verify 7+ HIV results displayed: Abbott HIV/Syphilis Duo (HIV-1/2 and Syphilis Reactive), Genie Fast HIV 1/2 (Positif), ABON Tri-line HIV 1/2/0 (Reactive HIV-1, NON-REACTIVE), Xpert HIV-1 Qual XC (HIV-1 DETECTED) |
+| **Expected** | Validation Routine uses different column set than Results (Save/Retest instead of Accept/Reject, result is read-only text) |
+| **Status** | PASS |
+
+#### TC-HB-VAL-ORDER-01: Validation By Order Search
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HB-VAL-ORDER-01 |
+| **Suite** | HB — Validation Deep Interactions & Workplan Pages |
+| **Phase** | 23AC |
+| **Steps** | 1. Validation > By Order → "Enter Accession Number" input (0/23 char counter, placeholder "Enter Lab No") + Search button 2. Search "25-CPHL-000-008" → returns 4 results (1-4 of 4 items) 3. Verify same Validation column layout (Sample Info, Test Name, Normal Range, Result, Save, Retest, Notes) 4. Verify same 3 bulk checkboxes + Save button 5. Verify pagination: Items per page 100, page controls |
+| **Expected** | Validation By Order accepts accession number, returns matching results with validation-specific columns |
+| **Status** | PASS |
+
+#### TC-HB-VAL-RANGE-01: Validation By Range of Order Numbers
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HB-VAL-RANGE-01 |
+| **Suite** | HB — Validation Deep Interactions & Workplan Pages |
+| **Phase** | 23AC |
+| **Steps** | 1. Validation > By Range of Order Numbers → different from Results range: "Load Next 99 Records Starting at Lab Number" (single input, NOT From/To pair) 2. Input "25-CPHL-000-008" → Search returns multi-page results (1/2 pagination) 3. Verify page-based navigation with ← → arrow buttons (different from item-based pagination on other pages) 4. Verify same Validation column layout + 3 bulk checkboxes |
+| **Expected** | Validation By Range loads 99 records starting from a lab number with page-based navigation |
+| **Status** | PASS |
+
+#### TC-HB-VAL-DATE-01: Validation By Date Search
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HB-VAL-DATE-01 |
+| **Suite** | HB — Validation Deep Interactions & Workplan Pages |
+| **Phase** | 23AC |
+| **Steps** | 1. Validation > By Date → "Enter Test Date" with dd/mm/yyyy date picker (calendar widget) 2. Verify CDS DatePicker renders: calendar grid, month/year navigation (← →), day selection, Year number input 3. Select date → Search button triggers query 4. Verify empty state: "There are no records to display" with standard pagination (Items per page 100, 0-0 of 0 items) |
+| **Expected** | Validation By Date uses CDS DatePicker; returns results filtered by test date |
+| **Status** | PASS |
+
+#### TC-HB-VAL-COMPARE-01: Validation vs Results Layout Comparison
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HB-VAL-COMPARE-01 |
+| **Suite** | HB — Validation Deep Interactions & Workplan Pages |
+| **Phase** | 23AC |
+| **Steps** | 1. Compare Results By Unit columns: Sample Info, Test Date, Analyzer Result, Test Name, Normal Range, Accept (checkbox), Result (editable dropdown/textarea), Current Result, Reject (checkbox), Notes 2. Compare Validation Routine columns: Sample Info, Test Name, Normal Range, Result (read-only text), Save (checkbox), Retest (checkbox), Notes (textbox) 3. Key differences: (a) No Test Date/Analyzer Result in Validation, (b) Result is read-only in Validation vs editable in Results, (c) Save/Retest replace Accept/Reject, (d) No Expand Row in Validation, (e) No Current Result in Validation, (f) Validation has 3 bulk actions (Save All Normal/Save All Results/Retest All Tests) |
+| **Expected** | Validation and Results are distinct views with different column sets and interaction patterns |
+| **Status** | PASS |
+
+#### TC-HB-WP-TEST-01: Workplan By Test Type
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HB-WP-TEST-01 |
+| **Suite** | HB — Validation Deep Interactions & Workplan Pages |
+| **Phase** | 23AC |
+| **Steps** | 1. Workplan > By Test Type (`/WorkPlanByTest?type=test`) → "Search By Test Type" heading 2. Verify "Select Test Type" dropdown with 200+ individual test options alphabetically sorted 3. Verify column header: "Test Type" + gray loading bar placeholder 4. Notable tests include: CBC tests (WBC/RBC/HGB/HCT/MCV/MCH/MCHC/PLT/RDW/MPV/LYM#/MON#/MXD#/NEU#/EOS#/BAS#), HIV assays (Abbott Duo, Genie Fast, ABON Tri-line, Xpert, MERISCREEN, MUREX), TB tests (Xpert MTB/RIF Ultra, Xpert MTB/XDR 6 subtypes, GenoType), Malaria (Parasite Detection, Species ID, Density Count, qPCR), AST antibiotics (20+ agents), Dengue, Poliovirus, M. ulcerans/leprae PCR 5. NOTE-40: Systemic duplicate test entries — ABON Tri-line ×3, Abbott HIV/Syphilis Duo ×3, Acid-Fast Microscopy ×4, Capilia TB-Neo ×4, Xpert MTB/RIF Ultra (MTB) ×6, Xpert MTB/RIF Ultra (RIF) ×6, each with different value IDs. Extends NOTE-38/39 pattern to test configuration level. |
+| **Expected** | Workplan By Test Type lists 200+ test types; systemic duplicate entries across many tests |
+| **Status** | PASS |
+
+#### TC-HB-WP-PANEL-01: Workplan By Panel
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HB-WP-PANEL-01 |
+| **Suite** | HB — Validation Deep Interactions & Workplan Pages |
+| **Phase** | 23AC |
+| **Steps** | 1. Workplan > By Panel (`/WorkPlanByPanel?type=panel`) → "Search By Panel Type" heading 2. Verify "Select Panel Type" dropdown with 40+ panel options 3. Panels include: Xpert MTB/RIF Ultra, Xpert MTB/XDR, TB FL-DST ×2, TB SL-DST, MTB SL-DST, AFR, NFS, Poliovirus Testing, Coliform Analysis (Treated/Untreated), Water Testing (Treated/Untreated), Typage lymphocytaire, Serologie VIH, Bilan Biochimique, Dengue, Dengue Serology, Measles IgM, Faeces M/C/S, FL-DST/SL-DST (Sputum), M. leprae Microscopy, AST panels (13 types: STAPH/STREP/Enterococcus/Gram Neg/Pseudomonas/etc.), P. falciparum Detected, Malaria Detected 4. Verify column header: "Panel Type" |
+| **Expected** | Workplan By Panel lists 40+ clinical test panels |
+| **Status** | PASS |
+
+#### TC-HB-WP-UNIT-01: Workplan By Unit
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HB-WP-UNIT-01 |
+| **Suite** | HB — Validation Deep Interactions & Workplan Pages |
+| **Phase** | 23AC |
+| **Steps** | 1. Workplan > By Unit (`/WorkPlanByTestSection?type=`) → "Search By Unit Type" heading 2. Verify "Select Unit Type" dropdown (same 14 units as Results/Validation) 3. Verify column header: "Unit Type" |
+| **Expected** | Workplan By Unit uses same 14-unit dropdown |
+| **Status** | PASS |
+
+#### TC-HB-WP-PRIORITY-01: Workplan By Priority
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HB-WP-PRIORITY-01 |
+| **Suite** | HB — Validation Deep Interactions & Workplan Pages |
+| **Phase** | 23AC |
+| **Steps** | 1. Workplan > By Priority (`/WorkPlanByPriority?type=priority`) → "Search By Priority" heading 2. Verify "Select Priority" dropdown: Routine (value="ROUTINE"), ASAP (no value), STAT (no value), Timed (value="TIMED"), Future STAT (value="FUTURE_STAT") 3. Verify column header: "Priority" 4. Verify 5 priority levels map to clinical urgency hierarchy |
+| **Expected** | Workplan By Priority offers 5 clinical urgency levels |
+| **Status** | PASS |
+
+#### TC-HB-SESSION-01: Session Timeout Warning Dialog
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HB-SESSION-01 |
+| **Suite** | HB — Validation Deep Interactions & Workplan Pages |
+| **Phase** | 23AC |
+| **Steps** | 1. After extended testing (~30+ min), observe "Still There?" modal dialog 2. Verify dialog content: "User session is about to time out. Click anywhere to stay logged in." 3. Verify close (×) button dismisses dialog 4. Verify any click on page extends session |
+| **Expected** | Session timeout warning renders correctly with dismissible dialog |
+| **Status** | PASS |
