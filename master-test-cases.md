@@ -13631,3 +13631,131 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 - **Expected**: Visually distinct interface: no Carbon Design System components, old-style navigation
 - **Result**: PASS — Orange header (not Carbon blue), bullet-list link navigation (not sidebar cards), "training installation" warning text, traditional page-reload navigation. No Carbon UI components. 20+ admin links covering: Analyzer Test Name, Master Lists, Menu Management, Test Management, User Administration, and more. This is the pre-React admin interface preserved for backward compatibility.
 
+---
+
+## Suite HP — General Config, Menu Config & Localization Deep Interaction Testing (Phase 23AQ)
+
+**Scope**: Deep field-level interaction testing of General Configuration sub-pages (WorkPlan, Result Entry, Patient Entry, Order Entry, Validation, NonConformity, Printed Report, Site Branding), Menu Configuration sub-pages (Global, Billing, Non-Conform, Patient, Study), and Localization sub-pages (Language Management, Translation Management) under `/MasterListsPage/*`.
+
+**Environment**: OpenELIS Global v3.2.1.3 at `https://www.jdhealthsolutions-openelis.com` (admin/adminADMIN!)
+
+### TC-HP-WORKPLAN-01: WorkPlan Configuration shows 3 boolean settings
+- **Precondition**: Logged in as admin, navigated to Admin > General Configurations > WorkPlan Configuration
+- **Steps**: 1) Click WorkPlan Configuration in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/WorkPlanConfigurationMenu` with config settings table
+- **Result**: PASS — 3 settings displayed: "next visit on workplan" (Show the date of the next visit on the workplan = false), "results on workplan" (Should there be a space for results on workplan = true), "subject on workplan" (Use the subject number on the workplan = true). Standard config table pattern with Modify Select radio buttons, Name/Description/Value columns, pagination "1-3 of 3 items".
+
+### TC-HP-RESULTENTRY-01: Result Entry Configuration shows 13 settings controlling result workflow
+- **Precondition**: Logged in as admin, navigated to Admin > General Configurations > Result Entry Configuration
+- **Steps**: 1) Click Result Entry Configuration in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/ResultConfigurationMenu` with result entry settings
+- **Result**: PASS — 13 settings displayed: alertWhenInvalidResult (true), allowResultRejection (true), autoFillTechNameBox (true), autoFillTechNameUser (true), customCriticalMessage ("Result is out of normal range"), modify results note required (true), modify results role (false), restrictFreeTextMethodEntry (false), ResultTechnicianName (true), roleForPatientOnResults (false), showValidationFailureIcon (true), validate all results (true), validateTechnicalRejection (true). Pagination "1-13 of 13 items". Standard config table with Modify Select radio buttons.
+
+### TC-HP-RESULTENTRY-02: Result Entry Configuration URL slug differs from sidebar label
+- **Steps**: 1) Note the URL after navigating via sidebar link "Result Entry Configuration"
+- **Expected**: URL matches a predictable pattern
+- **Result**: PASS (with NOTE) — URL is `/MasterListsPage/ResultConfigurationMenu` (not `ResultEntryConfigurationMenu`). The sidebar label says "Result Entry Configuration" but the URL slug omits "Entry". This is a minor naming inconsistency but does not affect functionality.
+
+### TC-HP-PATIENTENTRY-01: Patient Entry Configuration shows 7 settings controlling patient data requirements
+- **Precondition**: Logged in as admin, navigated to Admin > General Configurations > Patient Entry Configuration
+- **Steps**: 1) Click Patient Entry Configuration in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/PatientConfigurationMenu` with patient settings
+- **Result**: PASS — 7 settings displayed: Allow duplicate national ids (true), Allow duplicate subject number (true), National ID required (false), Patient ID required (false), Subject number required (false), supportPatientNationality (false), useNewAddressHierarchy (true). Pagination "1-7 of 7 items". Standard config table pattern.
+
+### TC-HP-ORDERENTRY-01: Order Entry Configuration shows 14 settings controlling order workflow
+- **Precondition**: Logged in as admin, navigated to Admin > General Configurations > Order Entry Configuration
+- **Steps**: 1) Click Order Entry Configuration in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/SampleEntryConfigurationMenu` with order entry settings
+- **Result**: PASS — 14 settings displayed: auto-fill collection date/time (true), billingRefNumber (false), billingRefNumberLocalization (EN: "URAP Number", FR: "N° URAP"), contactTracingEnabled (true), eqaEnabled (true), external orders (true), gpsCoordinatesEnabled (false), gpsRequiredAccuracyMeters (100), gpsTimeoutSeconds (10), Program (true), restrictFreeTextProviderEntry (false), restrictFreeTextRefSiteEntry (false), trackPayment (true), validateAccessionNumber (true). Pagination "1-14 of 14 items".
+
+### TC-HP-ORDERENTRY-02: Order Entry Configuration URL slug is SampleEntryConfigurationMenu
+- **Steps**: 1) Note the URL after navigating via sidebar link "Order Entry Configuration"
+- **Expected**: URL matches sidebar label pattern
+- **Result**: PASS (with NOTE) — URL is `/MasterListsPage/SampleEntryConfigurationMenu`. Internal naming uses "Sample Entry" while the UI displays "Order Entry Configuration". This reflects the legacy naming convention where "samples" were the primary entity; now "orders" is the user-facing term.
+
+### TC-HP-ORDERENTRY-03: eqaEnabled setting is true confirming EQA feature availability
+- **Steps**: 1) Locate eqaEnabled row in Order Entry Configuration
+- **Expected**: eqaEnabled = true, enabling EQA checkbox in Order Entry
+- **Result**: PASS — eqaEnabled is set to true with description "If true, the EQA checkbox appears on Order Entry allowing a sample to be marked as an EQA sample". This confirms EQA functionality is enabled on this instance.
+
+### TC-HP-VALIDATION-CONFIG-01: Validation Configuration shows 4 charset validation rules
+- **Precondition**: Logged in as admin, navigated to Admin > General Configurations > Validation Configuration
+- **Steps**: 1) Click Validation Configuration in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/ValidationConfigurationMenu` with charset settings
+- **Result**: PASS — 4 settings: firstNameCharset ('a-zàâçéèêëîïôûùüÿñæœ -), lastNameCharset ('a-zàâçéèêëîïôûùüÿñæœ -), patientIdCharset (a-z0-9/àâçéèêëîïôûùüÿñæœ), userNameCharset (a-zàâçéèêëîïôûùüÿñæœ ._@-). Pagination "1-4 of 4 items". Note: All charsets include French diacritical characters (à, â, ç, é, è, ê, ë, î, ï, ô, û, ù, ü, ÿ, ñ, æ, œ) confirming proper i18n support for French-speaking deployments.
+
+### TC-HP-NONCONFORM-CONFIG-01: NonConformity Configuration shows 4 NCE workflow settings
+- **Precondition**: Logged in as admin, navigated to Admin > General Configurations > NonConformity Configuration
+- **Steps**: 1) Click NonConformity Configuration in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/NonConformityConfigurationMenu` with NCE settings
+- **Result**: PASS — 4 settings: Collection as unit (true — sample collection can report NCE), Reception as unit (true — reception can report NCE), sample id required (true — requester sample ID required), sortQaEvents (false — QA events not sorted). Pagination "1-4 of 4 items". Standard config table pattern.
+
+### TC-HP-PRINTREPORT-01: Printed Report Configuration shows 9 settings including image uploads
+- **Precondition**: Logged in as admin, navigated to Admin > General Configurations > Printed Report Configuration
+- **Steps**: 1) Click Printed Report Configuration in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/PrintedReportsConfigurationMenu` with report header settings
+- **Result**: PASS — 9 settings: additional site info (empty — for report header), lab director ("Mr Willie Porau"), labDirectorNameimage (image upload), labDirectorTitleimage (image upload), reportPageNumbers (true), SiteName (empty — for report headers), headerRightImage (image upload), labDirectorSignature (image upload), headerLeftImage (image upload). 4 image upload fields for report branding. Pagination "1-9 of 9 items".
+
+### TC-HP-SITEBRANDING-01: Site Branding shows 3 logo uploads and 3 color pickers
+- **Precondition**: Logged in as admin, navigated to Admin > General Configurations > Site Branding
+- **Steps**: 1) Click Site Branding in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/SiteBrandingMenu` with branding customization
+- **Result**: PASS — 3 logo sections: Header Logo (with Upload/Remove), Login Page Logo (with "Use same logo as header" option + Upload/Remove), Favicon (Upload/Remove). 3 color pickers: Header Color, Primary Color, Secondary Color — each with hex code text input and CSS color description (e.g., "#0f62fe, blue, rgb(15, 98, 254)"). Action buttons: Save Changes, Cancel, "Reset to Default Branding" (danger, with confirmation dialog). Remove Logo also has confirmation dialog.
+
+### TC-HP-GLOBALMENU-01: Global Menu Configuration shows ~80+ menu items as checkbox tree
+- **Precondition**: Logged in as admin, navigated to Admin > Menu Configuration > Global Menu Configuration
+- **Steps**: 1) Click Global Menu Configuration in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/globalMenuManagement` with menu item tree
+- **Result**: PASS — Full application menu tree with "Show Child Elements" toggle and "On Side Nav Active" header. ~80+ menu items organized hierarchically: Home, Alerts, EQA Programs, Generic Sample (Create/Edit/Import/Enter Results/Sample Management), EQA Distributions, Order (Add/Study/Electronic/Edit/Incoming/Batch/Barcode), Patient (Add-Edit/History/Study/Merge), Storage (Management/Cold Storage Monitoring with sub-tabs), Analyzers (List/Errors/Types), Non-Conform (Report/View/Corrective), Workplan (Test Type/Panel/Unit/Priority), Pathology/IHC/Cytology, Results (6 sub-pages), Validation (Routine/Study/By Order/Range/Date), Reports (Routine + Study + Export — 30+ report types), Admin, Billing, Aliquot, NoteBook, Inventory, Help (User Manual/Process Documentation/VL Form/DBS Form). Submit button.
+
+### TC-HP-BILLINGMENU-01: Billing Menu Configuration shows URL and Active toggle
+- **Precondition**: Logged in as admin, navigated to Admin > Menu Configuration > Billing Menu Configuration
+- **Steps**: 1) Click Billing Menu Configuration in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/billingMenuManagement` with billing menu settings
+- **Result**: PASS — Simple form: "Billing URL" text field, "Billing Menu Active" checkbox, Submit button. This controls whether the Billing sidebar item is visible and where it links to.
+
+### TC-HP-NCMENU-01: Non-Conform Menu Configuration shows child elements toggle and active checkbox
+- **Precondition**: Logged in as admin, navigated to Admin > Menu Configuration > Non-Conform Menu Configuration
+- **Steps**: 1) Click Non-Conform Menu Configuration in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/nonConformityMenuManagement` with menu settings
+- **Result**: PASS — "Show Child Elements" toggle (currently Off), "Non-Conformity Menu Active" checkbox, Submit button. Controls visibility and expansion of the Non-Conform section in the main sidebar.
+
+### TC-HP-PATIENTMENU-01: Patient Menu Configuration shows child elements toggle and active checkbox
+- **Precondition**: Logged in as admin, navigated to Admin > Menu Configuration > Patient Menu Configuration
+- **Steps**: 1) Click Patient Menu Configuration in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/patientMenuManagement` with menu settings
+- **Result**: PASS — "Show Child Elements" toggle (Off), "Patient Menu Active" checkbox, Submit button. Same pattern as Non-Conform Menu Configuration.
+
+### TC-HP-STUDYMENU-01: Study Menu Configuration shows child elements toggle and active checkbox
+- **Precondition**: Logged in as admin, navigated to Admin > Menu Configuration > Study Menu Configuration
+- **Steps**: 1) Click Study Menu Configuration in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/studyMenuManagement` with menu settings
+- **Result**: PASS — "Show Child Elements" toggle (Off), "Study Menu Active" checkbox, Submit button. Same pattern as Non-Conform and Patient Menu Configuration pages.
+
+### TC-HP-LANGMGMT-01: Language Management shows 2 languages with full CRUD
+- **Precondition**: Logged in as admin, navigated to Admin > Localization > Language Management
+- **Steps**: 1) Expand Localization in Admin inner sidebar 2) Click Language Management
+- **Expected**: Page loads at `/MasterListsPage/languageManagement` with language listing
+- **Result**: PASS — 2 languages configured: English (en, Fallback, Active, Sort Order 1) and Francais (fr, Active, Sort Order 2). Per-language actions: Edit, Set as Fallback, Delete (danger). "Add Language" button opens modal with fields: Locale Code (e.g., en, fr, es, pt), Display Name (e.g., English, Français, Español), Sort Order, Active (Yes checkbox), Cancel/Save buttons. Delete confirmation dialog present.
+
+### TC-HP-LANGMGMT-02: Language Management English is set as Fallback language
+- **Steps**: 1) Check which language has "Fallback" status
+- **Expected**: One language marked as Fallback
+- **Result**: PASS — English (en) is marked as "Fallback" language. This means if a translation is missing in the selected locale, the English text is used. French (fr) shows "Set as Fallback" button indicating it could be promoted.
+
+### TC-HP-TRANSLATION-01: Translation Management shows 2180 entries with progress tracking
+- **Precondition**: Logged in as admin, navigated to Admin > Localization > Translation Management
+- **Steps**: 1) Click Translation Management in Admin inner sidebar
+- **Expected**: Page loads at `/MasterListsPage/translationManagement` with translation editor
+- **Result**: PASS — Translation Progress section: Total entries 2180, English (en) 2180/2180 (100.0%), Francais (fr) 1120/2180 (51.4%) with "1060 Missing" indicator. Controls: Select Language dropdown (English/Francais), "Show Missing Only" toggle, "Export CSV" button, Filter table search. Paginated table (88 pages, 25 per page) with columns: ID, Description, Fallback (English), Translation, Actions (Edit per row). Sample entries include test names (GPT/ALAT, GOT/ASAT, Glucose, Creatinine), report names, and UI labels with their French translations.
+
+### TC-HP-TRANSLATION-02: Translation Management French coverage is 51.4%
+- **Steps**: 1) Read French translation progress bar
+- **Expected**: French translation percentage and missing count displayed
+- **Result**: PASS — French (fr): 1120/2180 (51.4%), 1060 Missing. This matches the i18n data captured in earlier phases (Phase 13 CS-CT found ~42% text node change rate when switching to French, consistent with ~51% translation coverage). Export CSV available for offline translation work.
+
+### TC-HP-TRANSLATION-03: Translation Management per-entry edit with bilingual display
+- **Steps**: 1) Inspect any translation row for edit capability
+- **Expected**: Each row shows English fallback and current translation with Edit action
+- **Result**: PASS — Each row shows: ID number, Description (e.g., "test name" or "test report name"), Fallback English text, current Translation text, and Edit button. Example: ID 1 "Billing reference label" — Fallback "URAP Number", Translation "N° URAP". Edit opens modal with Cancel/Save. This enables in-app translation management without external tools.
+

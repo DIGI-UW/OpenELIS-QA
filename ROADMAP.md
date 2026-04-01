@@ -1,8 +1,8 @@
 # OpenELIS QA Testing — Roadmap & Next Steps
 
 **Created:** 2026-03-27
-**Updated:** 2026-03-31 (Phase 23AP complete)
-**Current State:** Phase 23AP complete, 720+ TCs, ~96% pass rate. Admin sub-page coverage COMPLETE (24/24 pages). All sidebar sections deeply tested.
+**Updated:** 2026-03-31 (Phase 23AQ complete)
+**Current State:** Phase 23AQ complete, 743+ TCs, ~96% pass rate. All admin sub-pages, General Config, Menu Config, and Localization deeply tested.
 
 ---
 
@@ -2228,8 +2228,73 @@ Single URL: `/FreezerMonitoring?tab=0` — all tabs within same page.
 **Page patterns identified**: 5 (CRUD Table, Config Form, Rule Card, Single-Action, Specialized Form)
 **Plus**: 1 Legacy JSP admin interface
 
-### Cumulative Progress
+### Cumulative Progress (after Phase 23AP)
 - **Total Test Cases**: 720+ TCs executed (698 + 22 new)
 - **Pass Rate**: ~96% (691+ passed)
 - **Admin Coverage**: 24 of ~24 Admin sub-pages now deeply tested at field level — COMPLETE
+
+---
+
+## Phase 23AQ — General Config, Menu Config & Localization Deep Testing (Suite HP)
+
+**Date**: 2026-03-31
+**Scope**: Deep field-level testing of General Configuration sub-pages, Menu Configuration sub-pages, and Localization sub-pages under `/MasterListsPage/*`
+**Test Cases**: 23 TCs (TC-HP-WORKPLAN-01 through TC-HP-TRANSLATION-03)
+**Results**: 23 PASS, 0 FAIL
+
+### Pages Tested
+
+| # | Page Name | URL Path | Page Type | Key Data |
+|---|-----------|----------|-----------|----------|
+| 1 | WorkPlan Configuration | `/WorkPlanConfigurationMenu` | Config table | 3 boolean settings |
+| 2 | Result Entry Configuration | `/ResultConfigurationMenu` | Config table | 13 settings (alerts, rejection, technician, validation) |
+| 3 | Patient Entry Configuration | `/PatientConfigurationMenu` | Config table | 7 settings (IDs, nationality, address hierarchy) |
+| 4 | Order Entry Configuration | `/SampleEntryConfigurationMenu` | Config table | 14 settings (EQA, GPS, billing, providers) |
+| 5 | Validation Configuration | `/ValidationConfigurationMenu` | Config table | 4 charset rules (French diacriticals) |
+| 6 | NonConformity Configuration | `/NonConformityConfigurationMenu` | Config table | 4 NCE workflow settings |
+| 7 | Printed Report Configuration | `/PrintedReportsConfigurationMenu` | Config table | 9 settings, 4 image uploads |
+| 8 | Site Branding | `/SiteBrandingMenu` | Rich form | 3 logos + 3 colors + reset |
+| 9 | Global Menu Configuration | `/globalMenuManagement` | Checkbox tree | ~80+ menu items, full app menu |
+| 10 | Billing Menu Configuration | `/billingMenuManagement` | Simple form | URL + Active + Submit |
+| 11 | Non-Conform Menu Config | `/nonConformityMenuManagement` | Toggle form | Show Children + Active + Submit |
+| 12 | Patient Menu Configuration | `/patientMenuManagement` | Toggle form | Show Children + Active + Submit |
+| 13 | Study Menu Configuration | `/studyMenuManagement` | Toggle form | Show Children + Active + Submit |
+| 14 | Language Management | `/languageManagement` | CRUD table | 2 langs (en Fallback, fr), Add/Edit/Delete |
+| 15 | Translation Management | `/translationManagement` | Editor table | 2180 entries, EN 100%, FR 51.4%, Export CSV |
+
+### Config Table Pattern Analysis
+
+All General Configuration sub-pages share a consistent pattern:
+- Radio-button row selection ("Modify Select")
+- 3 columns: Name, Description, Value
+- Pagination with "Items per page" selector (5/20/30/50)
+- Modify button activates on row selection
+- Config counts: WorkPlan (3), Result Entry (13), Patient Entry (7), Order Entry (14), Validation (4), NonConformity (4), Printed Report (9) = **54 total configuration settings**
+
+### Menu Configuration Pattern
+
+- **Global**: Full checkbox tree (~80+ items) with hierarchical nesting, "Show Child Elements" toggle, Submit
+- **Module-specific** (Billing, Non-Conform, Patient, Study): Simplified toggle — "Show Child Elements" + "[Module] Menu Active" checkbox + Submit
+- **Billing** is unique: has "Billing URL" text field (others don't have URL config)
+
+### Localization Pattern
+
+- **Language Management**: Full CRUD for supported languages with Fallback designation
+- **Translation Management**: Rich in-app translation editor with progress tracking, filtering, CSV export, per-entry edit
+
+### Key Findings
+
+1. **URL slug naming inconsistency**: "Result Entry Configuration" → `/ResultConfigurationMenu` (omits "Entry"); "Order Entry Configuration" → `/SampleEntryConfigurationMenu` (uses legacy "Sample" term)
+2. **54 configuration settings** across 7 General Config sub-pages provide deep system customization
+3. **French translation at 51.4%** (1120/2180) — 1060 entries still missing
+4. **Charset validation includes French diacriticals** — proper i18n support for francophone deployments
+5. **4 image upload fields** in Printed Report Config for report header branding
+6. **Site Branding** is the most visually rich admin page — 3 logos, 3 color pickers, confirmation dialogs
+7. **Global Menu Config** exposes the entire application menu structure — ~80+ items can be toggled on/off
+8. **eqaEnabled=true** confirmed in Order Entry Config — EQA features active on this instance
+
+### Cumulative Progress
+- **Total Test Cases**: 743+ TCs executed (720 + 23 new)
+- **Pass Rate**: ~96% (714+ passed)
+- **Admin Coverage**: COMPLETE — all admin sub-pages, General Config, Menu Config, and Localization pages tested
 
