@@ -12852,3 +12852,110 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Compare input patterns across all 12 report pages 2. Identify 5 distinct patterns: (A) Date-range-only: Summary of All Tests, Rejection Report, Non Conformity By Date, Non Conformity By Unit and Reason, WHONET Report — 5 reports (B) Date-range + selector dropdown: Activity By Test (Test Type), Activity By Panel (Panel Type), Activity By Unit (Unit Type) — 3 reports (C) Date-range + referral dropdown: External Referrals Report — 1 report (unique descriptive headings, format hints, active button) (D) Accordion multi-search: Patient Status Report — 1 report (3 expandable sections) (E) Lab No lookup + inline table: Audit Trail — 1 report (F) No-input direct PDF: Delayed Validation — 1 report 3. Compare Generate button behavior: Grayed-out until input (7 reports), Always active/blue (External Referrals, Patient Status Report), "View Report" text (Audit Trail only), No button (Delayed Validation) 4. Title/naming inconsistencies found: sidebar "By Unit" vs page "By Test Section", sidebar "Referred Out Tests Report" vs page "External Referrals Report", sidebar "WHONET Report" vs page "Export a CSV File by Date" 5. Typography bugs: "labratory" typo in External Referrals, missing space "ConformityReport" in Non Conformity By Date 6. Pagination only in Audit Trail (Items per page: 30) — no other report has pagination 7. Statistics Report is most complex with 21 checkboxes (15 lab units + 6 priorities) |
 | **Expected** | 12 reports use 6 distinct input patterns; 3 naming inconsistencies between sidebar and page titles; 2 typography bugs; Statistics Report most complex (21 checkboxes); Delayed Validation unique (no-input direct PDF) |
 | **Status** | PASS |
+
+---
+
+### Suite HJ — Results Pages Deep Interactions (Phase 23AK)
+
+> **Scope**: Field-level audit of all 8 Results sub-pages (By Unit, By Patient, By Order, Referred Out, By Range of Order numbers, By Test/Date/Status, Analyzer > Test Analyzer Alpha, Order Programs), documenting search patterns, results table columns, interactive elements, and cross-page comparison.
+> **Tested on**: OpenELIS v3.2.1.3 at `https://www.jdhealthsolutions-openelis.com`
+> **Date**: 2026-03-31
+
+#### TC-HJ-BYUNIT-01: Results By Unit
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HJ-BYUNIT-01 |
+| **Suite** | HJ — Results Pages Deep Interactions |
+| **Phase** | 23AK |
+| **Steps** | 1. Navigate to `/LogbookResults?type=` via sidebar Results > By Unit 2. Verify page title "Results" 3. Verify "Search" heading with "Select Test Unit" dropdown 4. Verify 14 test unit options: HIV, Malaria, Microbiology, Molecular Biology, Mycobacteriology, Sero-Surveillance, Biochemistry, Hematology, Immunology, Cytology, Serology, Virology, Pathology, Immunohistochemistry 5. Select HIV — verify results load with warning banner: orange triangle icon + "= Sample or Order is nonconforming or Test has been rejected" 6. Verify results table columns (left to right): expand arrow, Sample Info (accession number + patient name + ID + gender/DOB), avatar icon, Test Date, Analyzer Result, Test Name, Normal Range, Accept (checkbox), Result (dropdown selector), Current Result (text), Reject (checkbox), Notes (textarea) 7. Verify each row has interactive elements: Result dropdown (editable), Accept checkbox, Reject checkbox, Notes textarea 8. Verify pagination: Items per page dropdown (10/20/30/50/100, default 100) 9. Verify "Save" button (blue) below pagination |
+| **Expected** | Results By Unit uses unit-selector search with 14 units matching Statistics Report; results table has 10+ columns with 4 interactive elements per row (Result dropdown, Accept, Reject, Notes) |
+| **Status** | PASS |
+
+#### TC-HJ-BYPATIENT-01: Results By Patient
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HJ-BYPATIENT-01 |
+| **Suite** | HJ — Results Pages Deep Interactions |
+| **Phase** | 23AK |
+| **Steps** | 1. Navigate to `/PatientResults` 2. Verify page title "Results" 3. Verify patient search fields (Partial variant): Patient Id, Previous Lab Number (0/23 counter), Last Name, First Name, Date of Birth (dd/mm/yyyy), Gender (Male/Female radio), Client Registry Search toggle (default false), Search + External Search buttons 4. Note: NO "Search for Patient"/"New Patient" tab buttons — matches Patient History pattern (Partial variant) 5. Verify "Patient Results" table: 7 cols (Last Name/First Name/Gender/Date of Birth/Unique Health ID number/National ID/Data Source Name) 6. Verify TWO pagination bars: top one for Patient Results table, bottom one for test results 7. Verify Items per page 100 (both pagination bars) 8. Verify "Save" button below bottom pagination |
+| **Expected** | Results By Patient uses Partial patient search variant (fields direct, no tabs, with counter+CRS); dual pagination for patient results and test results |
+| **Status** | PASS |
+
+#### TC-HJ-BYORDER-01: Results By Order (Accession)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HJ-BYORDER-01 |
+| **Suite** | HJ — Results Pages Deep Interactions |
+| **Phase** | 23AK |
+| **Steps** | 1. Navigate to `/AccessionResults` 2. Verify page title "Results" 3. Verify "Search" heading with "Enter Accession Number" field + 0/23 character counter 4. Verify Search button (blue) 5. Verify "There are no records to display" empty state 6. Verify pagination: Items per page 100, "0-0 of 0 items" 7. Verify "Save" button below pagination 8. Note: Simplest Results search — single accession number field, same 0/23 counter as Lab Number fields |
+| **Expected** | Results By Order uses single accession number lookup (0/23 counter) — simplest Results search pattern |
+| **Status** | PASS |
+
+#### TC-HJ-REFERRED-01: Results Referred Out (Referrals)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HJ-REFERRED-01 |
+| **Suite** | HJ — Results Pages Deep Interactions |
+| **Phase** | 23AK |
+| **Steps** | 1. Navigate to `/ReferredOutTests` 2. Verify page title "Referrals" (not "Results") 3. Verify breadcrumb: Home > ReferredOutTests 4. Verify "Search Referrals By Patient" heading 5. Verify patient search fields (Partial variant): Patient Id, Previous Lab Number (0/23), Last Name, First Name, DOB, Gender, CRS toggle, Search + External Search 6. Verify 7-col Patient Results table with pagination (100) 7. Verify "Search Referrals By Patient" button below patient results table 8. Verify second section: "Results By Date / Test / Unit Date Type :" heading 9. Verify "Sent Date" dropdown/button for date type selection 10. Verify note: "Note if searching by result date, only tests with results will appear." 11. Note: Most complex Results page — dual search (patient + date/test/unit) |
+| **Expected** | Referrals page has dual search: patient search (Partial variant) + date/test/unit filter with "Sent Date" selector; unique among Results pages |
+| **Status** | PASS |
+
+#### TC-HJ-BYRANGE-01: Results By Range of Order Numbers
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HJ-BYRANGE-01 |
+| **Suite** | HJ — Results Pages Deep Interactions |
+| **Phase** | 23AK |
+| **Steps** | 1. Navigate to `/RangeResults` 2. Verify page title "Results" 3. Verify "Search" heading with dual accession fields: "From Accesion Number" (0/23) + "To Accesion Number" (0/23) 4. **TYPO**: Both labels say "Accesion" instead of "Accession" — missing second 's' 5. Verify Search button, "There are no records to display" empty state 6. Verify pagination: Items per page 100, Save button 7. Note: Only Results page using range-based search (from/to pattern) |
+| **Expected** | Results By Range uses dual accession number fields (from/to); typo "Accesion" in both labels |
+| **Status** | PASS — UX issue: typo "Accesion" ×2 |
+
+#### TC-HJ-BYSTATUS-01: Results By Test, Date or Status
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HJ-BYSTATUS-01 |
+| **Suite** | HJ — Results Pages Deep Interactions |
+| **Phase** | 23AK |
+| **Steps** | 1. Navigate to `/StatusResults?blank=true` 2. Verify page title "Results" 3. Verify 5 search fields in a single row: (a) Enter Collection Date (dd/mm/yyyy with calendar) (b) Enter Recieved Date (dd/mm/yyyy with calendar) — **TYPO**: "Recieved" should be "Received" (c) Select Test Name dropdown — massive list with 200+ test options covering HIV, Malaria, TB, Hematology, Dengue, etc. (d) Select Analysis Status dropdown — 5 options: Not started, Canceled, Accepted by technician, Not accepted by technician, Not accepted by biologist (e) Select Sample Status dropdown — 2 options: No tests have been run for this sample, Some tests have been run on this sample 4. Verify Search button, pagination (100), Save button 5. Note: Most multi-field search among all Results pages — 5 fields |
+| **Expected** | Results By Test/Date/Status is the most complex Results search: 5 fields (2 dates + 3 dropdowns); 200+ tests; typo "Recieved" |
+| **Status** | PASS — UX issue: typo "Recieved" |
+
+#### TC-HJ-ANALYZER-01: Results Analyzer (Test Analyzer Alpha)
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HJ-ANALYZER-01 |
+| **Suite** | HJ — Results Pages Deep Interactions |
+| **Phase** | 23AK |
+| **Steps** | 1. Navigate to Results > Analyzer > Test Analyzer Alpha 2. Verify URL: `/AnalyzerResults?type=Test%20Analyzer%20Alpha` 3. Verify page title "Test Analyzer Alpha" (not generic "Results") 4. Verify "Enter Lab Number" field with 0/23 character counter 5. Verify Search button (dark blue, different style from other Results search buttons) 6. Verify two "There are no records to display" messages (upper section + lower table section) 7. Verify pagination: Items per page 100, Save button 8. Note: Analyzer sub-section is dynamically populated — only "Test Analyzer Alpha" present; other instances may show different analyzers based on configuration |
+| **Expected** | Analyzer Results uses Lab Number lookup (0/23 counter) with analyzer-specific page title; dynamically populated sub-menu |
+| **Status** | PASS |
+
+#### TC-HJ-PROGRAMS-01: Order Programs
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HJ-PROGRAMS-01 |
+| **Suite** | HJ — Results Pages Deep Interactions |
+| **Phase** | 23AK |
+| **Steps** | 1. Navigate to `/genericProgram` via Results > Order Programs 2. Verify page title "Order Programs" 3. Verify summary card: "Total Entries 146" 4. Verify card-based pagination: "1/2" with left/right arrow buttons — UNIQUE pagination style (not standard Items per page dropdown) 5. Verify "Search by Accession Number" text input with search icon 6. Verify table with 8 columns: avatar (initials icon), First Name, Last Name, Program Name, Code, Accession number, Received Date, Questionnaire 7. Verify data rows show: Program Name = "Routine Testing", Code = "ROUTINE" 8. Verify accession numbers follow pattern: 25CPHL000002, 25CPHL000003, etc. 9. Note: Only Results page with card-based pagination instead of standard Items per page dropdown; no "Save" button — read-only view |
+| **Expected** | Order Programs is a read-only entry list with card pagination (unique), 8-col table, Total Entries counter, search by accession number; no Save button |
+| **Status** | PASS |
+
+#### TC-HJ-RESULTS-PATTERN-COMPARISON-01: Results Search Pattern Comparison
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HJ-RESULTS-PATTERN-COMPARISON-01 |
+| **Suite** | HJ — Results Pages Deep Interactions |
+| **Phase** | 23AK |
+| **Steps** | 1. Compare search patterns across all 8 Results sub-pages: (A) Unit selector: By Unit — "Select Test Unit" dropdown, 14 options (B) Patient search (Partial): By Patient, Referred Out — full patient fields, no tabs, dual pagination (C) Accession number: By Order — single field, 0/23 counter (D) Accession range: By Range — dual from/to fields, 0/23 counters (E) Multi-field: By Test/Date/Status — 2 dates + 3 dropdowns (F) Lab number: Analyzer — single field, 0/23 counter (G) Accession search: Order Programs — text input with search icon 2. Common elements across most pages: "Results" title (except Referrals, Analyzer, Order Programs), Items per page 100 default, Save button (except Order Programs) 3. Results table columns when populated (By Unit with HIV): expand arrow, Sample Info, avatar, Test Date, Analyzer Result, Test Name, Normal Range, Accept, Result, Current Result, Reject, Notes — 10+ columns 4. Interactive elements per result row: Result dropdown, Accept checkbox, Reject checkbox, Notes textarea 5. Typos found: "Accesion" (By Range ×2), "Recieved" (By Test/Date/Status) 6. Unique features: Referred Out has dual search sections; Order Programs has card pagination + no Save button; By Unit has nonconforming warning banner |
+| **Expected** | 8 Results pages use 7 distinct search patterns; common results table with 4 interactive elements per row; Order Programs is read-only with unique card pagination; 3 typos found |
+| **Status** | PASS |

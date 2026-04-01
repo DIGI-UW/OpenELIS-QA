@@ -1873,6 +1873,57 @@ Column naming inconsistency across the 3 dashboards is a UX cleanup opportunity 
 
 ---
 
+### Phase 23AK — Results Pages Deep Interactions (2026-03-31)
+
+**Suite HJ** — 9 TCs covering all 8 Results sub-pages under the Results sidebar section.
+
+**Results Sidebar Hierarchy (8 pages):**
+
+- By Unit, By Patient, By Order, Referred Out, By Range of Order numbers, By Test Date or Status
+- Analyzer > Test Analyzer Alpha (dynamically populated)
+- Order Programs
+
+**Page-by-page findings:**
+
+- **By Unit** (`/LogbookResults?type=`): "Select Test Unit" dropdown with 14 units matching Statistics Report. Results table has 10+ columns with 4 interactive elements per row: Result dropdown, Accept checkbox, Reject checkbox, Notes textarea. Nonconforming warning banner displayed. Pagination: Items per page 10/20/30/50/100 (default 100).
+
+- **By Patient** (`/PatientResults`): Patient search (Partial variant — no tabs, has counter+CRS). Dual pagination bars (Patient Results table + test results). Save button.
+
+- **By Order** (`/AccessionResults`): Single "Enter Accession Number" field (0/23 counter). Simplest Results search.
+
+- **Referred Out** (`/ReferredOutTests`): Title "Referrals" (not "Results"). Dual search: patient search (Partial) + "Results By Date / Test / Unit Date Type" with "Sent Date" selector. Most complex Results page.
+
+- **By Range of Order numbers** (`/RangeResults`): Dual "From/To" accession fields (0/23 counters). **TYPO**: "Accesion" missing second 's' in both labels.
+
+- **By Test, Date or Status** (`/StatusResults?blank=true`): 5 search fields: Collection Date, Received Date, Select Test Name (200+ options), Analysis Status (5 options), Sample Status (2 options). **TYPO**: "Recieved" instead of "Received".
+
+- **Analyzer > Test Analyzer Alpha** (`/AnalyzerResults?type=Test%20Analyzer%20Alpha`): Lab Number lookup (0/23 counter). Dynamically populated — only one analyzer present.
+
+- **Order Programs** (`/genericProgram`): Read-only. "Total Entries 146" with card-based pagination (1/2 with arrows — unique style). 8-col table (avatar/First Name/Last Name/Program Name/Code/Accession number/Received Date/Questionnaire). No Save button.
+
+**Results Search Pattern Comparison (7 patterns):**
+
+| Pattern | Page(s) | Fields |
+|---------|---------|--------|
+| Unit selector | By Unit | 1 dropdown (14 units) |
+| Patient search (Partial) | By Patient, Referred Out | 6 fields + CRS toggle |
+| Accession number | By Order | 1 field (0/23) |
+| Accession range | By Range | 2 fields (from/to, 0/23) |
+| Multi-field | By Test/Date/Status | 2 dates + 3 dropdowns |
+| Lab number | Analyzer | 1 field (0/23) |
+| Accession search | Order Programs | 1 text input |
+
+**UX Issues Found:**
+1. Typo "Accesion" (missing 's') in By Range — both From and To labels
+2. Typo "Recieved" (i/e swap) in By Test/Date/Status
+3. Order Programs uses non-standard card pagination instead of Items per page dropdown
+
+**Phase 23AK Summary:** 9 TCs (Suite HJ), all PASS (2 with typo issues). 7 distinct search patterns across 8 pages. Results table has 4 interactive elements per row. Order Programs is unique: read-only with card pagination.
+
+**Phase 23 Cumulative (through 23AK)**: 639+ TCs executed, ~612 passed, ~95.8% pass rate. 8 non-executable scripts catalogued.
+
+---
+
 ## Key Files
 
 | File | Purpose |
