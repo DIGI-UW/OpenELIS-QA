@@ -10651,3 +10651,88 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Navigate to Validation → By Date 2. Verify Enter Test Date (dd/mm/yyyy with calendar picker) 3. Verify Search, empty table, pagination, Save |
 | **Expected** | Date-based validation search |
 | **Status** | PASS |
+
+---
+
+## Phase 23G — Workplan & Non-Conform Pages Field-Level Verification
+
+### Suite FV — Workplan Pages Field-Level Verification
+
+#### TC-FV-BYTEST-01: Workplan By Test Type
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FV-BYTEST-01 |
+| **Suite** | FV — Workplan Pages |
+| **Phase** | 23G |
+| **Steps** | 1. Navigate to Workplan → By Test Type 2. Verify "Search By Test Type" heading 3. Verify Select Test Type dropdown (302 test types) 4. Verify "Test Type" column header |
+| **Expected** | Workplan By Test page with full test catalog dropdown |
+| **Status** | PASS |
+
+#### TC-FV-BYPANEL-01: Workplan By Panel
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FV-BYPANEL-01 |
+| **Suite** | FV — Workplan Pages |
+| **Phase** | 23G |
+| **Steps** | 1. Navigate to Workplan → By Panel 2. Verify "Search By Panel Type" heading 3. Verify Select Panel Type dropdown (41 panels) |
+| **Expected** | Workplan By Panel with 41 panel options |
+| **Status** | PASS |
+
+#### TC-FV-BYUNIT-01: Workplan By Unit
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FV-BYUNIT-01 |
+| **Suite** | FV — Workplan Pages |
+| **Phase** | 23G |
+| **Steps** | 1. Navigate to Workplan → By Unit 2. Verify Select Unit Type dropdown (14 units, same as Results/Validation) |
+| **Expected** | 14 test units consistent across modules |
+| **Status** | PASS |
+
+#### TC-FV-BYPRIORITY-01: Workplan By Priority
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FV-BYPRIORITY-01 |
+| **Suite** | FV — Workplan Pages |
+| **Phase** | 23G |
+| **Steps** | 1. Navigate to Workplan → By Priority 2. Verify Select Priority dropdown (5 options: Routine, ASAP, STAT, Timed, Future STAT) |
+| **Expected** | Priority options match Edit Order priority field |
+| **Status** | PASS |
+
+### Suite FW — Non-Conform Pages Field-Level Verification
+
+#### TC-FW-REPORT-01: Report Non-Conforming Event
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FW-REPORT-01 |
+| **Suite** | FW — Non-Conform Pages |
+| **Phase** | 23G |
+| **Steps** | 1. Navigate to Non-Conform → Report Non-Conforming Event 2. Verify heading "Report Non-Conforming Event (NCE)" 3. Verify Search By dropdown (4: Last Name, First Name, Patient Identification Code, Lab Number) 4. Verify Text Value field 5. Verify Search button |
+| **Expected** | NCE report form with 4 search-by options |
+| **Status** | PASS |
+
+#### TC-FW-VIEW-01: View New Non-Conforming Events
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FW-VIEW-01 |
+| **Suite** | FW — Non-Conform Pages |
+| **Phase** | 23G |
+| **Steps** | 1. Navigate to Non-Conform → View New Non-Conforming Events 2. Verify heading "View New Non Conform Event" 3. Verify same Search By + Text Value + Search form |
+| **Expected** | View NCE page with same search structure |
+| **Status** | PASS |
+
+#### TC-FW-CORRECTIVE-01: Corrective Actions
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-FW-CORRECTIVE-01 |
+| **Suite** | FW — Non-Conform Pages |
+| **Phase** | 23G |
+| **Steps** | 1. Navigate to Non-Conform → Corrective actions 2. Verify heading "Nonconforming Events Corrective Action" 3. Verify same Search By + Text Value + Search form |
+| **Expected** | Corrective action page with same search structure |
+| **Status** | PASS |

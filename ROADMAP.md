@@ -859,7 +859,43 @@ All 10 General Config sub-pages verified:
 - NOTE-30: Typo "Accesion" (missing 's') on RangeResults page in both "From" and "To" labels
 - NOTE-31: Typo "Recieved" (i/e transposed) on StatusResults page date label
 
-**Phase 23 Cumulative**: 419+ TCs + ~50 new field-level verifications (30 from 23C-E + 20 from 23F), ~94% pass rate
+#### Phase 23G — Workplan & Non-Conform Pages Field-Level Verification (ALL PASS)
+
+**Workplan sidebar sub-pages (4):**
+
+1. **By Test Type** (`/WorkPlanByTest?type=test`) — PASS
+   - "Search By Test Type" heading
+   - Select Test Type dropdown: 302 test types (full catalog)
+   - "Test Type" column header below
+
+2. **By Panel** (`/WorkPlanByPanel?type=panel`) — PASS
+   - "Search By Panel Type" heading
+   - Select Panel Type dropdown: 41 panels (Xpert MTB/RIF Ultra, Xpert MTB/XDR, TB FL-DST, TB SL-DST, AFR, Poliovirus Testing, NFS, Coliform Analysis ×2, Water Testing ×2, Typage lymphocytaire, Serologie VIH, Bilan Biochimique, Dengue, Dengue Serology, Measles IgM, Faeces M/C/S, FL-DST/SL-DST (Sputum), AST panels ×12, M. leprae Microscopy, P. falciparum/Malaria Detected, and more)
+
+3. **By Unit** (`/WorkPlanByTestSection?type=`) — PASS
+   - "Search By Unit Type" heading
+   - Select Unit Type dropdown: 14 units (same as Results/Validation)
+
+4. **By Priority** (`/WorkPlanByPriority?type=priority`) — PASS
+   - "Search By Priority" heading
+   - Select Priority dropdown: 5 options (Routine, ASAP, STAT, Timed, Future STAT — matches Edit Order)
+
+**Non-Conform sidebar sub-pages (3):**
+
+1. **Report Non-Conforming Event** (`/ReportNonConformingEvent`) — PASS
+   - "Report Non-Conforming Event (NCE)" heading
+   - Search By dropdown (4 options: Last Name, First Name, Patient Identification Code, Lab Number)
+   - Text Value text field, Search button
+
+2. **View New Non-Conforming Events** (`/ViewNonConformingEvent`) — PASS
+   - "View New Non Conform Event" heading
+   - Same search form as Report NCE (Search By + Text Value + Search)
+
+3. **Corrective actions** (`/NCECorrectiveAction`) — PASS
+   - "Nonconforming Events Corrective Action" heading
+   - Same search form (Search By + Text Value + Search)
+
+**Phase 23 Cumulative**: 419+ TCs + ~65 new field-level verifications (30 from 23C-E + 20 from 23F + 15 from 23G), ~94% pass rate
 
 ---
 

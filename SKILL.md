@@ -708,7 +708,9 @@ These results come from 6 rounds of live validation on the jdhealthsolutions ins
 | 30 (Phase 23E) | 2026-03-31 | 1 suite (10 TCs) | 10 | 0 | 0 | Batch Order Entry Setup: Form types (Routine/EID/Viral Load), Sample Type conditional display, Panels (3 for Whole Blood), Available Tests (16 for Whole Blood), Barcode Methods (On Demand/Pre-Printed), Optional Fields (Facility/Patient Info), Next button activation logic. ALL PASS. |
 | 31 (Phase 23F) | 2026-03-31 | 2 suites (20 TCs) | 20 | 0 | 0 | Results pages (6): By Unit (14 test units, 27 methods, 10 referral reasons, expanded row detail), By Patient (patient search), By Order (accession search), Referred Out (3 search methods), By Range (NOTE-30 typo), By Test/Date/Status (200+ tests, 5 analysis statuses, 2 sample statuses, NOTE-31 typo). Validation pages (4): Routine (14 test units), By Order, By Range, By Date. ALL PASS. |
 
-**Cumulative:** 439 TCs executed, 414 passed, ~94% pass rate (3 resolved bugs + 1 retracted false positive improve effective quality). 7 EQA Jira tickets (OGC-518–524) cancelled — need to re-test with EQA config enabled.
+| 32 (Phase 23G) | 2026-03-31 | 2 suites (15 TCs) | 15 | 0 | 0 | Workplan (4 pages): By Test Type (302 tests), By Panel (41 panels), By Unit (14 units), By Priority (5 priorities). Non-Conform (3 pages): Report NCE, View New NCE, Corrective Actions — all share Search By (4 options) + Text Value form. ALL PASS. |
+
+**Cumulative:** 454 TCs executed, 429 passed, ~94% pass rate (3 resolved bugs + 1 retracted false positive improve effective quality). 7 EQA Jira tickets (OGC-518–524) cancelled — need to re-test with EQA config enabled.
 
 **Key takeaway:** Read operations, admin pages, granular interactions, i18n, session security,
 accessibility, pathology modules, end-to-end workflows, and cross-module data flows are rock-solid.
