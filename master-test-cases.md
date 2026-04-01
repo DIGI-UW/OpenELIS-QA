@@ -12583,3 +12583,62 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | **Steps** | 1. Compare columns across all 5 Storage Management data tabs: Sample Items (8 cols), Rooms (6 cols), Devices (7 cols), Shelves (6 cols), Racks (8 cols), Boxes (no table — grid interface) 2. Compare filter controls: Sample Items has 2 (text + Status), Rooms has 1 (Status), Devices has 2 (Room + Status), Shelves has 3 (Room + Device + Status), Racks has 3 (Room + Device + Status) 3. Compare Add buttons: Add Room, Add Device, Add Shelf, Add Rack, Add Box/Plate 4. Compare pagination: Sample Items uses 5/25/50/100, Cold Storage Corrective Actions uses 5/10/20/30/40/50 (different options!) 5. Verify expandable rows: Rooms and Devices have expand arrows, showing metadata details 6. Verify occupancy display: Devices and Shelves show occupancy with progress bars, Racks show "0/0 (0%)" |
 | **Expected** | Storage tabs have progressive filter complexity (1→2→3 filters), different pagination options between modules |
 | **Status** | PASS |
+
+---
+
+### Suite HG — Order Pages Deep Interactions
+
+#### TC-HG-ADDORDER-01: Add Order (Test Request) Wizard
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HG-ADDORDER-01 |
+| **Suite** | HG — Order Pages Deep Interactions |
+| **Phase** | 23AH |
+| **Steps** | 1. Navigate to `/SamplePatientEntry` 2. Verify breadcrumb: Home > Add Order 3. Verify page title "Test Request" 4. Verify 4-step wizard progress bar: Patient Info (checkmark) → Program Sel... → Add Sample → Add Order 5. Verify "EQA Sample" checkbox at top 6. Verify Patient section with 2 tabs: "Search for Patient" (active, blue) and "New Patient" (outline) 7. Verify patient search fields: Patient Id, Previous Lab Number (0/23 char counter), Last Name, First Name, Date of Birth (dd/mm/yyyy DatePicker), Gender (Male/Female radio buttons) 8. Verify "Client Registry Search" toggle (default: false) 9. Verify Search + External Search buttons 10. Verify "Patient Results" table: 7 cols (Last Name/First Name/Gender/Date of Birth/Unique Health ID number/National ID/Data Source Name), Items per page 100, pagination 11. Verify "Next" button at bottom |
+| **Expected** | Add Order is a 4-step wizard with patient search/create, EQA toggle, Client Registry Search, and 7-col results table |
+| **Status** | PASS |
+
+#### TC-HG-EDITORDER-01: Edit Order (Modify Order) Search
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HG-EDITORDER-01 |
+| **Suite** | HG — Order Pages Deep Interactions |
+| **Phase** | 23AH |
+| **Steps** | 1. Navigate to `/SampleEdit?type=readwrite` 2. Verify page title "Modify Order" 3. Verify "Search By Accession Number" section: "Enter Accession Number" label, "Enter Lab No" text input with 0/23 char counter, Submit button 4. Verify "Search By Patient" section: identical fields to Add Order patient search — Patient Id, Previous Lab Number (0/23), Last Name, First Name, DOB, Gender (Male/Female radio), Client Registry Search toggle, Search + External Search buttons 5. Verify "Patient Results" table with same 7 cols as Add Order |
+| **Expected** | Modify Order has dual search: by accession number (0/23 counter) and by patient (reuses Add Order patient search layout) |
+| **Status** | PASS |
+
+#### TC-HG-INCOMING-01: Incoming Orders (Electronic Orders) Search
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HG-INCOMING-01 |
+| **Suite** | HG — Order Pages Deep Interactions |
+| **Phase** | 23AH |
+| **Steps** | 1. Navigate to `/ElectronicOrders` 2. Verify page title "Search Incoming Test Requests" 3. Verify text search: "Search by family name, national ID number, lab number from referring lab, or passport number" with Search Value input + "All Info" checkbox + Search button 4. Verify date search: "Search by Date, and Status" description, Start Date + End Date (dd/mm/yyyy DatePicker), Status dropdown (5 options: All Statuses, Cancelled=22, Entered=21, NonConforming=24, Realized=23), "All Info" checkbox, Search button 5. Note: Two independent search methods, each with its own "All Info" checkbox and Search button |
+| **Expected** | Incoming Orders has 2 search methods: text search (free-text + All Info) and date/status search (4 status values + All Info) |
+| **Status** | PASS |
+
+#### TC-HG-BATCH-01: Batch Order Entry Setup
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HG-BATCH-01 |
+| **Suite** | HG — Order Pages Deep Interactions |
+| **Phase** | 23AH |
+| **Steps** | 1. Navigate to `/SampleBatchEntrySetup` 2. Verify page title "Batch Order Entry Setup" 3. Verify ORDER section: Current Date (auto-filled 04/01/2026), Current Time (hh:mm auto-filled 17:10), Received Date (auto-filled), Reception Time (hh:mm auto-filled), Form dropdown (required *): Select Form/Routine/EID/Viral Load 4. Verify "Configure Barcode Entry" section: Methods dropdown (Select Method/On Demand/Pre-Printed), Optional Fields checkboxes (Facility, Patient Info), Site Name text input, Ward/Dept/Unit dropdown (empty) 5. Verify Next button (disabled until Form selected) + Cancel button |
+| **Expected** | Batch Order Entry has auto-filled date/time, 3 form types (Routine/EID/Viral Load), 2 barcode methods, optional facility/patient fields |
+| **Status** | PASS |
+
+#### TC-HG-BARCODE-01: Print Barcode Labels
+
+| Field | Value |
+|-------|-------|
+| **ID** | TC-HG-BARCODE-01 |
+| **Suite** | HG — Order Pages Deep Interactions |
+| **Phase** | 23AH |
+| **Steps** | 1. Navigate to `/PrintBarcode` 2. Verify page title "Print Bar Code Labels" 3. Verify "Pre-Print Barcodes" section: Number of label sets (number input with ± buttons, default 1), Number of order labels per set (default 1), Number of specimen labels per set (default 1), Total Labels to Print (calculated=2, with clear button) 4. Verify "Search Site Name" text input 5. Verify Sample section: Sample Type dropdown (2 options: Select sample type, Whole Blood) 6. Verify note: "If a facility and/or sample and test are added, they will be printed on EVERY label" 7. Verify "Pre-Print Labels" button (disabled) 8. Note: Only "Whole Blood" available as sample type — limited configuration |
+| **Expected** | Barcode page has label set calculator (sets × order labels + specimen labels), site search, limited sample type (Whole Blood only) |
+| **Status** | PASS |

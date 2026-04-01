@@ -1759,6 +1759,28 @@ Column naming inconsistency across the 3 dashboards is a UX cleanup opportunity 
 
 ---
 
+### Phase 23AH — Order Pages Deep Interactions (Suite HG)
+
+**Scope:** Field-level testing of all 5 Order sub-pages: Add Order, Edit Order, Incoming Orders, Batch Order Entry, Barcode.
+
+**Findings:**
+
+- **Add Order** (`/SamplePatientEntry`): "Test Request" with 4-step wizard (Patient Info → Program Selection → Add Sample → Add Order). EQA Sample checkbox. Patient search with "Search for Patient" / "New Patient" tabs. Search fields: Patient Id, Previous Lab Number (0/23 counter), Last Name, First Name, DOB (dd/mm/yyyy), Gender (Male/Female radio), Client Registry Search toggle (default false). Search + External Search buttons. Patient Results table: 7 cols (Last Name/First Name/Gender/DOB/Unique Health ID/National ID/Data Source Name). "Next" button.
+
+- **Edit Order** (`/SampleEdit?type=readwrite`): "Modify Order" with dual search — Search By Accession Number (Enter Lab No, 0/23 counter, Submit) + Search By Patient (identical fields to Add Order patient search). Reuses same 7-col Patient Results table.
+
+- **Incoming Orders** (`/ElectronicOrders`): "Search Incoming Test Requests" with 2 independent search methods: (1) Free-text search by family name/national ID/lab number/passport number + "All Info" checkbox, (2) Date range search (Start/End Date dd/mm/yyyy) + Status dropdown (All Statuses/Cancelled/Entered/NonConforming/Realized) + "All Info" checkbox.
+
+- **Batch Order Entry** (`/SampleBatchEntrySetup`): Auto-filled Current Date/Time and Received Date/Time. Form dropdown (required): Routine, EID, Viral Load. Configure Barcode Entry: Methods (On Demand/Pre-Printed). Optional Fields checkboxes: Facility, Patient Info. Site Name + Ward/Dept/Unit. Next (disabled until form selected) + Cancel buttons.
+
+- **Barcode** (`/PrintBarcode`): "Print Bar Code Labels" with Pre-Print Barcodes section — 3 numeric inputs (label sets/order labels per set/specimen labels per set) with ±, calculated Total Labels to Print. Search Site Name. Sample Type dropdown: only "Whole Blood" available. "Pre-Print Labels" button (disabled). Note: limited sample type configuration.
+
+**Phase 23AH Summary:** 5 TCs (Suite HG), all PASS. Order pages use a consistent patient search pattern (Patient Id/Prev Lab No/Last Name/First Name/DOB/Gender) with 0/23 accession number character counter. Batch Entry supports 3 form types (Routine/EID/Viral Load). Barcode printing has limited sample types.
+
+**Phase 23 Cumulative (through 23AH)**: 612+ TCs executed, ~585 passed, ~95.6% pass rate. 8 non-executable scripts catalogued.
+
+---
+
 ## Key Files
 
 | File | Purpose |
