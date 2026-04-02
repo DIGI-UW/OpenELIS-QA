@@ -1,8 +1,8 @@
 # OpenELIS QA Testing — Roadmap & Next Steps
 
 **Created:** 2026-03-27
-**Updated:** 2026-03-31 (Phase 23AQ complete)
-**Current State:** Phase 23AQ complete, 743+ TCs, ~96% pass rate. All admin sub-pages, General Config, Menu Config, and Localization deeply tested.
+**Updated:** 2026-04-01 (Phase 24 — Bug Retest on v3.2.1.4)
+**Current State:** Phase 24 bug retest on testing.openelis-global.org (v3.2.1.4). 752+ TCs, ~96% pass rate. Bug retesting in progress against upgraded platform.
 
 ---
 
@@ -30,6 +30,7 @@
 | 17 (Module Deep) | 03-29 | DJ-DQ | 15 | 93% | Storage dashboard rich; Cold Storage monitoring functional; Pathology/IHC/Cytology dashboards OK; Billing href=null (stub); NoteBook blank page; Aliquot functional |
 | 18 (NCE/Analyzers/Help) | 03-29 | DR-DZ | 9 | 89% | Non-Conform 3 pages OK; Analyzers rich (List/Errors/Types); Help: User Manual PDF works, Video Tutorials + Release Notes stub buttons |
 | 19 (Deep Interaction) | 03-29 | EA-EH | 8 | 88% | Analyzer kebab 6 actions; Delete {name} bug; Analyzer Types creation; Notifications panel; User panel; Global Search works |
+| 24 (Bug Retest v3.2.1.4) | 04-01 | RETEST | 2 | 50% | BUG-1 CONFIRMED (worse: 200+silent fail); BUG-20 LIKELY FIXED; Platform upgraded to v3.2.1.4; Chrome SSL blocked, Edge extension partial |
 
 ---
 
@@ -237,7 +238,7 @@
 
 | Bug | Severity | Status | Jira |
 |-----|----------|--------|------|
-| BUG-1 | Critical | Open | OGC-448 |
+| BUG-1 | Critical | **CONFIRMED v3.2.1.4** — POST returns 200 but test NOT saved (silent fail, worse than 500) | OGC-448 |
 | BUG-2 EXT | High | Open | OGC-467/468 |
 | BUG-3 | High | Open | OGC-448 |
 | BUG-4 | Medium | Open | — |
@@ -254,7 +255,7 @@
 | BUG-17 | Low | Open | — |
 | BUG-18 | Critical | **Resolved (P8)** | OGC-449 ✅ |
 | BUG-19 | Critical | **Resolved (P8)** | OGC-493 ✅ |
-| BUG-20 | Medium | **New (P8)** | OGC-494 |
+| BUG-20 | Medium | **Likely Fixed (v3.2.1.4)** — Login Name field no longer shows invalid state | OGC-494 |
 | BUG-21 | Low | **New (P8)** | OGC-495 |
 | BUG-22 | Medium | **New (P10)** | OGC-496 |
 | NOTE-1 | Low (UX) | Open | — |
@@ -2316,7 +2317,52 @@ All General Configuration sub-pages share a consistent pattern:
 5. **Printed Report Config details**: "additional site info" = "Central Public Health Laboratory", 2 of 5 image fields populated (labDirectorSignature, headerLeftImage with PNG coat of arms).
 
 ### Cumulative Progress
-- **Total Test Cases**: 752+ TCs executed (743 + 9 new)
+- **Total Test Cases**: 754+ TCs executed (752 + 2 retest)
 - **Pass Rate**: ~96% (723+ passed)
 - **Admin Coverage**: COMPLETE + Modify workflow interaction patterns documented
+
+---
+
+## Phase 24 — Bug Retest on v3.2.1.4 (2026-04-01)
+
+### Platform Changes
+- **testing.openelis-global.org upgraded to v3.2.1.4** (was v3.2.1.3)
+- **New sidebar item**: "External Connections" added to admin sidebar
+- **jdhealthsolutions-openelis.com**: still on v3.2.1.3
+- **Language options expanded**: Now includes English, Français, Español, Indonesia (was EN/FR only)
+
+### Browser Environment Issues
+1. **Chrome**: SSL certificate error on testing.openelis-global.org blocks all access. Chrome's error interstitial page cannot be automated (extension can't attach). The `thisisunsafe` bypass doesn't persist between sessions. jdhealthsolutions-openelis.com works fine in Chrome.
+2. **Edge**: testing.openelis-global.org loads without SSL issues, but the Claude in Chrome extension has persistent cross-extension permission conflicts. Read-only tools (read_page, find, form_input for text/select) work, but interactive tools (click, screenshot, key, javascript) fail with "Cannot access a chrome-extension:// URL of different extension."
+3. **Sandbox proxy**: curl/fetch from CLI blocked for both domains (blocked-by-allowlist).
+
+### Bug Retest Results
+
+| Bug | Severity | Previous Status | v3.2.1.4 Retest | Details |
+|-----|----------|----------------|-----------------|---------|
+| BUG-1 | Critical | Open (HTTP 500) | **CONFIRMED — WORSE** | POST `/rest/TestAdd` now returns HTTP 200 (was 500), but test is NOT persisted. Verified via `/rest/test-list` API — 164 tests, none matching submitted name. Form silently resets to Step 1 with no error message and no success toast. This is arguably worse than the 500: a **false success** that gives no feedback. |
+| BUG-20 | Medium | Open (Login Name invalid) | **LIKELY FIXED** | Login Name `<input>` in Add User form no longer has `data-invalid` or `aria-invalid` attributes. read_page shows clean `textbox "Login Name"` with no invalid state. Was previously showing `data-invalid="true"`, `aria-invalid="true"`, CSS class `cds--text-input--invalid`. Needs full interactive verification (blocked by Edge extension issue). |
+
+### Bugs Not Yet Retested (blocked by browser issues)
+- **BUG-3** (High): User creation — form filled but Save button click blocked by Edge extension error
+- **BUG-7/7a** (Medium/High): Panel Create — not yet tested
+- **BUG-8** (Critical): Test Modify — not yet tested
+- **BUG-22** (Medium): Rate limiting — not yet tested (requires API-level testing)
+- **BUG-2,4,6,9,10,11/15,12,13,16,17,30**: Not yet retested
+
+### Chrome SSL Investigation
+The Chrome SSL certificate error on testing.openelis-global.org is likely caused by:
+1. **Self-signed or internally-issued certificate**: The server uses a certificate not trusted by Chrome's certificate store
+2. **HSTS preload**: Once Chrome marks a domain as requiring valid SSL, it won't allow bypass easily
+3. **Fix options**:
+   - Install the server's CA certificate in Chrome's trust store (Settings → Privacy → Security → Manage certificates)
+   - Type `thisisunsafe` on the Chrome error page each session (manual, doesn't persist)
+   - Use Edge which appears to handle the certificate differently (possibly using Windows certificate store which may already trust the CA)
+   - Configure the server with a valid Let's Encrypt certificate
+
+### Cumulative Progress
+- **Total Test Cases**: 754+ TCs (752 + 2 retest TCs)
+- **Pass Rate**: ~96% overall (retest: 1 FAIL, 1 LIKELY PASS)
+- **Platform**: testing.openelis-global.org v3.2.1.4 (default test platform going forward)
+- **Key Finding**: BUG-1 regression — now returns false success (HTTP 200) instead of honest failure (HTTP 500)
 
