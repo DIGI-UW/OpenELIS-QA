@@ -5,6 +5,28 @@ import { BasePage } from './BasePage';
  * Page Object Model for OpenELIS Order Entry.
  * Handles the multi-step order creation process including patient selection,
  * program selection, sample addition, and order submission.
+ *
+ * URL: /SamplePatientEntry
+ *
+ * Wizard Steps:
+ *   Step 1: Patient Info (Search or New Patient)
+ *   Step 2: Program Selection
+ *   Step 3: Add Sample (sample type + tests)
+ *   Step 4: Add Order (review + submit)
+ *
+ * API Endpoints:
+ *   GET  /rest/SamplePatientEntry — Form metadata (24 sample types, 12 programs, 15 test sections)
+ *   POST /rest/SamplePatientEntry — Submit order (complex payload — needs full wizard form bean)
+ *
+ * React Form Interaction (Phase 30 discovery):
+ *   - All text inputs are React controlled components
+ *   - Must use native setter: Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
+ *   - Dispatch Event('input', { bubbles: true }) + Event('change', { bubbles: true })
+ *   - Radio buttons: standard .click() works
+ *   - Carbon dropdowns: native setter on <select> elements
+ *
+ * Key Sample Types: Urines(1), Serum(2), Plasma(3), Whole Blood(4), DBS(5)
+ * Key Serum Tests: GPT/ALAT(1), GOT/ASAT(2), Creatinine(4), Amylase(5)
  */
 export default class OrderEntryPage extends BasePage {
   constructor(page: Page) {
@@ -232,5 +254,122 @@ export default class OrderEntryPage extends BasePage {
     }
 
     return tests;
+  }
+
+  // --- API Methods (Phase 29/30) ---
+
+  /**
+   * Get form metadata via REST API.
+   * Returns sample types, programs, test sections, conditions.
+   */
+  async getFormMetadataViaAPI(): Promise<{
+    status: number;
+    sampleTypes: number;
+    programs: number;
+    testSections: number;
+    conditions: number;
+    rejectReasons: number;
+  }> {
+    return await this.page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const res = await fetch('/api/OpenELIS-Global/rest/SamplePatientEntry', {
+        headers: { 'X-CSRF-Token': csrf },
+      });
+      if (!res.ok) return { status: res.status, sampleTypes: 0, programs: 0, testSections: 0, conditions: 0, rejectReasons: 0 };
+      const data = await res.json();
+      return {
+        status: res.status,
+        sampleTypes: data.sampleTypes?.length || 0,
+        programs: data.projects?.length || 0,
+        testSections: data.testSectionList?.length || 0,
+        conditions: data.initialSampleConditionList?.length || 0,
+        rejectReasons: data.rejectReasonList?.length || 0,
+      };
+    });
+  }
+
+  /**
+   * Get dashboard metrics (orders in progress, completed today).
+   */
+  async getDashboardMetrics(): Promise<{
+    ordersInProgress: number;
+    completedToday: number;
+  }> {
+    return await this.page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const res = await fetch('/api/OpenELIS-Global/rest/home-dashboard/metrics', {
+        headers: { 'X-CSRF-Token': csrf },
+      });
+      const data = await res.json();
+      return {
+        ordersInProgress: data.ordersInProgress || 0,
+        completedToday: data.completedToday || 0,
+      };
+    });
+  }
+
+  /**
+   * Get logbook results for a test section.
+   * NOTE: Endpoint is case-sensitive: /rest/LogbookResults (capital L, capital R)
+   */
+  async getLogbookResultsViaAPI(section: string): Promise<{
+    status: number;
+    resultCount: number;
+  }> {
+    return await this.page.evaluate(async (sec) => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const res = await fetch(`/api/OpenELIS-Global/rest/LogbookResults?type=${sec}`, {
+        headers: { 'X-CSRF-Token': csrf },
+      });
+      if (!res.ok) return { status: res.status, resultCount: 0 };
+      const data = await res.json();
+      return { status: res.status, resultCount: data.testResult?.length || 0 };
+    }, section);
+  }
+
+  /**
+   * Fill new patient form using React native setter pattern.
+   * This is the reliable way to set values in React controlled inputs.
+   */
+  async fillNewPatientViaReactSetter(data: {
+    nationalId: string;
+    lastName?: string;
+    firstName?: string;
+    age?: string;
+    gender?: 'M' | 'F';
+  }): Promise<void> {
+    // Click New Patient tab first
+    await this.page.getByRole('button', { name: /new patient/i }).click();
+    await this.page.waitForTimeout(500);
+
+    await this.page.evaluate((formData) => {
+      const nativeSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype, 'value'
+      )!.set!;
+
+      function fill(input: HTMLInputElement | undefined, val: string) {
+        if (!input) return;
+        input.focus();
+        nativeSetter.call(input, val);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        input.blur();
+      }
+
+      const inputs = Array.from(document.querySelectorAll('input'));
+
+      fill(inputs.find(i => i.placeholder?.includes('Nationality')) as HTMLInputElement, formData.nationalId);
+      if (formData.lastName) fill(inputs.find(i => i.placeholder?.includes('Last Name')) as HTMLInputElement, formData.lastName);
+      if (formData.firstName) fill(inputs.find(i => i.placeholder?.includes('First Name')) as HTMLInputElement, formData.firstName);
+      if (formData.age) fill(inputs.find(i => i.placeholder?.includes('Enter Age')) as HTMLInputElement, formData.age);
+
+      if (formData.gender) {
+        const radios = inputs.filter(i => i.type === 'radio');
+        const target = formData.gender === 'M' ? radios[0] : radios[1];
+        if (target) target.click();
+      }
+    }, data);
+
+    await this.page.waitForTimeout(300);
   }
 }

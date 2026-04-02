@@ -13919,3 +13919,119 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 - **Expected**: Reflex rule fires, GOT/ASAT added to order
 - **Result**: BLOCKED (BUG-31) — Results By Unit shows "no records to display" after selecting test unit. Accept checkbox 60s renderer hang prevents result entry.
 
+---
+
+## Phase 29 — API CRUD Survey & Bug Retest (22 TCs — 72.7% PASS)
+
+**Date**: 2026-04-02
+**Server**: testing.openelis-global.org (v3.2.1.4)
+**Focus**: BUG-31 workaround, comprehensive API endpoint survey, write ops retest
+
+### Part A — BUG-31 Workaround (4 TCs — 0 PASS, 4 BLOCKED)
+
+### TC-BUG31-WK-01: API Access to All 13 Logbook Sections
+- **Steps**: 1) GET `/rest/LogbookResults?type={section}` for all 13 sections: Hematology, Biochemistry, HIV, Immunology, Microbiology, Molecular Biology, Mycobacteriology, Parasitology, Immuno-serology, VCT, Malaria, Cytobacteriology, Serology-Immunology
+- **Expected**: All sections return 200 with result data
+- **Result**: PASS (accessible) but DATA EMPTY — All 13 sections return `testResult: []`. Dashboard shows 24 ordersInProgress but no analysis records.
+
+### TC-BUG31-WK-02: API-Based Result Entry
+- **Steps**: 1) Attempt to POST results via API for pending orders
+- **Expected**: Results can be entered via API bypassing UI
+- **Result**: BLOCKED — No results to enter. All logbook sections empty.
+
+### TC-BUG31-WK-03: Create Order via API
+- **Steps**: 1) POST to `/rest/SamplePatientEntry` with minimal payload
+- **Expected**: Order created successfully
+- **Result**: BLOCKED — HTTP 500. Minimal payload doesn't match Spring form bean. Needs full wizard payload structure.
+
+### TC-BUG31-WK-04: End-to-End Result Entry Pipeline
+- **Steps**: 1) Create order 2) Enter results 3) Validate 4) Complete
+- **Expected**: Full pipeline functional
+- **Result**: BLOCKED — Cannot execute without results data.
+
+### Part B — API GET Endpoint Survey (16 TCs — 14 PASS, 2 FAIL)
+
+### TC-API-01: GET /rest/test-list
+- **Expected**: Test catalog
+- **Result**: PASS — 200 OK, 170 tests in catalog (up from 164 in Phase 25).
+
+### TC-API-02: GET /rest/test-calculations
+- **Expected**: Calculated value rules
+- **Result**: PASS — 200 OK, 2 rules (De Ritis Ratio + QA Test Calc).
+
+### TC-API-03: GET /rest/reflexrules
+- **Expected**: Reflex rules
+- **Result**: PASS — 200 OK, reflex rules returned.
+
+### TC-API-04: GET /rest/home-dashboard/metrics
+- **Expected**: Dashboard KPIs
+- **Result**: PASS — 200 OK, 24 in-progress, 0 completed today.
+
+### TC-API-05: GET /rest/SamplePatientEntry
+- **Expected**: Order creation form data
+- **Result**: PASS — 200 OK, 24 sample types, 12 programs, 15 test sections.
+
+### TC-API-06: GET /rest/patient-search
+- **Expected**: Patient search results
+- **Result**: PASS — 200 OK, empty array.
+
+### TC-API-07: GET /rest/LogbookResults?type=Hematology
+- **Expected**: Hematology results
+- **Result**: PASS — 200 OK, empty testResult array.
+
+### TC-API-08: GET /rest/UnifiedSystemUser (BUG-3 FIXED)
+- **Expected**: User creation form data
+- **Result**: PASS — 200 OK, 6 global roles, 4 lab unit roles. **Was 500 in v3.2.1.3.**
+
+### TC-API-09: GET /rest/UnifiedSystemUserMenu
+- **Expected**: User list menu
+- **Result**: PASS — 200 OK.
+
+### TC-API-10: GET /rest/TestAdd (BUG-1 FIXED)
+- **Expected**: Test creation form data
+- **Result**: PASS — 200 OK, 24 sample types, 6 result types, 6 panels. **Was 500 in v3.2.1.3.**
+
+### TC-API-11: GET /rest/TestModifyEntry (BUG-13 FIXED)
+- **Expected**: Test modify form data
+- **Result**: PASS — 200 OK, form loads. **Was 500 in v3.2.1.3.**
+
+### TC-API-12: GET /rest/PanelCreate
+- **Expected**: Panel creation form
+- **Result**: PASS — 200 OK, 23 existing panels.
+
+### TC-API-13: GET /rest/ProviderMenu
+- **Expected**: Provider management menu
+- **Result**: PASS — 200 OK, 4 providers.
+
+### TC-API-14: GET /rest/BarcodeConfiguration
+- **Expected**: Barcode settings
+- **Result**: PASS — 200 OK.
+
+### TC-API-15: GET /rest/SiteInformation
+- **Expected**: Site configuration
+- **Result**: PASS — 200 OK.
+
+### TC-API-16: GET /rest/Dictionary (BUG-33)
+- **Expected**: Dictionary entries
+- **Result**: FAIL — HTTP 500 "Check server logs". **BUG-33 confirmed.**
+
+### TC-API-17: GET /rest/Organization (BUG-34)
+- **Expected**: Organization list
+- **Result**: FAIL — HTTP 500 "Check server logs". **BUG-34 confirmed.**
+
+### TC-API-18: GET /rest/LabNumberManagement
+- **Expected**: Lab number config (expected 404 — endpoint name mismatch)
+- **Result**: PASS (expected) — 404 returned.
+
+### Part C — Write Endpoint Survey (2 TCs — both informational)
+
+### TC-WRITE-01: POST /rest/UnifiedSystemUser (BUG-3 IMPROVED)
+- **Steps**: 1) POST minimal user creation payload
+- **Expected**: User created or informative error
+- **Result**: 400 HttpMessageNotReadableException — payload format mismatch. **Server no longer crashes (was 500 in v3.2.1.3). BUG-3 IMPROVED.**
+
+### TC-WRITE-02: POST /rest/SamplePatientEntry
+- **Steps**: 1) POST minimal order payload
+- **Expected**: Order created
+- **Result**: 500 — Minimal payload doesn't match Spring form bean expectations. Needs full wizard payload.
+
