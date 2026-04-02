@@ -1,8 +1,8 @@
 # OpenELIS QA Testing — Roadmap & Next Steps
 
 **Created:** 2026-03-27
-**Updated:** 2026-04-01 (Phase 25b — Continued Bug Retest on v3.2.1.4)
-**Current State:** Phase 25b continued bug retest on testing.openelis-global.org (v3.2.1.4). 760+ TCs, ~97% pass rate. **8 bugs FIXED** (BUG-1, BUG-2, BUG-7/7a, BUG-11/15, BUG-13, BUG-16, BUG-20), BUG-8 CONFIRMED (dictionary value loss), BUG-10/BUG-12 CONFIRMED (low-pri), BUG-30 NEW+CONFIRMED (SiteInfo JS crash). 10 Jira tickets closed.
+**Updated:** 2026-04-01 (Phase 26 — Full Suite Run on v3.2.1.4)
+**Current State:** Phase 26 full suite run on testing.openelis-global.org (v3.2.1.4). 838+ TCs, ~97% pass rate. **8 bugs FIXED** (BUG-1, BUG-2, BUG-7/7a, BUG-11/15, BUG-13, BUG-16, BUG-20), BUG-8 CONFIRMED (dictionary value loss), BUG-10/BUG-12 CONFIRMED (low-pri), BUG-22 CONFIRMED (no rate limiting), BUG-30 CONFIRMED (SiteInfo JS crash). 10 Jira tickets closed. Full UI navigation validated — 22/23 sidebar items functional.
 
 ---
 
@@ -33,6 +33,7 @@
 | 24 (Bug Retest v3.2.1.4) | 04-01 | RETEST | 2 | 50% | BUG-1 CONFIRMED (worse: 200+silent fail); BUG-20 LIKELY FIXED; Platform upgraded to v3.2.1.4; Chrome SSL blocked, Edge extension partial |
 | 25 (Deep Bug Retest) | 04-01 | RETEST | 5 | 60% | BUG-1 REVISED→FIXED (test saved OK); BUG-8 CONFIRMED (dictionary values lost in modify); BUG-20 LIKELY FIXED; BUG-3 BLOCKED (extension); OGC-525 NEW |
 | 25b (Continued Retest) | 04-01 | RETEST | 11 | 82% | BUG-7/7a FIXED; BUG-13 FIXED; BUG-11/15 FIXED; BUG-20 FIXED; BUG-2 FIXED; BUG-16 FIXED; BUG-10 CONFIRMED; BUG-12 CONFIRMED; BUG-30 NEW+CONFIRMED (SiteInfo JS crash); BUG-3 BLOCKED; 10 Jira tickets closed |
+| 26 (Full Suite Run) | 04-01 | ALL | 78 | 93.6% | Full UI navigation validated on v3.2.1.4 clean instance; 22/23 sidebar items functional; 12/14 API endpoints OK; Dashboard, Patient, Order, Admin, Validation, Pathology, Analyzers, Workplan, Alerts, NoteBook, Storage, Non-Conform, EQA, Results (7 sub-pages), Reports, Aliquot all PASS; Billing still broken (BUG-10) |
 
 ---
 
