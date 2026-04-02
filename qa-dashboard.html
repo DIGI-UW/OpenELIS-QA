@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OpenELIS QA Dashboard — Phase 28 Advanced Testing</title>
+<title>OpenELIS QA Dashboard — Phase 29 API CRUD Survey</title>
 <style>
   :root {
     --carbon-blue: #0f62fe;
@@ -104,7 +104,7 @@
     <h1>OpenELIS Global QA Dashboard</h1>
     <div class="version">v3.2.1.4 &mdash; testing.openelis-global.org</div>
   </div>
-  <div class="timestamp" id="lastUpdate">Last updated: 2026-04-02 21:30 UTC-7 — PHASE 28 COMPLETE</div>
+  <div class="timestamp" id="lastUpdate">Last updated: 2026-04-02 — PHASE 29 COMPLETE</div>
 </div>
 
 <div class="container">
@@ -113,44 +113,44 @@
   <div class="summary-row">
     <div class="card progress">
       <div class="label">Total TCs</div>
-      <div class="value" id="totalTCs">158</div>
-      <div class="sub">Phase 26 (78) + Phase 27 (62) + Phase 28 (18)</div>
+      <div class="value" id="totalTCs">180</div>
+      <div class="sub">P26 (78) + P27 (62) + P28 (18) + P29 (22)</div>
     </div>
     <div class="card pass">
       <div class="label">Passed</div>
-      <div class="value" id="passCount">144</div>
-      <div class="sub" id="passRate">91.1% pass rate</div>
+      <div class="value" id="passCount">160</div>
+      <div class="sub" id="passRate">88.9% pass rate</div>
     </div>
     <div class="card fail">
       <div class="label">Failed</div>
-      <div class="value" id="failCount">5</div>
-      <div class="sub">4 API 500s + BUG-10 (Billing)</div>
+      <div class="value" id="failCount">7</div>
+      <div class="sub">5 prior + Dictionary 500 + Organization 500</div>
     </div>
     <div class="card blocked">
       <div class="label">Blocked</div>
-      <div class="value" id="blockedCount">5</div>
-      <div class="sub">BUG-31 (4), BUG-36 resolved</div>
+      <div class="value" id="blockedCount">9</div>
+      <div class="sub">BUG-31 (8 total), BUG-36 resolved</div>
     </div>
     <div class="card">
       <div class="label">Open Bugs</div>
-      <div class="value" id="openBugs">10</div>
-      <div class="sub">3 HIGH, 3 MED, 4 LOW</div>
+      <div class="value" id="openBugs">7</div>
+      <div class="sub">2 HIGH, 3 MED, 2 LOW (3 fixed)</div>
     </div>
   </div>
 
   <!-- Overall Progress -->
   <div class="progress-section">
-    <h2>Phase 28 Advanced Feature Testing — COMPLETED</h2>
+    <h2>Phase 29 API CRUD Survey &amp; Bug Retest — COMPLETED</h2>
     <div class="progress-bar" id="progressBar">
-      <div class="segment pass-seg" style="width: 88.9%"></div>
-      <div class="segment fail-seg" style="width: 0%"></div>
-      <div class="segment blocked-seg" style="width: 11.1%"></div>
+      <div class="segment pass-seg" style="width: 72.7%"></div>
+      <div class="segment fail-seg" style="width: 9.1%"></div>
+      <div class="segment blocked-seg" style="width: 18.2%"></div>
       <div class="segment pending-seg" style="width: 0%"></div>
     </div>
     <div class="progress-legend">
-      <span class="l-pass">Pass (16/18 TCs)</span>
-      <span class="l-fail">Fail (0)</span>
-      <span class="l-blocked">Blocked (2 — BUG-31)</span>
+      <span class="l-pass">Pass (16/22 TCs)</span>
+      <span class="l-fail">Fail (2 — Dictionary/Organization 500)</span>
+      <span class="l-blocked">Blocked (4 — no logbook data)</span>
       <span class="l-pending">Pending (0 — ALL COMPLETE)</span>
     </div>
   </div>
@@ -209,15 +209,20 @@
         <div class="mod-stats">6 / 6 TCs &mdash; 100% PASS</div>
         <div class="mod-bar"><div class="mod-bar-fill" style="width:100%"></div></div>
       </div>
-      <div class="module-card has-fail" id="mod-calcval">
+      <div class="module-card done" id="mod-calcval">
         <div class="mod-name">Calculated Values (P28)</div>
         <div class="mod-stats">5 / 6 TCs &mdash; 83% (BUG-36 RESOLVED)</div>
-        <div class="mod-bar"><div class="mod-bar-fill" style="width:33%"></div></div>
+        <div class="mod-bar"><div class="mod-bar-fill" style="width:83%"></div></div>
       </div>
       <div class="module-card done" id="mod-reflex">
         <div class="mod-name">Reflex Testing (P28)</div>
         <div class="mod-stats">5 / 6 TCs &mdash; 83% (BUG-31)</div>
         <div class="mod-bar"><div class="mod-bar-fill" style="width:83%"></div></div>
+      </div>
+      <div class="module-card has-fail" id="mod-apicrud">
+        <div class="mod-name">API CRUD Survey (P29)</div>
+        <div class="mod-stats">16 / 22 TCs &mdash; 72.7% (2 FAIL, 4 BLOCKED)</div>
+        <div class="mod-bar"><div class="mod-bar-fill" style="width:72.7%"></div></div>
       </div>
     </div>
   </div>
@@ -235,13 +240,12 @@
         <tr><td>BUG-8</td><td>TestModify silent data corruption &mdash; dictionary values lost on save</td><td><span class="tag tag-high">HIGH</span></td><td><span class="tag tag-open">OPEN</span></td><td>Admin</td></tr>
         <tr><td>BUG-22</td><td>No rate limiting on login endpoint (brute-force risk)</td><td><span class="tag tag-high">HIGH</span></td><td><span class="tag tag-open">OPEN</span></td><td>Security</td></tr>
         <tr><td>BUG-30</td><td>SiteInfo page JS crash on load</td><td><span class="tag tag-med">MED</span></td><td><span class="tag tag-open">OPEN</span></td><td>Admin</td></tr>
-        <tr><td>BUG-32</td><td>LogbookResults API returns HTTP 500 (NEW)</td><td><span class="tag tag-med">MED</span></td><td><span class="tag tag-open">OPEN</span></td><td>API</td></tr>
-        <tr><td>BUG-33</td><td>Dictionary API returns HTTP 500 (NEW)</td><td><span class="tag tag-med">MED</span></td><td><span class="tag tag-open">OPEN</span></td><td>API</td></tr>
-        <tr><td>BUG-10</td><td>Billing sidebar link has empty href (CONFIRMED v3.2.1.4)</td><td><span class="tag tag-low">LOW</span></td><td><span class="tag tag-open">OPEN</span></td><td>Billing</td></tr>
-        <tr><td>BUG-12</td><td>Panel Create POST returns 500</td><td><span class="tag tag-low">LOW</span></td><td><span class="tag tag-open">OPEN</span></td><td>Admin</td></tr>
-        <tr><td>BUG-34</td><td>Organization API returns HTTP 500 (NEW)</td><td><span class="tag tag-low">LOW</span></td><td><span class="tag tag-open">OPEN</span></td><td>API</td></tr>
-        <tr><td>BUG-35</td><td>Legacy Admin opens in new tab (NEW)</td><td><span class="tag tag-low">LOW</span></td><td><span class="tag tag-open">OPEN</span></td><td>Admin</td></tr>
-        <tr style="color:#8d8d8d"><td>BUG-1</td><td>TestAdd POST 500</td><td><span class="tag tag-low">-</span></td><td><span class="tag tag-fixed">FIXED</span></td><td>Admin</td></tr>
+        <tr><td>BUG-33</td><td>Dictionary API returns HTTP 500</td><td><span class="tag tag-med">MED</span></td><td><span class="tag tag-open">OPEN</span></td><td>API</td></tr>
+        <tr><td>BUG-34</td><td>Organization API returns HTTP 500</td><td><span class="tag tag-med">MED</span></td><td><span class="tag tag-open">OPEN</span></td><td>API</td></tr>
+        <tr><td>BUG-10</td><td>Billing sidebar link has empty href</td><td><span class="tag tag-low">LOW</span></td><td><span class="tag tag-open">OPEN</span></td><td>Billing</td></tr>
+        <tr style="color:#8d8d8d"><td>BUG-1</td><td>TestAdd GET/POST 500 &mdash; <strong>FIXED in v3.2.1.4</strong></td><td><span class="tag tag-low">-</span></td><td><span class="tag tag-fixed">FIXED</span></td><td>Admin</td></tr>
+        <tr style="color:#8d8d8d"><td>BUG-3</td><td>UserCreate GET 500 &mdash; <strong>IMPROVED in v3.2.1.4</strong> (GET 200, POST 400)</td><td><span class="tag tag-low">-</span></td><td><span class="tag tag-fixed">IMPROVED</span></td><td>Admin</td></tr>
+        <tr style="color:#8d8d8d"><td>BUG-13</td><td>TestModifyEntry GET 500 &mdash; <strong>FIXED in v3.2.1.4</strong></td><td><span class="tag tag-low">-</span></td><td><span class="tag tag-fixed">FIXED</span></td><td>Admin</td></tr>
         <tr style="color:#8d8d8d"><td>BUG-2</td><td>Carbon checkbox 60s hang</td><td><span class="tag tag-low">-</span></td><td><span class="tag tag-fixed">FIXED</span></td><td>UI</td></tr>
         <tr style="color:#8d8d8d"><td>BUG-7/7a</td><td>Dictionary value loss on save</td><td><span class="tag tag-low">-</span></td><td><span class="tag tag-fixed">FIXED</span></td><td>Admin</td></tr>
         <tr style="color:#8d8d8d"><td>BUG-11/15</td><td>NoteBook blank page</td><td><span class="tag tag-low">-</span></td><td><span class="tag tag-fixed">FIXED</span></td><td>NoteBook</td></tr>
@@ -254,42 +258,42 @@
 
   <!-- Testing Timeline -->
   <div class="timeline-section">
-    <h2>Phase 28 Testing Timeline</h2>
+    <h2>Phase 29 Testing Timeline</h2>
     <div class="timeline" id="timeline">
       <div class="tl-entry">
-        <div class="tl-time">22:30</div>
+        <div class="tl-time">Step 1</div>
         <div class="tl-dot blue"></div>
-        <div class="tl-text"><strong>Phase 28 Advanced Feature Testing started</strong> &mdash; Storage CRUD, Calculated Values, Reflex Testing</div>
+        <div class="tl-text"><strong>BUG-31 Workaround Attempt</strong> &mdash; Tested all 13 logbook sections via API. All return empty results (0 across Hematology, Biochemistry, HIV, etc.). 4 TCs BLOCKED.</div>
       </div>
       <div class="tl-entry">
-        <div class="tl-time">23:00</div>
+        <div class="tl-time">Step 2</div>
         <div class="tl-dot green"></div>
-        <div class="tl-text"><strong>Storage CRUD: 6/6 PASS</strong> &mdash; Room create/edit, stat card updates, Cold Storage Monitoring all functional.</div>
+        <div class="tl-text"><strong>API CRUD Survey: 16/18 PASS</strong> &mdash; 18 GET/POST endpoints tested. 15 GET endpoints return 200. Dictionary and Organization still 500.</div>
       </div>
       <div class="tl-entry">
-        <div class="tl-time">00:00</div>
+        <div class="tl-time">Step 3</div>
         <div class="tl-dot green"></div>
-        <div class="tl-text"><strong>De Ritis Ratio test created</strong> &mdash; 6-step TestAdd wizard completed. Test id=689, Numeric result type, Serum sample.</div>
+        <div class="tl-text"><strong>BUG-1 FIXED confirmed</strong> &mdash; TestAdd GET returns 200 with full form data (24 sample types, 6 result types, 6 panels). Was 500 in v3.2.1.3.</div>
       </div>
       <div class="tl-entry">
-        <div class="tl-time">01:00</div>
+        <div class="tl-time">Step 4</div>
+        <div class="tl-dot green"></div>
+        <div class="tl-text"><strong>BUG-3 IMPROVED confirmed</strong> &mdash; UserCreate GET 200, POST 400 (payload format mismatch, not crash). Was 500 in v3.2.1.3.</div>
+      </div>
+      <div class="tl-entry">
+        <div class="tl-time">Step 5</div>
+        <div class="tl-dot green"></div>
+        <div class="tl-text"><strong>BUG-13 FIXED confirmed</strong> &mdash; TestModifyEntry GET returns 200 with form data. Was 500 in v3.2.1.3.</div>
+      </div>
+      <div class="tl-entry">
+        <div class="tl-time">Step 6</div>
         <div class="tl-dot red"></div>
-        <div class="tl-text"><strong>Calculated Values: Formula builder works</strong> &mdash; UI formula builder works (GOT/ASAT / GPT/ALAT &rarr; De Ritis Ratio). POST /rest/test-calculation initially returned HTTP 500 (malformed payloads) &mdash; later confirmed working with correct payload structure.</div>
+        <div class="tl-text"><strong>BUG-33/34 CONFIRMED</strong> &mdash; Dictionary GET 500, Organization GET 500. Only remaining broken GET endpoints.</div>
       </div>
       <div class="tl-entry">
-        <div class="tl-time">02:00</div>
+        <div class="tl-time">Done</div>
         <div class="tl-dot green"></div>
-        <div class="tl-text"><strong>Reflex Testing: 5/6 PASS</strong> &mdash; "High ALT Reflex" rule created (GPT/ALAT &gt; 200 &rarr; auto-order GOT/ASAT). Rule verified via GET /rest/reflexrules API (id=1, active=true).</div>
-      </div>
-      <div class="tl-entry">
-        <div class="tl-time">21:00</div>
-        <div class="tl-dot green"></div>
-        <div class="tl-text"><strong>Order DEV01260000000000004 created</strong> &mdash; 3 tests on Serum: GPT/ALAT, GOT/ASAT, De Ritis Ratio. Result entry blocked by BUG-31.</div>
-      </div>
-      <div class="tl-entry">
-        <div class="tl-time">21:30</div>
-        <div class="tl-dot green"></div>
-        <div class="tl-text"><strong>PHASE 28 COMPLETE</strong> &mdash; 18 TCs, 88.9% pass rate. BUG-36 resolved (POST works with correct payloads). Final report generated.</div>
+        <div class="tl-text"><strong>PHASE 29 COMPLETE</strong> &mdash; 22 TCs, 72.7% pass rate. 3 bugs fixed in v3.2.1.4, open bugs down from 10 to 7.</div>
       </div>
     </div>
   </div>
