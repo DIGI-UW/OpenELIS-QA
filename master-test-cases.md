@@ -14035,3 +14035,145 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 - **Expected**: Order created
 - **Result**: 500 — Minimal payload doesn't match Spring form bean expectations. Needs full wizard payload.
 
+---
+
+## Phase 31 — Deep Endpoint Testing (2026-04-02)
+
+**Server:** testing.openelis-global.org (v3.2.1.4)
+**Focus:** Deep structural validation of all 29 working endpoints, POST operation probing, parameterized GET tests
+
+### Part A — Deep GET Structure Tests (11 TCs)
+
+### TC-DEEP-01: GET /rest/TestSectionCreate — Deep Structure
+- **Steps**: 1) GET endpoint 2) Validate full form bean structure
+- **Expected**: Active/inactive sections, EN/FR names, formName
+- **Result**: PASS — 200 OK. 15 active sections (Hematology id=36 first), 8 inactive. formName=testSectionCreateForm. Has existingEnglishNames and existingFrenchNames arrays.
+
+### TC-DEEP-02: GET /rest/WorkPlanByTest — Deep Structure
+- **Steps**: 1) GET endpoint 2) Validate form structure
+- **Expected**: WorkplanTests array, currentDate, paging
+- **Result**: PASS — 200 OK. workplanTests=[] (no pending work), has currentDate, paging, searchFinished fields.
+
+### TC-DEEP-03: GET /rest/WorkPlanByPanel — Deep Structure
+- **Steps**: 1) GET endpoint 2) Validate panelTypes
+- **Expected**: PanelTypes array
+- **Result**: PASS — 200 OK. Has panelTypes field.
+
+### TC-DEEP-04: GET /rest/ReferredOutTests — Deep Structure
+- **Steps**: 1) GET endpoint 2) Validate selection lists
+- **Expected**: testUnitSelectionList, testSelectionList, referralItems
+- **Result**: PASS — 200 OK. 15 test units (Hematology first), 170 tests (AMACR first), 0 referral items.
+
+### TC-DEEP-05: GET /rest/ElectronicOrders — Deep Structure
+- **Steps**: 1) GET endpoint 2) Validate selection lists and statuses
+- **Expected**: Facilities, tests, statuses, eOrders
+- **Result**: PASS — 200 OK. 0 facilities, 164 tests, 4 statuses (Cancelled id=22, Entered, Realized, Unrealized), 0 eOrders.
+
+### TC-DEEP-06: GET /rest/ProviderMenu — Deep Structure
+- **Steps**: 1) GET endpoint 2) Validate provider list with person details
+- **Expected**: Provider list with person, fhirUuid, address
+- **Result**: PASS — 200 OK. 4 providers. Each has id, person object, fhirUuid. Includes totalRecordCount, fromRecordCount, toRecordCount.
+
+### TC-DEEP-07: GET /rest/PanelCreate — Deep Structure
+- **Steps**: 1) GET endpoint 2) Validate panel and sample type lists
+- **Expected**: Existing/inactive panels, sample types, EN/FR names
+- **Result**: PASS — 200 OK. 23 existing panels, 23 inactive panels, 23 sample types. Has existingEnglishNames and existingFrenchNames.
+
+### TC-DEEP-08: GET /rest/TestAdd — Full Form Metadata
+- **Steps**: 1) GET endpoint 2) Validate all metadata lists
+- **Expected**: Sample types, UOM, result types, lab units, panels, age ranges
+- **Result**: PASS — 200 OK. 24 sampleTypes, 37 UOM, 6 resultTypes, 23 labUnits. Has panelList, ageRangeList, jsonWad.
+
+### TC-DEEP-09: GET /rest/TestModifyEntry — Form Structure
+- **Steps**: 1) GET endpoint 2) Validate sample type list and form
+- **Expected**: sampleTypeList, jsonWad, formName
+- **Result**: PASS — 200 OK. 24 sampleTypes, has jsonWad, formName present.
+
+### TC-DEEP-10: GET /rest/SampleBatchEntrySetup — Large Form
+- **Steps**: 1) GET endpoint 2) Validate form size and structure
+- **Expected**: Large form (>10KB) with sample types and test sections
+- **Result**: PASS — 200 OK. ~19KB response. Has sampleTypes and testSectionList arrays.
+
+### TC-DEEP-11: GET /rest/menu — Full Hierarchy
+- **Steps**: 1) GET endpoint 2) Validate menu tree
+- **Expected**: 24 top-level items with child menus
+- **Result**: PASS — 200 OK. ~43KB. 24 top-level items. First item=menu_home with childMenus.
+
+### Part B — Parameterized GET Tests (4 TCs)
+
+### TC-DEEP-12: GET /rest/WorkPlanByTest?type=Hematology
+- **Steps**: 1) GET with type parameter
+- **Expected**: 200 with filtered workplan
+- **Result**: PASS — 200 OK. Parameter accepted, workplanTests=0 (no pending Hematology work).
+
+### TC-DEEP-13: GET /rest/WorkPlanByTest?testTypeID=36
+- **Steps**: 1) GET with testTypeID parameter
+- **Expected**: 200 with filtered workplan
+- **Result**: PASS — 200 OK. testTypeID=36 accepted, workplanTests=0.
+
+### TC-DEEP-14: GET /rest/ReferredOutTests?testUnitId=36
+- **Steps**: 1) GET with testUnitId filter
+- **Expected**: 200 with filtered referrals
+- **Result**: PASS — 200 OK. referralItems=0 (no referrals for Hematology unit).
+
+### TC-DEEP-15: GET /rest/patient-search?lastName=test
+- **Steps**: 1) GET with lastName search parameter
+- **Expected**: 200 with patient results
+- **Result**: PASS — 200 OK. Returns search results (687 bytes).
+
+### Part C — POST Operation Probing (4 TCs)
+
+### TC-DEEP-16: POST /rest/TestSectionCreate (JSON body)
+- **Steps**: 1) POST with JSON body {testUnitEnglishName, testUnitFrenchName, isActive}
+- **Expected**: 400 or success
+- **Result**: PASS (expected) — 400 HttpMessageNotReadableException. Endpoint accepts POST+JSON but needs exact form bean structure matching the Java TestSectionCreateForm class.
+
+### TC-DEEP-17: POST /rest/TestSectionCreate (form-urlencoded)
+- **Steps**: 1) POST with Content-Type: application/x-www-form-urlencoded
+- **Expected**: 415 Unsupported Media Type
+- **Result**: PASS (expected) — 415. Endpoint only accepts application/json.
+
+### TC-DEEP-18: PUT /rest/TestSectionCreate
+- **Steps**: 1) PUT with JSON body
+- **Expected**: 405 Method Not Allowed
+- **Result**: PASS (expected) — 405. Only GET and POST are supported.
+
+### TC-DEEP-19: POST /rest/SampleBatchEntrySetup
+- **Steps**: 1) POST with minimal JSON body
+- **Expected**: 405 Method Not Allowed (GET-only endpoint)
+- **Result**: PASS (expected) — 405. SampleBatchEntrySetup is read-only.
+
+### Part D — Config Endpoint Validation (3 TCs)
+
+### TC-DEEP-20: GET /rest/SampleEntryConfig
+- **Steps**: 1) GET endpoint 2) Validate form structure
+- **Expected**: siteInfoDomain form with formName
+- **Result**: PASS — 200 OK. formName present, siteInfoDomainName present.
+
+### TC-DEEP-21: GET /rest/ResultConfiguration
+- **Steps**: 1) GET endpoint 2) Validate form structure
+- **Expected**: siteInfoDomain form with formName
+- **Result**: PASS — 200 OK. formName present, siteInfoDomainName present.
+
+### TC-DEEP-22: GET /rest/PatientConfiguration
+- **Steps**: 1) GET endpoint 2) Validate form structure
+- **Expected**: siteInfoDomain form with formName
+- **Result**: PASS — 200 OK. formName present, siteInfoDomainName present.
+
+### Part E — Admin Form Structure Validation (3 TCs)
+
+### TC-DEEP-23: GET /rest/TestAdd — Complete Metadata Verification
+- **Steps**: 1) GET endpoint 2) Assert all required metadata lists exist
+- **Expected**: All 6 key metadata lists present (sampleType, panel, UOM, resultType, ageRange, labUnit)
+- **Result**: PASS — All 6 lists present and populated.
+
+### TC-DEEP-24: GET /rest/PanelCreate — Complete Metadata Verification
+- **Steps**: 1) GET endpoint 2) Assert all required metadata lists exist
+- **Expected**: All 5 key lists present (existingPanels, inactivePanels, sampleTypes, EN names, FR names)
+- **Result**: PASS — All 5 lists present and populated.
+
+### TC-DEEP-25: GET /rest/SiteInformation — Site Config
+- **Steps**: 1) GET endpoint 2) Validate site information structure
+- **Expected**: 200 with site info
+- **Result**: PASS — 200 OK. Site configuration data returned.
+
