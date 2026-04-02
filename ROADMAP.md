@@ -2,7 +2,7 @@
 
 **Created:** 2026-03-27
 **Updated:** 2026-04-01 (Phase 25b — Continued Bug Retest on v3.2.1.4)
-**Current State:** Phase 25b continued bug retest on testing.openelis-global.org (v3.2.1.4). 760+ TCs, ~97% pass rate. **6 bugs FIXED** (BUG-1, BUG-7/7a, BUG-11/15, BUG-13, BUG-20), BUG-8 CONFIRMED (dictionary value loss), BUG-10/BUG-12 CONFIRMED (low-pri). 8 Jira tickets closed.
+**Current State:** Phase 25b continued bug retest on testing.openelis-global.org (v3.2.1.4). 760+ TCs, ~97% pass rate. **8 bugs FIXED** (BUG-1, BUG-2, BUG-7/7a, BUG-11/15, BUG-13, BUG-16, BUG-20), BUG-8 CONFIRMED (dictionary value loss), BUG-10/BUG-12 CONFIRMED (low-pri), BUG-30 NEW+CONFIRMED (SiteInfo JS crash). 10 Jira tickets closed.
 
 ---
 
@@ -32,7 +32,7 @@
 | 19 (Deep Interaction) | 03-29 | EA-EH | 8 | 88% | Analyzer kebab 6 actions; Delete {name} bug; Analyzer Types creation; Notifications panel; User panel; Global Search works |
 | 24 (Bug Retest v3.2.1.4) | 04-01 | RETEST | 2 | 50% | BUG-1 CONFIRMED (worse: 200+silent fail); BUG-20 LIKELY FIXED; Platform upgraded to v3.2.1.4; Chrome SSL blocked, Edge extension partial |
 | 25 (Deep Bug Retest) | 04-01 | RETEST | 5 | 60% | BUG-1 REVISED→FIXED (test saved OK); BUG-8 CONFIRMED (dictionary values lost in modify); BUG-20 LIKELY FIXED; BUG-3 BLOCKED (extension); OGC-525 NEW |
-| 25b (Continued Retest) | 04-01 | RETEST | 8 | 75% | BUG-7/7a FIXED; BUG-13 FIXED; BUG-11/15 FIXED; BUG-20 FIXED; BUG-10 CONFIRMED; BUG-12 CONFIRMED; BUG-3 BLOCKED; 8 Jira tickets closed |
+| 25b (Continued Retest) | 04-01 | RETEST | 11 | 82% | BUG-7/7a FIXED; BUG-13 FIXED; BUG-11/15 FIXED; BUG-20 FIXED; BUG-2 FIXED; BUG-16 FIXED; BUG-10 CONFIRMED; BUG-12 CONFIRMED; BUG-30 NEW+CONFIRMED (SiteInfo JS crash); BUG-3 BLOCKED; 10 Jira tickets closed |
 
 ---
 
@@ -241,7 +241,7 @@
 | Bug | Severity | Status | Jira |
 |-----|----------|--------|------|
 | BUG-1 | Critical | **FIXED v3.2.1.4** — POST returns 200 AND test IS saved. Phase 24 false-negative corrected in Phase 25. | OGC-448 |
-| BUG-2 EXT | High | Open | OGC-467/468 |
+| BUG-2 EXT | High | **FIXED v3.2.1.4** — Carbon checkbox .click() no longer hangs; all checkbox types respond instantly on User Management page | OGC-467/468 ✅ |
 | BUG-3 | High | Open | OGC-448 |
 | BUG-4 | Medium | Open | — |
 | BUG-6 | Low | Open | — |
@@ -253,7 +253,7 @@
 | BUG-12 | Medium | **CONFIRMED v3.2.1.4** — Legacy TestAdd JSP inputs still missing name attrs | OGC-473/474 |
 | BUG-13 | Critical | **FIXED v3.2.1.4** — TestModifyEntry GET returns 200, page loads with filters | OGC-475/476 ✅ |
 | BUG-14 | High | **Resolved (P8)** | OGC-477 ✅ |
-| BUG-16 | Medium | Open | — |
+| BUG-16 | Medium | **FIXED v3.2.1.4** — i18n locale switching works (EN→FR→EN); Dashboard, sidebar nav, breadcrumbs all translate correctly. Minor: "banner.menu.alerts" untranslated key in FR | — |
 | BUG-17 | Low | Open | — |
 | BUG-18 | Critical | **Resolved (P8)** | OGC-449 ✅ |
 | BUG-19 | Critical | **Resolved (P8)** | OGC-493 ✅ |
@@ -274,6 +274,7 @@
 | NOTE-12 | Serious (a11y) | **New (P12)** | OGC-497 |
 | NOTE-13 | Low (i18n) | **New (P13)** | OGC-498 |
 | BUG-23 | ~~High~~ | **RETRACTED (P15)** — false positive, hash-based URL test error | — |
+| BUG-30 | High | **NEW+CONFIRMED v3.2.1.4** — SiteInformationMenu bannerHeading Modify causes TypeError crash (Cannot read properties of undefined reading 'localization') with infinite spinner + JS error overlay | — |
 | NOTE-14 | Medium (Data) | **New (P14)** | — |
 | NOTE-15 | Low (Security) | **New (P15)** — reconfirms NOTE-7 | OGC-499 |
 
