@@ -1,8 +1,8 @@
 # OpenELIS QA Testing — Roadmap & Next Steps
 
 **Created:** 2026-03-27
-**Updated:** 2026-04-01 (Phase 25 — Full Bug Retest on v3.2.1.4)
-**Current State:** Phase 25 deep bug retest on testing.openelis-global.org (v3.2.1.4). 757+ TCs, ~96% pass rate. BUG-1 FIXED, BUG-8 CONFIRMED (new: dictionary value loss), BUG-20 LIKELY FIXED.
+**Updated:** 2026-04-01 (Phase 25b — Continued Bug Retest on v3.2.1.4)
+**Current State:** Phase 25b continued bug retest on testing.openelis-global.org (v3.2.1.4). 760+ TCs, ~97% pass rate. **6 bugs FIXED** (BUG-1, BUG-7/7a, BUG-11/15, BUG-13, BUG-20), BUG-8 CONFIRMED (dictionary value loss), BUG-10/BUG-12 CONFIRMED (low-pri). 8 Jira tickets closed.
 
 ---
 
@@ -32,6 +32,7 @@
 | 19 (Deep Interaction) | 03-29 | EA-EH | 8 | 88% | Analyzer kebab 6 actions; Delete {name} bug; Analyzer Types creation; Notifications panel; User panel; Global Search works |
 | 24 (Bug Retest v3.2.1.4) | 04-01 | RETEST | 2 | 50% | BUG-1 CONFIRMED (worse: 200+silent fail); BUG-20 LIKELY FIXED; Platform upgraded to v3.2.1.4; Chrome SSL blocked, Edge extension partial |
 | 25 (Deep Bug Retest) | 04-01 | RETEST | 5 | 60% | BUG-1 REVISED→FIXED (test saved OK); BUG-8 CONFIRMED (dictionary values lost in modify); BUG-20 LIKELY FIXED; BUG-3 BLOCKED (extension); OGC-525 NEW |
+| 25b (Continued Retest) | 04-01 | RETEST | 8 | 75% | BUG-7/7a FIXED; BUG-13 FIXED; BUG-11/15 FIXED; BUG-20 FIXED; BUG-10 CONFIRMED; BUG-12 CONFIRMED; BUG-3 BLOCKED; 8 Jira tickets closed |
 
 ---
 
@@ -244,19 +245,19 @@
 | BUG-3 | High | Open | OGC-448 |
 | BUG-4 | Medium | Open | — |
 | BUG-6 | Low | Open | — |
-| BUG-7/7a | Medium/High | Open | OGC-450/451 |
+| BUG-7/7a | Medium/High | **FIXED v3.2.1.4** — POST returns 200, panel persisted in Inactive Panels | OGC-450/451 ✅ |
 | BUG-8 | Critical | **CONFIRMED v3.2.1.4** — Modify wizard drops dictionary select values (only first kept) | OGC-452, OGC-525 |
 | BUG-9 | High | Open | — |
-| BUG-10 | Low | Open | OGC-469/470 |
-| BUG-11/15 | Medium | Open | OGC-471/472 |
-| BUG-12 | Medium | Open | OGC-473/474 |
-| BUG-13 | Critical | Open | OGC-475/476 |
+| BUG-10 | Low | **CONFIRMED v3.2.1.4** — Billing sidebar link still has empty href | OGC-469/470 |
+| BUG-11/15 | Medium | **FIXED v3.2.1.4** — NoteBook Dashboard renders fully (Projects table, filters, pagination) | OGC-471/472 ✅ |
+| BUG-12 | Medium | **CONFIRMED v3.2.1.4** — Legacy TestAdd JSP inputs still missing name attrs | OGC-473/474 |
+| BUG-13 | Critical | **FIXED v3.2.1.4** — TestModifyEntry GET returns 200, page loads with filters | OGC-475/476 ✅ |
 | BUG-14 | High | **Resolved (P8)** | OGC-477 ✅ |
 | BUG-16 | Medium | Open | — |
 | BUG-17 | Low | Open | — |
 | BUG-18 | Critical | **Resolved (P8)** | OGC-449 ✅ |
 | BUG-19 | Critical | **Resolved (P8)** | OGC-493 ✅ |
-| BUG-20 | Medium | **Likely Fixed (v3.2.1.4)** — Login Name field no longer shows invalid state | OGC-494 |
+| BUG-20 | Medium | **FIXED v3.2.1.4** — Login Name field clean on initial load (no invalid state) | OGC-494 ✅ |
 | BUG-21 | Low | **New (P8)** | OGC-495 |
 | BUG-22 | Medium | **New (P10)** | OGC-496 |
 | NOTE-1 | Low (UX) | Open | — |
