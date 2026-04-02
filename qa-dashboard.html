@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OpenELIS QA Dashboard — Phase 27 DEEP Testing</title>
+<title>OpenELIS QA Dashboard — Phase 28 Advanced Testing</title>
 <style>
   :root {
     --carbon-blue: #0f62fe;
@@ -104,7 +104,7 @@
     <h1>OpenELIS Global QA Dashboard</h1>
     <div class="version">v3.2.1.4 &mdash; testing.openelis-global.org</div>
   </div>
-  <div class="timestamp" id="lastUpdate">Last updated: 2026-04-02 02:30 UTC-7 — PHASE 27 COMPLETE</div>
+  <div class="timestamp" id="lastUpdate">Last updated: 2026-04-02 21:30 UTC-7 — PHASE 28 COMPLETE</div>
 </div>
 
 <div class="container">
@@ -113,13 +113,13 @@
   <div class="summary-row">
     <div class="card progress">
       <div class="label">Total TCs</div>
-      <div class="value" id="totalTCs">140</div>
-      <div class="sub">Phase 26 (78) + Phase 27 DEEP (62)</div>
+      <div class="value" id="totalTCs">158</div>
+      <div class="sub">Phase 26 (78) + Phase 27 (62) + Phase 28 (18)</div>
     </div>
     <div class="card pass">
       <div class="label">Passed</div>
-      <div class="value" id="passCount">128</div>
-      <div class="sub" id="passRate">91.4% pass rate</div>
+      <div class="value" id="passCount">141</div>
+      <div class="sub" id="passRate">89.2% pass rate</div>
     </div>
     <div class="card fail">
       <div class="label">Failed</div>
@@ -128,29 +128,29 @@
     </div>
     <div class="card blocked">
       <div class="label">Blocked</div>
-      <div class="value" id="blockedCount">3</div>
-      <div class="sub">BUG-31 (Accept checkbox), BUG-3, BUG-8</div>
+      <div class="value" id="blockedCount">8</div>
+      <div class="sub">BUG-31 (4), BUG-36 (4)</div>
     </div>
     <div class="card">
       <div class="label">Open Bugs</div>
-      <div class="value" id="openBugs">10</div>
-      <div class="sub">3 HIGH, 3 MED, 4 LOW</div>
+      <div class="value" id="openBugs">11</div>
+      <div class="sub">4 HIGH, 3 MED, 4 LOW</div>
     </div>
   </div>
 
   <!-- Overall Progress -->
   <div class="progress-section">
-    <h2>Phase 27 DEEP Testing Progress — COMPLETED</h2>
+    <h2>Phase 28 Advanced Feature Testing — COMPLETED</h2>
     <div class="progress-bar" id="progressBar">
-      <div class="segment pass-seg" style="width: 88.7%"></div>
-      <div class="segment fail-seg" style="width: 6.5%"></div>
-      <div class="segment blocked-seg" style="width: 4.8%"></div>
+      <div class="segment pass-seg" style="width: 72.2%"></div>
+      <div class="segment fail-seg" style="width: 0%"></div>
+      <div class="segment blocked-seg" style="width: 27.8%"></div>
       <div class="segment pending-seg" style="width: 0%"></div>
     </div>
     <div class="progress-legend">
-      <span class="l-pass">Pass (55/62 TCs)</span>
-      <span class="l-fail">Fail (4 API 500 errors)</span>
-      <span class="l-blocked">Blocked (3 — BUG-31)</span>
+      <span class="l-pass">Pass (13/18 TCs)</span>
+      <span class="l-fail">Fail (0)</span>
+      <span class="l-blocked">Blocked (5 — BUG-31, BUG-36)</span>
       <span class="l-pending">Pending (0 — ALL COMPLETE)</span>
     </div>
   </div>
@@ -204,6 +204,21 @@
         <div class="mod-stats">16 / 20 TCs &mdash; 80% (4 HTTP 500)</div>
         <div class="mod-bar"><div class="mod-bar-fill" style="width:80%"></div></div>
       </div>
+      <div class="module-card done" id="mod-storage-crud">
+        <div class="mod-name">Storage CRUD (P28)</div>
+        <div class="mod-stats">6 / 6 TCs &mdash; 100% PASS</div>
+        <div class="mod-bar"><div class="mod-bar-fill" style="width:100%"></div></div>
+      </div>
+      <div class="module-card has-fail" id="mod-calcval">
+        <div class="mod-name">Calculated Values (P28)</div>
+        <div class="mod-stats">2 / 6 TCs &mdash; 33% (BUG-36)</div>
+        <div class="mod-bar"><div class="mod-bar-fill" style="width:33%"></div></div>
+      </div>
+      <div class="module-card done" id="mod-reflex">
+        <div class="mod-name">Reflex Testing (P28)</div>
+        <div class="mod-stats">5 / 6 TCs &mdash; 83% (BUG-31)</div>
+        <div class="mod-bar"><div class="mod-bar-fill" style="width:83%"></div></div>
+      </div>
     </div>
   </div>
 
@@ -215,7 +230,8 @@
         <tr><th>Bug ID</th><th>Description</th><th>Priority</th><th>Status</th><th>Module</th></tr>
       </thead>
       <tbody id="bugTable">
-        <tr><td>BUG-31</td><td>Accept checkbox on Results page causes 60s renderer hang &mdash; blocks result entry workflow (NEW)</td><td><span class="tag tag-high">HIGH</span></td><td><span class="tag tag-open">OPEN</span></td><td>Results</td></tr>
+        <tr><td>BUG-36</td><td>POST /rest/test-calculation returns HTTP 500 &mdash; calculated value rules cannot be saved (NEW P28)</td><td><span class="tag tag-high">HIGH</span></td><td><span class="tag tag-open">OPEN</span></td><td>Calc Values</td></tr>
+        <tr><td>BUG-31</td><td>Accept checkbox on Results page causes 60s renderer hang &mdash; blocks result entry workflow</td><td><span class="tag tag-high">HIGH</span></td><td><span class="tag tag-open">OPEN</span></td><td>Results</td></tr>
         <tr><td>BUG-8</td><td>TestModify silent data corruption &mdash; dictionary values lost on save</td><td><span class="tag tag-high">HIGH</span></td><td><span class="tag tag-open">OPEN</span></td><td>Admin</td></tr>
         <tr><td>BUG-22</td><td>No rate limiting on login endpoint (brute-force risk)</td><td><span class="tag tag-high">HIGH</span></td><td><span class="tag tag-open">OPEN</span></td><td>Security</td></tr>
         <tr><td>BUG-30</td><td>SiteInfo page JS crash on load</td><td><span class="tag tag-med">MED</span></td><td><span class="tag tag-open">OPEN</span></td><td>Admin</td></tr>
@@ -238,57 +254,42 @@
 
   <!-- Testing Timeline -->
   <div class="timeline-section">
-    <h2>Phase 27 Testing Timeline</h2>
+    <h2>Phase 28 Testing Timeline</h2>
     <div class="timeline" id="timeline">
       <div class="tl-entry">
-        <div class="tl-time">21:00</div>
+        <div class="tl-time">22:30</div>
         <div class="tl-dot blue"></div>
-        <div class="tl-text"><strong>Phase 27 DEEP testing started</strong> &mdash; Dashboard and roadmap created</div>
+        <div class="tl-text"><strong>Phase 28 Advanced Feature Testing started</strong> &mdash; Storage CRUD, Calculated Values, Reflex Testing</div>
       </div>
       <div class="tl-entry">
-        <div class="tl-time">23:15</div>
+        <div class="tl-time">23:00</div>
         <div class="tl-dot green"></div>
-        <div class="tl-text"><strong>Storage &amp; Cold Storage: 12/12 PASS</strong> &mdash; All 6 tabs tested (Rooms, Devices, Shelves, Racks, Boxes, Sample Items). CRUD modals functional. Cold Storage Monitoring 5 sub-tabs all render. Real data: 2 rooms, 1 device, 1 shelf, 1 rack.</div>
+        <div class="tl-text"><strong>Storage CRUD: 6/6 PASS</strong> &mdash; Room create/edit, stat card updates, Cold Storage Monitoring all functional.</div>
       </div>
       <div class="tl-entry">
-        <div class="tl-time">23:45</div>
+        <div class="tl-time">00:00</div>
         <div class="tl-dot green"></div>
-        <div class="tl-text"><strong>Patient Management: 6/6 PASS</strong> &mdash; Search by last name functional, edit form loaded with full data, Patient History page displayed with "no test results" message (expected), Merge Patient sidebar verified.</div>
-      </div>
-      <div class="tl-entry">
-        <div class="tl-time">23:45</div>
-        <div class="tl-dot green"></div>
-        <div class="tl-text"><strong>Order Entry Workflow: 8/8 PASS</strong> &mdash; Created order DEV01260000000000003 with patient Alpha TestPatient, 3 tests (GPT/ALAT, HIV VIRAL LOAD, HEPATITIS B VIRAL LOAD), Serum sample. Dashboard shows 21 orders in progress.</div>
-      </div>
-      <div class="tl-entry">
-        <div class="tl-time">23:45</div>
-        <div class="tl-dot blue"></div>
-        <div class="tl-text"><strong>API Endpoints: Batch 1 Testing</strong> &mdash; 7/14 pass (panels, test-sections, dashboard-metrics, patient-search, notifications, alerts, test-list all 200 OK).</div>
+        <div class="tl-text"><strong>De Ritis Ratio test created</strong> &mdash; 6-step TestAdd wizard completed. Test id=689, Numeric result type, Serum sample.</div>
       </div>
       <div class="tl-entry">
         <div class="tl-time">01:00</div>
         <div class="tl-dot red"></div>
-        <div class="tl-text"><strong>Results &amp; Validation DEEP testing</strong> &mdash; All 7 Results sub-pages + 5 Validation sub-pages load correctly. BUG-31 discovered: Accept checkbox causes 60s renderer hang, blocking result entry workflow.</div>
-      </div>
-      <div class="tl-entry">
-        <div class="tl-time">01:30</div>
-        <div class="tl-dot green"></div>
-        <div class="tl-text"><strong>Workplan + Reports + EQA complete</strong> &mdash; All 4 workplan types, all 11+ report types, and all EQA pages tested and passing.</div>
+        <div class="tl-text"><strong>Calculated Values: BUG-36 discovered</strong> &mdash; UI formula builder works (GOT/ASAT / GPT/ALAT &rarr; De Ritis Ratio). POST /rest/test-calculation returns HTTP 500 &mdash; rules cannot be persisted.</div>
       </div>
       <div class="tl-entry">
         <div class="tl-time">02:00</div>
         <div class="tl-dot green"></div>
-        <div class="tl-text"><strong>Admin CRUD DEEP: 20/20 PASS</strong> &mdash; 16 admin pages tested: Test Mgmt, User Mgmt (2 users), Dictionary (779 entries), Org Mgmt (25 orgs), Provider Mgmt (3 providers), App Properties, Barcode Config, External Connections, Lab Number, Analyzer Test Name, Result Reporting, Logging, Program Entry, Legacy Admin, Search Index, Plugins, Notifications, Batch Reassignment.</div>
+        <div class="tl-text"><strong>Reflex Testing: 5/6 PASS</strong> &mdash; "High ALT Reflex" rule created (GPT/ALAT &gt; 200 &rarr; auto-order GOT/ASAT). Rule verified via GET /rest/reflexrules API (id=1, active=true).</div>
       </div>
       <div class="tl-entry">
-        <div class="tl-time">02:15</div>
-        <div class="tl-dot blue"></div>
-        <div class="tl-text"><strong>API Batch 2: 16/20 pass (80%)</strong> &mdash; 9 additional endpoints tested. 4 HTTP 500 errors: LogbookResults (x2), Dictionary, Organization.</div>
-      </div>
-      <div class="tl-entry">
-        <div class="tl-time">02:30</div>
+        <div class="tl-time">21:00</div>
         <div class="tl-dot green"></div>
-        <div class="tl-text"><strong>PHASE 27 COMPLETE</strong> &mdash; 62 TCs, 88.7% pass rate. Final report generated, committed to GitHub.</div>
+        <div class="tl-text"><strong>Order DEV01260000000000004 created</strong> &mdash; 3 tests on Serum: GPT/ALAT, GOT/ASAT, De Ritis Ratio. Result entry blocked by BUG-31.</div>
+      </div>
+      <div class="tl-entry">
+        <div class="tl-time">21:30</div>
+        <div class="tl-dot green"></div>
+        <div class="tl-text"><strong>PHASE 28 COMPLETE</strong> &mdash; 18 TCs, 72.2% pass rate. 1 new bug (BUG-36). Final report generated, GitHub commit pending.</div>
       </div>
     </div>
   </div>
