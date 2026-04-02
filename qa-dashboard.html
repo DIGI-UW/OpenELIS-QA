@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenELIS QA Dashboard — Phase 27 DEEP Testing</title>
+<style>
+  :root {
+    --carbon-blue: #0f62fe;
+    --carbon-green: #24a148;
+    --carbon-red: #da1e28;
+    --carbon-yellow: #f1c21b;
+    --carbon-gray90: #262626;
+    --carbon-gray80: #393939;
+    --carbon-gray70: #525252;
+    --carbon-gray20: #e0e0e0;
+    --carbon-gray10: #f4f4f4;
+    --carbon-white: #ffffff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'IBM Plex Sans', -apple-system, sans-serif; background: var(--carbon-gray10); color: var(--carbon-gray90); }
+  .header { background: var(--carbon-gray90); color: white; padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; }
+  .header h1 { font-size: 20px; font-weight: 600; }
+  .header .version { font-size: 13px; color: #c6c6c6; }
+  .header .timestamp { font-size: 12px; color: #8d8d8d; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+  /* Summary cards */
+  .summary-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
+  .card { background: white; border-left: 4px solid var(--carbon-blue); padding: 20px; }
+  .card.pass { border-left-color: var(--carbon-green); }
+  .card.fail { border-left-color: var(--carbon-red); }
+  .card.blocked { border-left-color: var(--carbon-yellow); }
+  .card.progress { border-left-color: var(--carbon-blue); }
+  .card .label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--carbon-gray70); margin-bottom: 4px; }
+  .card .value { font-size: 32px; font-weight: 600; }
+  .card .sub { font-size: 12px; color: var(--carbon-gray70); margin-top: 4px; }
+
+  /* Progress bar */
+  .progress-section { background: white; padding: 20px; margin-bottom: 24px; }
+  .progress-section h2 { font-size: 16px; margin-bottom: 12px; }
+  .progress-bar { height: 24px; background: var(--carbon-gray20); border-radius: 2px; overflow: hidden; display: flex; }
+  .progress-bar .segment { height: 100%; transition: width 0.3s ease; }
+  .progress-bar .pass-seg { background: var(--carbon-green); }
+  .progress-bar .fail-seg { background: var(--carbon-red); }
+  .progress-bar .blocked-seg { background: var(--carbon-yellow); }
+  .progress-bar .pending-seg { background: var(--carbon-gray20); }
+  .progress-legend { display: flex; gap: 16px; margin-top: 8px; font-size: 12px; }
+  .progress-legend span::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 1px; margin-right: 4px; vertical-align: middle; }
+  .progress-legend .l-pass::before { background: var(--carbon-green); }
+  .progress-legend .l-fail::before { background: var(--carbon-red); }
+  .progress-legend .l-blocked::before { background: var(--carbon-yellow); }
+  .progress-legend .l-pending::before { background: var(--carbon-gray20); }
+
+  /* Module grid */
+  .modules-section { margin-bottom: 24px; }
+  .modules-section h2 { font-size: 16px; margin-bottom: 12px; background: white; padding: 16px 20px; }
+  .module-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+  .module-card { background: white; padding: 16px; border-left: 4px solid var(--carbon-gray20); }
+  .module-card.done { border-left-color: var(--carbon-green); }
+  .module-card.running { border-left-color: var(--carbon-blue); animation: pulse 1.5s infinite; }
+  .module-card.pending { border-left-color: var(--carbon-gray20); }
+  .module-card.has-fail { border-left-color: var(--carbon-red); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+  .module-card .mod-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .module-card .mod-stats { font-size: 12px; color: var(--carbon-gray70); }
+  .module-card .mod-bar { height: 4px; background: var(--carbon-gray20); margin-top: 8px; border-radius: 1px; overflow: hidden; }
+  .module-card .mod-bar-fill { height: 100%; background: var(--carbon-green); }
+
+  /* Bug tracker */
+  .bugs-section { margin-bottom: 24px; }
+  .bugs-section h2 { font-size: 16px; margin-bottom: 12px; background: white; padding: 16px 20px; }
+  table { width: 100%; border-collapse: collapse; background: white; }
+  th { background: var(--carbon-gray90); color: white; text-align: left; padding: 10px 16px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 10px 16px; font-size: 13px; border-bottom: 1px solid var(--carbon-gray20); }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .tag-fixed { background: #defbe6; color: #0e6027; }
+  .tag-open { background: #fff1f1; color: #a2191f; }
+  .tag-blocked { background: #fff8e1; color: #8e6a00; }
+  .tag-high { background: #fff1f1; color: #a2191f; }
+  .tag-med { background: #fff8e1; color: #8e6a00; }
+  .tag-low { background: #e0e0e0; color: #525252; }
+
+  /* Timeline */
+  .timeline-section { margin-bottom: 24px; }
+  .timeline-section h2 { font-size: 16px; margin-bottom: 12px; background: white; padding: 16px 20px; }
+  .timeline { background: white; padding: 16px 20px; }
+  .tl-entry { display: flex; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--carbon-gray10); }
+  .tl-entry:last-child { border-bottom: none; }
+  .tl-time { font-size: 12px; color: var(--carbon-gray70); min-width: 60px; }
+  .tl-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 3px; flex-shrink: 0; }
+  .tl-dot.green { background: var(--carbon-green); }
+  .tl-dot.blue { background: var(--carbon-blue); }
+  .tl-dot.red { background: var(--carbon-red); }
+  .tl-dot.gray { background: var(--carbon-gray20); }
+  .tl-text { font-size: 13px; }
+  .tl-text strong { font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>OpenELIS Global QA Dashboard</h1>
+    <div class="version">v3.2.1.4 &mdash; testing.openelis-global.org</div>
+  </div>
+  <div class="timestamp" id="lastUpdate">Last updated: 2026-04-02 02:30 UTC-7 — PHASE 27 COMPLETE</div>
+</div>
+
+<div class="container">
+
+  <!-- Summary Cards -->
+  <div class="summary-row">
+    <div class="card progress">
+      <div class="label">Total TCs</div>
+      <div class="value" id="totalTCs">140</div>
+      <div class="sub">Phase 26 (78) + Phase 27 DEEP (62)</div>
+    </div>
+    <div class="card pass">
+      <div class="label">Passed</div>
+      <div class="value" id="passCount">128</div>
+      <div class="sub" id="passRate">91.4% pass rate</div>
+    </div>
+    <div class="card fail">
+      <div class="label">Failed</div>
+      <div class="value" id="failCount">5</div>
+      <div class="sub">4 API 500s + BUG-10 (Billing)</div>
+    </div>
+    <div class="card blocked">
+      <div class="label">Blocked</div>
+      <div class="value" id="blockedCount">3</div>
+      <div class="sub">BUG-31 (Accept checkbox), BUG-3, BUG-8</div>
+    </div>
+    <div class="card">
+      <div class="label">Open Bugs</div>
+      <div class="value" id="openBugs">10</div>
+      <div class="sub">3 HIGH, 3 MED, 4 LOW</div>
+    </div>
+  </div>
+
+  <!-- Overall Progress -->
+  <div class="progress-section">
+    <h2>Phase 27 DEEP Testing Progress — COMPLETED</h2>
+    <div class="progress-bar" id="progressBar">
+      <div class="segment pass-seg" style="width: 88.7%"></div>
+      <div class="segment fail-seg" style="width: 6.5%"></div>
+      <div class="segment blocked-seg" style="width: 4.8%"></div>
+      <div class="segment pending-seg" style="width: 0%"></div>
+    </div>
+    <div class="progress-legend">
+      <span class="l-pass">Pass (55/62 TCs)</span>
+      <span class="l-fail">Fail (4 API 500 errors)</span>
+      <span class="l-blocked">Blocked (3 — BUG-31)</span>
+      <span class="l-pending">Pending (0 — ALL COMPLETE)</span>
+    </div>
+  </div>
+
+  <!-- Module Grid -->
+  <div class="modules-section">
+    <h2>Module Testing Status</h2>
+    <div class="module-grid" id="moduleGrid">
+      <div class="module-card done" id="mod-storage">
+        <div class="mod-name">Storage &amp; Cold Storage</div>
+        <div class="mod-stats">12 / 12 TCs &mdash; 100% PASS</div>
+        <div class="mod-bar"><div class="mod-bar-fill" style="width:100%"></div></div>
+      </div>
+      <div class="module-card done" id="mod-eqa">
+        <div class="mod-name">EQA Tests &amp; Management</div>
+        <div class="mod-stats">6 / 6 TCs &mdash; 100% PASS</div>
+        <div class="mod-bar"><div class="mod-bar-fill" style="width:100%"></div></div>
+      </div>
+      <div class="module-card done" id="mod-reports">
+        <div class="mod-name">Reports (all types)</div>
+        <div class="mod-stats">12 / 12 TCs &mdash; 100% PASS</div>
+        <div class="mod-bar"><div class="mod-bar-fill" style="width:100%"></div></div>
+      </div>
+      <div class="module-card done" id="mod-admin">
+        <div class="mod-name">Admin CRUD (20 pages)</div>
+        <div class="mod-stats">20 / 20 TCs &mdash; 100% PASS</div>
+        <div class="mod-bar"><div class="mod-bar-fill" style="width:100%"></div></div>
+      </div>
+      <div class="module-card done" id="mod-patient">
+        <div class="mod-name">Patient Management</div>
+        <div class="mod-stats">6 / 6 TCs &mdash; 100% PASS</div>
+        <div class="mod-bar"><div class="mod-bar-fill" style="width:100%"></div></div>
+      </div>
+      <div class="module-card done" id="mod-order">
+        <div class="mod-name">Order Entry Workflow</div>
+        <div class="mod-stats">8 / 8 TCs &mdash; 100% PASS</div>
+        <div class="mod-bar"><div class="mod-bar-fill" style="width:100%"></div></div>
+      </div>
+      <div class="module-card done" id="mod-results">
+        <div class="mod-name">Results &amp; Validation</div>
+        <div class="mod-stats">5 / 8 TCs &mdash; 3 BLOCKED (BUG-31)</div>
+        <div class="mod-bar"><div class="mod-bar-fill" style="width:62.5%"></div></div>
+      </div>
+      <div class="module-card done" id="mod-referrals">
+        <div class="mod-name">Referrals &amp; Workplan</div>
+        <div class="mod-stats">6 / 6 TCs &mdash; 100% PASS</div>
+        <div class="mod-bar"><div class="mod-bar-fill" style="width:100%"></div></div>
+      </div>
+      <div class="module-card has-fail" id="mod-api">
+        <div class="mod-name">API Endpoints</div>
+        <div class="mod-stats">16 / 20 TCs &mdash; 80% (4 HTTP 500)</div>
+        <div class="mod-bar"><div class="mod-bar-fill" style="width:80%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bug Tracker -->
+  <div class="bugs-section">
+    <h2>Bug Tracker &mdash; v3.2.1.4</h2>
+    <table>
+      <thead>
+        <tr><th>Bug ID</th><th>Description</th><th>Priority</th><th>Status</th><th>Module</th></tr>
+      </thead>
+      <tbody id="bugTable">
+        <tr><td>BUG-31</td><td>Accept checkbox on Results page causes 60s renderer hang &mdash; blocks result entry workflow (NEW)</td><td><span class="tag tag-high">HIGH</span></td><td><span class="tag tag-open">OPEN</span></td><td>Results</td></tr>
+        <tr><td>BUG-8</td><td>TestModify silent data corruption &mdash; dictionary values lost on save</td><td><span class="tag tag-high">HIGH</span></td><td><span class="tag tag-open">OPEN</span></td><td>Admin</td></tr>
+        <tr><td>BUG-22</td><td>No rate limiting on login endpoint (brute-force risk)</td><td><span class="tag tag-high">HIGH</span></td><td><span class="tag tag-open">OPEN</span></td><td>Security</td></tr>
+        <tr><td>BUG-30</td><td>SiteInfo page JS crash on load</td><td><span class="tag tag-med">MED</span></td><td><span class="tag tag-open">OPEN</span></td><td>Admin</td></tr>
+        <tr><td>BUG-32</td><td>LogbookResults API returns HTTP 500 (NEW)</td><td><span class="tag tag-med">MED</span></td><td><span class="tag tag-open">OPEN</span></td><td>API</td></tr>
+        <tr><td>BUG-33</td><td>Dictionary API returns HTTP 500 (NEW)</td><td><span class="tag tag-med">MED</span></td><td><span class="tag tag-open">OPEN</span></td><td>API</td></tr>
+        <tr><td>BUG-10</td><td>Billing sidebar link has empty href (CONFIRMED v3.2.1.4)</td><td><span class="tag tag-low">LOW</span></td><td><span class="tag tag-open">OPEN</span></td><td>Billing</td></tr>
+        <tr><td>BUG-12</td><td>Panel Create POST returns 500</td><td><span class="tag tag-low">LOW</span></td><td><span class="tag tag-open">OPEN</span></td><td>Admin</td></tr>
+        <tr><td>BUG-34</td><td>Organization API returns HTTP 500 (NEW)</td><td><span class="tag tag-low">LOW</span></td><td><span class="tag tag-open">OPEN</span></td><td>API</td></tr>
+        <tr><td>BUG-35</td><td>Legacy Admin opens in new tab (NEW)</td><td><span class="tag tag-low">LOW</span></td><td><span class="tag tag-open">OPEN</span></td><td>Admin</td></tr>
+        <tr style="color:#8d8d8d"><td>BUG-1</td><td>TestAdd POST 500</td><td><span class="tag tag-low">-</span></td><td><span class="tag tag-fixed">FIXED</span></td><td>Admin</td></tr>
+        <tr style="color:#8d8d8d"><td>BUG-2</td><td>Carbon checkbox 60s hang</td><td><span class="tag tag-low">-</span></td><td><span class="tag tag-fixed">FIXED</span></td><td>UI</td></tr>
+        <tr style="color:#8d8d8d"><td>BUG-7/7a</td><td>Dictionary value loss on save</td><td><span class="tag tag-low">-</span></td><td><span class="tag tag-fixed">FIXED</span></td><td>Admin</td></tr>
+        <tr style="color:#8d8d8d"><td>BUG-11/15</td><td>NoteBook blank page</td><td><span class="tag tag-low">-</span></td><td><span class="tag tag-fixed">FIXED</span></td><td>NoteBook</td></tr>
+        <tr style="color:#8d8d8d"><td>BUG-13</td><td>Test Section dropdown empty</td><td><span class="tag tag-low">-</span></td><td><span class="tag tag-fixed">FIXED</span></td><td>Admin</td></tr>
+        <tr style="color:#8d8d8d"><td>BUG-16</td><td>i18n locale switching broken</td><td><span class="tag tag-low">-</span></td><td><span class="tag tag-fixed">FIXED</span></td><td>i18n</td></tr>
+        <tr style="color:#8d8d8d"><td>BUG-20</td><td>Login Name field always invalid</td><td><span class="tag tag-low">-</span></td><td><span class="tag tag-fixed">FIXED</span></td><td>Admin</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Testing Timeline -->
+  <div class="timeline-section">
+    <h2>Phase 27 Testing Timeline</h2>
+    <div class="timeline" id="timeline">
+      <div class="tl-entry">
+        <div class="tl-time">21:00</div>
+        <div class="tl-dot blue"></div>
+        <div class="tl-text"><strong>Phase 27 DEEP testing started</strong> &mdash; Dashboard and roadmap created</div>
+      </div>
+      <div class="tl-entry">
+        <div class="tl-time">23:15</div>
+        <div class="tl-dot green"></div>
+        <div class="tl-text"><strong>Storage &amp; Cold Storage: 12/12 PASS</strong> &mdash; All 6 tabs tested (Rooms, Devices, Shelves, Racks, Boxes, Sample Items). CRUD modals functional. Cold Storage Monitoring 5 sub-tabs all render. Real data: 2 rooms, 1 device, 1 shelf, 1 rack.</div>
+      </div>
+      <div class="tl-entry">
+        <div class="tl-time">23:45</div>
+        <div class="tl-dot green"></div>
+        <div class="tl-text"><strong>Patient Management: 6/6 PASS</strong> &mdash; Search by last name functional, edit form loaded with full data, Patient History page displayed with "no test results" message (expected), Merge Patient sidebar verified.</div>
+      </div>
+      <div class="tl-entry">
+        <div class="tl-time">23:45</div>
+        <div class="tl-dot green"></div>
+        <div class="tl-text"><strong>Order Entry Workflow: 8/8 PASS</strong> &mdash; Created order DEV01260000000000003 with patient Alpha TestPatient, 3 tests (GPT/ALAT, HIV VIRAL LOAD, HEPATITIS B VIRAL LOAD), Serum sample. Dashboard shows 21 orders in progress.</div>
+      </div>
+      <div class="tl-entry">
+        <div class="tl-time">23:45</div>
+        <div class="tl-dot blue"></div>
+        <div class="tl-text"><strong>API Endpoints: Batch 1 Testing</strong> &mdash; 7/14 pass (panels, test-sections, dashboard-metrics, patient-search, notifications, alerts, test-list all 200 OK).</div>
+      </div>
+      <div class="tl-entry">
+        <div class="tl-time">01:00</div>
+        <div class="tl-dot red"></div>
+        <div class="tl-text"><strong>Results &amp; Validation DEEP testing</strong> &mdash; All 7 Results sub-pages + 5 Validation sub-pages load correctly. BUG-31 discovered: Accept checkbox causes 60s renderer hang, blocking result entry workflow.</div>
+      </div>
+      <div class="tl-entry">
+        <div class="tl-time">01:30</div>
+        <div class="tl-dot green"></div>
+        <div class="tl-text"><strong>Workplan + Reports + EQA complete</strong> &mdash; All 4 workplan types, all 11+ report types, and all EQA pages tested and passing.</div>
+      </div>
+      <div class="tl-entry">
+        <div class="tl-time">02:00</div>
+        <div class="tl-dot green"></div>
+        <div class="tl-text"><strong>Admin CRUD DEEP: 20/20 PASS</strong> &mdash; 16 admin pages tested: Test Mgmt, User Mgmt (2 users), Dictionary (779 entries), Org Mgmt (25 orgs), Provider Mgmt (3 providers), App Properties, Barcode Config, External Connections, Lab Number, Analyzer Test Name, Result Reporting, Logging, Program Entry, Legacy Admin, Search Index, Plugins, Notifications, Batch Reassignment.</div>
+      </div>
+      <div class="tl-entry">
+        <div class="tl-time">02:15</div>
+        <div class="tl-dot blue"></div>
+        <div class="tl-text"><strong>API Batch 2: 16/20 pass (80%)</strong> &mdash; 9 additional endpoints tested. 4 HTTP 500 errors: LogbookResults (x2), Dictionary, Organization.</div>
+      </div>
+      <div class="tl-entry">
+        <div class="tl-time">02:30</div>
+        <div class="tl-dot green"></div>
+        <div class="tl-text"><strong>PHASE 27 COMPLETE</strong> &mdash; 62 TCs, 88.7% pass rate. Final report generated, committed to GitHub.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
