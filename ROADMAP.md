@@ -1,8 +1,8 @@
 # OpenELIS QA Testing — Roadmap & Next Steps
 
 **Created:** 2026-03-27
-**Updated:** 2026-04-01 (Phase 24 — Bug Retest on v3.2.1.4)
-**Current State:** Phase 24 bug retest on testing.openelis-global.org (v3.2.1.4). 752+ TCs, ~96% pass rate. Bug retesting in progress against upgraded platform.
+**Updated:** 2026-04-01 (Phase 25 — Full Bug Retest on v3.2.1.4)
+**Current State:** Phase 25 deep bug retest on testing.openelis-global.org (v3.2.1.4). 757+ TCs, ~96% pass rate. BUG-1 FIXED, BUG-8 CONFIRMED (new: dictionary value loss), BUG-20 LIKELY FIXED.
 
 ---
 
@@ -31,6 +31,7 @@
 | 18 (NCE/Analyzers/Help) | 03-29 | DR-DZ | 9 | 89% | Non-Conform 3 pages OK; Analyzers rich (List/Errors/Types); Help: User Manual PDF works, Video Tutorials + Release Notes stub buttons |
 | 19 (Deep Interaction) | 03-29 | EA-EH | 8 | 88% | Analyzer kebab 6 actions; Delete {name} bug; Analyzer Types creation; Notifications panel; User panel; Global Search works |
 | 24 (Bug Retest v3.2.1.4) | 04-01 | RETEST | 2 | 50% | BUG-1 CONFIRMED (worse: 200+silent fail); BUG-20 LIKELY FIXED; Platform upgraded to v3.2.1.4; Chrome SSL blocked, Edge extension partial |
+| 25 (Deep Bug Retest) | 04-01 | RETEST | 5 | 60% | BUG-1 REVISED→FIXED (test saved OK); BUG-8 CONFIRMED (dictionary values lost in modify); BUG-20 LIKELY FIXED; BUG-3 BLOCKED (extension); OGC-525 NEW |
 
 ---
 
@@ -238,13 +239,13 @@
 
 | Bug | Severity | Status | Jira |
 |-----|----------|--------|------|
-| BUG-1 | Critical | **CONFIRMED v3.2.1.4** — POST returns 200 but test NOT saved (silent fail, worse than 500) | OGC-448 |
+| BUG-1 | Critical | **FIXED v3.2.1.4** — POST returns 200 AND test IS saved. Phase 24 false-negative corrected in Phase 25. | OGC-448 |
 | BUG-2 EXT | High | Open | OGC-467/468 |
 | BUG-3 | High | Open | OGC-448 |
 | BUG-4 | Medium | Open | — |
 | BUG-6 | Low | Open | — |
 | BUG-7/7a | Medium/High | Open | OGC-450/451 |
-| BUG-8 | Critical | Open | OGC-452 |
+| BUG-8 | Critical | **CONFIRMED v3.2.1.4** — Modify wizard drops dictionary select values (only first kept) | OGC-452, OGC-525 |
 | BUG-9 | High | Open | — |
 | BUG-10 | Low | Open | OGC-469/470 |
 | BUG-11/15 | Medium | Open | OGC-471/472 |
@@ -2360,9 +2361,45 @@ The Chrome SSL certificate error on testing.openelis-global.org is likely caused
    - Use Edge which appears to handle the certificate differently (possibly using Windows certificate store which may already trust the CA)
    - Configure the server with a valid Let's Encrypt certificate
 
-### Cumulative Progress
+### Cumulative Progress (Phase 24)
 - **Total Test Cases**: 754+ TCs (752 + 2 retest TCs)
 - **Pass Rate**: ~96% overall (retest: 1 FAIL, 1 LIKELY PASS)
 - **Platform**: testing.openelis-global.org v3.2.1.4 (default test platform going forward)
 - **Key Finding**: BUG-1 regression — now returns false success (HTTP 200) instead of honest failure (HTTP 500)
+
+---
+
+### Phase 25 — Deep Bug Retest on v3.2.1.4 ✅ COMPLETE
+**Focus:** Full test suite retest concentrating on bugs, against testing.openelis-global.org (v3.2.1.4)
+**Completed:** 2026-04-01
+**Browser:** Edge (Chrome SSL blocked)
+
+#### Bug Retest Results
+
+| Bug | Severity | Previous Status | v3.2.1.4 Retest | Details |
+|-----|----------|----------------|-----------------|---------|
+| BUG-1 | Critical | CONFIRMED worse (Phase 24) | **FIXED** | Phase 24 conclusion was incorrect. The test "QA BUG1 Retest Apr2026" IS present in the test catalog (25 Serum tests). Confirmed via Admin > Test Management > Modify Tests (Serum filter) and API `GET /api/OpenELIS-Global/rest/TestModifyEntry?sampleType=2` returning test in `testCatBeanList`. POST `/rest/TestAdd` returns HTTP 200 and data IS persisted. Phase 24 check failed due to UI not refreshing test list after creation. |
+| BUG-8 | Critical | Open | **CONFIRMED — DATA LOSS** | Test Modify wizard drops dictionary select values. Tested with DENGUE PCR (Serum) which has 5 select values: Invalid, Inconclusive, DENGUE VIRUS TYPE2 DETECTED, TYPE1 DETECTED, NOT DETECTED. Steps 1-4 preserve all data correctly (form fields, panels, sample types). But Step 5 (Select List Options) only shows "Invalid" (first value) — other 4 values are LOST. Reference Value, Default Result, and Qualifiers dropdowns also only contain "Invalid". If user saves, all but first dictionary value would be permanently deleted. Created OGC-525. |
+| BUG-3 | High | Open | **BLOCKED** | Form fields filled (Login Name, Password, First Name, Last Name) but checkbox clicking and Save button blocked by Edge extension conflict ("Cannot access a chrome-extension:// URL of different extension"). Cannot complete interactive testing. |
+| BUG-20 | Medium | LIKELY FIXED (Phase 24) | **Status unchanged** | Not re-verified in Phase 25 — Phase 24 finding stands. |
+
+#### Additional Findings
+
+1. **Test Modify wizard Step 1-4 data preservation**: Confirmed working. Test Section, Test Name (EN/FR), Reporting Name (EN/FR), Panel, Unit of Measure, Result Type, LOINC, Active/Orderable flags, Sample Type, and Test Display Order all preserved correctly through the multi-step wizard.
+
+2. **Edge extension conflict pattern**: The "Cannot access a chrome-extension:// URL" error is intermittent and affects screenshot, click, key, and javascript_tool actions. It appears to be triggered by certain page states or scrolling operations. Read-only tools (read_page, find, form_input for text/select, scroll_to, navigate) remain functional.
+
+3. **Test Catalog completeness**: 25 tests confirmed in Serum sample type including the QA test created during BUG-1 testing.
+
+#### Bugs Not Yet Retested
+- **BUG-7/7a** (Medium/High): Panel Create — not tested (extension issues)
+- **BUG-22** (Medium): Rate limiting — not tested
+- **BUG-2,4,6,9,10,11/15,12,13,16,17,30**: Not yet retested
+
+### Cumulative Progress (Phase 25)
+- **Total Test Cases**: 757+ TCs (754 + 3 new retest TCs)
+- **Pass Rate**: ~96% overall
+- **Bugs Fixed**: BUG-1 (TestAdd), BUG-14, BUG-18, BUG-19, BUG-20 (likely)
+- **Bugs Confirmed**: BUG-8 (Test Modify dictionary value loss — OGC-525)
+- **Platform**: testing.openelis-global.org v3.2.1.4
 
