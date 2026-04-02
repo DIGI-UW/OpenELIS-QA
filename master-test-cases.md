@@ -14177,3 +14177,95 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 - **Expected**: 200 with site info
 - **Result**: PASS — 200 OK. Site configuration data returned.
 
+
+---
+
+## Phase 32 — UI Order Creation End-to-End (15 TCs)
+
+**Server:** testing.openelis-global.org (v3.2.1.4)
+**Date:** 2026-04-02
+
+### Part A — Order Wizard Navigation
+
+### TC-ORD-01: Step 1 → Step 2 Navigation
+- **Steps**: 1) Navigate to /SamplePatientEntry 2) Click "New Patient" tab 3) Fill National ID, Last Name, Gender 4) Click Next
+- **Expected**: Wizard advances to Step 2 (Program Selection)
+- **Result**: PASS — Advanced to Program Selection step.
+
+### TC-ORD-02: Step 2 → Step 3 Navigation
+- **Steps**: 1) On Program Selection step 2) Select "Routine Testing" 3) Click Next
+- **Expected**: Wizard advances to Step 3 (Add Sample)
+- **Result**: PASS — Advanced to Add Sample step.
+
+### TC-ORD-03: Step 3 → Step 4 Navigation
+- **Steps**: 1) On Add Sample step 2) Select Serum sample type 3) Check 3 test checkboxes 4) Click Next
+- **Expected**: Wizard advances to Step 4 (Add Order)
+- **Result**: PASS — Advanced to Add Order step with ORDER heading visible.
+
+### TC-ORD-04: Progress Indicator Updates
+- **Steps**: 1) Navigate through all steps 2) Verify progress indicator shows checkmarks on completed steps
+- **Expected**: Green checkmarks appear on completed steps
+- **Result**: PASS — Patient Info ✓, Program Selection ✓, Add Sample ✓ all showed checkmarks.
+
+### Part B — Patient Info Entry
+
+### TC-ORD-05: Fill Patient Fields (National ID, Last Name, Gender, Age, DOB)
+- **Steps**: 1) Use React native setter for National ID "QA-P32-003" 2) Set Last Name "QATestPatient" 3) Set Gender "M" via select 4) Set Age "30"
+- **Expected**: All fields accept values
+- **Result**: PASS — All fields filled correctly. Patient created as PatientID=6 with FHIR GUID.
+
+### TC-ORD-06: First Name Input (React Controlled Resistance)
+- **Steps**: 1) Attempt native setter on First Name 2) Attempt onChange dispatch 3) Attempt InputEvent dispatch
+- **Expected**: First Name value persists
+- **Result**: PARTIAL — React controlled input resisted all setter methods. Value remained empty. Not required for wizard progression.
+
+### TC-ORD-07: New Patient Tab Selection
+- **Steps**: 1) Navigate to /SamplePatientEntry 2) Click "New Patient" tab
+- **Expected**: New Patient form appears with empty fields
+- **Result**: PASS — Tab activated, form fields became visible.
+
+### Part C — Sample & Test Selection
+
+### TC-ORD-08: Select Serum Sample Type
+- **Steps**: 1) On Add Sample step 2) Select "Serum" from dropdown
+- **Expected**: Serum selected, test list renders
+- **Result**: PASS — Serum selected, test checkboxes appeared.
+
+### TC-ORD-09: Check 3 Test Checkboxes
+- **Steps**: 1) Click test_0_1 (GPT/ALAT) 2) Click test_0_2 (GOT/ASAT) 3) Click test_0_4 (Creatinine)
+- **Expected**: All 3 checkboxes checked
+- **Result**: PASS — All 3 tests checked=true confirmed via JS query.
+
+### TC-ORD-10: Test Checkboxes Persist Through Navigation
+- **Steps**: 1) Check 3 tests 2) Scroll down and back up 3) Verify checkboxes still checked
+- **Expected**: Checkboxes remain checked
+- **Result**: PASS — All 3 tests remained checked after scroll.
+
+### Part D — Order Details & Submission
+
+### TC-ORD-11: Generate Lab Number
+- **Steps**: 1) On Add Order step 2) Click "Generate" link
+- **Expected**: Lab number auto-generated in DEV prefix format
+- **Result**: PASS — DEV0126000000000005 generated.
+
+### TC-ORD-12: Fill Order Details (Dates, Requester, Site)
+- **Steps**: 1) Set Request Date "02/04/2026" 2) Set Received Date "02/04/2026" 3) Fill Requester FirstName "QA", LastName "Tester" 4) Fill Site Name "QA Test Site"
+- **Expected**: All fields accept values
+- **Result**: PARTIAL — Dates and requester filled OK. Site Name/Requester showed "No suggestions available" (no matching records in test env). Carbon DatePicker wrapper is DIV — must target nested input.
+
+### TC-ORD-13: Submit Order
+- **Steps**: 1) Click Submit button (at x=1444, off-screen — clicked via JS)
+- **Expected**: Success confirmation
+- **Result**: PASS — Green checkmark, "Succesfuly saved" message, lab number DEV0126000000000005 confirmed. NOTE: Submit button off-screen (BUG-38). Typo "Succesfuly" in app.
+
+### TC-ORD-14: Print Labels Dialog
+- **Steps**: 1) After submission 2) Verify print labels dialog
+- **Expected**: Order and Specimen print buttons with Done
+- **Result**: PASS — Order (Qty:1) and Specimen (Qty:1) print buttons shown, Done button available.
+
+### Part E — Post-Submission Verification
+
+### TC-ORD-15: Verify Order via Modify Order & API
+- **Steps**: 1) Navigate to /SampleEdit 2) Search DEV0126000000000005 3) Check Modify Order page 4) Query patient-search API 5) Query WorkPlan/Logbook APIs
+- **Expected**: Order found with patient linked, tests in workplan
+- **Result**: FAIL — Order found but "No Patient Information Available" banner. Patient exists (PatientID=6, confirmed via API) but NOT linked to order. Current Tests: 1 item with empty columns. Workplan/Logbook: 0 results. BUG-37 filed.
