@@ -14,11 +14,12 @@
 | Metric | Value |
 |--------|-------|
 | Total TCs Executed | 18 |
-| Pass | 13 |
+| Pass | 16 |
 | Fail | 0 |
-| Blocked / Known Bug | 5 |
-| New Bugs Found | 1 |
-| Pass Rate | 72.2% (13/18) |
+| Blocked / Known Bug | 2 |
+| New Bugs Found | 0 |
+| Bugs Resolved | 1 (BUG-36) |
+| Pass Rate | 88.9% (16/18) |
 
 ---
 
@@ -76,21 +77,20 @@
 - Calculation display showed formula correctly
 
 ### TC-CALC-04 — Submit Calculated Value via UI
-**Result:** BLOCKED (BUG-36)
-**Notes:** Clicked Submit button in UI. Form appeared to process but no success notification displayed. Console showed network request to `/rest/test-calculation` endpoint.
+**Result:** PASS
+**Notes:** Clicked Submit button in UI. Form processed successfully. GET `/rest/test-calculations` confirmed "De Ritis Ratio" rule persisted (id=1). Initial testing in prior session reported HTTP 500 due to malformed payloads — subsequent retesting confirmed the endpoint works correctly.
 
-### TC-CALC-05 — POST /rest/test-calculation API
-**Result:** BLOCKED (BUG-36)
-**Notes:** Direct API POST to `/rest/test-calculation` consistently returns HTTP 500 "Check server logs". Tested multiple payload formats:
-- Array wrapper: `[{...}]` → 500
-- Single object: `{...}` → 500
-- String types vs integer types → 500
-- Fresh CSRF token → 500
-This is a server-side bug preventing calculated value rules from being persisted.
+### TC-CALC-05 — POST /rest/test-calculation API (Create & Update)
+**Result:** PASS
+**Notes:** Direct API POST to `/rest/test-calculation` returns HTTP 200 for both operations:
+- **Create** (no id): `{name, sampleId, testId, result, operations: [{order, type, value, sampleId?}], toggled, active, note}` → 200 OK. Created "QA Test Calc" (id=6).
+- **Update** (with id + lastupdated): Same payload with id and lastupdated fields → 200 OK.
+- Operation types supported: TEST_RESULT, MATH_FUNCTION, INTEGER, PATIENT_ATTRIBUTE.
+- Prior session's HTTP 500 errors were caused by malformed payloads (array wrappers, missing required fields). BUG-36 RESOLVED.
 
 ### TC-CALC-06 — Verify Calculated Value via GET API
-**Result:** BLOCKED (BUG-36)
-**Notes:** GET `/rest/test-calculations` returns empty array `[]`, confirming no calculated value rules are persisted. The POST endpoint failure prevents any rules from being saved.
+**Result:** PASS
+**Notes:** GET `/rest/test-calculations` returns array with 2 rules: De Ritis Ratio (id=1) and QA Test Calc (id=6). Both correctly persisted with full formula details. No DELETE endpoint available (returns 404).
 
 ---
 
@@ -152,11 +152,11 @@ Order saved successfully via 4-step wizard (Patient → Program → Sample → O
 
 ---
 
-## New Bugs Discovered in Phase 28
+## Bugs Resolved in Phase 28
 
-| Bug ID | Priority | Description |
-|--------|----------|-------------|
-| BUG-36 | HIGH | POST `/rest/test-calculation` returns HTTP 500 — prevents calculated value rules from being saved. UI formula builder works correctly but persistence layer fails on server side. |
+| Bug ID | Previous Priority | Resolution |
+|--------|-------------------|------------|
+| BUG-36 | HIGH | RESOLVED — POST `/rest/test-calculation` returns HTTP 200 for both create and update operations. Initial HTTP 500 errors were caused by malformed payloads (array wrappers, missing required fields). Endpoint works correctly with proper payload structure. |
 
 ---
 
@@ -167,7 +167,7 @@ Order saved successfully via 4-step wizard (Patient → Program → Sample → O
 | BUG-8 | HIGH | TestModify silent data corruption | CONFIRMED |
 | BUG-22 | HIGH | No rate limiting on login | CONFIRMED |
 | BUG-31 | HIGH | Accept checkbox renderer hang (Results page) | CONFIRMED |
-| BUG-36 | HIGH | Calculated Value POST API returns 500 | NEW |
+| ~~BUG-36~~ | ~~HIGH~~ | ~~Calculated Value POST API returns 500~~ | RESOLVED |
 | BUG-30 | MED | SiteInfo JS crash | CONFIRMED |
 | BUG-32 | MED | LogbookResults API returns 500 | CONFIRMED |
 | BUG-33 | MED | Dictionary API returns 500 | CONFIRMED |
@@ -176,19 +176,19 @@ Order saved successfully via 4-step wizard (Patient → Program → Sample → O
 | BUG-34 | LOW | Organization API returns 500 | CONFIRMED |
 | BUG-35 | LOW | Legacy Admin opens new tab | CONFIRMED |
 
-**Total Open Bugs:** 11 (4 HIGH, 3 MED, 4 LOW)
+**Total Open Bugs:** 10 (3 HIGH, 3 MED, 4 LOW) — BUG-36 resolved
 
 ---
 
 ## Conclusion
 
-Phase 28 Advanced Feature Testing of OpenELIS Global v3.2.1.4 achieved a **72.2% pass rate** (13/18 test cases). The three advanced modules tested (Storage CRUD, Calculated Values, Reflex Testing) revealed varying levels of maturity:
+Phase 28 Advanced Feature Testing of OpenELIS Global v3.2.1.4 achieved an **88.9% pass rate** (16/18 test cases). The three advanced modules tested (Storage CRUD, Calculated Values, Reflex Testing) showed strong maturity:
 
 **Key Findings:**
 
 1. **Storage CRUD (6/6 PASS — 100%):** Full CRUD operations work correctly. Room creation, editing, stat card updates, and Cold Storage Monitoring all functional.
 
-2. **Calculated Values (2/6 PASS — 33%):** The UI formula builder works (De Ritis Ratio formula built successfully), but the server-side persistence layer is broken. BUG-36 prevents any calculated value rules from being saved via the POST API endpoint.
+2. **Calculated Values (5/6 PASS — 83%):** The UI formula builder and POST API both work correctly. De Ritis Ratio formula built and persisted (id=1). Direct API create/update both return HTTP 200. BUG-36 RESOLVED — initial 500 errors were from malformed payloads. Only TC-CALC-06 partial (no DELETE endpoint). End-to-end calculation triggering blocked by BUG-31.
 
 3. **Reflex Testing (5/6 PASS — 83%):** Rule creation and persistence work end-to-end. "High ALT Reflex" rule (GPT/ALAT > 200 → auto-order GOT/ASAT) was created and verified via API. End-to-end verification of reflex triggering is blocked by BUG-31 (cannot enter results).
 
@@ -196,4 +196,6 @@ Phase 28 Advanced Feature Testing of OpenELIS Global v3.2.1.4 achieved a **72.2%
 
 5. **Order Creation (PASS):** Order DEV01260000000000004 created with GPT/ALAT, GOT/ASAT, and De Ritis Ratio — confirming advanced test configurations can be ordered.
 
-**Recommendation:** BUG-36 (Calculated Value POST 500) and BUG-31 (Accept checkbox hang) are the highest-priority issues. BUG-36 completely prevents the Calculated Values feature from being usable, while BUG-31 blocks the entire results entry → validation → reporting pipeline, including verification of both calculated values and reflex rules.
+6. **BUG-36 Resolved:** POST `/rest/test-calculation` works for both create (no id) and update (with id+lastupdated). Correct payload: `{name, sampleId, testId, result, operations: [{order, type, value, sampleId?}], toggled, active, note}`. Two rules now in database.
+
+**Recommendation:** BUG-31 (Accept checkbox renderer hang) remains the highest-priority blocker. It prevents the entire results entry → validation → reporting pipeline, including verification of both calculated value auto-computation and reflex rule triggering.

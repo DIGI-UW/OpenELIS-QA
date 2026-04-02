@@ -677,6 +677,14 @@ require a separate authentication flow. Cookie/session sharing between the two i
 | NOTE-41 | Low | **NEW (Phase 23AE)** Billing sidebar link has NO href attribute — empty anchor tag `<a>` with no destination. Clicking does nothing. This is the ONLY dead link in the entire sidebar navigation (all other 18 top-level items have valid hrefs or are expandable menus). | HD (Billing) |
 | NOTE-42 | High | **NEW (Phase 23AE)** NoteBook Dashboard (`/NotebookDashboard`) renders a COMPLETELY BLANK white page — no header, no sidebar, no content area. DOM contains only Chrome extension overlay elements. Page URL is correct but application fails to render any components. Critical rendering failure. | HD (NoteBook) |
 
+| BUG-30 | Medium | **NEW (Phase 23B/27)** bannerHeading Modify causes indefinite loading spinner in Site Information. JS crash on bilingual text format. | FJ (Admin General Configuration) |
+| BUG-31 | **High** | **NEW (Phase 27)** Accept checkbox on Results page causes 60s renderer hang, blocking all result entry. Extends BUG-2 pattern. Critical — blocks results→validation→reporting pipeline. | Results (LogbookResults) |
+| BUG-32 | Medium | **NEW (Phase 27)** LogbookResults API returns 500 | Results |
+| BUG-33 | Medium | **NEW (Phase 27)** Dictionary API returns 500 | Admin (Dictionary) |
+| BUG-34 | Low | **NEW (Phase 27)** Organization API returns 500 | Admin (Organization) |
+| BUG-35 | Low | **NEW (Phase 27)** Legacy Admin opens new tab instead of SPA navigation | Admin (Legacy) |
+| ~~BUG-36~~ | ~~High~~ **Resolved** | POST `/rest/test-calculation` returns HTTP 200 for both create and update. Initial 500s in Phase 28 were from malformed payloads (array wrappers, missing required fields). Endpoint works correctly with proper payload structure. | Calculated Values |
+
 If you encounter a new failure that matches one of these bugs in a **different** area,
 note it as "BUG-X extending to Suite Y" rather than filing a new ticket.
 
@@ -782,7 +790,11 @@ These results come from 6 rounds of live validation on the jdhealthsolutions ins
 
 | 62 (Phase 25) | 2026-04-01 | Bug Retest (5 TCs) | 3 | 2 | 0 | **Deep Bug Retest on v3.2.1.4** — BUG-1 REVISED→FIXED: Test "QA BUG1 Retest Apr2026" IS in catalog (25 Serum tests). Confirmed via Modify Tests UI + API. Phase 24 false-negative corrected — POST returns 200 AND data persists. BUG-8 CONFIRMED (CRITICAL DATA LOSS): Test Modify wizard drops dictionary select values. DENGUE PCR has 5 select values (Invalid, Inconclusive, DENGUE VIRUS TYPE2/TYPE1 DETECTED, NOT DETECTED) but Step 5 only loads "Invalid" (first value). Other 4 values LOST. Created OGC-525. BUG-3 BLOCKED: Form filled but checkbox/Save click blocked by Edge extension conflict. BUG-20 status unchanged (likely fixed per Phase 24). Edge extension intermittent — screenshots/clicks/JS fail with "Cannot access chrome-extension:// URL" error. Read-only tools (read_page, find, form_input, navigate) still work. |
 
-**Cumulative:** 757 TCs executed, 727 passed, ~96.0% pass rate. 8 non-executable test scripts catalogued. (4 resolved/fixed bugs + 1 retracted false positive + 1 likely fixed improve effective quality). BUG-1 now FIXED in v3.2.1.4. BUG-8 CONFIRMED with new data loss finding (OGC-525). Admin coverage: COMPLETE — all sub-pages, General Config (54+ settings across 10 pages), Menu Config (5 pages), Localization (2 pages), and Config Modify workflow (3 edit form types) deeply tested.
+| 63 (Phase 26) | 2026-04-01 | 6 suites (78 TCs) | 73 | 0 | 5 | **Comprehensive Regression & New Feature Testing** — Full regression across orders, results, validation, reports, admin. 5 blocked by BUG-31 (Accept checkbox renderer hang on Results page — 60s hang). |
+| 64 (Phase 27) | 2026-04-01 | 10 suites (62 TCs) | 57 | 0 | 5 | **Extended Module Testing** — Dashboard, Patient Management, Non-Conform, Workplan, Referrals, Pathology, EQA, Analyzers, Storage, i18n. BUG-31 continues blocking results entry. BUG-30 (SiteInfo JS crash), BUG-32 (LogbookResults 500), BUG-33 (Dictionary 500), BUG-34 (Organization 500), BUG-35 (Legacy Admin new tab) discovered. |
+| 65 (Phase 28) | 2026-04-02 | 3 suites (18 TCs) | 16 | 0 | 2 | **Advanced Feature Testing** — Storage CRUD 6/6 PASS (room create/edit, stat cards, cold storage). Calculated Values 5/6 PASS (De Ritis Ratio formula built+persisted, POST API confirmed working — BUG-36 RESOLVED, was malformed payloads). Reflex Testing 5/6 PASS (High ALT Reflex rule created+verified via API). 2 TCs blocked by BUG-31 (cannot enter results to trigger calc/reflex). Order DEV01260000000000004 created with 3 tests. |
+
+**Cumulative:** 775 TCs executed, 746 passed, ~96.3% pass rate. 8 non-executable test scripts catalogued. (4 resolved/fixed bugs + 1 retracted false positive + 1 likely fixed + BUG-36 resolved improve effective quality). BUG-1 now FIXED in v3.2.1.4. BUG-8 CONFIRMED with new data loss finding (OGC-525). Admin coverage: COMPLETE — all sub-pages, General Config (54+ settings across 10 pages), Menu Config (5 pages), Localization (2 pages), and Config Modify workflow (3 edit form types) deeply tested.
 
 **Key takeaway:** Read operations, admin pages, granular interactions, i18n, session security,
 accessibility, pathology modules, end-to-end workflows, and cross-module data flows are rock-solid.
@@ -817,6 +829,16 @@ deferred garbage collection. Performance is application-healthy; local deploymen
 **Phase 23C-E Findings (2026-03-31):** Fine-grained form verification against Confluence user manual. User Management: 24 users, 6 global roles, 15 lab units, 5 per-unit permissions; BUG-20 reconfirmed (Add-only, Login Name always invalid + CSS class typo `defalut`). Edit Order: full 3-step wizard with 21 fields documented; Priority has 5 options (ROUTINE/ASAP/STAT/Timed/Future STAT), payment has 4 statuses, sampling has 8 codes (B1/J0/J15/M1/M3/M6/M12/Other). Batch Order Entry: 3 form types, 3 panels, 16 available tests for Whole Blood, 2 barcode methods. All 30 TCs PASS. Field-level data captured for future regression baselines.
 
 **Phase 17 findings (2026-03-29):** Storage Management Dashboard is comprehensive with 6-tab interface, real data (67 rows), hierarchical location display. Cold Storage Monitoring has real-time status, 5 tabs, temperature monitoring infrastructure. Pathology/IHC/Cytology dashboards all follow consistent design patterns with status cards, search, filters, and paginated tables. Billing sidebar link has href=null — stub with no page (NOTE-18). NoteBook Dashboard renders completely blank page — broken route (NOTE-19). Aliquot page renders correctly with accession number search.
+
+**Phase 28 findings (2026-04-02):** Advanced feature testing — Storage CRUD, Calculated Values, Reflex Testing.
+
+- **Storage CRUD (100%):** Room create/edit via `/Storage/rooms` works end-to-end. Stat cards update dynamically (Total/Active/Disposed). Cold Storage Monitoring accessible at `/FreezerMonitoring`.
+- **Calculated Values (83%):** Formula builder UI at `/MasterListsPage/calculatedValue` works. Operand types: TEST_RESULT, MATH_FUNCTION, INTEGER, PATIENT_ATTRIBUTE. POST `/rest/test-calculation` works for both create (no id) and update (with id+lastupdated). Correct payload: `{name, sampleId, testId, result, operations: [{order, type, value, sampleId?}], toggled, active, note}`. GET `/rest/test-calculations` returns all rules. No DELETE endpoint. BUG-36 RESOLVED — initial 500s were from malformed payloads (array wrappers, missing fields).
+- **Reflex Testing (83%):** Rule builder UI at `/MasterListsPage/reflex` works. Must set "Over All Option" dropdown (id `0_overall`) to "ANY" or "ALL" before submit. POST `/rest/reflexrule` works. GET `/rest/reflexrules` returns all rules with conditions+actions. Rule structure: `{ruleName, overall: "ANY"|"ALL", active, conditions: [{sampleId, testId, relation: "GREATER_THAN", value}], actions: [{reflexTestId, sampleId, addNotification}]}`.
+- **TestAdd wizard** at `/MasterListsPage/TestAdd` — 6-step form confirmed working in v3.2.1.4. De Ritis Ratio test created (id=689, Numeric, Serum).
+- **Order creation** at `/SamplePatientEntry` — 4-step wizard: Patient→Program→Sample→Order. Test checkboxes appear on Step 3 (Add Sample) after selecting sample type.
+- **React form input pattern for dropdowns:** `Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(el, value); el.dispatchEvent(new Event('change', { bubbles: true }));` — also works for `<select>` elements via `HTMLSelectElement.prototype`.
+- **BUG-31 remains critical:** Blocks results entry, preventing verification of calculated value auto-computation and reflex rule triggering.
 
 ---
 

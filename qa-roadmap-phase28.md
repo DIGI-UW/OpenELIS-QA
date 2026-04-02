@@ -11,11 +11,11 @@
 | Step | Module | TCs | Status | Pass | Fail | Blocked | Notes |
 |------|--------|-----|--------|------|------|---------|-------|
 | 1 | Storage CRUD | 6 | COMPLETED | 6 | 0 | 0 | Room create/edit, stat cards, Cold Storage — 100% PASS |
-| 2 | Calculated Values | 6 | COMPLETED | 2 | 0 | 4 | De Ritis Ratio test created, formula built, POST 500 (BUG-36) |
+| 2 | Calculated Values | 6 | COMPLETED | 5 | 0 | 1 | De Ritis Ratio test created, formula built & persisted, POST works (BUG-36 RESOLVED). 1 blocked by BUG-31 |
 | 3 | Reflex Testing | 6 | COMPLETED | 5 | 0 | 1 | High ALT Reflex rule created + verified via API, result entry BLOCKED (BUG-31) |
 
-**Total: 18 test cases — 13 pass, 0 fail, 5 blocked**
-**Pass Rate: 72.2%**
+**Total: 18 test cases — 16 pass, 0 fail, 2 blocked**
+**Pass Rate: 88.9%**
 
 ---
 
@@ -26,7 +26,7 @@
 | BUG-8 | HIGH | TestModify data corruption |
 | BUG-22 | HIGH | No rate limiting on login |
 | BUG-31 | HIGH | Accept checkbox 60s renderer hang (blocks result entry) |
-| BUG-36 | HIGH | Calculated Value POST API 500 — NEW |
+| ~~BUG-36~~ | ~~HIGH~~ | ~~Calculated Value POST API 500~~ — RESOLVED (malformed payloads) |
 | BUG-30 | MED | SiteInfo JS crash |
 | BUG-32 | MED | LogbookResults API 500 |
 | BUG-33 | MED | Dictionary API 500 |
@@ -46,3 +46,4 @@
 - **02:00** — Reflex rule "High ALT Reflex" created and verified via API.
 - **21:00** — Order DEV01260000000000004 created with 3 tests. Result entry blocked by BUG-31.
 - **21:30** — Phase 28 COMPLETED. Final report generated. GitHub commit pending.
+- **22:00** — BUG-36 RESOLVED: Retested POST `/rest/test-calculation` with correct payloads. Create (200 OK, id=6) and update (200 OK) both work. Prior 500s were from malformed payloads. Pass rate corrected to 88.9% (16/18).

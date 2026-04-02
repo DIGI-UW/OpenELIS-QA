@@ -118,8 +118,8 @@
     </div>
     <div class="card pass">
       <div class="label">Passed</div>
-      <div class="value" id="passCount">141</div>
-      <div class="sub" id="passRate">89.2% pass rate</div>
+      <div class="value" id="passCount">144</div>
+      <div class="sub" id="passRate">91.1% pass rate</div>
     </div>
     <div class="card fail">
       <div class="label">Failed</div>
@@ -128,13 +128,13 @@
     </div>
     <div class="card blocked">
       <div class="label">Blocked</div>
-      <div class="value" id="blockedCount">8</div>
-      <div class="sub">BUG-31 (4), BUG-36 (4)</div>
+      <div class="value" id="blockedCount">5</div>
+      <div class="sub">BUG-31 (4), BUG-36 resolved</div>
     </div>
     <div class="card">
       <div class="label">Open Bugs</div>
-      <div class="value" id="openBugs">11</div>
-      <div class="sub">4 HIGH, 3 MED, 4 LOW</div>
+      <div class="value" id="openBugs">10</div>
+      <div class="sub">3 HIGH, 3 MED, 4 LOW</div>
     </div>
   </div>
 
@@ -142,15 +142,15 @@
   <div class="progress-section">
     <h2>Phase 28 Advanced Feature Testing — COMPLETED</h2>
     <div class="progress-bar" id="progressBar">
-      <div class="segment pass-seg" style="width: 72.2%"></div>
+      <div class="segment pass-seg" style="width: 88.9%"></div>
       <div class="segment fail-seg" style="width: 0%"></div>
-      <div class="segment blocked-seg" style="width: 27.8%"></div>
+      <div class="segment blocked-seg" style="width: 11.1%"></div>
       <div class="segment pending-seg" style="width: 0%"></div>
     </div>
     <div class="progress-legend">
-      <span class="l-pass">Pass (13/18 TCs)</span>
+      <span class="l-pass">Pass (16/18 TCs)</span>
       <span class="l-fail">Fail (0)</span>
-      <span class="l-blocked">Blocked (5 — BUG-31, BUG-36)</span>
+      <span class="l-blocked">Blocked (2 — BUG-31)</span>
       <span class="l-pending">Pending (0 — ALL COMPLETE)</span>
     </div>
   </div>
@@ -211,7 +211,7 @@
       </div>
       <div class="module-card has-fail" id="mod-calcval">
         <div class="mod-name">Calculated Values (P28)</div>
-        <div class="mod-stats">2 / 6 TCs &mdash; 33% (BUG-36)</div>
+        <div class="mod-stats">5 / 6 TCs &mdash; 83% (BUG-36 RESOLVED)</div>
         <div class="mod-bar"><div class="mod-bar-fill" style="width:33%"></div></div>
       </div>
       <div class="module-card done" id="mod-reflex">
@@ -230,7 +230,7 @@
         <tr><th>Bug ID</th><th>Description</th><th>Priority</th><th>Status</th><th>Module</th></tr>
       </thead>
       <tbody id="bugTable">
-        <tr><td>BUG-36</td><td>POST /rest/test-calculation returns HTTP 500 &mdash; calculated value rules cannot be saved (NEW P28)</td><td><span class="tag tag-high">HIGH</span></td><td><span class="tag tag-open">OPEN</span></td><td>Calc Values</td></tr>
+        <tr><td><s>BUG-36</s></td><td><s>POST /rest/test-calculation returns HTTP 500</s> &mdash; RESOLVED: malformed payloads caused 500s, endpoint works with correct structure</td><td><span class="tag tag-high">—</span></td><td><span class="tag" style="background:#24a148;color:white">RESOLVED</span></td><td>Calc Values</td></tr>
         <tr><td>BUG-31</td><td>Accept checkbox on Results page causes 60s renderer hang &mdash; blocks result entry workflow</td><td><span class="tag tag-high">HIGH</span></td><td><span class="tag tag-open">OPEN</span></td><td>Results</td></tr>
         <tr><td>BUG-8</td><td>TestModify silent data corruption &mdash; dictionary values lost on save</td><td><span class="tag tag-high">HIGH</span></td><td><span class="tag tag-open">OPEN</span></td><td>Admin</td></tr>
         <tr><td>BUG-22</td><td>No rate limiting on login endpoint (brute-force risk)</td><td><span class="tag tag-high">HIGH</span></td><td><span class="tag tag-open">OPEN</span></td><td>Security</td></tr>
@@ -274,7 +274,7 @@
       <div class="tl-entry">
         <div class="tl-time">01:00</div>
         <div class="tl-dot red"></div>
-        <div class="tl-text"><strong>Calculated Values: BUG-36 discovered</strong> &mdash; UI formula builder works (GOT/ASAT / GPT/ALAT &rarr; De Ritis Ratio). POST /rest/test-calculation returns HTTP 500 &mdash; rules cannot be persisted.</div>
+        <div class="tl-text"><strong>Calculated Values: Formula builder works</strong> &mdash; UI formula builder works (GOT/ASAT / GPT/ALAT &rarr; De Ritis Ratio). POST /rest/test-calculation initially returned HTTP 500 (malformed payloads) &mdash; later confirmed working with correct payload structure.</div>
       </div>
       <div class="tl-entry">
         <div class="tl-time">02:00</div>
@@ -289,7 +289,7 @@
       <div class="tl-entry">
         <div class="tl-time">21:30</div>
         <div class="tl-dot green"></div>
-        <div class="tl-text"><strong>PHASE 28 COMPLETE</strong> &mdash; 18 TCs, 72.2% pass rate. 1 new bug (BUG-36). Final report generated, GitHub commit pending.</div>
+        <div class="tl-text"><strong>PHASE 28 COMPLETE</strong> &mdash; 18 TCs, 88.9% pass rate. BUG-36 resolved (POST works with correct payloads). Final report generated.</div>
       </div>
     </div>
   </div>

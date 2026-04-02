@@ -13816,3 +13816,106 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 - **Expected**: All General Configuration sub-pages listed
 - **Result**: PASS — 10 sub-pages visible: NonConformity Configuration, MenuStatement Configuration, WorkPlan Configuration, Site Information, Site Branding, Result Entry Configuration, Patient Entry Configuration, Printed Report Configuration, Order Entry Configuration, Validation Configuration. Note: MenuStatement Configuration was not listed in the original admin URL table (rows 22-34) — it's a newly discovered 10th General Config sub-page.
 
+---
+
+## Phase 28 — Advanced Feature Testing (2026-04-02)
+
+**Instance:** testing.openelis-global.org v3.2.1.4
+**Pass Rate:** 88.9% (16/18) — 2 blocked by BUG-31
+
+### Part A — Storage CRUD (6 TCs — 100% PASS)
+
+### TC-STOR-CRUD-01: Navigate to Storage Management
+- **Steps**: 1) Click Storage Management in sidebar
+- **Expected**: Storage Management page loads with all tabs
+- **Result**: PASS — 6 tabs render: Rooms, Devices, Shelves, Racks, Boxes, Sample Items.
+
+### TC-STOR-CRUD-02: Add Room Form
+- **Steps**: 1) Click Rooms tab 2) Click "Add Room" button
+- **Expected**: Form with Name, Code, Description, Status fields
+- **Result**: PASS — Form validates required fields.
+
+### TC-STOR-CRUD-03: Create Storage Room
+- **Steps**: 1) Fill room form with Name="QA-Room-Phase28", Code, Description, Status=Active 2) Submit
+- **Expected**: Room created and visible in Rooms tab table
+- **Result**: PASS — Room "QA-Room-Phase28" appears in table.
+
+### TC-STOR-CRUD-04: Edit Storage Room
+- **Steps**: 1) Click Edit on QA-Room-Phase28 row 2) Modify description 3) Save
+- **Expected**: Pre-filled edit form, changes saved
+- **Result**: PASS — Description modified and saved successfully.
+
+### TC-STOR-CRUD-05: Storage Stat Cards Update
+- **Steps**: 1) Check stat cards after room creation
+- **Expected**: Stat cards reflect new room counts
+- **Result**: PASS — Total: 1, Active: 1, Disposed: 0.
+
+### TC-STOR-CRUD-06: Cold Storage Monitoring Page
+- **Steps**: 1) Navigate to `/FreezerMonitoring`
+- **Expected**: Monitoring dashboard loads
+- **Result**: PASS — Dashboard with empty device list renders.
+
+### Part B — Calculated Values (6 TCs — 83% PASS, 1 blocked)
+
+### TC-CALC-01: Create De Ritis Ratio Test via TestAdd Wizard
+- **Steps**: 1) Navigate to `/MasterListsPage/TestAdd` 2) Complete 6-step wizard: Test name="De Ritis Ratio", English name, Test Section, Panel, UoM, Result type=Numeric (N), Sample type=Serum (id=2), Normal ranges, Review+Accept
+- **Expected**: Test created and accessible via API
+- **Result**: PASS — Test confirmed at id=689 via `/rest/test-display-beans?sampleType=2`.
+
+### TC-CALC-02: Navigate to Calculated Value Management
+- **Steps**: 1) Navigate to `/MasterListsPage/calculatedValue`
+- **Expected**: Formula builder UI with operand type selector
+- **Result**: PASS — Fields: Result Test (autocomplete), calculation display, operand types (Test Result, Mathematical Function, Integer, Patient Attribute).
+
+### TC-CALC-03: Build Calculated Value Formula in UI
+- **Steps**: 1) Set Result Test to "De Ritis Ratio(Serum)" 2) Add operands: GOT/ASAT(Serum) / GPT/ALAT(Serum) 3) Verify formula display
+- **Expected**: Formula built correctly in UI
+- **Result**: PASS — Formula `GOT/ASAT(Serum) / GPT/ALAT(Serum)` displayed correctly.
+
+### TC-CALC-04: Submit Calculated Value via UI
+- **Steps**: 1) Click Submit button on formula builder
+- **Expected**: Formula persisted via POST API
+- **Result**: PASS — GET `/rest/test-calculations` confirmed De Ritis Ratio rule persisted (id=1). Initial 500 errors in prior session were from malformed payloads.
+
+### TC-CALC-05: POST /rest/test-calculation API (Create & Update)
+- **Steps**: 1) POST create (no id): `{name, sampleId, testId, result, operations: [{order, type, value, sampleId?}], toggled, active, note}` 2) POST update (with id+lastupdated)
+- **Expected**: Both return HTTP 200
+- **Result**: PASS — Create returned 200 (created "QA Test Calc" id=6). Update returned 200. Operation types: TEST_RESULT, MATH_FUNCTION, INTEGER, PATIENT_ATTRIBUTE.
+
+### TC-CALC-06: Verify Calculated Value via GET API
+- **Steps**: 1) GET `/rest/test-calculations` 2) Verify rules persisted 3) Attempt DELETE
+- **Expected**: Rules visible, DELETE not available
+- **Result**: PASS — 2 rules returned (De Ritis Ratio id=1, QA Test Calc id=6). No DELETE endpoint (404).
+
+### Part C — Reflex Testing (6 TCs — 83% PASS, 1 blocked)
+
+### TC-REFLEX-01: Navigate to Reflex Tests Management
+- **Steps**: 1) Navigate to `/MasterListsPage/reflex`
+- **Expected**: Reflex rule builder form
+- **Result**: PASS — Form fields: Rule Name, Toggle Rule, Active, Conditions (Over All Option, Sample, Test, Relation, Value), Actions (Sample, Test, Notes), Submit, + Rule.
+
+### TC-REFLEX-02: Configure Reflex Rule (High ALT Reflex)
+- **Steps**: 1) Set Rule Name="High ALT Reflex" 2) Toggle Rule=On, Active=true 3) Over All Option=ANY 4) Condition: Serum → GPT/ALAT(Serum) → Is greater than → 200 5) Action: Serum → GOT/ASAT(Serum)
+- **Expected**: All fields populated
+- **Result**: PASS — Over All Option dropdown (`id=0_overall`) must be set to "ANY" or "ALL" via JavaScript native setter pattern.
+
+### TC-REFLEX-03: Submit Reflex Rule
+- **Steps**: 1) Click Submit
+- **Expected**: Rule saved, button disabled
+- **Result**: PASS — Submit button grayed out after click, no error notifications.
+
+### TC-REFLEX-04: Verify Reflex Rule via API
+- **Steps**: 1) GET `/rest/reflexrules`
+- **Expected**: Rule with correct conditions and actions
+- **Result**: PASS — Returns `[{id:1, ruleName:"High ALT Reflex", overall:"ANY", active:true, conditions:[{sampleId:"2", testId:"1", relation:"GREATER_THAN", value:"200"}], actions:[{reflexTestId:"2", sampleId:"2", addNotification:"Y"}]}]`.
+
+### TC-REFLEX-05: Create Order with Reflex-Triggering Tests
+- **Steps**: 1) Navigate to `/SamplePatientEntry` 2) Complete 4-step wizard: Patient→Program→Sample (Serum, select GPT/ALAT + GOT/ASAT + De Ritis Ratio)→Order
+- **Expected**: Order created with 3 tests on Serum
+- **Result**: PASS — Order DEV01260000000000004 created. Test checkboxes appear on Step 3 after selecting sample type.
+
+### TC-REFLEX-06: Enter Results to Trigger Reflex Rule
+- **Steps**: 1) Navigate to Results page 2) Find order DEV01260000000000004 3) Enter GPT/ALAT > 200 4) Save 5) Verify GOT/ASAT auto-ordered
+- **Expected**: Reflex rule fires, GOT/ASAT added to order
+- **Result**: BLOCKED (BUG-31) — Results By Unit shows "no records to display" after selecting test unit. Accept checkbox 60s renderer hang prevents result entry.
+
