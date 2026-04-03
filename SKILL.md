@@ -516,7 +516,8 @@ For screens not in the confirmed URL table, try these patterns in order:
 **Audit:** `/AuditLog`, `/SystemLog`, `/MasterListsPage/AuditLog`
 **Pathology:** `/PathologyDashboard`, `/ImmunohistochemistryDashboard`, `/CytologyDashboard`
 **Analyzers:** `/analyzers`, `/analyzers/errors`, `/analyzers/types`
-**EQA:** `/EQADistribution`
+**EQA:** `/EQADistribution`, `/EQAManagement`, `/EQAParticipants`, `/EQAResults`
+**Inventory:** `/Inventory` (Dashboard+Catalog+Reports tabs)
 **Alerts:** `/Alerts`
 **Orders:** `/ElectronicOrders`, `/SampleBatchEntrySetup`, `/PrintBarcode`
 **Storage:** `/Storage`, `/Storage/samples`
@@ -684,6 +685,10 @@ require a separate authentication flow. Cookie/session sharing between the two i
 | BUG-34 | Low | **NEW (Phase 27)** Organization API returns 500 | Admin (Organization) |
 | BUG-35 | Low | **NEW (Phase 27)** Legacy Admin opens new tab instead of SPA navigation | Admin (Legacy) |
 | ~~BUG-36~~ | ~~High~~ **Resolved** | POST `/rest/test-calculation` returns HTTP 200 for both create and update. Initial 500s in Phase 28 were from malformed payloads (array wrappers, missing required fields). Endpoint works correctly with proper payload structure. | Calculated Values |
+| BUG-38 | **Critical** | **NEW (Phase 35)** POST `/rest/reportnonconformingevent` hangs indefinitely — server never returns a response. Causes Chrome 6-connection-per-origin pool exhaustion when multiple tabs attempt the POST simultaneously. All subsequent API calls to the same origin block until hanging tabs are closed. NCE form UI (search, sample selection, checkbox, navigation, form pre-population) all work; only the final submission endpoint is broken. **Workaround:** Close any tab with a pending POST to this endpoint immediately to restore connectivity. Note: BUG-38 was previously retracted (Submit button off-screen — normal behavior); this re-assigns the number to a genuine Critical bug. | Phase 35 Chain B (NCE E2E) |
+| BUG-39 | Medium | **NEW (Phase 37B)** `GET /rest/eqa/samples/dashboard` returns HTTP 404 — EQA Management main dashboard KPI endpoint not deployed. Page renders with fallback zeros for all 4 stat cards (Pending/In Progress/Completed/Submitted) and dashes for Performance Summary metrics. All other EQA Management sub-pages work: `/EQAParticipants` (`/rest/eqa/programs` → 200), `/EQADistribution` (`/rest/eqa/distributions` → 200), `/EQAResults` (`/rest/eqa/orders` → 200). | EQA Management Dashboard |
+| BUG-40 | Low | **NEW (Phase 37A)** `POST /rest/inventory-storage-locations` returns HTTP 500 (empty body). Tested with `locationType:"REFRIGERATOR"` and `locationType:"ROOM"` (form default) — both fail. The GET endpoint works (`GET /rest/inventory-storage-locations` → 200, empty array). **Workaround:** Inventory lots can be created with `storageLocation:null` — storage location is not required by the `/rest/inventory/management/receive` endpoint. | Inventory Management — Storage Locations |
+| BUG-41 | Low | **NEW (Phase 37A)** `GET /rest/inventory/items/all?isActive=true` returns deactivated items (`isActive:"N"`). The `?isActive=true` query parameter filter is silently ignored by the `/items/all` endpoint. The Inventory Catalog view uses this endpoint for the "active items" list — deactivated items incorrectly appear as active. | Inventory Management — Catalog |
 
 If you encounter a new failure that matches one of these bugs in a **different** area,
 note it as "BUG-X extending to Suite Y" rather than filing a new ticket.
@@ -800,7 +805,12 @@ These results come from 6 rounds of live validation on the jdhealthsolutions ins
 | 70 (Retest) | 2026-04-03 | BUG-37/BUG-38 Retest (2 TCs) | 0 | 1 | 0 | **Bug Retest** — Retested BUG-37 and BUG-38 with fresh order (DEV01260000000000008). **BUG-37 CONFIRMED:** Full UI wizard with existing patient selection (PatientID=6 from search), proper autocomplete selections (Hospital site, Doc/DOc requester), React state verified patientPK="6" with patientUpdateStatus="UPDATE" before submit, POST payload confirmed patientPK present — yet Modify Order still shows "No Patient Information Available". Backend fails to persist sample_human linkage. **BUG-38 RETRACTED:** Submit button is within viewport (x=1789 in 2156px viewport), just far-right in layout — normal Carbon form behavior, not a bug. Test data also shows empty in Current Tests table on Modify Order page. |
 | 71 (Phase 33) | 2026-04-03 | New Feature Audit v3.2.1.4 (12 TCs) + Jira Cleanup | 12 | 0 | 0 | **New Feature Audit & Jira Cleanup** — Full DOM sidebar enumeration (32 sections, 113 page links via `document.querySelectorAll`). **New in v3.2.1.4 vs v3.2.1.3:** (1) Inventory Management (`/Inventory`) — stock items, consumables, lot tracking; (2) EQA Management — 5 new pages (`/EQAManagement`, `/EQAMyPrograms`, `/EQAOrders`, `/EQAParticipants`, `/EQAResults`); (3) Virology module — 12 new report types (ARV Dispense/Patient Register/Interrupted Treatment/Annual, EID PCR/DBS/Enrolled/Rapid, VL Initial/Repeat/Annual/Suppressed); (4) Generic Sample (`/GenericSample/Edit`); (5) Sample Management (`/SampleManagement`); (6) Process Documentation section. EQAManagement page verified: 4 status cards (Pending 0/In Progress 0/Completed 0/Submitted 0), Bulk Upload Results, View Performance, Performance Summary. Total report types now 34+ (was 12). **Jira Cleanup:** BUG-33 FIXED (DictionaryMenu returns 200 in v3.2.1.4), BUG-20 FIXED (Login Name no false-invalid state), BUG-1 FIXED (TestAdd works). OGC-468 (Carbon checkbox hang BUG-31) incorrectly marked Done — reopened with regression comment (still fails in v3.2.1.4). **New Jira tickets:** OGC-533 (BUG-37 patient-order linkage), OGC-534 (BUG-32 LogbookResults tab freeze), OGC-535 (BUG-34 Organization GET 500). Roadmap document `qa-roadmap-2026-04-03.md` created with 9 E2E test chains (A–I) and 8 new test phases (34–42). |
 
-**Cumulative:** 865 TCs executed, 825 passed, ~95.4% pass rate. 8 non-executable test scripts catalogued. (4 resolved/fixed bugs + 2 retracted false positives (BUG-38) + 1 likely fixed + BUG-36 resolved improve effective quality). BUG-1 now FIXED in v3.2.1.4. BUG-8 CONFIRMED with new data loss finding (OGC-525). **BUG-37 CONFIRMED (retest 2026-04-03):** Patient-Order linkage failure on UI order creation — backend does not persist sample_human link even when patientPK is correctly sent in POST payload. **BUG-38 RETRACTED:** Submit button position is normal layout behavior, not a defect. Admin coverage: COMPLETE — all sub-pages, General Config (54+ settings across 10 pages), Menu Config (5 pages), Localization (2 pages), and Config Modify workflow (3 edit form types) deeply tested. Order creation E2E: two full wizard passes completed with consistent patient linkage failure.
+| 72 (Phase 34) | 2026-04-03 | E2E Result Lifecycle Chain A (8 TCs) | 8 | 0 | 0 | **Full Result Lifecycle E2E** — Create order → enter result → validate → verify on patient report. Site branding CRUD (`/rest/site-branding` PUT) confirmed working. primaryColor and headerColor update correctly. ALL PASS. |
+| 73 (Phase 35 Chain B) | 2026-04-03 | NCE Rejection E2E (1 TC) | 0 | 0 | 1 | **BLOCKED by BUG-38** — POST `/rest/reportnonconformingevent` hangs indefinitely. NCE GET API works (`/rest/nonconformevents?labNumber=...` → 200). NCE form UI works (search, sample selection, checkbox, navigation, pre-population). Only final POST submission is broken. Chrome 6-connection-per-origin pool exhausted when multiple tabs attempted this endpoint; fix: close hanging tabs immediately. |
+| 74 (Phase 36 Chain C) | 2026-04-03 | Site Config → Branding (2 TCs) | 2 | 0 | 0 | **Site Config → Report Branding** — `GET /rest/site-branding` → 200, `PUT /rest/site-branding` → 200. primaryColor changed from #0f62fe to #cc0000 and back. Confirmed via React fiber onClick dispatch. ALL PASS. |
+| 75 (Phase 37) | 2026-04-03 | Inventory CRUD & EQA Management (13 TCs) | 10 | 3 | 0 | **Inventory CRUD** (8 TCs, 6 PASS 2 FAIL): GET items/all → 200. POST /rest/inventory/items → 201 (correct fields: name/itemType/category/manufacturer/units/lowStockThreshold/stabilityAfterOpening). POST /rest/inventory/management/receive → 201 (lot with null storageLocation). Dashboard KPIs correct (1 lot, 0 low/expiring/expired). PUT update → 200. PUT deactivate → 200. POST storage-locations → 500 (BUG-40). isActive filter broken (BUG-41). **EQA Management** (5 TCs, 4 PASS 1 FAIL): /EQAManagement loads (samples/dashboard → 404 BUG-39). /EQAParticipants + eqa/programs → 200. /EQADistribution + eqa/distributions → 200. /EQAResults + eqa/orders → 200. Enter New EQA Test → /SamplePatientEntry?isEQA=true with locked patient fields. |
+
+**Cumulative:** 886 TCs executed, 843 passed, ~95.2% pass rate. 8 non-executable test scripts catalogued. (4 resolved/fixed bugs + 2 retracted false positives (BUG-38) + 1 likely fixed + BUG-36 resolved improve effective quality). BUG-1 now FIXED in v3.2.1.4. BUG-8 CONFIRMED with new data loss finding (OGC-525). **BUG-37 CONFIRMED (retest 2026-04-03):** Patient-Order linkage failure on UI order creation — backend does not persist sample_human link even when patientPK is correctly sent in POST payload. **BUG-38 RETRACTED:** Submit button position is normal layout behavior, not a defect. Admin coverage: COMPLETE — all sub-pages, General Config (54+ settings across 10 pages), Menu Config (5 pages), Localization (2 pages), and Config Modify workflow (3 edit form types) deeply tested. Order creation E2E: two full wizard passes completed with consistent patient linkage failure.
 
 **Key takeaway:** Read operations, admin pages, granular interactions, i18n, session security,
 accessibility, pathology modules, end-to-end workflows, and cross-module data flows are rock-solid.
@@ -909,6 +919,39 @@ When `await` is not supported in Claude in Chrome's `javascript_tool`, use the
 Claude in Chrome may block `fetch()` results that contain session cookies in the response.
 If fetch results are blocked, use DOM inspection (`document.querySelector`) or
 `page.evaluate()` as alternatives to read page data.
+
+### 10.8 — Inventory API Payload Field Names (Critical)
+The `/rest/inventory/items` POST/PUT endpoint requires **exact** field names from `InventoryItemForm.jsx sanitizedData`:
+- `name` (string, required)
+- `itemType` (string: "REAGENT"|"CARTRIDGE"|"RDT", required)
+- `category` (string)
+- `manufacturer` (string)
+- `units` (string — NOT `unitOfMeasure`)
+- `lowStockThreshold` (number)
+- `stabilityAfterOpening` (number, REAGENT only)
+- `storageRequirements` (string, REAGENT only)
+- `compatibleAnalyzers` (string, CARTRIDGE only)
+- `testsPerKit` (number, RDT only)
+
+Wrong field names → HTTP 400 `HttpMessageNotReadableException`. Do NOT include `active`, `description`, or any other fields.
+
+**Lot creation** uses `POST /rest/inventory/management/receive` with:
+`{inventoryItem:{id}, lotNumber, currentQuantity, initialQuantity, expirationDate(ISO), receiptDate(ISO), storageLocation(null OK), qcStatus:"PENDING", status:"ACTIVE"}`
+
+**Storage location creation** (`POST /rest/inventory-storage-locations`) → HTTP 500 (BUG-40). Use null for storageLocation when creating lots.
+
+### 10.9 — Connection Pool Exhaustion Prevention (Critical)
+Chrome allows max 6 simultaneous connections per origin. When testing endpoints that may hang:
+1. **Never** open more than 3 tabs to the same origin simultaneously
+2. **Monitor** `/read_network_requests` for pending status
+3. **Close hanging tabs immediately** if a POST stays "pending" beyond 30s — use `tabs_close_mcp`
+4. **Test from the app page**, not API-direct tabs, for POST requests (app page has session context)
+5. **BUG-38 endpoint** (`/rest/reportnonconformingevent`) must NOT be tested — it hangs permanently
+
+If all API calls from all tabs start hanging, connection pool is exhausted:
+- Close ALL tabs with pending requests
+- Wait 5s for connections to reset
+- Reopen needed tabs fresh
 
 ---
 

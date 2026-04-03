@@ -14269,3 +14269,115 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 - **Steps**: 1) Navigate to /SampleEdit 2) Search DEV0126000000000005 3) Check Modify Order page 4) Query patient-search API 5) Query WorkPlan/Logbook APIs
 - **Expected**: Order found with patient linked, tests in workplan
 - **Result**: FAIL — Order found but "No Patient Information Available" banner. Patient exists (PatientID=6, confirmed via API) but NOT linked to order. Current Tests: 1 item with empty columns. Workplan/Logbook: 0 results. BUG-37 filed.
+
+---
+
+## Phase 35 Chain B — NCE Rejection E2E (BLOCKED)
+
+### TC-NCE-E2E-01: NCE Workflow End-to-End
+- **URL**: `/ReportNonConformingEvent`
+- **Steps**: 1) Search for sample by lab number 2) Select sample and reason 3) Navigate to reporting form 4) Submit POST to `/rest/reportnonconformingevent`
+- **Expected**: NCE recorded, appears in View NCE list
+- **Result**: BLOCKED — POST hangs indefinitely (BUG-38). NCE form UI works (search/select/pre-populate) but submission is broken server-side.
+
+---
+
+## Phase 36 Chain C — Site Branding CRUD
+
+### TC-BRAND-01: GET Site Branding Config
+- **URL**: `GET /rest/site-branding`
+- **Steps**: 1) Navigate to API endpoint 2) Read response
+- **Expected**: JSON with site branding fields
+- **Result**: PASS — Returns `{id:1, headerColor:"#295785", primaryColor:"#0f62fe", colorMode:"light"}`
+
+### TC-BRAND-02: PUT Site Branding Update
+- **URL**: `PUT /rest/site-branding`
+- **Steps**: 1) Navigate to `/MasterListsPage/SiteBrandingMenu` 2) Use React fiber onClick to invoke save 3) Verify via GET
+- **Expected**: Color values updated and persisted
+- **Result**: PASS — primaryColor updated #0f62fe → #cc0000 → restored. PUT returns 200.
+
+---
+
+## Phase 37A — Inventory Management CRUD
+
+### TC-INV-01: GET Inventory Endpoints (Baseline)
+- **URL**: `GET /rest/inventory/items/all`, `GET /rest/inventory/lots`, `GET /rest/inventory/management/alerts`
+- **Steps**: Navigate to each API endpoint
+- **Expected**: HTTP 200 with empty arrays
+- **Result**: PASS — All return HTTP 200, empty data in fresh environment.
+
+### TC-INV-02: Create Catalog Item
+- **URL**: `POST /rest/inventory/items`
+- **Steps**: 1) POST with payload: `{name:"QA_AUTO_0403 Test Reagent", itemType:"REAGENT", category:"Hematology Reagents", manufacturer:"QA Manufacturer Inc", units:"mL", lowStockThreshold:10, stabilityAfterOpening:30, storageRequirements:"2-8C refrigerated"}`
+- **Expected**: HTTP 201 with created item including `id` and `isActive:"Y"`
+- **Result**: PASS — HTTP 201, id=1, fhirUuid assigned. WARNING: wrong field name `unitOfMeasure` (instead of `units`) causes HTTP 400.
+
+### TC-INV-03: Create Inventory Lot (Receive)
+- **URL**: `POST /rest/inventory/management/receive`
+- **Steps**: 1) POST with `{inventoryItem:{id:1}, lotNumber:"QA-LOT-0403-001", currentQuantity:500, initialQuantity:500, expirationDate:(+1yr ISO), receiptDate:(now ISO), storageLocation:null, qcStatus:"PENDING", status:"ACTIVE"}`
+- **Expected**: HTTP 201 with lot linked to catalog item
+- **Result**: PASS — HTTP 201, lot created with storageLocation=null accepted.
+
+### TC-INV-04: Verify Inventory Dashboard KPIs
+- **URL**: `/Inventory` (browser), `GET /rest/inventory/management/alerts`
+- **Steps**: 1) Navigate to /Inventory 2) Read KPI cards 3) Check alerts API
+- **Expected**: Total Lots=1, Low Stock=0, Expiring Soon=0, Expired=0. Lot visible in table.
+- **Result**: PASS — All KPIs correct. Table shows: QA_AUTO_0403 Test Reagent | QA-LOT-0403-001 | REAGENT | 500 mL | 4/3/2027 | ACTIVE | In Stock.
+
+### TC-INV-05: Update Catalog Item (PUT)
+- **URL**: `PUT /rest/inventory/items/1`
+- **Steps**: 1) PUT with updated `name` and `lowStockThreshold:20`
+- **Expected**: HTTP 200 with updated fields
+- **Result**: PASS — HTTP 200, name updated, lowStockThreshold=20, new lastupdated timestamp.
+
+### TC-INV-06: Deactivate Catalog Item
+- **URL**: `PUT /rest/inventory/items/1/deactivate`
+- **Steps**: 1) PUT to deactivate endpoint
+- **Expected**: HTTP 200, item `isActive:"N"`
+- **Result**: PASS — HTTP 200 (empty body). Subsequent GET confirms `isActive:"N"`.
+
+### TC-INV-07: Create Storage Location (FAIL — BUG-40)
+- **URL**: `POST /rest/inventory-storage-locations`
+- **Steps**: 1) POST with `{name:"QA_AUTO Refrigerator", locationType:"ROOM", isActive:true}` 2) Also try locationType:"REFRIGERATOR"
+- **Expected**: HTTP 201 with created location
+- **Result**: FAIL — HTTP 500 (empty body) for both locationType values. BUG-40 filed.
+
+### TC-INV-08: Active Items Filter (FAIL — BUG-41)
+- **URL**: `GET /rest/inventory/items/all?isActive=true`
+- **Steps**: 1) Deactivate item 2) GET with isActive=true filter
+- **Expected**: Only active items returned (empty since item deactivated)
+- **Result**: FAIL — Deactivated item (`isActive:"N"`) still returned. Filter parameter ignored. BUG-41 filed.
+
+---
+
+## Phase 37B — EQA Management Module
+
+### TC-EQA-MGT-01: EQA Management Dashboard (FAIL — BUG-39)
+- **URL**: `/EQAManagement`, API: `GET /rest/eqa/samples/dashboard`
+- **Steps**: 1) Navigate to /EQAManagement 2) Check API calls in network tab
+- **Expected**: Dashboard KPIs loaded (Pending/In Progress/Completed/Submitted counts)
+- **Result**: FAIL — `GET /rest/eqa/samples/dashboard` → HTTP 404. Page renders fallback UI with all zeros and dashes. BUG-39 filed.
+
+### TC-EQA-MGT-02: EQA Participants Page
+- **URL**: `/EQAParticipants`, API: `GET /rest/eqa/programs`
+- **Steps**: 1) Navigate to /EQAParticipants 2) Verify program dropdown
+- **Expected**: Programs list loads, enrollment UI renders
+- **Result**: PASS — `GET /rest/eqa/programs` → HTTP 200 (empty array). "Select Program" dropdown and "Select a program to view enrollments" placeholder render correctly.
+
+### TC-EQA-MGT-03: EQA Distribution Page
+- **URL**: `/EQADistribution`, API: `GET /rest/eqa/distributions`
+- **Steps**: 1) Navigate to /EQADistribution 2) Check KPI cards, buttons, empty state
+- **Expected**: Distribution dashboard renders with KPI cards and action buttons
+- **Result**: PASS — HTTP 200. 4 KPI cards (Draft=0, Shipped=0, Completed=0, Participants=0). "Create New Shipment", "Manage Participants" buttons present. "No distributions found" empty state.
+
+### TC-EQA-MGT-04: EQA Results & Analysis Page
+- **URL**: `/EQAResults`, API: `GET /rest/eqa/orders`
+- **Steps**: 1) Navigate to /EQAResults 2) Verify table structure
+- **Expected**: Results table renders with correct columns
+- **Result**: PASS — HTTP 200. Table columns: Lab Number | Programme | Provider | Priority | Status | Deadline. "No EQA test results found" empty state.
+
+### TC-EQA-MGT-05: Enter New EQA Test
+- **URL**: `/EQAManagement` → "Enter New EQA Test" button
+- **Steps**: 1) Click "Enter New EQA Test" button 2) Verify navigation target and EQA mode
+- **Expected**: Opens Add Order wizard in EQA mode with locked patient fields
+- **Result**: PASS — Navigates to `/SamplePatientEntry?isEQA=true`. EQA banner: "EQA Sample — Patient Info Locked". Patient demographic fields auto-set and non-editable. National ID marked required. Standard 4-step wizard adapts for EQA workflow.
