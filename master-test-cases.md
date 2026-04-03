@@ -14381,3 +14381,177 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 - **Steps**: 1) Click "Enter New EQA Test" button 2) Verify navigation target and EQA mode
 - **Expected**: Opens Add Order wizard in EQA mode with locked patient fields
 - **Result**: PASS — Navigates to `/SamplePatientEntry?isEQA=true`. EQA banner: "EQA Sample — Patient Info Locked". Patient demographic fields auto-set and non-editable. National ID marked required. Standard 4-step wizard adapts for EQA workflow.
+
+---
+
+## Phase 38A — Study/Routine Report PDF Generation
+
+### TC-RPT-VIR-01: ARV Initial Version 1 Page Load
+- **URL**: `/Report?type=patient&report=patientARVInitial1`
+- **Steps**: 1) Navigate to page 2) Verify form renders
+- **Expected**: Lab number range form renders (From/To inputs, Generate Printable Version button)
+- **Result**: PASS — HTTP 200. Form: "Generate a report or range of reports by Order Number / Lab Number". From/To inputs present. Generate Printable Version button present.
+
+### TC-RPT-VIR-02: ARV Initial Version 2 Page Load
+- **URL**: `/Report?type=patient&report=patientARVInitial2`
+- **Result**: PASS — HTTP 200. Lab number form renders correctly.
+
+### TC-RPT-VIR-03: ARV Follow-up Version 1 Page Load
+- **URL**: `/Report?type=patient&report=patientARVFollowup1`
+- **Result**: PASS — HTTP 200. Lab number form renders correctly.
+
+### TC-RPT-VIR-04: ARV Follow-up Version 2 Page Load
+- **URL**: `/Report?type=patient&report=patientARVFollowup2`
+- **Result**: PASS — HTTP 200. Lab number form renders correctly.
+
+### TC-RPT-VIR-05: ARV Version 1 Page Load
+- **URL**: `/Report?type=patient&report=patientARV1`
+- **Result**: PASS — HTTP 200. Lab number form renders correctly.
+
+### TC-RPT-VIR-06: EID Version 1 Page Load
+- **URL**: `/Report?type=patient&report=patientEID1`
+- **Result**: PASS — HTTP 200. Lab number form renders correctly.
+
+### TC-RPT-VIR-07: EID Version 2 Page Load
+- **URL**: `/Report?type=patient&report=patientEID2`
+- **Result**: PASS — HTTP 200. Lab number form renders correctly.
+
+### TC-RPT-VIR-08: VL Version Nationale Page Load
+- **URL**: `/Report?type=patient&report=patientVL1`
+- **Result**: PASS — HTTP 200. Lab number form renders correctly.
+
+### TC-RPT-PDF-01: Patient Status Report PDF Generation
+- **Endpoint**: `GET /api/OpenELIS-Global/ReportPrint?report=patientCILNSP_vreduit&type=patient&startDate=01/01/2026&endDate=04/03/2026`
+- **Result**: PASS — HTTP 200, Content-Type: application/pdf, Size: 1,446 bytes, %PDF header confirmed.
+
+### TC-RPT-PDF-02: Delayed Validation Report PDF Generation
+- **Endpoint**: `GET /api/OpenELIS-Global/ReportPrint?report=validationBacklog&...`
+- **Result**: PASS — HTTP 200, PDF, 1,970 bytes.
+
+### TC-RPT-PDF-03: Rejection Report PDF Generation
+- **Endpoint**: `GET /api/OpenELIS-Global/ReportPrint?report=sampleRejectionReport&...`
+- **Result**: PASS — HTTP 200, PDF, 1,452 bytes.
+
+### TC-RPT-PDF-04: Non-Conformity By Date (Haiti) PDF Generation
+- **Endpoint**: `GET /api/OpenELIS-Global/ReportPrint?report=haitiNonConformityByDate&...`
+- **Result**: PASS — HTTP 200, PDF, 1,452 bytes.
+
+### TC-RPT-PDF-05: Non-Conformity By Date (retroCI) PDF Generation
+- **Endpoint**: `GET /api/OpenELIS-Global/ReportPrint?report=retroCINonConformityByDate&...`
+- **Result**: PASS — HTTP 200, PDF, 1,452 bytes.
+
+### TC-RPT-PDF-06: Non-Conformity By Section/Reason PDF Generation
+- **Endpoint**: `GET /api/OpenELIS-Global/ReportPrint?report=retroCInonConformityBySectionReason&...`
+- **Result**: PASS — HTTP 200, PDF, 1,452 bytes.
+
+### TC-RPT-PDF-07: Non-Conformity By Lab No PDF Generation
+- **Endpoint**: `GET /api/OpenELIS-Global/ReportPrint?report=retroCINonConformityByLabno&...`
+- **Result**: PASS — HTTP 200, PDF, 1,437 bytes.
+
+### TC-RPT-PDF-08: Follow-up Required PDF Generation
+- **Endpoint**: `GET /api/OpenELIS-Global/ReportPrint?report=retroCIFollowupRequiredByLocation&...`
+- **Result**: PASS — HTTP 200, PDF, 1,452 bytes.
+
+### TC-RPT-PDF-09: General Export (CIStudyExport) PDF Generation
+- **Endpoint**: `GET /api/OpenELIS-Global/ReportPrint?report=CIStudyExport&...`
+- **Result**: PASS — HTTP 200, PDF, 1,452 bytes.
+
+### TC-RPT-PDF-10: Viral Load Data Export (Trends) PDF Generation
+- **Endpoint**: `GET /api/OpenELIS-Global/ReportPrint?report=Trends&...`
+- **Result**: PASS — HTTP 200, PDF, 1,452 bytes.
+
+### TC-RPT-PDF-11: Activity Report By Test PDF Generation
+- **Endpoint**: `GET /api/OpenELIS-Global/ReportPrint?report=activityReportByTest&...`
+- **Result**: PASS — HTTP 200, PDF, 1,452 bytes.
+
+### TC-RPT-PDF-12: Activity Report By Panel PDF Generation
+- **Endpoint**: `GET /api/OpenELIS-Global/ReportPrint?report=activityReportByPanel&...`
+- **Result**: PASS — HTTP 200, PDF, 1,452 bytes.
+
+### TC-RPT-PDF-13: Activity Report By Unit PDF Generation
+- **Endpoint**: `GET /api/OpenELIS-Global/ReportPrint?report=activityReportByTestSection&...`
+- **Result**: PASS — HTTP 200, PDF, 1,452 bytes.
+
+### TC-RPT-PDF-14: Referred Out Tests PDF Generation
+- **Endpoint**: `GET /api/OpenELIS-Global/ReportPrint?report=referredOut&...`
+- **Result**: PASS — HTTP 200, PDF, 1,477 bytes.
+
+### TC-RPT-PDF-15: Routine CSV Export PDF Generation
+- **Endpoint**: `GET /api/OpenELIS-Global/ReportPrint?report=CISampleRoutineExport&...`
+- **Result**: PASS — HTTP 200, PDF, 1,452 bytes.
+
+### TC-RPT-PDF-16: Statistics Report PDF Generation
+- **Endpoint**: `GET /api/OpenELIS-Global/ReportPrint?report=statisticsReport&...`
+- **Result**: FAIL (BUG-42) — HTTP 500, body: `"Check server logs"` (19 bytes).
+
+### TC-RPT-PDF-17: Summary of All Tests PDF Generation
+- **Endpoint**: `GET /api/OpenELIS-Global/ReportPrint?report=indicatorHaitiLNSPAllTests&...`
+- **Result**: FAIL (BUG-42) — HTTP 500, body: `"Check server logs"`.
+
+### TC-RPT-PDF-18: HIV Test Summary PDF Generation
+- **Endpoint**: `GET /api/OpenELIS-Global/ReportPrint?report=indicatorCDILNSPHIV&...`
+- **Result**: FAIL (BUG-42) — HTTP 500, body: `"Check server logs"`.
+
+### TC-RPT-PDF-19: Non-Conformity Notification PDF Generation
+- **Endpoint**: `GET /api/OpenELIS-Global/ReportPrint?report=retroCInonConformityNotification&...`
+- **Result**: FAIL (BUG-42) — HTTP 500, body: `"Check server logs"`.
+
+### TC-RPT-PDF-20: Audit Trail PDF Generation
+- **Endpoint**: `GET /api/OpenELIS-Global/ReportPrint?report=auditTrail&...`
+- **Result**: FAIL (BUG-42) — HTTP 500, body: `"Check server logs"`.
+
+---
+
+## Phase 38B — Generic Sample & Sample Management
+
+### TC-GS-01: Generic Sample Order Page
+- **URL**: `/GenericSample/Order`
+- **Steps**: 1) Navigate 2) Inspect form structure and fields
+- **Expected**: Full order form renders with sample types, units, label options
+- **Result**: PASS — HTTP 200. Form fields: Notebook Selection (optional), Lab Number + Generate Lab Number button, Sample Type (18 types: Urine/Histopathology/Serum/Immunohistochemistry/Plasma/Tissue antemortem/DBS/Whole Blood/Tissue post mortem/Respiratory Swab/Sputum/Fluid), Quantity, Unit of Measure (30+ units including mL/mg/dL/copies/mL etc.), Collector, Collection Date/Time, Label quantities (Order labels, Specimen labels), Save/Cancel.
+
+### TC-GS-02: Generic Sample Edit Page
+- **URL**: `/GenericSample/Edit`
+- **Steps**: 1) Navigate 2) Verify search form
+- **Expected**: Accession number search form renders
+- **Result**: PASS — HTTP 200. "Edit Sample" page with "Search by Accession Number" form and Search button.
+
+### TC-GS-03: Generic Sample Import Page
+- **URL**: `/GenericSample/Import`
+- **Steps**: 1) Navigate 2) Verify upload form
+- **Expected**: File upload form renders with CSV/Excel support
+- **Result**: PASS — HTTP 200. "Upload CSV or Excel file (.csv, .xlsx, .xls)" — Select file, Validate, Import staged workflow.
+
+### TC-GS-04: Generic Sample Results Page (i18n regression)
+- **URL**: `/GenericSample/Results`
+- **Steps**: 1) Navigate 2) Check breadcrumb and heading text
+- **Expected**: Page renders with correct human-readable breadcrumb
+- **Result**: FAIL (BUG-43) — HTTP 200 but breadcrumb displays raw i18n key `sample.label.generic` instead of translated text. Page heading "Result Entry" (H3) and accession search form render correctly. Key appears between Home breadcrumb and Result Entry heading.
+
+### TC-GS-05: Sample Management Page
+- **URL**: `/SampleManagement`
+- **Steps**: 1) Navigate 2) Check search and test-addition panels
+- **Expected**: Search and add-tests workflow renders
+- **Result**: PASS — HTTP 200. "Search Samples" section with Search button. "Add tests to 0 selected sample(s)" panel with Sample Type dropdown. "Please select a sample type to view available panels and tests" helper text. "No Eligible Samples" empty state.
+
+---
+
+## Phase 38D — Inventory Reports Tab
+
+### TC-INV-RPT-01: Inventory Reports Tab — UI Structure
+- **URL**: `/Inventory` → Reports tab
+- **Steps**: 1) Navigate to /Inventory 2) Click Reports tab 3) Inspect form
+- **Expected**: Report generation form renders with report types and options
+- **Result**: PASS — Reports tab renders. Report Type dropdown: Stock Levels Report, Expiration Forecast, Usage Trends, Lot Traceability, Low Stock Alerts, Transaction History. Date Range inputs, filter/grouping checkboxes, Generate button all present. Export Format dropdown renders with no options (secondary UI bug).
+
+### TC-INV-RPT-02: Inventory Report Generate Endpoint
+- **Endpoint**: `POST /api/OpenELIS-Global/rest/inventory/reports/generate`
+- **Steps**: 1) Click Generate button 2) Check API response
+- **Expected**: Report PDF or file returned
+- **Result**: FAIL (BUG-45) — HTTP 404 `NoHandlerFoundException`. Backend endpoint not deployed. Request payload is `{}` because Export Format dropdown has no selectable options.
+
+### TC-INV-RPT-03: Inventory Table i18n — Action Column Headers
+- **URL**: `/Inventory`
+- **Steps**: 1) Navigate to /Inventory 2) Inspect Lots and Catalog table column headers
+- **Expected**: All column headers display translated labels
+- **Result**: FAIL (BUG-44) — Last column header in both Lots table and Catalog table shows raw i18n key `label.button.action` instead of "Actions" or equivalent translated text.
