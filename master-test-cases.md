@@ -14555,3 +14555,235 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 - **Steps**: 1) Navigate to /Inventory 2) Inspect Lots and Catalog table column headers
 - **Expected**: All column headers display translated labels
 - **Result**: FAIL (BUG-44) — Last column header in both Lots table and Catalog table shows raw i18n key `label.button.action` instead of "Actions" or equivalent translated text.
+
+---
+
+## Phase 39A — Inventory CRUD Deep Testing
+
+### TC-INV-CRUD-01: GET /items/all
+- **Endpoint**: `GET /api/OpenELIS-Global/rest/inventory/items/all`
+- **Steps**: 1) Navigate to endpoint 2) Verify response structure
+- **Expected**: HTTP 200, array of inventory items with all fields
+- **Result**: PASS — HTTP 200, 5 items in end-state: id=1 REAGENT Inactive, id=2 CARTRIDGE UPDATED Active, id=3 CARTRIDGE Inactive, id=4 CARTRIDGE Active, id=5 RDT Active
+
+### TC-INV-CRUD-02: GET /items/{id}
+- **Endpoint**: `GET /api/OpenELIS-Global/rest/inventory/items/2`
+- **Steps**: 1) Navigate to individual item endpoint 2) Verify full object returned
+- **Expected**: HTTP 200, full item object with all fields
+- **Result**: PASS — Returns `{id:2, name:"QA_AUTO_0404 Cartridge Test Item UPDATED", itemType:"CARTRIDGE", units:"cartridges", lowStockThreshold:15, isActive:"Y"}`
+
+### TC-INV-CRUD-03: GET /items/types (New Discovery)
+- **Endpoint**: `GET /api/OpenELIS-Global/rest/inventory/items/types`
+- **Steps**: 1) Navigate to types endpoint 2) Record all returned types
+- **Expected**: HTTP 200, array of item type strings
+- **Result**: PASS — Returns `["REAGENT","RDT","CARTRIDGE","HIV_KIT","SYPHILIS_KIT"]`. **5 types, not 3.** HIV_KIT and SYPHILIS_KIT are newly documented. UI labels: Reagent, RDT (Rapid Diagnostic Test), Analyzer Cartridge, HIV Test Kit, Syphilis Test Kit.
+
+### TC-INV-CRUD-04: POST /items — CARTRIDGE type
+- **Endpoint**: `POST /api/OpenELIS-Global/rest/inventory/items`
+- **Payload**: `{name, itemType:"CARTRIDGE", category, manufacturer, units:"cartridges", lowStockThreshold:10, calibrationRequired:"N", individualTracking:"Y", isActive:"Y"}`
+- **Steps**: 1) Open "Add Catalog Item" modal 2) Fill fields 3) Select "Analyzer Cartridge" from dropdown 4) Click Save
+- **Expected**: HTTP 201, item created
+- **Result**: PASS — HTTP 201 confirmed via network log. Item id=2 created and visible in /items/all. Note: Repeated slow retries created duplicates (id=2,3,4). Deactivate duplicate via PUT /items/3/deactivate.
+
+### TC-INV-CRUD-05: POST /items — RDT type
+- **Endpoint**: `POST /api/OpenELIS-Global/rest/inventory/items`
+- **Payload**: `{name:"QA_AUTO_0404 RDT Malaria Test", itemType:"RDT", units:"tests", lowStockThreshold:25, isActive:"Y"}`
+- **Steps**: 1) Fire fetch POST 2) Verify via GET /items/all
+- **Expected**: HTTP 201, RDT item created
+- **Result**: PASS — HTTP 201 confirmed via network log. Item id=5 confirmed in /items/all.
+
+### TC-INV-CRUD-06: PUT /items/{id} — Update item
+- **Endpoint**: `PUT /api/OpenELIS-Global/rest/inventory/items/2`
+- **Payload**: `{id:2, name:"...UPDATED", lowStockThreshold:15, storageRequirements:"Room temperature 15-25C", ...}`
+- **Steps**: 1) Fire PUT 2) GET /items/2 to confirm
+- **Expected**: HTTP 200, item fields updated
+- **Result**: PASS — Confirmed via GET: name="QA_AUTO_0404 Cartridge Test Item UPDATED", lowStockThreshold=15, storageRequirements="Room temperature 15-25C"
+
+### TC-INV-CRUD-07: PUT /items/{id}/deactivate
+- **Endpoint**: `PUT /api/OpenELIS-Global/rest/inventory/items/3/deactivate`
+- **Steps**: 1) Fire PUT deactivate 2) GET /items/3 to confirm
+- **Expected**: HTTP 200, isActive set to N
+- **Result**: PASS — Confirmed via GET: isActive="N"
+
+### TC-INV-CRUD-08: GET /lots
+- **Endpoint**: `GET /api/OpenELIS-Global/rest/inventory/lots`
+- **Steps**: 1) Navigate to lots endpoint 2) Inspect lot fields
+- **Expected**: HTTP 200, array of lots with full nested inventoryItem object
+- **Result**: PASS — Returns 1 lot: `{id:1, lotNumber:"QA-LOT-0403-001", currentQuantity:500, qcStatus:"PENDING", status:"ACTIVE", availableForUse:false}`. Note: availableForUse=false because qcStatus=PENDING (requires APPROVED status).
+
+### TC-INV-CRUD-09: POST /management/receive — New lot
+- **Endpoint**: `POST /api/OpenELIS-Global/rest/inventory/management/receive`
+- **Payload**: `{inventoryItemId:2, lotNumber:"QA-LOT-0404-CART-001", expirationDate:"2027-06-30", initialQuantity:50, qcStatus:"APPROVED"}`
+- **Steps**: 1) Fire POST 2) GET /lots to confirm
+- **Expected**: HTTP 201, new lot appears in /lots
+- **Result**: INCONCLUSIVE — Network request captured as pending; server write latency exceeded test window. GET /lots still shows only 1 lot. Could not confirm creation.
+
+### TC-INV-CRUD-10: GET /management/alerts
+- **Endpoint**: `GET /api/OpenELIS-Global/rest/inventory/management/alerts`
+- **Steps**: 1) Navigate to alerts endpoint 2) Verify response structure
+- **Expected**: HTTP 200, alert summary object with lowStockItems, expiringLots, expiredLots arrays
+- **Result**: PASS — Returns `{"lowStockItems":[],"expiringLots":[],"expiredLots":[]}`. All three alert arrays present and empty (expected — no threshold violations).
+
+### TC-INV-CRUD-11: GET /inventory-storage-locations — Stability
+- **Endpoint**: `GET /api/OpenELIS-Global/rest/inventory-storage-locations`
+- **Steps**: 1) Request endpoint in isolation 2) Request as part of concurrent batch
+- **Expected**: HTTP 200 consistently
+- **Result**: INTERMITTENT — Returns HTTP 200 when called in isolation (confirmed in network log). Hangs indefinitely when called concurrently with other requests due to browser connection pool exhaustion. Not consistently broken; classified as server-side performance issue.
+
+### TC-INV-CRUD-12: Add New Lot Modal — i18n (BUG-47)
+- **URL**: `/Inventory` → "Add New Lot" button
+- **Steps**: 1) Click "Add New Lot" 2) Inspect modal content for unresolved i18n keys
+- **Expected**: All labels display human-readable translated text
+- **Result**: FAIL (BUG-47) — Raw i18n key `storage.location.add.button` displayed as button label inside Storage Location field. All other fields (Lot Number, Initial Quantity, Expiration Date, Receipt Date, QC Status, Status, Barcode) render correctly.
+
+### TC-INV-CRUD-13: Server Write Latency
+- **Endpoint**: All POST/PUT to `/rest/inventory/`
+- **Steps**: 1) Fire POST/PUT 2) Monitor time to response 3) Check connection pool status
+- **Expected**: Response within 10 seconds
+- **Result**: FAIL — POST/PUT operations take 30–120+ seconds. Side effects: multiple pending connections saturate Chrome's 6-connection-per-host limit; dependent UI (dropdown data loading) blocks until connections free. GETs unaffected (1–2s).
+
+---
+
+## Phase 39B — EQA CRUD Testing
+
+### TC-EQA-01: EQA Management Page Load
+- **URL**: `/EQAManagement`
+- **Steps**: 1) Navigate to page 2) Verify KPI cards and actions
+- **Expected**: HTTP 200, page loads with sample workflow KPIs
+- **Result**: PASS — KPI cards: Pending (0), In Progress (0), Completed (0), Submitted (0). Tabs: All Samples/Pending/In Progress/Completed/Submitted/Overdue. Buttons: "Enter New EQA Test", "Bulk Upload Results", "View Performance". "EQA Samples" section with "No EQA samples found" empty state.
+
+### TC-EQA-02: Enter New EQA Test Navigation
+- **URL**: `/EQAManagement` → "Enter New EQA Test" button
+- **Steps**: 1) Click button 2) Verify destination page
+- **Expected**: EQA-specific order entry form
+- **Result**: PASS — Navigates to `/SamplePatientEntry?isEQA=true`. Multi-step EQA wizard: Patient Info → Program Selection → Add Sample → Add Order. EQA-specific step (Program Selection) added to standard order form.
+
+### TC-EQA-03: EQA Participants Page Load
+- **URL**: `/EQAParticipants`
+- **Steps**: 1) Navigate to page 2) Check content
+- **Expected**: HTTP 200, participant management UI
+- **Result**: PASS — "Select Program" dropdown present. "Select a program to view enrollments" guidance text. No data (no programs enrolled).
+
+### TC-EQA-04: EQA Distribution Page Load
+- **URL**: `/EQADistribution`
+- **Steps**: 1) Navigate to page 2) Check KPI cards
+- **Expected**: HTTP 200, distribution management with shipment KPIs
+- **Result**: PASS — KPI cards: Draft Shipments (0 Being prepared), Shipped (0 Awaiting responses), Completed (0 All responses received), Participants (0 Enrolled). Tabs: All Shipments/Draft/Prepared/Shipped/Completed. "Create New Shipment" button present.
+
+### TC-EQA-05: EQA Results Page Load
+- **URL**: `/EQAResults`
+- **Steps**: 1) Navigate to page 2) Verify table
+- **Expected**: HTTP 200, results table
+- **Result**: PASS — Table with columns: Lab Number, Programme, Provider, Priority, Status, Deadline. "No EQA test results found." empty state.
+
+### TC-EQA-06: EQA My Programs Page Load
+- **URL**: `/EQAMyPrograms`
+- **Steps**: 1) Navigate to page 2) Verify content
+- **Expected**: HTTP 200, enrolled programs list
+- **Result**: PASS — "Enroll in Program" button. Table with Program Name/Provider/Lab Unit(s)/Tests/Status/Actions columns. Empty (no enrolled programs).
+
+### TC-EQA-07: GET /eqa/programs
+- **Endpoint**: `GET /api/OpenELIS-Global/rest/eqa/programs`
+- **Steps**: 1) Navigate to endpoint 2) Check response
+- **Expected**: HTTP 200, array of programs
+- **Result**: PASS — HTTP 200, returns array. After POST: `[{id:1, name:"QA_AUTO_0404 HIV EQA Program UPDATED", participantCount:0, isActive:true, fhirUuid:"004cb3d9-..."}]`
+
+### TC-EQA-08: GET /eqa/distributions
+- **Endpoint**: `GET /api/OpenELIS-Global/rest/eqa/distributions`
+- **Steps**: 1) Navigate to endpoint
+- **Expected**: HTTP 200, distribution list
+- **Result**: PASS — HTTP 200, returns `{"totalCount":0,"distributions":[]}`
+
+### TC-EQA-09: GET /eqa/orders
+- **Endpoint**: `GET /api/OpenELIS-Global/rest/eqa/orders`
+- **Steps**: 1) Navigate to endpoint
+- **Expected**: HTTP 200
+- **Result**: PASS — HTTP 200, returns `[]`
+
+### TC-EQA-10: GET /eqa/my-programs
+- **Endpoint**: `GET /api/OpenELIS-Global/rest/eqa/my-programs`
+- **Steps**: 1) Navigate to endpoint (discovered from network log)
+- **Expected**: HTTP 200
+- **Result**: PASS — HTTP 200, returns `[]` (no enrolled programs). New endpoint — not previously documented.
+
+### TC-EQA-11: GET /eqa/samples/dashboard — BUG-39 Reconfirmed
+- **Endpoint**: `GET /api/OpenELIS-Global/rest/eqa/samples/dashboard`
+- **Steps**: 1) Navigate to endpoint
+- **Expected**: HTTP 200, dashboard summary data
+- **Result**: FAIL (BUG-39 confirmed) — HTTP 404 `NoHandlerFoundException`. Called by /EQAManagement on every load. Dashboard KPI cards may show hardcoded 0 values rather than real data.
+
+### TC-EQA-12: GET /eqa/participants — Not Implemented
+- **Endpoint**: `GET /api/OpenELIS-Global/rest/eqa/participants`
+- **Steps**: 1) Navigate to endpoint
+- **Expected**: HTTP 200, participant list
+- **Result**: FAIL — HTTP 404 `NoHandlerFoundException`. REST endpoint for participant management not implemented.
+
+### TC-EQA-13: GET /eqa/results — Not Implemented
+- **Endpoint**: `GET /api/OpenELIS-Global/rest/eqa/results`
+- **Steps**: 1) Navigate to endpoint
+- **Expected**: HTTP 200, results list
+- **Result**: FAIL — HTTP 404 `NoHandlerFoundException`. REST endpoint for EQA results not implemented.
+
+### TC-EQA-14: POST /eqa/programs — Create Program
+- **Endpoint**: `POST /api/OpenELIS-Global/rest/eqa/programs`
+- **Payload**: `{name:"QA_AUTO_0404 HIV EQA Program", description:"...", isActive:true}`
+- **Steps**: 1) POST program 2) GET /eqa/programs to confirm
+- **Expected**: HTTP 201, program created with id and fhirUuid
+- **Result**: PASS — HTTP 200 (not 201 — non-standard), returns `{id:1, participantCount:0, isActive:true, fhirUuid:"004cb3d9-6753-42e0-bc19-fe0e0e5a2710"}`. Program confirmed in GET.
+
+### TC-EQA-15: PUT /eqa/programs/{id} — Update Program
+- **Endpoint**: `PUT /api/OpenELIS-Global/rest/eqa/programs/1`
+- **Payload**: `{id:1, name:"...UPDATED", description:"Updated description", isActive:true}`
+- **Steps**: 1) Fire PUT 2) GET /eqa/programs to confirm
+- **Expected**: HTTP 200, name updated
+- **Result**: PASS — Confirmed via GET: name="QA_AUTO_0404 HIV EQA Program UPDATED"
+
+### TC-EQA-16: POST /eqa/distributions — Create Distribution
+- **Endpoint**: `POST /api/OpenELIS-Global/rest/eqa/distributions`
+- **Payload**: `{programId:1, shipmentDate:"2026-04-15", dueDate:"2026-05-15", description:"QA_AUTO_0404 Test Distribution Round 1"}`
+- **Steps**: 1) Fire POST 2) GET /eqa/distributions to confirm
+- **Expected**: HTTP 200/201, distribution created
+- **Result**: INCONCLUSIVE — Network request captured as pending; server latency exceeded test window. GET /eqa/distributions still shows totalCount=0.
+
+---
+
+## Phase 39C — Calculated Value Tests Retest
+
+### TC-CALC-01: Calculated Value Admin Page Load
+- **URL**: `/MasterListsPage/calculatedValue`
+- **Steps**: 1) Click "Calculated Value Tests Management" in admin sidebar 2) Verify page content
+- **Expected**: HTTP 200, list of configured calculation rules
+- **Result**: PASS — Page loads with 2 configured rules visible (De Ritis Ratio, QA Test Calc). "Toggle Rule" switch and "Deactivate Rule" button per row.
+
+### TC-CALC-02: GET /rest/test-calculations
+- **Endpoint**: `GET /api/OpenELIS-Global/rest/test-calculations`
+- **Steps**: 1) Navigate to endpoint 2) Inspect rule definitions
+- **Expected**: HTTP 200, array of calculation rules with operation chains
+- **Result**: PASS — HTTP 200, 2 rules:
+  - De Ritis Ratio (id=1): sampleId=2, testId=689, ops=`TEST_RESULT(2) / TEST_RESULT(1)` (AST÷ALT), active=true, toggled=false
+  - QA Test Calc (id=6): sampleId=2, testId=7, ops=`TEST_RESULT(8) * INTEGER(2)`, active=true, toggled=false
+
+### TC-CALC-03: GET /rest/math-functions
+- **Endpoint**: `GET /api/OpenELIS-Global/rest/math-functions`
+- **Steps**: 1) Navigate to endpoint 2) List all available operators
+- **Expected**: HTTP 200, array of operator objects
+- **Result**: PASS — HTTP 200, 14 operators: Plus (+), Minus (-), Divided By (/), Multiplied By (*), Open Bracket, Close Bracket, Equals (==), Does Not Equal (!=), Greater Than Or Equal (>=), Less Than Or Equal (<=), Is Within Normal Range, Is Outside Normal Range, And, Or
+
+### TC-CALC-04: GET /rest/calculatedValue (Admin page call) — BUG-46
+- **Endpoint**: `GET /api/OpenELIS-Global/rest/calculatedValue`
+- **Steps**: 1) Load /MasterListsPage/calculatedValue 2) Monitor network requests
+- **Expected**: Endpoint to not return 404 if called by the page
+- **Result**: FAIL (BUG-46) — HTTP 404. Page also calls `GET /rest/testCalculatedValue` → also 404. Correct endpoint is `/rest/test-calculations`. Page renders correctly despite these 404s because it uses the correct endpoint for primary data load.
+
+### TC-CALC-05: POST /rest/test-calculations — Create Rule
+- **Endpoint**: `POST /api/OpenELIS-Global/rest/test-calculations`
+- **Payload**: `{name:"QA_AUTO_0404 eGFR Simple", sampleId:2, testId:689, active:true, toggled:false, operations:[{order:0,type:"TEST_RESULT",value:"1"},{order:1,type:"MATH_FUNCTION",value:"/"},{order:2,type:"INTEGER",value:"88"}]}`
+- **Steps**: 1) Fire POST 2) GET /rest/test-calculations to confirm
+- **Expected**: HTTP 200/201, new rule appears in list
+- **Result**: INCONCLUSIVE — Network request pending; server latency exceeded test window. GET /rest/test-calculations still shows only 2 rules.
+
+### TC-CALC-06: Deactivate Rule UI — Button Rendering
+- **URL**: `/MasterListsPage/calculatedValue`
+- **Steps**: 1) Inspect "Deactivate Rule" button presence 2) Verify confirmation modal pre-renders
+- **Expected**: Deactivate buttons visible and confirmation modal available
+- **Result**: PASS — "Deactivate Rule" button visible for each rule. Confirmation modal pre-renders in DOM (hidden): "Confirm Deactivation — Are you sure you want to deactivate [name]? Implications: [text]". Modal triggered on button click.
