@@ -14787,3 +14787,173 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 - **Steps**: 1) Inspect "Deactivate Rule" button presence 2) Verify confirmation modal pre-renders
 - **Expected**: Deactivate buttons visible and confirmation modal available
 - **Result**: PASS — "Deactivate Rule" button visible for each rule. Confirmation modal pre-renders in DOM (hidden): "Confirm Deactivation — Are you sure you want to deactivate [name]? Implications: [text]". Modal triggered on button click.
+
+---
+
+## Phase 40 — Admin Config CRUD Deep Testing (2026-04-05)
+
+### TC-BUG46-VERIFY: BUG-46 Cannot Reproduce Verification
+- **URL**: `/MasterListsPage/calculatedValue`
+- **Steps**: 1) Navigate fresh to calculatedValue admin page 2) Monitor network requests via read_network_requests 3) Check for GET /rest/calculatedValue and GET /rest/testCalculatedValue calls
+- **Expected**: Only correct endpoint GET /rest/test-calculations (200) observed; no spurious 404 calls
+- **Result**: PASS — BUG-46 CANNOT REPRODUCE in v3.2.1.4. Only `GET /rest/test-calculations` (200) and `GET /rest/math-functions` (200) observed. Spurious 404 calls are gone. Likely fixed.
+
+### TC-BUG47-VERIFY: BUG-47 Extended i18n Key Verification
+- **URL**: `/Inventory`
+- **Steps**: 1) Open overflow menu on inventory lot row 2) Click "Add New Lot" 3) Observe Storage Location section 4) Open Add Storage Location dialog 5) Open Deactivate Item dialog
+- **Expected**: All labels display translated human-readable text
+- **Result**: FAIL (BUG-47 CONFIRMED + EXTENDED) — 4 unresolved i18n keys found: `storage.location.add.button` (modal button), `storage.location.add.title` (sub-dialog heading), `dangerDeactivate` (deactivate confirmation button), `label.button.action` (lots table column header).
+
+### TC-SITE-01: Site Information Page Render
+- **URL**: `/MasterListsPage/SiteInformation` (or via Admin → Site Information)
+- **Steps**: 1) Navigate to Site Information 2) Verify page loads with address/label fields
+- **Expected**: Page renders with editable address fields (Address line 1 label, etc.), GET /rest/SiteInformation → 200
+- **Result**: PASS — Page renders with labeled fields. GET /rest/SiteInformation returns structure: `{formName, formAction, paramName, value, valueType, editable}`.
+
+### TC-SITE-02: Site Information Edit and Save
+- **URL**: `/MasterListsPage/SiteInformation`
+- **Steps**: 1) Click edit/modify on a field 2) Observe GET?ID=X loads that record 3) Change value 4) Click Save/Submit
+- **Expected**: GET `?ID=X` loads individual record; POST `?ID=X` saves with 200 response
+- **Result**: PASS — Edit loads record via `GET /rest/SiteInformation?ID=X`, save triggers `POST /rest/SiteInformation?ID=X` → 200.
+
+### TC-SITE-03: Site Information Cancel Reverts
+- **URL**: `/MasterListsPage/SiteInformation`
+- **Steps**: 1) Enter edit mode for a field 2) Modify value 3) Click Cancel
+- **Expected**: No API call made; original value restored
+- **Result**: PASS — Cancel button exits edit mode without firing any POST. DOM value reverts to original.
+
+### TC-PROP-01: Application Properties Page Render
+- **URL**: `/MasterListsPage/applicationProperties` (or equivalent)
+- **Steps**: 1) Navigate to Application Properties 2) Verify property list renders
+- **Expected**: Table/list of application properties with key/value pairs; GET /rest/properties → 200
+- **Result**: PASS — Properties page renders with key/value table. GET /rest/properties → 200.
+
+### TC-PROP-02: Application Property Edit and Save
+- **URL**: `/MasterListsPage/applicationProperties`
+- **Steps**: 1) Select a property 2) Modify value 3) Save
+- **Expected**: POST /rest/properties → 200; change persists
+- **Result**: PASS — Edit workflow confirmed; POST → 200.
+
+### TC-GENCFG-01: WorkplanConfigurationMenu Renders
+- **URL**: `/MasterListsPage/WorkplanConfigurationMenu`
+- **Steps**: 1) Navigate to WorkplanConfigurationMenu 2) Verify content renders
+- **Expected**: Page renders with configuration rows; GET /rest/WorkplanConfigurationMenu → 200
+- **Result**: PASS — Page renders correctly with workplan config settings. API → 200.
+
+### TC-GENCFG-02: NonConformityConfigurationMenu Renders
+- **URL**: `/MasterListsPage/NonConformityConfigurationMenu`
+- **Steps**: 1) Navigate to NonConformityConfigurationMenu 2) Verify content renders
+- **Expected**: Page renders with config rows; GET /rest/NonConformityConfigurationMenu → 200
+- **Result**: PASS — Page renders correctly. API → 200.
+
+### TC-GENCFG-03: ValidationConfigurationMenu Renders
+- **URL**: `/MasterListsPage/ValidationConfigurationMenu`
+- **Steps**: 1) Navigate to ValidationConfigurationMenu 2) Verify content renders
+- **Expected**: Page renders with config rows; GET /rest/ValidationConfigurationMenu → 200
+- **Result**: PASS — Page renders correctly. API → 200.
+
+### TC-GENCFG-04: Blank General Config Sub-Pages (BUG-48)
+- **URL**: `/MasterListsPage/SampleEntryConfigurationMenu`, `OrderEntryConfigurationMenu`, `PatientConfigurationMenu`, `PrinterConfigurationMenu`
+- **Steps**: 1) Navigate to each sub-page 2) Check body.innerText.length and h2 presence
+- **Expected**: Each page renders with configuration content; API → 200
+- **Result**: FAIL (BUG-48) — All 4 pages render blank: body.innerText.length === 879, no h2, no inputs. API `GET /rest/<PageName>` → 404 for each. React component receives no data and renders nothing.
+
+### TC-SBRND-01: Site Branding Edit/Save
+- **URL**: `/MasterListsPage/SiteBranding` (or equivalent)
+- **Steps**: 1) Navigate to Site Branding 2) Verify page renders 3) Change a value 4) Save 5) Confirm change via GET
+- **Expected**: GET /rest/site-branding → 200; PUT /rest/site-branding → 200; change persists
+- **Result**: PASS — GET → 200, PUT → 200. Color change (#0f62fe → test value) confirmed and reverted.
+
+---
+
+## Phase 41 — Provider, Lab Number, Barcode Config, Menu Config (2026-04-05)
+
+### TC-PROV-01: Provider Management Page Render
+- **URL**: `/MasterListsPage/providerMenu`
+- **Steps**: 1) Navigate to providerMenu 2) Verify provider table renders
+- **Expected**: Table of providers renders; GET /rest/provider → 200
+- **Result**: PASS — Provider table renders with name, phone, fax columns. GET /rest/provider → 200. Initial count: 5 providers.
+
+### TC-PROV-02: Add Provider Modal
+- **URL**: `/MasterListsPage/providerMenu`
+- **Steps**: 1) Click "Add Provider" button 2) Verify modal opens with form fields
+- **Expected**: Modal renders with firstName, lastName, phone, fax fields; Carbon TextInput interactions work
+- **Result**: PASS — Modal opens with all expected fields. Note: `lastName` Carbon TextInput requires React fiber props onChange dispatch (native setter insufficient for React state update); `firstName` and others work with native setter.
+
+### TC-PROV-03: Create Provider
+- **URL**: `/MasterListsPage/providerMenu`
+- **Steps**: 1) Fill Add Provider form (firstName, lastName) 2) Click Submit/Add 3) Verify new row appears
+- **Expected**: POST /rest/provider → 200; table row count increases
+- **Result**: PASS — POST /rest/provider → 200. Row count increased from 5 to 6, confirming successful creation.
+
+### TC-LABN-01: Lab Number Management Page Render
+- **URL**: `/MasterListsPage/labNumber`
+- **Steps**: 1) Navigate to labNumber 2) Verify h2 and controls render
+- **Expected**: h2 "Lab Number Management"; dropdown with Alpha Numeric/Legacy options; current format displayed; Submit button
+- **Result**: PASS — h2 "Lab Number Management". Dropdown `lab_number_type` with `SITEYEARNUM` (Alpha Numeric) default and Legacy option. Current format and new format both show `DEV01260000000000009`. Submit button present.
+
+### TC-LABN-02: Lab Number Submit
+- **URL**: `/MasterListsPage/labNumber`
+- **Steps**: 1) Click Submit (keep existing format) 2) Monitor network for API call
+- **Expected**: POST /rest/labnumbermanagement → 200
+- **Result**: PASS — POST /rest/labnumbermanagement → 200. Follow-up GET /rest/SampleEntryGenerateScanProvider?noIncrement=true&format=SITEYEARNUM → 200 (preview refresh).
+
+### TC-BARCODE-01: Barcode Configuration Page Render
+- **URL**: `/MasterListsPage/barcodeConfiguration`
+- **Steps**: 1) Navigate to barcodeConfiguration 2) Verify controls render
+- **Expected**: Numeric count inputs for order/specimen/slide/block; checkboxes for patient info fields; locale selector; Save button; GET /rest/BarcodeConfiguration → 200
+- **Result**: PASS — All controls present: order=2, specimen=1, slide=1, maxOrder=10, maxSpecimen=1, maxSlide=1, maxBlock=1, maxFreezer=1. Checkboxes: orderPatientDobCheck, orderPatientIdCheck, orderPatientNameCheck, orderSiteIdCheck, specimenPatientDobCheck, etc. Locale selector. Save and Cancel buttons.
+
+### TC-BARCODE-02: Barcode Configuration Save
+- **URL**: `/MasterListsPage/barcodeConfiguration`
+- **Steps**: 1) Change a numeric value 2) Click Save 3) Monitor network
+- **Expected**: POST /rest/BarcodeConfiguration → 200; Save only fires POST when a value has changed
+- **Result**: PASS — Changed order count 2→3, POST /rest/BarcodeConfiguration → 200. Reverted 3→2, confirmed second POST → 200. No-op Save (no changes) does not fire POST.
+
+### TC-MENU-01: globalMenuManagement Renders
+- **URL**: `/MasterListsPage/globalMenuManagement`
+- **Steps**: 1) Navigate to globalMenuManagement 2) Verify content
+- **Expected**: h2 "Global Menu Management"; checkboxes for menu items; Submit button
+- **Result**: PASS — h2 "Global Menu Management". 158 checkboxes (all menu items). Submit button. API: GET /rest/menu → 200.
+
+### TC-MENU-02: billingMenuManagement Renders
+- **URL**: `/MasterListsPage/billingMenuManagement`
+- **Steps**: 1) Navigate to billingMenuManagement 2) Verify content
+- **Expected**: h2 "Billing Menu Management"; checkbox(es); Submit button
+- **Result**: PASS — h2 "Billing Menu Management". 1 checkbox. Submit button. bodyLen=990.
+
+### TC-MENU-03: nonConformityMenuManagement Renders
+- **URL**: `/MasterListsPage/nonConformityMenuManagement`
+- **Steps**: 1) Navigate 2) Verify content
+- **Expected**: h2 "Non-Conformity Menu Management"; checkbox(es); Submit button
+- **Result**: PASS — h2 "Non-Conformity Menu Management". 1 checkbox. Submit button. bodyLen=1028.
+
+### TC-MENU-04: patientMenuManagement Renders
+- **URL**: `/MasterListsPage/patientMenuManagement`
+- **Steps**: 1) Navigate 2) Verify content
+- **Expected**: h2 "Patient Menu Management"; checkbox(es); Submit button
+- **Result**: PASS — h2 "Patient Menu Management". 1 checkbox. Submit button. bodyLen=1010.
+
+### TC-MENU-05: studyMenuManagement Renders
+- **URL**: `/MasterListsPage/studyMenuManagement`
+- **Steps**: 1) Navigate 2) Verify content
+- **Expected**: h2 "Study Menu Configuration"; checkbox(es); Submit button
+- **Result**: PASS — h2 "Study Menu Configuration". 1 checkbox. Submit button. bodyLen=1007.
+
+### TC-MENU-06: testManagementConfigMenu Renders
+- **URL**: `/MasterListsPage/testManagementConfigMenu`
+- **Steps**: 1) Navigate 2) Verify content
+- **Expected**: h2 "Test Management"; navigation links to sub-pages
+- **Result**: PASS — h2 "Test Management". Navigation landing page with links: TestRenameEntry, PanelRenameEntry, SampleTypeRenameEntry, TestSectionRenameEntry, UomRenameEntry, SelectListRenameEntry. No Submit button (nav-only page). bodyLen=2696.
+
+### TC-MENU-07: testNotificationConfigMenu Renders
+- **URL**: `/MasterListsPage/testNotificationConfigMenu`
+- **Steps**: 1) Navigate 2) Verify content
+- **Expected**: h2 "Test Notification Configuration"; checkboxes for test notifications
+- **Result**: PASS — h2 "Test Notification Configuration". 100 checkboxes. bodyLen=2585. Links to "Non-conformity notification" sub-page.
+
+### TC-MENU-08: menuConfiguration Parent Route Blank (BUG-49)
+- **URL**: `/MasterListsPage/menuConfiguration`
+- **Steps**: 1) Navigate to menuConfiguration (sidebar "Menu Configuration" button destination) 2) Check body.innerText.length and h2
+- **Expected**: Landing page or redirect to first sub-page; content rendered
+- **Result**: FAIL (BUG-49) — body.innerText.length === 879 (sidebar-only render, no content). No h2. No inputs. Same blank signature as BUG-48 pages. Users clicking "Menu Configuration" in the sidebar see a blank page; actual sub-routes only accessible via direct URL.
