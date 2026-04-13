@@ -14957,3 +14957,123 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 - **Steps**: 1) Navigate to menuConfiguration (sidebar "Menu Configuration" button destination) 2) Check body.innerText.length and h2
 - **Expected**: Landing page or redirect to first sub-page; content rendered
 - **Result**: FAIL (BUG-49) — body.innerText.length === 879 (sidebar-only render, no content). No h2. No inputs. Same blank signature as BUG-48 pages. Users clicking "Menu Configuration" in the sidebar see a blank page; actual sub-routes only accessible via direct URL.
+
+---
+
+## Phase 42 — mgtest v3.2.1.5 Baseline Survey (2026-04-13)
+
+**Server:** https://mgtest.openelis-global.org — OpenELIS Global v3.2.1.5 ("Madagascar OpenELIS")
+**Credentials:** admin / adminADMIN!
+**CSRF:** localStorage['CSRF'] → header X-CSRF-Token
+**Baseline:** 0 in progress, 15 ready for validation, 0 completed today
+
+### TC-MGT-01: Dashboard Loads with KPI Cards
+- **URL**: `/Dashboard`
+- **Steps**: 1) Navigate 2) Verify KPI cards and API call
+- **Expected**: KPI cards render; GET /rest/home-dashboard/metrics → 200
+- **Result**: PASS — KPIs: 0 in progress, 15 ready for validation, 0 completed today.
+
+### TC-MGT-02: Analyzers Page Renders
+- **URL**: `/analyzers`
+- **Steps**: 1) Navigate 2) Verify content and actual API endpoint
+- **Expected**: Table with analyzers; stat cards
+- **Result**: PASS — 4 total analyzers, 0 active, 0 inactive, 1 plugin warning. Uses GET /rest/analyzer/analyzers (200) — NOT /rest/analyzers (404). API path corrected for v3.2.1.5.
+
+### TC-MGT-03: Analyzer Error Dashboard Renders
+- **URL**: `/analyzers/errors`
+- **Steps**: 1) Navigate 2) Verify stat cards
+- **Expected**: Error Dashboard with stat cards
+- **Result**: PASS — "Error Dashboard" renders. 1 total, 1 unacknowledged, 0 critical, 1 last 24h.
+
+### TC-MGT-04: Patient Management Form Renders
+- **URL**: `/PatientManagement`
+- **Steps**: 1) Navigate 2) Verify search form
+- **Expected**: Search form with key fields
+- **Result**: PASS — Form renders with Patient ID, Previous Lab Number, Last Name, First Name, DOB, Gender, Search, External Search buttons. 9 inputs.
+
+### TC-MGT-05: LogbookResults Renders with Dropdown
+- **URL**: `/LogbookResults?type=`
+- **Steps**: 1) Navigate 2) Check dropdown option count
+- **Expected**: Test Unit dropdown renders with sections
+- **Result**: PASS — 11 test unit options including Biochemistry, Hematology, Serology, Immunology, Molecular Biology, etc.
+
+### TC-MGT-06: SamplePatientEntry (Add Order) 4-Step Wizard Renders
+- **URL**: `/SamplePatientEntry`
+- **Steps**: 1) Navigate 2) Verify wizard structure
+- **Expected**: h2 "Test Request"; 4-step wizard
+- **Result**: PASS — "Test Request" h2; 4 steps: Patient Info / Program Selection / Add Sample / Add Order.
+
+### TC-MGT-07: AccessionValidation Renders
+- **URL**: `/AccessionValidation`
+- **Steps**: 1) Navigate 2) Verify search form
+- **Expected**: Accession number search form
+- **Result**: PASS — Search form renders with accession number input. "There are no records to display" (empty instance, expected).
+
+### TC-MGT-08: ResultValidation (Routine) Renders
+- **URL**: `/ResultValidation`
+- **Steps**: 1) Navigate 2) Verify dropdowns
+- **Expected**: Test Unit selector renders
+- **Result**: PASS — 4 selects including test unit dropdown.
+
+### TC-MGT-09: TestAdd Form Renders
+- **URL**: `/MasterListsPage/TestAdd`
+- **Steps**: 1) Navigate 2) Verify form inputs
+- **Expected**: h2 "Add new tests"; input fields
+- **Result**: PASS — h2 "Add new tests"; 4 inputs (EN/FR test name, reporting name), 2 selects, Next/Cancel buttons.
+
+### TC-MGT-10: User Management List Renders
+- **URL**: `/MasterListsPage/userManagement/createUser`
+- **Steps**: 1) Navigate 2) Verify list renders, Add button opens form
+- **Expected**: User list table; Add User form opens on click
+- **Result**: PASS — User Management list with search, filters, user table (2 users: ID 1, 109). Add button opens "Add User" modal with Login Name, Password, First/Last Name, Roles fields.
+
+### TC-MGT-11: Provider Management Renders (BUG-50)
+- **URL**: `/MasterListsPage/providerMenu`
+- **Steps**: 1) Navigate 2) Check table rows and API status
+- **Expected**: Table of providers from GET /rest/provider
+- **Result**: FAIL (BUG-50) — GET /rest/provider → 404. Page renders h2 "Provider Management" with 1-row table showing only "UNKNOWN_" default entry (isActive=false, no name/phone/fax). Real provider data unavailable.
+
+### TC-MGT-12: Dictionary API Health
+- **Steps**: fetch('/api/OpenELIS-Global/rest/dictionary')
+- **Expected**: 200
+- **Result**: FAIL (BUG-51) — 404. DictionaryMenu admin page likely blank.
+
+### TC-MGT-13: Patient Search API Health
+- **Steps**: fetch('/api/OpenELIS-Global/rest/patient/search?lastName=test...')
+- **Expected**: 200
+- **Result**: FAIL (BUG-52) — 404. Patient search non-functional across app.
+
+### TC-MGT-14: Referrals API Health
+- **Steps**: fetch('/api/OpenELIS-Global/rest/referrals')
+- **Expected**: 200
+- **Result**: FAIL (BUG-53) — 404. Referred Out Tests lookup broken.
+
+### TC-MGT-15: CalculatedValue API Health (BUG-46 regression check)
+- **Steps**: fetch('/api/OpenELIS-Global/rest/calculatedValue')
+- **Expected**: 404 (was fixed in v3.2.1.4, checking regression)
+- **Result**: FAIL (BUG-46 REGRESSED / BUG-54) — 404 confirmed. Also GET /rest/organizationManagement/providers → 404.
+
+### TC-MGT-16: TestAdd POST (BUG-1 check)
+- **Steps**: POST /rest/TestAdd with CSRF token from localStorage['CSRF']
+- **Expected**: 200/201 with created test data
+- **Result**: FAIL (BUG-1 CONFIRMED in v3.2.1.5) — HTTP 500 "Check server logs"
+
+### TC-MGT-17: UserCreate Form Submission (BUG-20 check)
+- **Steps**: 1) Open Add User form 2) Fill fields via React fiber 3) Click Save 4) Check POST
+- **Expected**: Save triggers POST and creates user
+- **Result**: FAIL (BUG-20 CONFIRMED in v3.2.1.5) — login-name and last-name fields remain aria-invalid="true" after React fiber input. Save button does not fire POST. Form validation permanently blocks submission.
+
+### TC-MGT-18: PatientConfigurationMenu API (BUG-48 fix verification)
+- **Steps**: fetch('/api/OpenELIS-Global/rest/PatientConfigurationMenu')
+- **Expected**: 200 (was 404 in v3.2.1.4)
+- **Result**: PASS — 200. BUG-48 partially fixed in v3.2.1.5 (PatientConfigurationMenu now working).
+
+### TC-MGT-19: BarcodeConfiguration API Health
+- **Steps**: fetch('/api/OpenELIS-Global/rest/BarcodeConfiguration')
+- **Expected**: 200
+- **Result**: PASS — 200
+
+### TC-MGT-20: LabNumberManagement API Health
+- **Steps**: fetch('/api/OpenELIS-Global/rest/labnumbermanagement')
+- **Expected**: 200
+- **Result**: PASS — 200
