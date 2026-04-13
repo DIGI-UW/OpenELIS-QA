@@ -196,15 +196,15 @@ h3 { font-size:15px; font-weight:600; margin-bottom:12px; }
       <div class="header-sub">DIGI-UW / openelis-test-catalog-qa · Last updated: 2026-04-13</div>
     </div>
     <div class="header-stats">
-      <strong>1,074</strong> total TCs &nbsp;·&nbsp; <strong>989</strong> pass &nbsp;·&nbsp; <strong>92.1%</strong> overall<br>
-      <strong>2</strong> servers tested &nbsp;·&nbsp; <strong>51</strong> phases &nbsp;·&nbsp; <strong>31</strong> open bugs
+      <strong>1,097</strong> total TCs &nbsp;·&nbsp; <strong>1,011</strong> pass &nbsp;·&nbsp; <strong>92.2%</strong> overall<br>
+      <strong>2</strong> servers tested &nbsp;·&nbsp; <strong>56</strong> phases &nbsp;·&nbsp; <strong>31</strong> open bugs
     </div>
   </div>
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="showPanel('overview',this)">Overview</button>
     <button class="nav-tab" onclick="showPanel('servers',this)">Servers</button>
     <button class="nav-tab" onclick="showPanel('history',this)">Run History</button>
-    <button class="nav-tab" onclick="showPanel('bugs',this)">Bugs (31)</button>
+    <button class="nav-tab" onclick="showPanel('bugs',this)">Bugs (31) · 1 Fixed</button>
     <button class="nav-tab" onclick="showPanel('compare',this)">v3.2.1.4 vs v3.2.1.5</button>
   </div>
 </div>
@@ -215,24 +215,24 @@ h3 { font-size:15px; font-weight:600; margin-bottom:12px; }
 <div id="panel-overview" class="panel active">
   <div class="kpi-grid">
     <div class="kpi blue">
-      <div class="kpi-value">1,074</div>
+      <div class="kpi-value">1,097</div>
       <div class="kpi-label">Total Test Cases</div>
-      <div class="kpi-sub">Phases 1–51</div>
+      <div class="kpi-sub">Phases 1–56</div>
     </div>
     <div class="kpi green">
-      <div class="kpi-value">989</div>
+      <div class="kpi-value">1,011</div>
       <div class="kpi-label">Pass</div>
-      <div class="kpi-sub">92.1% overall rate</div>
+      <div class="kpi-sub">92.2% overall rate</div>
     </div>
     <div class="kpi red">
-      <div class="kpi-value">85</div>
+      <div class="kpi-value">86</div>
       <div class="kpi-label">Fail</div>
-      <div class="kpi-sub">7.9% failure rate</div>
+      <div class="kpi-sub">7.8% failure rate</div>
     </div>
     <div class="kpi orange">
       <div class="kpi-value">31</div>
       <div class="kpi-label">Open Bugs</div>
-      <div class="kpi-sub">5 fixed/resolved</div>
+      <div class="kpi-sub">6 fixed/resolved</div>
     </div>
     <div class="kpi teal">
       <div class="kpi-value">2</div>
@@ -240,9 +240,9 @@ h3 { font-size:15px; font-weight:600; margin-bottom:12px; }
       <div class="kpi-sub">testing + mgtest</div>
     </div>
     <div class="kpi purple">
-      <div class="kpi-value">51</div>
+      <div class="kpi-value">56</div>
       <div class="kpi-label">Phases Complete</div>
-      <div class="kpi-sub">Phases 1–51</div>
+      <div class="kpi-sub">Phases 1–56</div>
     </div>
   </div>
 
@@ -282,13 +282,13 @@ h3 { font-size:15px; font-weight:600; margin-bottom:12px; }
       </div>
       <div class="sc-body">
         <div class="sc-kpis">
-          <div class="sc-kpi"><div class="sc-kpi-val" style="color:#24a148">59</div><div class="sc-kpi-lbl">Pass</div></div>
-          <div class="sc-kpi"><div class="sc-kpi-val" style="color:#da1e28">27</div><div class="sc-kpi-lbl">Fail</div></div>
-          <div class="sc-kpi"><div class="sc-kpi-val">86</div><div class="sc-kpi-lbl">Total TCs</div></div>
+          <div class="sc-kpi"><div class="sc-kpi-val" style="color:#24a148">81</div><div class="sc-kpi-lbl">Pass</div></div>
+          <div class="sc-kpi"><div class="sc-kpi-val" style="color:#da1e28">28</div><div class="sc-kpi-lbl">Fail</div></div>
+          <div class="sc-kpi"><div class="sc-kpi-val">109</div><div class="sc-kpi-lbl">Total TCs</div></div>
         </div>
-        <div class="pass-rate"><div class="pass-rate-fill med" style="width:68.6%"></div></div>
-        <div class="sc-stat-row"><span>Pass Rate</span><strong>68.6%</strong></div>
-        <div class="sc-phases">Phases 42–51 · CSRF via localStorage · Madagascar branding · 4 MOLECULAR analyzers · 4 French panels</div>
+        <div class="pass-rate"><div class="pass-rate-fill med" style="width:74.3%"></div></div>
+        <div class="sc-stat-row"><span>Pass Rate</span><strong>74.3%</strong></div>
+        <div class="sc-phases">Phases 42–56 · CSRF via localStorage · Madagascar branding · 4 MOLECULAR analyzers · 4 French panels · BUG-55 FIXED</div>
         <div class="sc-bugs">
           <span class="sc-bug-chip chip-high">3 New High</span>
           <span class="sc-bug-chip chip-med">7 New Med</span>
@@ -663,6 +663,11 @@ const PHASES = [
   { phase:49, ver:'v3.2.1.5', server:'mgtest', date:'2026-04-13', focus:'Phase 49: Analyzer Deep (4 TCs)', tcs:4, pass:4, fail:0, notes:'4 MOLECULAR analyzers (Quantstudio5-1/2/4, GeneXpert PC) all pluginLoaded=true; Field Mappings via overflow menu; EXCEL import format; 1 GeneXpert unregistered_source warning (non-critical)' },
   { phase:50, ver:'v3.2.1.5', server:'mgtest', date:'2026-04-13', focus:'Phase 50: Storage/EQA/Patient Management (6 TCs)', tcs:6, pass:6, fail:0, notes:'Storage dashboard loads; EQA Management 0 shipments; Patient Management renders (BUG-52 graceful degradation); EQA wizard patient locked; Storage rooms multi-level functional' },
   { phase:51, ver:'v3.2.1.5', server:'mgtest', date:'2026-04-13', focus:'Phase 51: Dashboard KPI & Admin (7 TCs)', tcs:7, pass:7, fail:0, notes:'10 KPI cards match API JSON; NOTE-3 API typos confirmed on mgtest; 52 admin links; Analyzer Error Dashboard shows 1 GeneXpert unregistered_source warning; 2 users confirmed' },
+  { phase:52, ver:'v3.2.1.5', server:'mgtest', date:'2026-04-13', focus:'Phase 52: Pathology/IHC/Cytology Dashboards (5 TCs)', tcs:5, pass:5, fail:0, notes:'All 3 specialty dashboards load; 0 cases on mgtest (graceful empty state); design consistent with v3.2.1.4 (BI-DEEP/BJ-DEEP/BK-DEEP)' },
+  { phase:53, ver:'v3.2.1.5', server:'mgtest', date:'2026-04-13', focus:'Phase 53: Cold Storage Monitoring (4 TCs)', tcs:4, pass:4, fail:0, notes:'0 cold storage devices on mgtest (vs 2 on jdhealthsolutions); graceful empty state; Temperature/Humidity/Events tabs present' },
+  { phase:54, ver:'v3.2.1.5', server:'mgtest', date:'2026-04-13', focus:'Phase 54: Non-Conforming Events & Workplan (6 TCs)', tcs:6, pass:5, fail:1, notes:'BUG-55 CONFIRMED FIXED: all WorkPlanBy* routes now load; NCE form redesigned to 5-section creation form in v3.2.1.5; FAIL: /Report?type=patient still redirects to Dashboard (BUG-57)' },
+  { phase:55, ver:'v3.2.1.5', server:'mgtest', date:'2026-04-13', focus:'Phase 55: Notifications, Alerts & Help (4 TCs)', tcs:4, pass:4, fail:0, notes:'Notification bell functional (0 messages); Alerts page renders; NOTE-21 confirmed: Video Tutorials + Release Notes are stub buttons on mgtest' },
+  { phase:56, ver:'v3.2.1.5', server:'mgtest', date:'2026-04-13', focus:'Phase 56: Print Barcode, Aliquot, Notebook & Patient Results (4 TCs)', tcs:4, pass:4, fail:0, notes:'NotebookDashboard NEW in v3.2.1.5 (was blank in v3.2.1.4) — KPI cards, Projects/All Entries tabs, New Entry button; PatientResults full search form functional' },
 ];
 
 function pctBadgeClass(pct) {
