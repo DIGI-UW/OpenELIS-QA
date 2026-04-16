@@ -12,7 +12,7 @@ import { Page } from '@playwright/test';
 // Config Constants
 // ---------------------------------------------------------------------------
 
-export const BASE = 'https://www.jdhealthsolutions-openelis.com';
+export const BASE = process.env.BASE_URL || 'https://testing.openelis-global.org';
 
 export const ADMIN = {
   user: 'admin',

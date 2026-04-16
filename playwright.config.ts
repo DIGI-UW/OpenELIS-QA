@@ -12,7 +12,7 @@
 
 import { defineConfig, devices } from '@playwright/test';
 
-const BASE_URL = process.env.BASE_URL || 'https://www.jdhealthsolutions-openelis.com';
+const BASE_URL = process.env.BASE_URL || 'https://testing.openelis-global.org';
 
 export default defineConfig({
   // Test directory
@@ -180,6 +180,28 @@ export default defineConfig({
     {
       name: 'qa-performance',
       testMatch: 'performance.spec.ts',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/user.json',
+      },
+    },
+
+    // --- Electronic Signature workflow (Site Information config + validation signing) ---
+    {
+      name: 'qa-electronic-signature',
+      testMatch: 'electronic-signature.spec.ts',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/user.json',
+      },
+    },
+
+    // --- EQA workflow (Program management, Distributions, Results) ---
+    {
+      name: 'qa-eqa-workflow',
+      testMatch: 'eqa-workflow.spec.ts',
       dependencies: ['setup'],
       use: {
         ...devices['Desktop Chrome'],
