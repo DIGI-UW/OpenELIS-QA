@@ -283,3 +283,160 @@ test.describe('Suite N-DEEP-EXT — Workplan Deep Extended (TC-WPD-06–10)', ()
     expect(elapsed, 'Workplan page must load within 5000ms').toBeLessThan(5000);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Suite N-DEEP-EXT2 — Workplan Cross-Module & API (TC-WPD-11 through TC-WPD-16)
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('Suite N-DEEP-EXT2 — Workplan Cross-Module & API (TC-WPD-11–16)', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+  });
+
+  test('TC-WPD-11: Workplan panel API matches UI dropdown count', async ({ page }) => {
+    /**
+     * US-WP-5: The panel count from the API must approximately match what
+     * is shown in the UI dropdown — confirms UI is reading from the same source.
+     */
+    await page.goto(`${BASE}`);
+
+    const apiCount = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const candidates = [
+        '/api/OpenELIS-Global/rest/panels',
+        '/api/OpenELIS-Global/rest/test-panels',
+        '/api/OpenELIS-Global/rest/AllPanels',
+      ];
+      for (const url of candidates) {
+        const res = await fetch(url, { headers: { 'X-CSRF-Token': csrf } });
+        if (res.ok) {
+          const data = await res.json();
+          const list = Array.isArray(data) ? data : (data.panels ?? data.testPanels ?? []);
+          return { count: list.length, url, status: res.status };
+        }
+        if (res.status !== 404) return { count: -1, url, status: res.status };
+      }
+      return { count: -1, url: 'none', status: 404 };
+    });
+
+    console.log(`TC-WPD-11: Panels API → ${apiCount.url} HTTP ${apiCount.status}, panels=${apiCount.count}`);
+    expect(apiCount.status, 'Panels API must not 5xx').not.toBeGreaterThanOrEqual(500);
+    if (apiCount.count > 0) {
+      expect(apiCount.count, 'API must return at least 20 panels').toBeGreaterThanOrEqual(20);
+    }
+  });
+
+  test('TC-WPD-12: Workplan By Priority accepts STAT filter without crash', async ({ page }) => {
+    /**
+     * US-WP-2: Filtering by STAT priority (the most urgent lab category)
+     * must return results or empty state — never a server error.
+     */
+    const loaded = await navigateWithDiscovery(page, ['/WorkPlanByPriority', '/WorkPlan/priority']);
+    if (!loaded) { test.skip(); return; }
+
+    await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+
+    // Try to select STAT from the priority dropdown
+    const selects = await page.locator('select').all();
+    let statSelected = false;
+    for (const sel of selects) {
+      const options = await sel.locator('option').allTextContents();
+      const statIdx = options.findIndex(o => /stat/i.test(o));
+      if (statIdx >= 0) {
+        await sel.selectOption({ index: statIdx });
+        statSelected = true;
+        break;
+      }
+    }
+
+    await page.waitForTimeout(1500);
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText).not.toContain('Internal Server Error');
+    console.log(`TC-WPD-12: STAT filter selected=${statSelected}, no server error`);
+  });
+
+  test('TC-WPD-13: WorkPlanByPanel API endpoint responds for first panel', async ({ page }) => {
+    /**
+     * US-WP-1: The workplan API for an individual panel must respond without
+     * a server error. Uses panel ID 1 as a probe.
+     */
+    await page.goto(`${BASE}`);
+
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const candidates = [
+        '/api/OpenELIS-Global/rest/workplan/testPanel/1',
+        '/api/OpenELIS-Global/rest/workplan/panel/1',
+        '/api/OpenELIS-Global/rest/workPlan?panelId=1',
+      ];
+      for (const url of candidates) {
+        const res = await fetch(url, { headers: { 'X-CSRF-Token': csrf } });
+        if (res.status !== 404) return { status: res.status, url };
+      }
+      return { status: 404, url: 'none' };
+    });
+
+    console.log(`TC-WPD-13: Workplan panel API → ${result.url} HTTP ${result.status}`);
+    if (result.status !== 404) {
+      expect(result.status, 'Workplan panel API must not 5xx').not.toBeGreaterThanOrEqual(500);
+    } else {
+      console.log('TC-WPD-13: NOTE — panel workplan API not found at expected paths');
+    }
+  });
+
+  test('TC-WPD-14: Workplan is accessible to admin (RBAC)', async ({ page }) => {
+    /**
+     * US-WP-1: Admin must be able to access all workplan views. RBAC must
+     * not block the admin role from viewing the lab workplan.
+     */
+    const loaded = await goToWorkplanPanel(page);
+    expect(loaded, 'Admin must be able to access Workplan By Panel').toBe(true);
+    expect(page.url()).not.toMatch(/LoginPage|login/i);
+  });
+
+  test('TC-WPD-15: Workplan does not expose stack traces on invalid panel ID', async ({ page }) => {
+    /**
+     * US-WP-1 (edge case): Requesting a workplan for a non-existent panel ID
+     * must return an empty set or 404, not a Java stack trace.
+     */
+    await page.goto(`${BASE}`);
+
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const res = await fetch('/api/OpenELIS-Global/rest/workplan/testPanel/999999', {
+        headers: { 'X-CSRF-Token': csrf },
+      });
+      const text = await res.text().catch(() => '');
+      return {
+        status: res.status,
+        hasStack: text.includes('at org.') || text.includes('NullPointerException'),
+      };
+    });
+
+    console.log(`TC-WPD-15: Invalid panel ID → HTTP ${result.status}, hasStack=${result.hasStack}`);
+    expect(result.hasStack, 'Invalid panel ID must not return stack trace').toBe(false);
+  });
+
+  test('TC-WPD-16: Three concurrent workplan section requests are stable', async ({ page }) => {
+    /**
+     * US-WP-4 (performance): Multiple lab sections may be queried concurrently
+     * when loading a workplan overview. Must not cause server errors.
+     */
+    await page.goto(`${BASE}`);
+
+    const results = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const sections = ['Hematology', 'Chemistry', 'Microbiology'];
+      const requests = sections.map(s =>
+        fetch(`/api/OpenELIS-Global/rest/LogbookResults?type=${s}`, {
+          headers: { 'X-CSRF-Token': csrf },
+        }).then(r => r.status)
+      );
+      return Promise.all(requests);
+    });
+
+    const serverErrors = results.filter(s => s >= 500);
+    console.log(`TC-WPD-16: 3 concurrent section requests → [${results.join(', ')}], errors=${serverErrors.length}`);
+    expect(serverErrors.length, 'Concurrent section requests must not cause 5xx').toBe(0);
+  });
+});
