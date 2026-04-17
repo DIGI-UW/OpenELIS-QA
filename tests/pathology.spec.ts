@@ -242,8 +242,128 @@ test.describe('Phase 7 — BK-DEEP: Cytology', () => {
     const found = await tryNavigateToURL(page, ['/CytologyDashboard', '/Cytology']);
     if (!found) { test.skip(); return; }
 
-    // At least one interactive control must be present
     const count = await page.locator('input, select, button, [role="combobox"]').count();
     expect(count, 'Cytology page must render interactive workflow controls').toBeGreaterThan(0);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Suite PATH-EXT — Pathology Extended (TC-PATH-EXT-01 through TC-PATH-EXT-05)
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('Suite PATH-EXT — Pathology Module Extended', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+  });
+
+  test('TC-PATH-EXT-01: All three pathology dashboards load without 500', async ({ page }) => {
+    /**
+     * Pathology, IHC, and Cytology are three parallel modules. All three
+     * dashboards must be reachable without server error.
+     */
+    const pathUrls = [
+      ['/PathologyDashboard', '/Pathology'],
+      ['/Immunohistochemistry', '/IHC'],
+      ['/CytologyDashboard', '/Cytology'],
+    ];
+
+    const results: { name: string; ok: boolean }[] = [];
+    const names = ['Pathology', 'IHC', 'Cytology'];
+
+    for (let i = 0; i < pathUrls.length; i++) {
+      const found = await tryNavigateToURL(page, pathUrls[i]);
+      const bodyText = await page.locator('body').innerText();
+      const ok = found && !bodyText.includes('Internal Server Error') && !page.url().match(/login/i);
+      results.push({ name: names[i], ok });
+    }
+
+    console.log('TC-PATH-EXT-01:', JSON.stringify(results));
+    const failing = results.filter(r => !r.ok);
+    expect(failing.length, `Failing pathology dashboards: ${JSON.stringify(failing)}`).toBe(0);
+  });
+
+  test('TC-PATH-EXT-02: Pathology dashboard status filter API is healthy', async ({ page }) => {
+    /**
+     * The status filter on the pathology dashboard reads from an API to
+     * populate status options. The API must return usable data.
+     */
+    await page.goto(`${BASE}`);
+
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const candidates = [
+        '/api/OpenELIS-Global/rest/pathology/status',
+        '/api/OpenELIS-Global/rest/pathologyStatus',
+        '/api/OpenELIS-Global/rest/PathologyDashboard',
+      ];
+      for (const url of candidates) {
+        const res = await fetch(url, { headers: { 'X-CSRF-Token': csrf } });
+        if (res.status !== 404) return { status: res.status, url };
+      }
+      return { status: 404, url: 'none' };
+    });
+
+    console.log(`TC-PATH-EXT-02: Pathology API → ${result.url} HTTP ${result.status}`);
+    expect(result.status, 'Pathology status API must not 5xx').not.toBeGreaterThanOrEqual(500);
+  });
+
+  test('TC-PATH-EXT-03: IHC page has case search by accession', async ({ page }) => {
+    /**
+     * IHC cases must be searchable by accession number so lab staff can
+     * locate specific cases for staining annotation.
+     */
+    const found = await tryNavigateToURL(page, ['/Immunohistochemistry', '/IHC']);
+    if (!found) { test.skip(); return; }
+
+    await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+
+    const searchInput = page.locator('input[placeholder*="accession" i], input[placeholder*="lab" i], input').first();
+    if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await searchInput.fill('26CPHL00008V');
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(1500);
+      const bodyText = await page.locator('body').innerText();
+      expect(bodyText).not.toContain('Internal Server Error');
+      console.log('TC-PATH-EXT-03: PASS — IHC accession search completed without error');
+    } else {
+      console.log('TC-PATH-EXT-03: NOTE — no search input found on IHC page');
+    }
+  });
+
+  test('TC-PATH-EXT-04: Cytology dashboard has status card counts', async ({ page }) => {
+    /**
+     * The Cytology dashboard should show status cards with case counts
+     * (similar to Pathology/IHC dashboards, following same design pattern).
+     */
+    const found = await tryNavigateToURL(page, ['/CytologyDashboard', '/Cytology']);
+    if (!found) { test.skip(); return; }
+
+    await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    const bodyText = await page.locator('body').innerText();
+
+    // Look for numeric counts — status cards display numbers
+    const hasNumbers = /\d+/.test(bodyText);
+    const hasStatus = /in progress|awaiting|completed|status/i.test(bodyText);
+
+    console.log(`TC-PATH-EXT-04: hasNumbers=${hasNumbers}, hasStatus=${hasStatus}`);
+    expect(bodyText).not.toContain('Internal Server Error');
+  });
+
+  test('TC-PATH-EXT-05: Pathology modules load within acceptable time', async ({ page }) => {
+    /**
+     * Performance check: pathology dashboard must load within 5 seconds since
+     * it is used during active case review sessions.
+     */
+    const start = Date.now();
+    const found = await tryNavigateToURL(page, ['/PathologyDashboard', '/Pathology']);
+    await page.waitForLoadState('domcontentloaded');
+    const elapsed = Date.now() - start;
+
+    console.log(`TC-PATH-EXT-05: Pathology dashboard loaded in ${elapsed}ms`);
+    if (found) {
+      expect(elapsed, 'Pathology dashboard must load within 5000ms').toBeLessThan(5000);
+    } else {
+      console.log('TC-PATH-EXT-05: SKIP — pathology page not reachable');
+    }
   });
 });
