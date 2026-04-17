@@ -1026,7 +1026,7 @@ test.describe('Suite AL — Storage Management', () => {
 
     await page.waitForTimeout(1000);
 
-    const table = await page.$('table, [role="table"], [class*="list"], [class*="tree"]');
+    const table = await page.locator('table, [role="table"], [class*="list"], [class*="tree"]').first().isVisible({ timeout: 3000 }).catch(() => false);
     expect(table).toBeTruthy();
   });
 
@@ -1061,7 +1061,7 @@ test.describe('Suite AL — Storage Management', () => {
 
     // Look for temperature readings
     const tempText = await page.locator('text/-?\\d+°?C/').count();
-    const table = await page.$('table, [role="table"], [class*="list"]');
+    const table = await page.locator('table, [role="table"], [class*="list"]').first().isVisible({ timeout: 3000 }).catch(() => false);
 
     expect(table || tempText > 0).toBeTruthy();
   });
@@ -1100,7 +1100,7 @@ test.describe('Suite AM — Analyzers', () => {
 
     await page.waitForTimeout(1000);
 
-    const table = await page.$('table, [role="table"]');
+    const table = await page.locator('table, [role="table"]').first().isVisible({ timeout: 3000 }).catch(() => false);
     expect(table).toBeTruthy();
   });
 
@@ -1174,8 +1174,8 @@ test.describe('Suite AN — EQA Distributions', () => {
 
     await page.waitForTimeout(1000);
 
-    const table = await page.$('table, [role="table"]');
-    const form = await page.$('form, [role="form"]');
+    const table = await page.locator('table, [role="table"]').first().isVisible({ timeout: 3000 }).catch(() => false);
+    const form = await page.locator('form, [role="form"]').first().isVisible({ timeout: 3000 }).catch(() => false);
 
     expect(table || form).toBeTruthy();
   });
@@ -1232,14 +1232,15 @@ test.describe('Suite AO — Aliquot', () => {
 
     await page.waitForTimeout(1000);
 
-    const button = await page.$('button:has-text("Create"), button:has-text("New"), button:has-text("Add")');
-    if (button) {
-      await button.click();
+    const buttonLocator = page.locator('button:has-text("Create"), button:has-text("New"), button:has-text("Add")').first();
+    const buttonVisible = await buttonLocator.isVisible({ timeout: 3000 }).catch(() => false);
+    if (buttonVisible) {
+      await buttonLocator.click();
       await page.waitForTimeout(1000);
     }
 
-    const form = await page.$('form, [role="form"]');
-    const inputs = await page.$$('input, textarea, select');
+    const form = await page.locator('form, [role="form"]').first().isVisible({ timeout: 3000 }).catch(() => false);
+    const inputs = await page.locator('input, textarea, select').all();
 
     expect(form && inputs.length > 0).toBeTruthy();
   });
@@ -1255,25 +1256,27 @@ test.describe('Suite AO — Aliquot', () => {
 
     await page.waitForTimeout(1000);
 
-    const button = await page.$('button:has-text("Create"), button:has-text("New")');
-    if (button) {
-      await button.click();
+    const buttonLocator2 = page.locator('button:has-text("Create"), button:has-text("New")').first();
+    const buttonVisible2 = await buttonLocator2.isVisible({ timeout: 3000 }).catch(() => false);
+    if (buttonVisible2) {
+      await buttonLocator2.click();
       await page.waitForTimeout(1000);
     }
 
-    const inputs = await page.$$('input[type="text"]');
+    const inputs = await page.locator('input[type="text"]').all();
     if (inputs.length > 0) {
       await inputs[0].fill('26CPHL00001T');
     }
 
-    const submitBtn = await page.$('button:has-text("Submit"), button:has-text("Save")');
-    if (submitBtn) {
-      await submitBtn.click();
+    const submitBtnLocator = page.locator('button:has-text("Submit"), button:has-text("Save")').first();
+    const submitBtnVisible = await submitBtnLocator.isVisible({ timeout: 3000 }).catch(() => false);
+    if (submitBtnVisible) {
+      await submitBtnLocator.click();
       await page.waitForTimeout(2000);
     }
 
     // Check for error or success
-    const error = await page.$('[class*="error"]');
+    const error = await page.locator('[class*="error"]').first().isVisible({ timeout: 3000 }).catch(() => false);
     expect(!error).toBeTruthy();
   });
 });
@@ -1311,8 +1314,8 @@ test.describe('Suite AP — Billing & NoteBook', () => {
 
     await page.waitForTimeout(1000);
 
-    const table = await page.$('table, [role="table"]');
-    const form = await page.$('form, [role="form"]');
+    const table = await page.locator('table, [role="table"]').first().isVisible({ timeout: 3000 }).catch(() => false);
+    const form = await page.locator('form, [role="form"]').first().isVisible({ timeout: 3000 }).catch(() => false);
 
     expect(table || form).toBeTruthy();
   });
@@ -1346,8 +1349,8 @@ test.describe('Suite AP — Billing & NoteBook', () => {
 
     await page.waitForTimeout(1000);
 
-    const table = await page.$('table, [role="table"]');
-    const textarea = await page.$('textarea, [role="textbox"]');
+    const table = await page.locator('table, [role="table"]').first().isVisible({ timeout: 3000 }).catch(() => false);
+    const textarea = await page.locator('textarea, [role="textbox"]').first().isVisible({ timeout: 3000 }).catch(() => false);
 
     expect(table || textarea).toBeTruthy();
   });
@@ -1683,8 +1686,12 @@ test.describe('Phase 5 — B-DEEP: Order Wizard Field Enumeration Tests', () => 
 
 
 test.describe('Phase 6 — BC-DEEP: Electronic Orders Tests', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+  });
+
   test('TC-BC-DEEP-01: Page structure', async ({ page }) => {
-    await page.goto('/ElectronicOrders');
+    await page.goto(`${BASE}/ElectronicOrders`);
     await expect(page.locator('text=Search Incoming Test Requests')).toBeVisible();
     await expect(page.locator('text=Search Value')).toBeVisible();
     await expect(page.locator('text=Start Date')).toBeVisible();
@@ -1693,7 +1700,7 @@ test.describe('Phase 6 — BC-DEEP: Electronic Orders Tests', () => {
   });
 
   test('TC-BC-DEEP-02: Status dropdown options', async ({ page }) => {
-    await page.goto('/ElectronicOrders');
+    await page.goto(`${BASE}/ElectronicOrders`);
     const statusSelect = page.locator('select').filter({ hasText: 'All Statuses' });
     const options = await statusSelect.locator('option').allTextContents();
     expect(options).toContain('All Statuses');
@@ -1707,13 +1714,17 @@ test.describe('Phase 6 — BC-DEEP: Electronic Orders Tests', () => {
 
 
 test.describe('Phase 7 — BL-DEEP: EQA Distribution', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+  });
+
   test('TC-BL-DEEP-01: Page structure', async ({ page }) => {
-    await page.goto('/MasterListsPage/eqaProgram');
+    await page.goto(`${BASE}/MasterListsPage/eqaProgram`);
     await expect(page.locator('text=EQA')).toBeVisible();
   });
 
   test('TC-BL-DEEP-02: Program listing', async ({ page }) => {
-    await page.goto('/MasterListsPage/eqaProgram');
+    await page.goto(`${BASE}/MasterListsPage/eqaProgram`);
     // Should display program management interface
     const content = page.locator('table, .cds--data-table, form, [role="table"]');
     await expect(content.first()).toBeVisible({ timeout: 10000 });
@@ -1721,13 +1732,17 @@ test.describe('Phase 7 — BL-DEEP: EQA Distribution', () => {
 });
 
 test.describe('Phase 7 — BM-DEEP: Analyzer Error Dashboard', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+  });
+
   test('TC-BM-DEEP-01: Page structure', async ({ page }) => {
-    await page.goto('/MasterListsPage/AnalyzerTestName');
+    await page.goto(`${BASE}/MasterListsPage/AnalyzerTestName`);
     await expect(page.locator('text=Analyzer Test Name')).toBeVisible();
   });
 
   test('TC-BM-DEEP-02: Analyzer listing', async ({ page }) => {
-    await page.goto('/MasterListsPage/AnalyzerTestName');
+    await page.goto(`${BASE}/MasterListsPage/AnalyzerTestName`);
     // Should have analyzer configuration table or listing
     const listing = page.locator('table, .cds--data-table, select, [role="table"]');
     await expect(listing.first()).toBeVisible({ timeout: 10000 });

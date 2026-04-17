@@ -233,19 +233,158 @@ test.describe('Reflex Testing — Over All Option Validation', () => {
     await page.goto(`${BASE}${REFLEX_URL}`);
     await page.waitForLoadState('networkidle');
 
-    // Verify Over All Option dropdown options
     const options = await page.evaluate(() => {
       const select = document.getElementById('0_overall') as HTMLSelectElement;
       if (!select) return [];
-      return Array.from(select.options).map(o => ({
-        value: o.value,
-        text: o.text,
-      }));
+      return Array.from(select.options).map(o => ({ value: o.value, text: o.text }));
     });
 
-    // Should have at least ANY and ALL options
     const values = options.map(o => o.value);
     expect(values).toContain('ANY');
     expect(values).toContain('ALL');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// Reflex Rule Lifecycle: Create → Read → Update
+// ─────────────────────────────────────────────────────────────
+
+test.describe('Reflex Rule Lifecycle Tests (Phase 28 Extended)', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+  });
+
+  test('TC-REFLEX-07: Create reflex rule and verify it appears in GET /rest/reflexrules', async ({ page }) => {
+    await page.goto(`${BASE}${REFLEX_URL}`);
+    await page.waitForLoadState('networkidle');
+
+    const ruleName = `${QA_PREFIX}_LifecycleTest`;
+
+    // Create via API
+    const createResult = await page.evaluate(async (name) => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const payload = {
+        ruleName: name,
+        overall: 'ANY',
+        active: true,
+        conditions: [{ sampleId: '2', testId: '1', relation: 'GREATER_THAN', value: '100' }],
+        actions: [{ reflexTestId: '2', sampleId: '2', addNotification: 'N' }],
+      };
+      const res = await fetch('/api/OpenELIS-Global/rest/reflexrule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+        body: JSON.stringify(payload),
+      });
+      return { status: res.status };
+    }, ruleName);
+
+    expect(createResult.status).toBe(200);
+
+    // Verify the rule now appears in the GET list
+    const rules = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const res = await fetch('/api/OpenELIS-Global/rest/reflexrules', {
+        headers: { 'X-CSRF-Token': csrf },
+      });
+      return res.json();
+    });
+
+    const found = rules.find((r: any) => r.ruleName === ruleName);
+    expect(found).toBeTruthy();
+    expect(found.overall).toBe('ANY');
+    expect(found.active).toBe(true);
+    expect(found.conditions.length).toBeGreaterThan(0);
+    expect(found.actions.length).toBeGreaterThan(0);
+    console.log(`TC-REFLEX-07: PASS — Rule "${ruleName}" created and confirmed in list`);
+  });
+
+  test('TC-REFLEX-08: Update existing reflex rule and verify change persists', async ({ page }) => {
+    await page.goto(`${BASE}${REFLEX_URL}`);
+    await page.waitForLoadState('networkidle');
+
+    // Get current rules
+    const rules = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const res = await fetch('/api/OpenELIS-Global/rest/reflexrules', {
+        headers: { 'X-CSRF-Token': csrf },
+      });
+      return res.json();
+    });
+
+    if (rules.length === 0) {
+      console.log('TC-REFLEX-08: SKIP — no existing rules to update');
+      test.skip();
+      return;
+    }
+
+    const targetRule = rules[0];
+    const updatedName = `${QA_PREFIX}_Updated_${Date.now()}`;
+
+    const updateResult = await page.evaluate(async ({ rule, newName }) => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const payload = { ...rule, ruleName: newName };
+      const res = await fetch('/api/OpenELIS-Global/rest/reflexrule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+        body: JSON.stringify(payload),
+      });
+      return { status: res.status };
+    }, { rule: targetRule, newName: updatedName });
+
+    expect(updateResult.status).toBe(200);
+
+    // Verify the name changed
+    const updatedRules = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const res = await fetch('/api/OpenELIS-Global/rest/reflexrules', {
+        headers: { 'X-CSRF-Token': csrf },
+      });
+      return res.json();
+    });
+
+    const updatedRule = updatedRules.find((r: any) => r.id === targetRule.id);
+    expect(updatedRule?.ruleName).toBe(updatedName);
+    console.log(`TC-REFLEX-08: PASS — Rule updated to "${updatedName}"`);
+  });
+
+  test('TC-REFLEX-09: Inactive reflex rule is visible in the list', async ({ page }) => {
+    await page.goto(`${BASE}${REFLEX_URL}`);
+    await page.waitForLoadState('networkidle');
+
+    const ruleName = `${QA_PREFIX}_InactiveRule`;
+
+    // Create inactive rule
+    const createResult = await page.evaluate(async (name) => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const payload = {
+        ruleName: name,
+        overall: 'ALL',
+        active: false, // inactive
+        conditions: [{ sampleId: '2', testId: '1', relation: 'LESS_THAN', value: '50' }],
+        actions: [{ reflexTestId: '3', sampleId: '2', addNotification: 'N' }],
+      };
+      const res = await fetch('/api/OpenELIS-Global/rest/reflexrule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+        body: JSON.stringify(payload),
+      });
+      return { status: res.status };
+    }, ruleName);
+
+    expect(createResult.status).toBe(200);
+
+    // Verify inactive rule appears (inactive rules should still be returned in the list)
+    const rules = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const res = await fetch('/api/OpenELIS-Global/rest/reflexrules', {
+        headers: { 'X-CSRF-Token': csrf },
+      });
+      return res.json();
+    });
+
+    const found = rules.find((r: any) => r.ruleName === ruleName);
+    expect(found).toBeTruthy();
+    expect(found.active).toBe(false);
+    console.log(`TC-REFLEX-09: PASS — Inactive rule "${ruleName}" visible in list`);
   });
 });

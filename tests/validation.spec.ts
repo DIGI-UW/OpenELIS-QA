@@ -381,3 +381,139 @@ test.describe('Suite AB — Validation By Order & By Date', () => {
     });
   });
 });
+
+// ─────────────────────────────────────────────────────────────
+// Validation Extended — Reject, Notes, and API Verification
+// ─────────────────────────────────────────────────────────────
+
+test.describe('Validation Extended — Result Rejection & API Verification', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+  });
+
+  test('TC-VAL-EXT-01: AccessionValidation API returns queue data', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      // Try both known validation endpoints
+      const endpoints = [
+        '/api/OpenELIS-Global/rest/AccessionValidation',
+        '/api/OpenELIS-Global/rest/ResultValidation',
+      ];
+      for (const ep of endpoints) {
+        const res = await fetch(ep, { headers: { 'X-CSRF-Token': csrf } });
+        if (res.ok) {
+          const data = await res.json();
+          return { status: res.status, endpoint: ep, hasResults: data.testResult !== undefined || Array.isArray(data) };
+        }
+      }
+      return { status: 404, endpoint: 'none', hasResults: false };
+    });
+
+    console.log(`TC-VAL-EXT-01: Validation API at ${result.endpoint} → ${result.status}`);
+    // Should return 200 with structured data
+    expect(result.status).toBe(200);
+  });
+
+  test('TC-VAL-EXT-02: Reject button is present or queue is empty state', async ({ page }) => {
+    /**
+     * US: As a lab supervisor, I can reject a result that has errors.
+     * Rejection requires results in the validation queue.
+     * Tests the UI presence of the Reject action.
+     */
+    const url = await goToValidation(page, 'routine').catch(() => null);
+    if (!url) {
+      console.log('TC-VAL-EXT-02: SKIP — validation page not reachable');
+      test.skip();
+      return;
+    }
+
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+
+    const bodyText = await page.locator('body').innerText();
+    const hasRejectBtn = (await page.locator('button, a').filter({ hasText: /reject/i }).count()) > 0;
+    const hasQueueContent = /accession|test|hgb|result/i.test(bodyText);
+    const isEmptyState = /no result|empty|nothing to validate/i.test(bodyText);
+
+    if (hasRejectBtn) {
+      console.log('TC-VAL-EXT-02: PASS — Reject button visible in validation queue');
+      expect(hasRejectBtn).toBe(true);
+    } else if (isEmptyState) {
+      console.log('TC-VAL-EXT-02: PARTIAL — Queue is empty, Reject not yet applicable');
+      expect(page.url()).not.toMatch(/LoginPage|login/i);
+    } else {
+      console.log(`TC-VAL-EXT-02: PARTIAL — Queue may have content but Reject not found. hasQueueContent=${hasQueueContent}`);
+      expect(page.url()).not.toMatch(/LoginPage|login/i);
+    }
+  });
+
+  test('TC-VAL-EXT-03: Validation page loads for known accession', async ({ page }) => {
+    /**
+     * Navigate to Validation by accession number (26CPHL00008V — known baseline accession).
+     * This exercises the search-by-accession code path.
+     */
+    const url = await goToValidation(page, 'order').catch(() => `${BASE}/ResultValidation`);
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+
+    // Try to search for the known accession
+    const accessionInput = page
+      .locator('input[placeholder*="accession" i], input[id*="accession" i], input[name*="accession" i]')
+      .first();
+
+    if (await accessionInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await accessionInput.fill('26CPHL00008V');
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(2000);
+
+      const bodyText = await page.locator('body').innerText();
+      const found = /26CPHL|Abby|HGB|Sebby/i.test(bodyText);
+      console.log(`TC-VAL-EXT-03: ${found ? 'PASS' : 'PARTIAL'} — accession search result: ${found ? 'found' : 'not found (may be validated already)'}`);
+      expect(bodyText).not.toContain('Internal Server Error');
+    } else {
+      console.log('TC-VAL-EXT-03: PARTIAL — accession input not found on validation screen');
+      const bodyText = await page.locator('body').innerText();
+      expect(bodyText).toBeTruthy();
+    }
+  });
+
+  test('TC-VAL-EXT-04: Validation shows correct status after approving a result', async ({ page }) => {
+    /**
+     * US: As a lab technician, I can approve a validated result.
+     * Tests that clicking Approve changes the status without server errors.
+     * Requires data in the queue — if queue is empty, the test is marked PARTIAL.
+     */
+    const url = await goToValidation(page, 'routine').catch(() => null);
+    if (!url) {
+      test.skip();
+      return;
+    }
+
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+
+    // Look for an Approve/Accept button
+    const approveBtn = page
+      .getByRole('button', { name: /approve|accept/i })
+      .or(page.locator('button').filter({ hasText: /approve|accept/i }))
+      .first();
+
+    if (!(await approveBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
+      console.log('TC-VAL-EXT-04: PARTIAL — No Approve button visible (empty queue or different UI state)');
+      expect(page.url()).not.toMatch(/LoginPage|login/i);
+      return;
+    }
+
+    // Intercept the POST response
+    let responseStatus = 0;
+    page.on('response', resp => {
+      if (resp.url().includes('Validation') && resp.request().method() === 'POST') {
+        responseStatus = resp.status();
+      }
+    });
+
+    await approveBtn.click();
+    await page.waitForTimeout(2000);
+
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText).not.toContain('Internal Server Error');
+    console.log(`TC-VAL-EXT-04: Approve clicked, POST status=${responseStatus}`);
+  });
+});

@@ -535,8 +535,8 @@ test.describe('Suite AH — Incoming Orders & Batch Order Entry', () => {
     expect(page.url()).not.toContain('signin');
 
     // Check for page heading or table
-    const heading = await page.$('[class*="heading"], h1, h2, [role="heading"]');
-    const table = await page.$('table, [role="table"], [class*="list"], [class*="grid"]');
+    const heading = await page.locator('[class*="heading"], h1, h2, [role="heading"]').first().isVisible({ timeout: 3000 }).catch(() => false);
+    const table = await page.locator('table, [role="table"], [class*="list"], [class*="grid"]').first().isVisible({ timeout: 3000 }).catch(() => false);
 
     expect(heading || table).toBeTruthy();
   });
@@ -550,15 +550,13 @@ test.describe('Suite AH — Incoming Orders & Batch Order Entry', () => {
     await page.waitForTimeout(1000);
 
     // Check for key columns in table
-    const table = await page.$('table');
-    if (!table) {
+    const tableVisible = await page.locator('table').first().isVisible({ timeout: 3000 }).catch(() => false);
+    if (!tableVisible) {
       test.skip();
       return;
     }
 
-    const cells = await page.$$('th, [role="columnheader"]');
-    const headerText = await Promise.all(cells.map(cell => cell.textContent()));
-    const headerStr = headerText.join(' ').toLowerCase();
+    const headerStr = (await page.locator('th, [role="columnheader"]').allTextContents()).join(' ').toLowerCase();
 
     // At least some key columns should be present
     const hasKeyColumns = ['accession', 'patient', 'test', 'status', 'date'].some(
@@ -586,8 +584,8 @@ test.describe('Suite AH — Incoming Orders & Batch Order Entry', () => {
     expect(page.url()).not.toContain('login');
 
     // Check for form or input field
-    const textarea = await page.$('textarea, [role="textbox"]');
-    const input = await page.$('input[type="text"]');
+    const textarea = await page.locator('textarea, [role="textbox"]').first().isVisible({ timeout: 3000 }).catch(() => false);
+    const input = await page.locator('input[type="text"]').first().isVisible({ timeout: 3000 }).catch(() => false);
 
     expect(textarea || input).toBeTruthy();
   });
@@ -603,25 +601,26 @@ test.describe('Suite AH — Incoming Orders & Batch Order Entry', () => {
 
     await page.waitForTimeout(1000);
 
-    const textarea = await page.$('textarea');
-    if (!textarea) {
+    const textareaLocator = page.locator('textarea').first();
+    const textareaVisible = await textareaLocator.isVisible({ timeout: 3000 }).catch(() => false);
+    if (!textareaVisible) {
       test.skip();
       return;
     }
 
     // Fill in batch accessions
-    await textarea.fill('26CPHL00001T\n26CPHL00002T\n26CPHL00003T');
+    await textareaLocator.fill('26CPHL00001T\n26CPHL00002T\n26CPHL00003T');
 
     // Look for submit/process button
-    const button = await page.$('button:has-text("Submit"), button:has-text("Process"), button:has-text("Parse")');
-    if (button) {
+    const button = page.getByRole('button', { name: /submit|process|parse/i }).first();
+    if (await button.isVisible({ timeout: 2000 }).catch(() => false)) {
       await button.click();
       await page.waitForTimeout(2000);
     }
 
     // Check if form processed (no immediate error)
-    const errorMsg = await page.$('[class*="error"], [class*="alert"][class*="error"], .error');
-    expect(!errorMsg).toBeTruthy();
+    const hasError = await page.locator('[class*="error"], .error').first().isVisible({ timeout: 1000 }).catch(() => false);
+    expect(hasError).toBe(false);
   });
 
   test('TC-IO-05: Batch order validation flags incomplete entries', async ({ page }) => {
@@ -635,17 +634,18 @@ test.describe('Suite AH — Incoming Orders & Batch Order Entry', () => {
 
     await page.waitForTimeout(1000);
 
-    const textarea = await page.$('textarea');
-    if (!textarea) {
+    const textareaLocator = page.locator('textarea').first();
+    const textareaVisible = await textareaLocator.isVisible({ timeout: 3000 }).catch(() => false);
+    if (!textareaVisible) {
       test.skip();
       return;
     }
 
     // Enter incomplete/invalid data
-    await textarea.fill('INVALID\n\n');
+    await textareaLocator.fill('INVALID\n\n');
 
-    const button = await page.$('button:has-text("Submit"), button:has-text("Process"), button:has-text("Parse")');
-    if (button) {
+    const button = page.getByRole('button', { name: /submit|process|parse/i }).first();
+    if (await button.isVisible({ timeout: 2000 }).catch(() => false)) {
       await button.click();
       await page.waitForTimeout(2000);
     }

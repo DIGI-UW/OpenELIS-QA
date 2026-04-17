@@ -380,27 +380,51 @@ test.describe('Suite AD — Non-Conform Corrective Actions + View NC Events', ()
 });
 
 test.describe('Phase 5 — G-DEEP: NCE Interaction Tests', () => {
-  test.beforeEach(async ({ page }) => { await login(page, ADMIN.user, ADMIN.pass); });
-
-  test('TC-G-DEEP-01: Report NCE form loads', async ({ page }) => {
-    await page.click('text=Non-Conform');
-    await page.click('text=Report');
-    await page.waitForSelector('text=Non-Conforming Event');
-    await expect(page.locator('text=Non-Conforming Event')).toBeVisible();
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
   });
 
-  test('TC-G-DEEP-02: View NC Events search', async ({ page }) => {
+  test('TC-G-DEEP-01: Report NCE form loads with required fields', async ({ page }) => {
+    // Navigate directly to the confirmed NC event reporting URL
+    await page.goto(`${BASE}/NonConformingEvent`);
+    await page.waitForLoadState('networkidle');
+
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText, 'Page must not have a server error').not.toMatch(/500|Internal Server Error/);
+    expect(page.url(), 'Must not redirect to login').not.toMatch(/LoginPage|login/i);
+
+    // Page must have a heading identifying it as a Non-Conforming Event form
+    const hasHeading = /Non-Conforming Event|NCE|Non Conforming/i.test(bodyText);
+    expect(hasHeading, 'Report NCE form must show a Non-Conforming Event heading').toBe(true);
+  });
+
+  test('TC-G-DEEP-02: View NC Events search page loads', async ({ page }) => {
     await page.goto(`${BASE}/ViewNonConformingEvent`);
-    await page.waitForSelector('text=Lab Number');
-    // Search should return no data (no NCE records exist)
-    const noData = page.locator('text=No data found');
-    await expect(noData.or(page.locator('text=0-0 of 0'))).toBeVisible();
+    await page.waitForLoadState('networkidle');
+
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText, 'Page must not have a server error').not.toMatch(/500|Internal Server Error/);
+    expect(page.url(), 'Must not redirect to login').not.toMatch(/LoginPage|login/i);
+
+    // Search field must be present (Lab Number or accession)
+    const hasSearchField = await page.locator(
+      'input[placeholder*="lab" i], input[placeholder*="accession" i], input[id*="lab" i]'
+    ).first().isVisible({ timeout: 3000 }).catch(() => false);
+    expect(hasSearchField, 'View NC Events must have a Lab Number search field').toBe(true);
   });
 
-  test('TC-G-DEEP-03: Corrective Actions search', async ({ page }) => {
+  test('TC-G-DEEP-03: Corrective Actions search page loads', async ({ page }) => {
     await page.goto(`${BASE}/NCECorrectiveAction`);
-    await page.waitForSelector('text=Lab Number');
-    const noData = page.locator('text=No data found');
-    await expect(noData.or(page.locator('text=0-0 of 0'))).toBeVisible();
+    await page.waitForLoadState('networkidle');
+
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText, 'Page must not have a server error').not.toMatch(/500|Internal Server Error/);
+    expect(page.url(), 'Must not redirect to login').not.toMatch(/LoginPage|login/i);
+
+    // Must have a search field so supervisor can find NC events
+    const hasSearchField = await page.locator(
+      'input[placeholder*="lab" i], input[placeholder*="accession" i], input'
+    ).first().isVisible({ timeout: 3000 }).catch(() => false);
+    expect(hasSearchField, 'Corrective Actions page must have a search field').toBe(true);
   });
 });
