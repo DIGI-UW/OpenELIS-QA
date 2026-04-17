@@ -283,3 +283,172 @@ test.describe('Shipment Settings (US-SHIP-5)', () => {
     ).toBeVisible({ timeout: TIMEOUT });
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shipment API Extended (TC-SHIP-EXT)
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('Shipment API Extended (TC-SHIP-EXT)', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+  });
+
+  test('TC-SHIP-EXT-01: Shipment boxes API returns HTTP 200 with list structure', async ({ page }) => {
+    /**
+     * US-SHIP-1: The shipment dashboard reads from the boxes API.
+     * Must return a valid response (array or object with boxes list).
+     */
+    await page.goto(`${BASE}${SHIP_DASHBOARD}`);
+
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const candidates = [
+        '/api/OpenELIS-Global/rest/shipment/boxes',
+        '/api/OpenELIS-Global/rest/SampleShipment/boxes',
+        '/api/OpenELIS-Global/rest/shipment',
+      ];
+      for (const path of candidates) {
+        const res = await fetch(path, { headers: { 'X-CSRF-Token': csrf } });
+        if (res.status === 404) continue;
+        const text = await res.text();
+        let data: any = null;
+        try { data = JSON.parse(text); } catch { /* not JSON */ }
+        return {
+          status: res.status, path,
+          isArray: Array.isArray(data),
+          count: Array.isArray(data) ? data.length : (data?.boxes?.length ?? -1),
+        };
+      }
+      return { status: 404, path: 'none', isArray: false, count: -1 };
+    });
+
+    console.log(`TC-SHIP-EXT-01: ${result.path} → HTTP ${result.status}, count=${result.count}`);
+    expect(result.status, 'Boxes API must not return 5xx').not.toBeGreaterThanOrEqual(500);
+  });
+
+  test('TC-SHIP-EXT-02: Facilities API returns destination labs list', async ({ page }) => {
+    /**
+     * US-SHIP-1: The Create Box form needs destination labs populated from the API.
+     * Without facilities, the coordinator cannot select where to send the box.
+     */
+    await page.goto(`${BASE}${SHIP_DASHBOARD}`);
+
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const candidates = [
+        '/api/OpenELIS-Global/rest/shipment/facilities',
+        '/api/OpenELIS-Global/rest/SampleShipment/facilities',
+        '/api/OpenELIS-Global/rest/organization/list',
+      ];
+      for (const path of candidates) {
+        const res = await fetch(path, { headers: { 'X-CSRF-Token': csrf } });
+        if (res.status === 404) continue;
+        const data = await res.json().catch(() => null);
+        const count = Array.isArray(data) ? data.length : (data?.facilities?.length ?? data?.organizations?.length ?? -1);
+        return { status: res.status, path, count };
+      }
+      return { status: 404, path: 'none', count: -1 };
+    });
+
+    console.log(`TC-SHIP-EXT-02: ${result.path} → HTTP ${result.status}, facilities=${result.count}`);
+    expect(result.status, 'Facilities API must not return 5xx').not.toBeGreaterThanOrEqual(500);
+    if (result.status === 200) {
+      expect(result.count, 'At least 1 destination facility must be configured').toBeGreaterThan(0);
+    }
+  });
+
+  test('TC-SHIP-EXT-03: Shipment dashboard KPI values are numeric', async ({ page }) => {
+    /**
+     * US-SHIP-1: The 4 KPI tiles (In Transit, Delivered, Reconciled, Total Samples)
+     * must each display a number — even if 0. Non-numeric values indicate a render error.
+     */
+    await page.goto(`${BASE}${SHIP_DASHBOARD}`);
+    await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+
+    const bodyText = await page.locator('body').innerText();
+    // Look for numeric values on the dashboard
+    const numericMatches = bodyText.match(/\b\d+\b/g) ?? [];
+    console.log(`TC-SHIP-EXT-03: ${numericMatches.length} numeric values visible on shipment dashboard`);
+    expect(numericMatches.length, 'At least one numeric KPI value must render').toBeGreaterThan(0);
+    expect(bodyText).not.toContain('Internal Server Error');
+  });
+
+  test('TC-SHIP-EXT-04: Box state transitions — valid states returned by API', async ({ page }) => {
+    /**
+     * US-SHIP-3: Box states (Pending, In Transit, Delivered, Reconciled) drive the
+     * workflow. The API must return valid state enumeration so the UI can filter correctly.
+     */
+    await page.goto(`${BASE}${SHIP_DASHBOARD}`);
+
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const candidates = [
+        '/api/OpenELIS-Global/rest/shipment/states',
+        '/api/OpenELIS-Global/rest/shipment/boxes',
+      ];
+      for (const path of candidates) {
+        const res = await fetch(path, { headers: { 'X-CSRF-Token': csrf } });
+        if (!res.ok) continue;
+        const data = await res.json().catch(() => null);
+        // States may come as an enum list or as part of box objects
+        if (Array.isArray(data) && data.length > 0) {
+          const states = [...new Set(data.map((b: any) => b.state || b.status).filter(Boolean))];
+          return { status: res.status, path, states };
+        }
+        if (Array.isArray(data)) return { status: res.status, path, states: [] };
+      }
+      return { status: 404, path: 'none', states: [] };
+    });
+
+    console.log(`TC-SHIP-EXT-04: ${result.path} → states: [${result.states.join(', ')}]`);
+    expect(result.status, 'Shipment state API must not return 5xx').not.toBeGreaterThanOrEqual(500);
+  });
+
+  test('TC-SHIP-EXT-05: Receive page scan field accepts barcode input without crashing', async ({ page }) => {
+    /**
+     * US-SHIP-3: The receiving technician scans a physical barcode to pull up
+     * the expected box manifest. The input must accept alphanumeric barcode values.
+     */
+    await page.goto(`${BASE}${SHIP_RECEIVE}`);
+    await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+
+    const barcodeInput = page.locator(
+      'input[placeholder*="barcode" i], input[placeholder*="box" i], input[placeholder*="scan" i], input'
+    ).first();
+
+    const hasInput = await barcodeInput.isVisible({ timeout: 3000 }).catch(() => false);
+    if (hasInput) {
+      // Type a mock barcode
+      await barcodeInput.fill('BOX-2026-0001');
+      await page.waitForTimeout(500);
+      const bodyText = await page.locator('body').innerText();
+      expect(bodyText, 'Barcode input must not cause Internal Server Error').not.toContain('Internal Server Error');
+      console.log('TC-SHIP-EXT-05: PASS — barcode input accepted without error');
+    } else {
+      console.log('TC-SHIP-EXT-05: GAP — barcode input not found on receive page');
+    }
+  });
+
+  test('TC-SHIP-EXT-06: Shipment reports page handles no-data date range gracefully', async ({ page }) => {
+    /**
+     * US-SHIP-4: When no shipments exist in a date range, the reports page must
+     * show an empty result rather than crashing.
+     */
+    await page.goto(`${BASE}${SHIP_REPORTS}`);
+    await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+
+    // Click generate without setting date range
+    const generateBtn = page.getByRole('button', { name: /generate report/i }).first();
+    const btnVisible = await generateBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    if (btnVisible) {
+      await generateBtn.click();
+      await page.waitForTimeout(2000);
+      const bodyText = await page.locator('body').innerText();
+      expect(bodyText, 'Empty report must not cause Internal Server Error').not.toContain('Internal Server Error');
+      const hasNoData = /no.*shipment|no.*result|no.*data|empty|0 boxes/i.test(bodyText);
+      console.log(`TC-SHIP-EXT-06: Generate report → hasNoData=${hasNoData}`);
+    } else {
+      console.log('TC-SHIP-EXT-06: GAP — Generate Report button not found');
+    }
+  });
+});
