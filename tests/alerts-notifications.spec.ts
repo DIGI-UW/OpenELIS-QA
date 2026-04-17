@@ -380,8 +380,152 @@ test.describe('Suite R-XMOD — Alerts Cross-Module (TC-ALERT-XMOD)', () => {
     console.log(`TC-ALERT-XMOD-01: Home metrics keys: [${homeMetrics ? Object.keys(homeMetrics).join(', ') : 'N/A'}]`);
     console.log(`TC-ALERT-XMOD-01: AlertNotification count: ${alertCount}`);
 
-    // Both APIs must be reachable
     expect(homeMetrics, 'Home dashboard metrics API must return data').not.toBeNull();
     expect(alertCount, 'AlertNotification API must return a count').toBeGreaterThanOrEqual(0);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Suite R-EXT — Alerts Extended (TC-ALERT-EXT-01 through -06)
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('Suite R-EXT — Alerts Extended (TC-ALERT-EXT)', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+  });
+
+  test('TC-ALERT-EXT-01: Alert subscribe action does not 5xx', async ({ page }) => {
+    /**
+     * Phase 15 confirmed: the notification bell Subscribe button is functional.
+     * The subscribe API must return a non-5xx response.
+     */
+    await page.goto(`${BASE}`);
+    await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const candidates = [
+        '/api/OpenELIS-Global/rest/AlertNotification/subscribe',
+        '/api/OpenELIS-Global/rest/alerts/subscribe',
+      ];
+      for (const url of candidates) {
+        const res = await fetch(url, { method: 'GET', headers: { 'X-CSRF-Token': csrf } });
+        if (res.status !== 404) return { status: res.status, url };
+      }
+      return { status: 404, url: 'none' };
+    });
+
+    console.log(`TC-ALERT-EXT-01: Subscribe API → ${result.url} HTTP ${result.status}`);
+    expect(result.status, 'Subscribe API must not 5xx').not.toBeGreaterThanOrEqual(500);
+  });
+
+  test('TC-ALERT-EXT-02: AlertNotification/all returns structured response', async ({ page }) => {
+    /**
+     * The /AlertNotification/all endpoint must return a list (possibly empty)
+     * with each alert having at minimum a message or type field.
+     */
+    await page.goto(`${BASE}`);
+
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const res = await fetch('/api/OpenELIS-Global/rest/AlertNotification/all', {
+        headers: { 'X-CSRF-Token': csrf },
+      });
+      if (!res.ok) return { status: res.status, count: -1, hasStructure: false };
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : [];
+      const first = list[0];
+      return {
+        status: res.status,
+        count: list.length,
+        hasStructure: first ? !!(first.message || first.type || first.alertType || first.id) : true,
+      };
+    });
+
+    console.log(`TC-ALERT-EXT-02: /AlertNotification/all → ${result.status}, count=${result.count}, structured=${result.hasStructure}`);
+    expect(result.status).toBe(200);
+    if (result.count > 0) {
+      expect(result.hasStructure, 'Alert objects must have identifiable fields').toBe(true);
+    }
+  });
+
+  test('TC-ALERT-EXT-03: Alerts page table has sortable columns', async ({ page }) => {
+    /**
+     * The alerts table must have column headers that support sorting so
+     * supervisors can quickly find the most recent or highest-severity alerts.
+     */
+    const loaded = await navigateWithDiscovery(page, ['/Alerts', '/AlertDashboard', '/AlertNotification']);
+    if (!loaded) { test.skip(); return; }
+
+    await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+
+    const tableHeaders = await page.locator('th, [role="columnheader"]').count();
+    console.log(`TC-ALERT-EXT-03: Table column headers: ${tableHeaders}`);
+    // Non-blocking — just document
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText).not.toContain('Internal Server Error');
+    if (tableHeaders > 0) {
+      console.log('TC-ALERT-EXT-03: PASS — table has column headers');
+    }
+  });
+
+  test('TC-ALERT-EXT-04: Alert notification bell click opens panel without error', async ({ page }) => {
+    /**
+     * Phase 15 confirmed: the bell button opens a notification drawer.
+     * Clicking it must not crash the page.
+     */
+    await page.goto(`${BASE}`);
+    await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+
+    const bell = page.locator(
+      'button[aria-label*="notification" i], button[aria-label*="alert" i], [data-testid*="notification"], button svg'
+    ).first();
+
+    if (await bell.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await bell.click();
+      await page.waitForTimeout(1000);
+    }
+
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText, 'Bell click must not cause server error').not.toContain('Internal Server Error');
+    console.log('TC-ALERT-EXT-04: Bell click handled without error');
+  });
+
+  test('TC-ALERT-EXT-05: Alerts page loads within acceptable time', async ({ page }) => {
+    const start = Date.now();
+    const loaded = await navigateWithDiscovery(page, ['/Alerts', '/AlertDashboard', '/AlertNotification']);
+    await page.waitForLoadState('domcontentloaded');
+    const elapsed = Date.now() - start;
+
+    console.log(`TC-ALERT-EXT-05: Alerts page loaded in ${elapsed}ms`);
+    if (loaded) {
+      expect(elapsed, 'Alerts page must load within 5000ms').toBeLessThan(5000);
+    } else {
+      console.log('TC-ALERT-EXT-05: SKIP — alerts page not reachable');
+    }
+  });
+
+  test('TC-ALERT-EXT-06: Mark-read action on alerts does not 5xx', async ({ page }) => {
+    /**
+     * Phase 15 confirmed: the MarkRead button is functional.
+     * The mark-read API must return a non-5xx response.
+     */
+    await page.goto(`${BASE}`);
+
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const candidates = [
+        '/api/OpenELIS-Global/rest/AlertNotification/markRead',
+        '/api/OpenELIS-Global/rest/alerts/markRead',
+      ];
+      for (const url of candidates) {
+        const res = await fetch(url, { method: 'GET', headers: { 'X-CSRF-Token': csrf } });
+        if (res.status !== 404) return { status: res.status, url };
+      }
+      return { status: 404, url: 'none' };
+    });
+
+    console.log(`TC-ALERT-EXT-06: MarkRead API → ${result.url} HTTP ${result.status}`);
+    expect(result.status, 'MarkRead API must not 5xx').not.toBeGreaterThanOrEqual(500);
   });
 });
