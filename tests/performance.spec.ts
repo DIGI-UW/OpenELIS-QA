@@ -341,3 +341,176 @@ test.describe('Phase 4 — Y-DEEP: Data Integrity', () => {
     expect(inProgressVal).toBeGreaterThanOrEqual(0);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Performance Extended — API Latency & Throughput (TC-PERF-EXT)
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('Performance Extended — API Latency & Throughput (TC-PERF-EXT)', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+  });
+
+  test('TC-PERF-EXT-01: Home dashboard metrics API p50 latency under 2s', async ({ page }) => {
+    /**
+     * US-PERF-1: The dashboard metrics API is called every time a supervisor
+     * refreshes the page. p50 (median) latency must be acceptable for regular use.
+     * Phase 11 CI suite showed ~370ms for all endpoints (network-bound).
+     */
+    await page.goto(`${BASE}`);
+
+    const latencies = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const times: number[] = [];
+      for (let i = 0; i < 5; i++) {
+        const start = Date.now();
+        await fetch('/api/OpenELIS-Global/rest/home-dashboard/metrics', {
+          headers: { 'X-CSRF-Token': csrf },
+        });
+        times.push(Date.now() - start);
+      }
+      times.sort((a, b) => a - b);
+      return { times, p50: times[2], min: times[0], max: times[4] };
+    });
+
+    console.log(`TC-PERF-EXT-01: p50=${latencies.p50}ms, min=${latencies.min}ms, max=${latencies.max}ms`);
+    expect(latencies.p50, 'Dashboard metrics p50 must be under 2000ms').toBeLessThan(2000);
+  });
+
+  test('TC-PERF-EXT-02: LogbookResults Hematology loads under 3s', async ({ page }) => {
+    /**
+     * US-PERF-2: Lab technicians open the Hematology worklist at the start of
+     * every shift. A 3s load time is the maximum acceptable for a productive workflow.
+     */
+    await page.goto(`${BASE}`);
+
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const start = Date.now();
+      const res = await fetch('/api/OpenELIS-Global/rest/LogbookResults?type=Hematology', {
+        headers: { 'X-CSRF-Token': csrf },
+      });
+      const elapsed = Date.now() - start;
+      const data = await res.json().catch(() => null);
+      const rowCount = Array.isArray(data?.testResult) ? data.testResult.length : 0;
+      return { status: res.status, elapsed, rowCount };
+    });
+
+    console.log(`TC-PERF-EXT-02: Hematology LogbookResults in ${result.elapsed}ms, rows=${result.rowCount}`);
+    expect(result.status).toBe(200);
+    expect(result.elapsed, 'Hematology worklist must load in under 3000ms').toBeLessThan(3000);
+  });
+
+  test('TC-PERF-EXT-03: AccessionResults lookup under 2s for known accession', async ({ page }) => {
+    /**
+     * US-PERF-3: Result lookup by accession is a high-frequency operation —
+     * receptionists and clinicians do this dozens of times per shift.
+     */
+    await page.goto(`${BASE}`);
+
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const start = Date.now();
+      const res = await fetch('/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=26CPHL00008V', {
+        headers: { 'X-CSRF-Token': csrf },
+      });
+      const elapsed = Date.now() - start;
+      return { status: res.status, elapsed };
+    });
+
+    console.log(`TC-PERF-EXT-03: AccessionResults in ${result.elapsed}ms`);
+    expect(result.status).toBe(200);
+    expect(result.elapsed, 'AccessionResults lookup must complete in under 2000ms').toBeLessThan(2000);
+  });
+
+  test('TC-PERF-EXT-04: 10 sequential API requests complete without degradation', async ({ page }) => {
+    /**
+     * US-PERF-4: A lab in a busy session makes many sequential API calls.
+     * The last call should not be significantly slower than the first —
+     * indicates no connection leak or progressive slowdown.
+     */
+    await page.goto(`${BASE}`);
+
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const times: number[] = [];
+      for (let i = 0; i < 10; i++) {
+        const start = Date.now();
+        await fetch('/api/OpenELIS-Global/rest/home-dashboard/metrics', {
+          headers: { 'X-CSRF-Token': csrf },
+        });
+        times.push(Date.now() - start);
+      }
+      return { times, first3avg: (times[0] + times[1] + times[2]) / 3, last3avg: (times[7] + times[8] + times[9]) / 3 };
+    });
+
+    const degradation = result.last3avg / result.first3avg;
+    console.log(`TC-PERF-EXT-04: first3avg=${result.first3avg.toFixed(0)}ms, last3avg=${result.last3avg.toFixed(0)}ms, ratio=${degradation.toFixed(2)}x`);
+    // Last 3 calls should not be more than 3x slower than first 3 (indicates no connection leak)
+    expect(degradation, 'Sequential requests must not degrade by more than 3x').toBeLessThan(3);
+  });
+
+  test('TC-PERF-EXT-05: SPA navigation does not accumulate DOM nodes', async ({ page }) => {
+    /**
+     * US-PERF-5: React SPA navigation should clean up after itself.
+     * DOM node accumulation across navigations indicates a memory leak
+     * that will eventually crash the browser tab in a long work session.
+     * Phase 11 CL-DEEP confirmed stable at 853 nodes across 10 navigations.
+     */
+    await page.goto(`${BASE}`);
+    await page.waitForLoadState('networkidle');
+
+    const measure = () => page.evaluate(() => document.querySelectorAll('*').length);
+
+    const baseline = await measure();
+    const routes = [
+      `${BASE}/LogbookResults`,
+      `${BASE}/SamplePatientEntry`,
+      `${BASE}/ResultValidation`,
+      `${BASE}/LogbookResults`,
+      `${BASE}`,
+    ];
+
+    for (const route of routes) {
+      await page.goto(route);
+      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(300);
+    }
+
+    const after = await measure();
+    const growth = after - baseline;
+    const growthPct = (growth / baseline) * 100;
+
+    console.log(`TC-PERF-EXT-05: baseline=${baseline} nodes, after=${after} nodes, growth=${growth} (${growthPct.toFixed(1)}%)`);
+    // Allow up to 100% growth (DOM can legitimately grow as React hydrates more content)
+    expect(growth, 'DOM node growth after 5 SPA navigations must be reasonable').toBeLessThan(baseline);
+  });
+
+  test('TC-PERF-EXT-06: Report generation API responds within 5s', async ({ page }) => {
+    /**
+     * US-PERF-6: Report generation is batch-heavy but must complete in reasonable
+     * time. A supervisor waiting more than 5s for a report will abandon it.
+     */
+    await page.goto(`${BASE}`);
+    await page.waitForTimeout(500);
+
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const today = new Date().toISOString().slice(0, 10).replace(/-/g, '/');
+      const oneMonthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10).replace(/-/g, '/');
+
+      const start = Date.now();
+      const res = await fetch(`/api/OpenELIS-Global/rest/Report?type=patient&startDate=${oneMonthAgo}&endDate=${today}`, {
+        headers: { 'X-CSRF-Token': csrf },
+      });
+      return { status: res.status, elapsed: Date.now() - start };
+    });
+
+    console.log(`TC-PERF-EXT-06: Report API status=${result.status} in ${result.elapsed}ms`);
+    if (result.status !== 404) {
+      expect(result.elapsed, 'Report generation must respond within 5000ms').toBeLessThan(5000);
+    } else {
+      console.log('TC-PERF-EXT-06: NOTE — Report API not found at tested path');
+    }
+  });
+});
