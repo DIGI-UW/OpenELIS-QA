@@ -7,6 +7,8 @@
  */
 
 import { Page } from '@playwright/test';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // ---------------------------------------------------------------------------
 // Config Constants
@@ -19,12 +21,145 @@ export const ADMIN = {
   pass: 'adminADMIN!',
 };
 
-// Test data constants
-export const PATIENT_NAME = 'Abby Sebby';
+// ---------------------------------------------------------------------------
+// Test data constants — dynamic, backed by .auth/test-data.json
+// ---------------------------------------------------------------------------
+
+/** National ID of the baseline test patient created by data.setup.ts */
 export const PATIENT_ID = '0123456';
-export const ACCESSION = '26CPHL00008T';
+/** Display name of the baseline test patient */
+export const PATIENT_NAME = 'Abby Sebby';
+/** First name */
+export const PATIENT_FIRST_NAME = 'Abby';
+/** Last name */
+export const PATIENT_LAST_NAME = 'Sebby';
+
+/**
+ * Primary test accession — reads from .auth/test-data.json when available.
+ * Falls back to the jdhealthsolutions baseline value.
+ */
+export const ACCESSION: string = (() => {
+  try {
+    const p = path.join(process.cwd(), '.auth', 'test-data.json');
+    if (fs.existsSync(p)) {
+      const d = JSON.parse(fs.readFileSync(p, 'utf8'));
+      if (d.primaryOrder?.accession) return d.primaryOrder.accession;
+    }
+  } catch { /* ignore */ }
+  return '26CPHL00008V';
+})();
+
+/**
+ * Secondary test accession (WBC order).
+ */
+export const ACCESSION2: string = (() => {
+  try {
+    const p = path.join(process.cwd(), '.auth', 'test-data.json');
+    if (fs.existsSync(p)) {
+      const d = JSON.parse(fs.readFileSync(p, 'utf8'));
+      if (d.secondaryOrder?.accession) return d.secondaryOrder.accession;
+    }
+  } catch { /* ignore */ }
+  return '26CPHL00008K';
+})();
+
 export const QA_PREFIX = `QA_AUTO_${new Date().toISOString().slice(5, 10).replace('-', '')}`;
 export const TIMEOUT = 5000;
+
+// ---------------------------------------------------------------------------
+// Dynamic test data — reads from .auth/test-data.json written by data.setup.ts
+// ---------------------------------------------------------------------------
+
+export interface TestDataState {
+  patient: {
+    nationalId: string;
+    firstName: string;
+    lastName: string;
+    systemId: string | null;
+    found: boolean;
+  };
+  primaryOrder: {
+    accession: string | null;
+    testName: string;
+    sampleType: string;
+    status: string;
+  };
+  secondaryOrder: {
+    accession: string | null;
+    testName: string;
+    sampleType: string;
+    status: string;
+  };
+  setupTimestamp: string;
+  setupErrors: string[];
+}
+
+const TEST_DATA_PATH = path.join(process.cwd(), '.auth', 'test-data.json');
+
+/**
+ * Read the test data written by data.setup.ts.
+ * Returns a fallback object with static constants if the file doesn't exist.
+ * Tests should use this instead of hard-coded accession numbers so they work
+ * across environments where the data was freshly created.
+ */
+export function getTestData(): TestDataState {
+  try {
+    if (fs.existsSync(TEST_DATA_PATH)) {
+      return JSON.parse(fs.readFileSync(TEST_DATA_PATH, 'utf8')) as TestDataState;
+    }
+  } catch {
+    // File missing or corrupt — return safe fallback
+  }
+  // Fallback: use static constants so old tests still compile
+  return {
+    patient: {
+      nationalId: '0123456',
+      firstName: 'Abby',
+      lastName: 'Sebby',
+      systemId: null,
+      found: false,
+    },
+    primaryOrder: {
+      accession: '26CPHL00008V',
+      testName: 'HGB',
+      sampleType: 'Whole Blood',
+      status: 'fallback',
+    },
+    secondaryOrder: {
+      accession: '26CPHL00008K',
+      testName: 'WBC',
+      sampleType: 'Whole Blood',
+      status: 'fallback',
+    },
+    setupTimestamp: new Date().toISOString(),
+    setupErrors: ['test-data.json not found — using static fallback accessions'],
+  };
+}
+
+/**
+ * Get the primary test accession number.
+ * Uses the dynamically-created one from data.setup.ts when available,
+ * falls back to the static constant.
+ */
+export function getPrimaryAccession(): string {
+  return getTestData().primaryOrder.accession ?? ACCESSION;
+}
+
+/**
+ * Get the secondary test accession number.
+ */
+export function getSecondaryAccession(): string {
+  return getTestData().secondaryOrder.accession ?? '26CPHL00008K';
+}
+
+/**
+ * Returns true if the data setup ran successfully and data is available.
+ * Tests can use this to skip data-dependent assertions gracefully.
+ */
+export function isDataSetupComplete(): boolean {
+  const data = getTestData();
+  return data.patient.found && data.primaryOrder.accession !== null;
+}
 
 // ---------------------------------------------------------------------------
 // Confirmed Admin URLs (Round 4 validation, 2026-03-24) — all 28 PASS

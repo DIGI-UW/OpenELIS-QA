@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import {
   BASE,
   ADMIN,
+  ACCESSION,
   QA_PREFIX,
   TIMEOUT,
   login,
@@ -106,7 +107,7 @@ test.describe('Suite AP — Aliquot Management Core (TC-ALQ)', () => {
 
     const searchInput = page.locator('input').first();
     if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await searchInput.fill('26CPHL00008V');
+      await searchInput.fill(ACCESSION);
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2500);
     }

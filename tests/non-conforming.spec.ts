@@ -160,7 +160,7 @@ test.describe('Non-conforming samples (TC-NC)', () => {
     // This test verifies the UX behavior — not a strict pass/fail
     await page.goto(`${BASE}/AccessionResults`);
     const searchInput = page.locator('input').first();
-    await searchInput.fill('26CPHL00008V'); // existing order
+    await searchInput.fill(ACCESSION); // existing order
     await page.getByRole('button', { name: /Search/i }).click();
     await page.waitForTimeout(2000);
 
@@ -429,7 +429,7 @@ test.describe('Suite NC-EXT — Non-Conforming Extended Tests (TC-NC-EXT)', () =
       test.skip(); return;
     }
 
-    await searchInput.fill('26CPHL00008V');
+    await searchInput.fill(ACCESSION);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(2000);
 

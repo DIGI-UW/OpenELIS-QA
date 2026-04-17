@@ -49,7 +49,8 @@ const BARCODE_URLS = [
   '/PrintLabel',
 ];
 
-const KNOWN_ACCESSION = '26CPHL00008V';
+// Uses dynamic accession from data.setup.ts when available (falls back to jdhealthsolutions baseline)
+const KNOWN_ACCESSION = ACCESSION;
 
 async function goToBarcodeScreen(page: any): Promise<boolean> {
   return navigateWithDiscovery(page, BARCODE_URLS);

@@ -319,7 +319,7 @@ test.describe('Suite PATH-EXT — Pathology Module Extended', () => {
 
     const searchInput = page.locator('input[placeholder*="accession" i], input[placeholder*="lab" i], input').first();
     if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await searchInput.fill('26CPHL00008V');
+      await searchInput.fill(ACCESSION);
       await page.keyboard.press('Enter');
       await page.waitForTimeout(1500);
       const bodyText = await page.locator('body').innerText();

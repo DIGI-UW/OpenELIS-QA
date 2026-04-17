@@ -2,10 +2,18 @@ import { test, expect } from '@playwright/test';
 import {
   BASE,
   ADMIN,
+  ACCESSION,
+  PATIENT_ID,
+  PATIENT_FIRST_NAME,
+  PATIENT_LAST_NAME,
   TIMEOUT,
   login,
   navigateWithDiscovery,
 } from '../helpers/test-helpers';
+
+// Use dynamic values from data.setup.ts (falls back to jdhealthsolutions baseline)
+const KNOWN_PATIENT_ID = PATIENT_ID;
+const KNOWN_ACCESSION = ACCESSION;
 
 /**
  * Patient History Test Suite — Suite BD-DEEP + H-DEEP Extended
@@ -104,14 +112,15 @@ test.describe('Suite BD-DEEP — Patient History Core (TC-HIST)', () => {
 
     const searchInput = page.locator('input').first();
     if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await searchInput.fill('0123456');
+      await searchInput.fill(KNOWN_PATIENT_ID);
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2500);
     }
 
     const bodyText = await page.locator('body').innerText();
     expect(bodyText, 'Known patient lookup must not cause 500').not.toContain('Internal Server Error');
-    const hasPatientData = /abby|sebby|0123456|26CPHL/i.test(bodyText);
+    const patternStr = `${PATIENT_FIRST_NAME}|${PATIENT_LAST_NAME}|${KNOWN_PATIENT_ID}|26CPHL`;
+    const hasPatientData = new RegExp(patternStr, 'i').test(bodyText);
     console.log(`TC-HIST-03: patientDataFound=${hasPatientData}`);
     if (hasPatientData) {
       console.log('TC-HIST-03: PASS — patient history data found for known patient');
@@ -131,7 +140,7 @@ test.describe('Suite BD-DEEP — Patient History Core (TC-HIST)', () => {
     // Search for known patient to get results
     const searchInput = page.locator('input').first();
     if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await searchInput.fill('0123456');
+      await searchInput.fill(KNOWN_PATIENT_ID);
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2500);
     }
@@ -172,12 +181,12 @@ test.describe('Suite H-DEEP-EXT — Patient History API (TC-HIST-06–10)', () =
      */
     await page.goto(`${BASE}`);
 
-    const result = await page.evaluate(async () => {
+    const result = await page.evaluate(async (params: { patientId: string; accession: string }) => {
       const csrf = localStorage.getItem('CSRF') || '';
       const candidates = [
-        '/api/OpenELIS-Global/rest/patient/history?nationalId=0123456',
-        '/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=26CPHL00008V',
-        '/api/OpenELIS-Global/rest/patientHistory?patientId=0123456',
+        `/api/OpenELIS-Global/rest/patient/history?nationalId=${params.patientId}`,
+        `/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=${params.accession}`,
+        `/api/OpenELIS-Global/rest/patientHistory?patientId=${params.patientId}`,
       ];
       for (const url of candidates) {
         const res = await fetch(url, { headers: { 'X-CSRF-Token': csrf } });
@@ -188,7 +197,7 @@ test.describe('Suite H-DEEP-EXT — Patient History API (TC-HIST-06–10)', () =
         if (res.status !== 404) return { status: res.status, url, hasData: false };
       }
       return { status: 404, url: 'none', hasData: false };
-    });
+    }, { patientId: KNOWN_PATIENT_ID, accession: KNOWN_ACCESSION });
 
     console.log(`TC-HIST-06: ${result.url} → HTTP ${result.status}, hasData=${result.hasData}`);
     expect(result.status, 'Patient history API must not 5xx').not.toBeGreaterThanOrEqual(500);
@@ -226,20 +235,20 @@ test.describe('Suite H-DEEP-EXT — Patient History API (TC-HIST-06–10)', () =
     await page.goto(`${BASE}`);
 
     const [accResult, patResult] = await Promise.all([
-      page.evaluate(async () => {
+      page.evaluate(async (accession: string) => {
         const csrf = localStorage.getItem('CSRF') || '';
-        const res = await fetch('/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=26CPHL00008V', {
+        const res = await fetch(`/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=${accession}`, {
           headers: { 'X-CSRF-Token': csrf },
         });
         return { status: res.status, ok: res.ok };
-      }),
-      page.evaluate(async () => {
+      }, KNOWN_ACCESSION),
+      page.evaluate(async (patientId: string) => {
         const csrf = localStorage.getItem('CSRF') || '';
-        const res = await fetch('/api/OpenELIS-Global/rest/patient?nationalId=0123456', {
+        const res = await fetch(`/api/OpenELIS-Global/rest/patient?nationalId=${patientId}`, {
           headers: { 'X-CSRF-Token': csrf },
         });
         return { status: res.status, ok: res.ok };
-      }),
+      }, KNOWN_PATIENT_ID),
     ]);
 
     console.log(`TC-HIST-08: AccessionResults=${accResult.status}, Patient=${patResult.status}`);
@@ -272,7 +281,7 @@ test.describe('Suite H-DEEP-EXT — Patient History API (TC-HIST-06–10)', () =
 
     const searchInput = page.locator('input').first();
     if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await searchInput.fill('0123456');
+      await searchInput.fill(KNOWN_PATIENT_ID);
       await page.waitForTimeout(500);
 
       const bodyText = await page.locator('body').innerText();

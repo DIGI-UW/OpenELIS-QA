@@ -44,17 +44,31 @@ export default defineConfig({
   // Projects — allowlist-based with explicit testMatch
   // -------------------------------------------------------------------------
   projects: [
-    // --- Setup: authenticate once, cache to .auth/user.json ---
+    // --- Step 1: Authenticate once, cache session to .auth/user.json ---
     {
       name: 'setup',
       testMatch: 'auth.setup.ts',
     },
 
-    // --- Core QA: all test suites using cached auth ---
+    // --- Step 2: Create baseline test data (patient + orders) ---
+    // Runs after auth so it can use the cached session.
+    // Writes created accession numbers to .auth/test-data.json.
+    // Every QA spec project depends on this so data is guaranteed present.
+    {
+      name: 'data-setup',
+      testMatch: 'data.setup.ts',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/user.json',
+      },
+    },
+
+    // --- Core QA: all test suites using cached auth + test data ---
     {
       name: 'qa-dashboard',
       testMatch: 'dashboard.spec.ts',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'data-setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/user.json',
@@ -63,7 +77,7 @@ export default defineConfig({
     {
       name: 'qa-order-entry',
       testMatch: 'order-entry.spec.ts',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'data-setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/user.json',
@@ -72,7 +86,7 @@ export default defineConfig({
     {
       name: 'qa-edit-order',
       testMatch: 'edit-order.spec.ts',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'data-setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/user.json',
@@ -81,7 +95,7 @@ export default defineConfig({
     {
       name: 'qa-results',
       testMatch: 'results-entry.spec.ts',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'data-setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/user.json',
@@ -90,7 +104,7 @@ export default defineConfig({
     {
       name: 'qa-validation',
       testMatch: 'validation.spec.ts',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'data-setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/user.json',
@@ -99,7 +113,7 @@ export default defineConfig({
     {
       name: 'qa-admin',
       testMatch: 'admin-config.spec.ts',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'data-setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/user.json',
@@ -108,7 +122,7 @@ export default defineConfig({
     {
       name: 'qa-patient',
       testMatch: 'patient-management.spec.ts',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'data-setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/user.json',
@@ -117,7 +131,7 @@ export default defineConfig({
     {
       name: 'qa-referral',
       testMatch: 'referral-workflow.spec.ts',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'data-setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/user.json',
@@ -126,7 +140,7 @@ export default defineConfig({
     {
       name: 'qa-pathology',
       testMatch: 'pathology.spec.ts',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'data-setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/user.json',
@@ -135,7 +149,7 @@ export default defineConfig({
     {
       name: 'qa-reports',
       testMatch: 'reports.spec.ts',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'data-setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/user.json',
@@ -144,7 +158,7 @@ export default defineConfig({
     {
       name: 'qa-workplan',
       testMatch: 'workplan.spec.ts',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'data-setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/user.json',
@@ -153,7 +167,7 @@ export default defineConfig({
     {
       name: 'qa-non-conforming',
       testMatch: 'non-conforming.spec.ts',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'data-setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/user.json',
@@ -162,7 +176,7 @@ export default defineConfig({
     {
       name: 'qa-i18n',
       testMatch: 'i18n.spec.ts',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'data-setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/user.json',
@@ -171,7 +185,7 @@ export default defineConfig({
     {
       name: 'qa-accessibility',
       testMatch: 'accessibility.spec.ts',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'data-setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/user.json',
@@ -180,7 +194,7 @@ export default defineConfig({
     {
       name: 'qa-performance',
       testMatch: 'performance.spec.ts',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'data-setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/user.json',
@@ -191,7 +205,7 @@ export default defineConfig({
     {
       name: 'qa-electronic-signature',
       testMatch: 'electronic-signature.spec.ts',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'data-setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/user.json',
@@ -202,7 +216,7 @@ export default defineConfig({
     {
       name: 'qa-eqa-workflow',
       testMatch: 'eqa-workflow.spec.ts',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'data-setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/user.json',
@@ -213,7 +227,7 @@ export default defineConfig({
     {
       name: 'qa-full',
       testMatch: 'openelis-e2e.spec.ts',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'data-setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/user.json',
