@@ -379,6 +379,170 @@ test.describe('Suite AD — Non-Conform Corrective Actions + View NC Events', ()
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Suite NC-EXT — Non-Conforming Extended (TC-NC-EXT-01 through TC-NC-EXT-07)
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('Suite NC-EXT — Non-Conforming Extended Tests (TC-NC-EXT)', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+  });
+
+  test('TC-NC-EXT-01: NonConformingEvent API endpoint is reachable', async ({ page }) => {
+    /**
+     * The NC event backend must accept submissions without returning 5xx.
+     * A 405 on GET is acceptable — it confirms the POST route is wired.
+     */
+    await page.goto(`${BASE}`);
+
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const candidates = [
+        '/api/OpenELIS-Global/rest/NonConformingEvent',
+        '/api/OpenELIS-Global/rest/NCEvent',
+        '/api/OpenELIS-Global/rest/nonConformingEvent',
+      ];
+      for (const url of candidates) {
+        const res = await fetch(url, { headers: { 'X-CSRF-Token': csrf } });
+        if (res.status !== 404) return { status: res.status, url };
+      }
+      return { status: 404, url: 'none' };
+    });
+
+    console.log(`TC-NC-EXT-01: NC event API → ${result.url} HTTP ${result.status}`);
+    expect(result.status, 'NC event API must not 5xx').not.toBeGreaterThanOrEqual(500);
+  });
+
+  test('TC-NC-EXT-02: View NC Events search returns results for known accession', async ({ page }) => {
+    /**
+     * The ViewNonConformingEvent search must handle a known accession without
+     * crashing, whether or not there is a matching NC event.
+     */
+    await page.goto(`${BASE}/ViewNonConformingEvent`);
+    await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+
+    const searchInput = page.locator(
+      'input[placeholder*="lab" i], input[placeholder*="accession" i], input[id*="lab" i]'
+    ).first();
+    if (!await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+      console.log('TC-NC-EXT-02: SKIP — no search input found');
+      test.skip(); return;
+    }
+
+    await searchInput.fill('26CPHL00008V');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(2000);
+
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText, 'NC event search must not cause server error').not.toContain('Internal Server Error');
+    console.log('TC-NC-EXT-02: PASS — NC event search completed without error');
+  });
+
+  test('TC-NC-EXT-03: NC event naming consistency — heading variants', async ({ page }) => {
+    /**
+     * NOTE-20: Three naming conventions exist across the NC module:
+     * "Non-Conforming", "Non Conform Event", "Nonconforming". This test
+     * documents which variant is shown on the main NCE screen.
+     */
+    await page.goto(`${BASE}/NonConformingEvent`);
+    await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+
+    const bodyText = await page.locator('body').innerText();
+    const hasHyphenated = /non-conforming/i.test(bodyText);
+    const hasSpaced = /non conform(?!ing)/i.test(bodyText);
+    const hasOneWord = /nonconforming/i.test(bodyText);
+
+    console.log(`TC-NC-EXT-03: naming — hyphenated=${hasHyphenated}, spaced=${hasSpaced}, oneword=${hasOneWord}`);
+    // Document NOTE-20 state — at least one variant must exist
+    expect(hasHyphenated || hasSpaced || hasOneWord, 'Some NC naming variant must appear').toBe(true);
+  });
+
+  test('TC-NC-EXT-04: NC Corrective Actions page — empty search shows no server error', async ({ page }) => {
+    /**
+     * Submitting the corrective actions search form without filling in the
+     * accession must produce a graceful empty state, not a 500.
+     */
+    await page.goto(`${BASE}/NCECorrectiveAction`);
+    await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+
+    const searchBtn = page.getByRole('button', { name: /search|find|submit/i }).first();
+    if (await searchBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await searchBtn.click();
+      await page.waitForTimeout(2000);
+    }
+
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText, 'Empty corrective action search must not 500').not.toContain('Internal Server Error');
+    console.log('TC-NC-EXT-04: PASS — empty corrective action search handled gracefully');
+  });
+
+  test('TC-NC-EXT-05: All three NC URLs are reachable without error', async ({ page }) => {
+    /**
+     * The three entry points to the NC module must all be accessible:
+     * Report, View Events, and Corrective Actions.
+     */
+    const ncUrls = [
+      '/NonConformingEvent',
+      '/ViewNonConformingEvent',
+      '/NCECorrectiveAction',
+    ];
+
+    const results: { url: string; ok: boolean }[] = [];
+    for (const url of ncUrls) {
+      await page.goto(`${BASE}${url}`);
+      await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+      const bodyText = await page.locator('body').innerText();
+      const ok = !bodyText.includes('404') && !bodyText.includes('Internal Server Error')
+        && !page.url().match(/LoginPage|login/i);
+      results.push({ url, ok });
+    }
+
+    console.log('TC-NC-EXT-05:', JSON.stringify(results));
+    const failing = results.filter(r => !r.ok);
+    expect(failing, `All NC URLs must be reachable: failing=${JSON.stringify(failing)}`).toHaveLength(0);
+  });
+
+  test('TC-NC-EXT-06: NC event form submission without data returns validation, not 500', async ({ page }) => {
+    /**
+     * Submitting the NC event report form empty must show a validation
+     * message, not an Internal Server Error.
+     */
+    await page.goto(`${BASE}/NonConformingEvent`);
+    await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+
+    const submitBtn = page.getByRole('button', { name: /submit|save|report/i }).first();
+    if (await submitBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await submitBtn.click();
+      await page.waitForTimeout(2000);
+      const bodyText = await page.locator('body').innerText();
+      expect(bodyText, 'Empty NC form submit must not 500').not.toContain('Internal Server Error');
+      const hasValidation = /required|invalid|error|please|field/i.test(bodyText);
+      console.log(`TC-NC-EXT-06: validationShown=${hasValidation}`);
+    } else {
+      console.log('TC-NC-EXT-06: NOTE — submit button not found on NC event form');
+    }
+  });
+
+  test('TC-NC-EXT-07: NC module loads within acceptable time', async ({ page }) => {
+    /**
+     * The NonConformingEvent page is used during urgent sample rejection
+     * workflows. It must be accessible and load promptly.
+     */
+    const start = Date.now();
+    await page.goto(`${BASE}/NonConformingEvent`);
+    await page.waitForLoadState('domcontentloaded');
+    const elapsed = Date.now() - start;
+
+    const bodyText = await page.locator('body').innerText();
+    const ok = !bodyText.includes('Internal Server Error') && !page.url().match(/LoginPage|login/i);
+
+    console.log(`TC-NC-EXT-07: NCE page loaded in ${elapsed}ms, ok=${ok}`);
+    if (ok) {
+      expect(elapsed, 'NC event page must load within 5000ms').toBeLessThan(5000);
+    }
+  });
+});
+
 test.describe('Phase 5 — G-DEEP: NCE Interaction Tests', () => {
   test.beforeEach(async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);

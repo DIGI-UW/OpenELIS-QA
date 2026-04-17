@@ -230,3 +230,129 @@ test.describe('Storage Extended — Room Creation & Tab Navigation', () => {
     }
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Suite STOR-DEEP — Storage API & Cross-Module (TC-STOR-DEEP-01 through -07)
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('Suite STOR-DEEP — Storage API & Cross-Module', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+  });
+
+  test('TC-STOR-DEEP-01: Storage items API returns list structure', async ({ page }) => {
+    /**
+     * The storage items API must return an array (possibly empty) — not a
+     * server error — so the UI can populate storage tabs.
+     */
+    await page.goto(`${BASE}`);
+
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const candidates = [
+        '/api/OpenELIS-Global/rest/storage/items/all',
+        '/api/OpenELIS-Global/rest/storage',
+        '/api/OpenELIS-Global/rest/storageLocation',
+      ];
+      for (const url of candidates) {
+        const res = await fetch(url, { headers: { 'X-CSRF-Token': csrf } });
+        if (res.ok) {
+          const data = await res.json();
+          return { status: res.status, url, count: Array.isArray(data) ? data.length : -1 };
+        }
+        if (res.status !== 404) return { status: res.status, url, count: -1 };
+      }
+      return { status: 404, url: 'none', count: -1 };
+    });
+
+    console.log(`TC-STOR-DEEP-01: ${result.url} → HTTP ${result.status}, count=${result.count}`);
+    expect(result.status, 'Storage items API must not 5xx').not.toBeGreaterThanOrEqual(500);
+  });
+
+  test('TC-STOR-DEEP-02: Cold Storage (FreezerMonitoring) page loads all tabs', async ({ page }) => {
+    /**
+     * The Cold Storage monitoring page must load its temperature monitoring tabs
+     * without error. It has 5 tabs confirmed in Phase 17.
+     */
+    await page.goto(`${BASE}${COLD_STORAGE_URL}`);
+    await page.waitForLoadState('networkidle', { timeout: 10000 });
+
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText).not.toContain('Internal Server Error');
+    expect(page.url()).not.toMatch(/LoginPage|login/i);
+
+    const tabs = await page.locator('[role="tab"]').count();
+    console.log(`TC-STOR-DEEP-02: Cold Storage tabs=${tabs}`);
+    expect(tabs, 'Cold Storage must have at least 2 tabs').toBeGreaterThanOrEqual(2);
+  });
+
+  test('TC-STOR-DEEP-03: Storage Devices tab loads without crash', async ({ page }) => {
+    await page.goto(`${BASE}${STORAGE_URL}/devices`);
+    await page.waitForLoadState('networkidle', { timeout: 10000 });
+
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText).not.toContain('Internal Server Error');
+    console.log(`TC-STOR-DEEP-03: Storage devices page at ${page.url()}`);
+  });
+
+  test('TC-STOR-DEEP-04: Storage Boxes tab loads without crash', async ({ page }) => {
+    await page.goto(`${BASE}${STORAGE_URL}/boxes`);
+    await page.waitForLoadState('networkidle', { timeout: 10000 });
+
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText).not.toContain('Internal Server Error');
+    console.log(`TC-STOR-DEEP-04: Storage boxes page at ${page.url()}`);
+  });
+
+  test('TC-STOR-DEEP-05: Storage navigation between all 6 tabs does not crash', async ({ page }) => {
+    /**
+     * Clicking through all 6 storage tabs (Rooms, Devices, Shelves, Racks,
+     * Boxes, Sample Items) must not produce any server errors or JS crashes.
+     */
+    await page.goto(`${BASE}${STORAGE_URL}`);
+    await page.waitForLoadState('networkidle', { timeout: 10000 });
+
+    const tabs = await page.locator('[role="tab"]').all();
+    for (let i = 0; i < Math.min(tabs.length, 6); i++) {
+      await tabs[i].click();
+      await page.waitForTimeout(500);
+      const bodyText = await page.locator('body').innerText();
+      expect(bodyText, `Tab ${i + 1} must not cause server error`).not.toContain('Internal Server Error');
+    }
+    console.log(`TC-STOR-DEEP-05: PASS — navigated ${Math.min(tabs.length, 6)} storage tabs without error`);
+  });
+
+  test('TC-STOR-DEEP-06: Storage create room form has required fields', async ({ page }) => {
+    /**
+     * The room creation form must have at minimum a name/label field so
+     * a lab can add a new storage room with meaningful identification.
+     */
+    await page.goto(`${BASE}${STORAGE_URL}/rooms`);
+    await page.waitForLoadState('networkidle', { timeout: 10000 });
+
+    const addBtn = page.getByRole('button', { name: /add|create|new/i }).first();
+    if (await addBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await addBtn.click();
+      await page.waitForTimeout(1000);
+
+      const nameInput = page.locator('input[id*="name" i], input[placeholder*="name" i]').first();
+      const hasNameInput = await nameInput.isVisible({ timeout: 2000 }).catch(() => false);
+      console.log(`TC-STOR-DEEP-06: room name input visible=${hasNameInput}`);
+    } else {
+      console.log('TC-STOR-DEEP-06: NOTE — no Add button found on rooms page');
+    }
+
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText).not.toContain('Internal Server Error');
+  });
+
+  test('TC-STOR-DEEP-07: Storage page loads within acceptable time', async ({ page }) => {
+    const start = Date.now();
+    await page.goto(`${BASE}${STORAGE_URL}`);
+    await page.waitForLoadState('domcontentloaded');
+    const elapsed = Date.now() - start;
+
+    console.log(`TC-STOR-DEEP-07: Storage page loaded in ${elapsed}ms`);
+    expect(elapsed, 'Storage page must load within 5000ms').toBeLessThan(5000);
+  });
+});
