@@ -52,44 +52,56 @@ test.describe('Validation workflow (TC-VAL)', () => {
     await login(page, ADMIN.user, ADMIN.pass);
   });
 
-  test('TC-VAL-01: Validation screen is reachable', async ({ page }) => {
+  test('TC-VAL-01: Validation screen renders the correct page structure for a validator', async ({ page }) => {
+    // A results validator's entry point — they need to see a list of results
+    // waiting for approval. The page must have a heading and a table/list structure.
     const reachedUrl = await goToValidation(page);
-    // Should NOT redirect to login
-    expect(page.url()).not.toMatch(/LoginPage|login/i);
+    expect(page.url(), 'Must not redirect to login — validator must be authenticated').not.toMatch(/LoginPage|login/i);
     console.log(`TC-VAL-01: Validation reached at ${reachedUrl}`);
-    // Any combination of a table or heading indicates the page is functional
-    const hasContent = await page
-      .locator('table, .cds--data-table, h1, h2, .cds--search-input')
-      .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
-    expect(hasContent).toBe(true);
+
+    // A heading is required so the validator knows what screen they're on
+    const heading = page.locator('h1, h2').first();
+    await expect(heading, 'Validation page must have an h1/h2 heading').toBeVisible({ timeout: 5000 });
+
+    // A table or search input is required — without either, the validator has nothing to act on
+    const hasTable = await page.locator('table, .cds--data-table, [role="table"]').first()
+      .isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSearch = await page.locator('.cds--search-input, input[placeholder*="accession" i]').first()
+      .isVisible({ timeout: 3000 }).catch(() => false);
+
+    expect(
+      hasTable || hasSearch,
+      'Validation page must show a results table or an accession search field — otherwise validator has nothing to act on',
+    ).toBe(true);
   });
 
-  test('TC-VAL-02: Search for order in By Order validation view', async ({ page }) => {
+  test('TC-VAL-02: Searching a known accession returns the matching result row', async ({ page }) => {
+    // A validator searching by accession must get results for that specific order.
+    // If the search returns nothing for a valid accession, the validator cannot approve results.
     await goToValidation(page, 'order');
 
-    // The By Order view may have a search/accession input
     const accInput = page
       .locator('input[placeholder*="accession" i], input[id*="accession" i], input[placeholder*="number" i]')
       .first();
 
-    if (await accInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await accInput.fill(VAL_ACCESSION);
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(2000);
-      // Result row with HGB should appear
-      const hasHgb = await page.getByText(/HGB|Hemoglobin/i).isVisible({ timeout: 5000 }).catch(() => false);
-      if (hasHgb) {
-        console.log(`TC-VAL-02: PASS — HGB result visible for ${VAL_ACCESSION}`);
-        await expect(page.getByText(/HGB|Hemoglobin/i)).toBeVisible();
-      } else {
-        console.log(`TC-VAL-02: INFO — Result not found in validation queue (may already be validated)`);
-      }
-    } else {
-      console.log('TC-VAL-02: INFO — No accession search field on validation page; documenting layout');
-      // Still pass — just document that the page structure differs from expected
+    if (!(await accInput.isVisible({ timeout: 3000 }).catch(() => false))) {
+      console.log('TC-VAL-02: SKIP — By Order view has no accession input field; page structure differs from expected');
+      return;
     }
+
+    await accInput.fill(VAL_ACCESSION);
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(2000);
+
+    // Verify the page didn't error out
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText, 'Page must not show a server error after accession search').not.toMatch(/500|Internal Server Error/);
+
+    // The known accession (26CPHL00008V) has an HGB test — it must appear or
+    // we get an empty state (already validated), never a crash
+    const hasResults = await page.getByText(/HGB|Hemoglobin|No.*result|0.*result/i).first()
+      .isVisible({ timeout: 5000 }).catch(() => false);
+    expect(hasResults, 'Search must return either a result row or a clear empty-state message — not a blank page').toBe(true);
   });
 
   test('TC-VAL-03: Accept checkbox is present on result rows', async ({ page }) => {

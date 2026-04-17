@@ -116,7 +116,7 @@ test.describe('Order Creation Wizard (Phase 30)', () => {
     await page.getByRole('button', { name: /new patient/i }).click();
     await page.waitForTimeout(500);
 
-    // Fill National ID using native setter (React controlled input)
+    // Fill fields using native setter (React controlled input pattern)
     await page.evaluate(() => {
       const nativeSetter = Object.getOwnPropertyDescriptor(
         window.HTMLInputElement.prototype, 'value'
@@ -149,11 +149,14 @@ test.describe('Order Creation Wizard (Phase 30)', () => {
 
     await page.waitForTimeout(500);
 
-    // Verify values were set
+    // Verify the National ID field actually holds our value (not empty)
+    // A lab tech's patient identity entry must stick — empty means lost record
     const nationalIdVal = await page.locator('input[placeholder*="Nationality"]').inputValue();
-    // Note: React may or may not reflect the value depending on state management
-    // This test documents the behavior
-    expect(nationalIdVal.length).toBeGreaterThanOrEqual(0);
+    expect(nationalIdVal, 'National ID must be filled — empty value means patient identity was lost').toBe('QA-ORDER-04');
+
+    // Last name must also be set — it drives patient search
+    const lastNameVal = await page.locator('input[placeholder*="Last Name"]').inputValue();
+    expect(lastNameVal, 'Last name must be filled').toBe('QAOrder');
   });
 
   test('TC-ORDER-05: Step 2 (Program Selection) loads on Next', async ({ page }) => {
@@ -193,13 +196,20 @@ test.describe('Order Creation Wizard (Phase 30)', () => {
     await page.getByRole('button', { name: /next/i }).click();
     await page.waitForTimeout(1000);
 
-    // Should advance to Step 2 or show validation error
+    // With National ID + Age + Gender filled, the wizard should advance to Step 2.
+    // Step 2 contains program selection — verify we left Step 1.
+    // A failure here means the wizard is broken and lab staff can't place orders.
     const bodyText = await page.locator('body').textContent();
     const isStep2 = bodyText?.includes('Program') || false;
-    const hasValidationError = bodyText?.includes('Required') || false;
+    const hasValidationError = bodyText?.includes('Required') || bodyText?.includes('required') || false;
 
-    // Either we advanced or got a validation message — both are valid outcomes
-    expect(isStep2 || hasValidationError).toBe(true);
+    if (!isStep2 && hasValidationError) {
+      // If still on Step 1 with validation errors, log which fields are missing
+      console.warn('TC-ORDER-05: Still on Step 1 after Next — validation blocking advance. Check required fields.');
+    }
+
+    // The test is green only if we actually advanced to Step 2 (Program)
+    expect(isStep2, 'Wizard must advance to Program Selection (Step 2) when required fields are filled').toBe(true);
   });
 
   test('TC-ORDER-06: SamplePatientEntry API returns full form metadata', async ({ page }) => {
