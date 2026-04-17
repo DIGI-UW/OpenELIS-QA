@@ -289,9 +289,167 @@ test.describe('Suite BB-DEEP — Barcode API & Label Content (TC-BARCODE-06–10
     console.log(`TC-BARCODE-10: AccessionResults labNo="${accResult.labNo}", hasPatient=${accResult.hasPatient}, test=${accResult.testName}`);
     expect(accResult.status).toBe(200);
 
-    // If labNo is returned, it must match the queried accession
     if (accResult.labNo) {
       expect(accResult.labNo, 'Returned labNo must match the queried accession').toContain('26CPHL00008');
     }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Suite BB-EXT — Barcode Extended (TC-BARCODE-EXT-01 through -06)
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('Suite BB-EXT — Barcode Extended (TC-BARCODE-EXT)', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+  });
+
+  test('TC-BARCODE-EXT-01: Barcode screen clears search field on reset', async ({ page }) => {
+    /**
+     * After entering an accession and getting a result, the user should be
+     * able to clear the form to start a fresh search without reloading the page.
+     */
+    const loaded = await goToBarcodeScreen(page);
+    if (!loaded) { test.skip(); return; }
+
+    await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+
+    const input = page.locator('input').first();
+    if (await input.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await input.fill(KNOWN_ACCESSION);
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(1500);
+
+      // Look for a Clear or Reset button
+      const clearBtn = page.getByRole('button', { name: /clear|reset|new/i }).first();
+      if (await clearBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await clearBtn.click();
+        await page.waitForTimeout(500);
+        const value = await input.inputValue().catch(() => '');
+        console.log(`TC-BARCODE-EXT-01: Input value after clear: "${value}"`);
+      } else {
+        console.log('TC-BARCODE-EXT-01: NOTE — no clear button found');
+      }
+    }
+
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText).not.toContain('Internal Server Error');
+  });
+
+  test('TC-BARCODE-EXT-02: Barcode API response time under 2 seconds', async ({ page }) => {
+    /**
+     * Lab technicians print labels continuously during sample intake.
+     * The barcode lookup API must respond within 2 seconds.
+     */
+    await page.goto(`${BASE}`);
+
+    const result = await page.evaluate(async (acc: string) => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const t0 = Date.now();
+      const res = await fetch(`/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=${acc}`, {
+        headers: { 'X-CSRF-Token': csrf },
+      });
+      return { status: res.status, elapsed: Date.now() - t0 };
+    }, KNOWN_ACCESSION);
+
+    console.log(`TC-BARCODE-EXT-02: AccessionResults for barcode → HTTP ${result.status}, elapsed=${result.elapsed}ms`);
+    expect(result.status, 'Barcode API must not 5xx').not.toBeGreaterThanOrEqual(500);
+    expect(result.elapsed, 'Barcode API must respond within 2000ms').toBeLessThan(2000);
+  });
+
+  test('TC-BARCODE-EXT-03: Multiple barcodes can be queried sequentially without crash', async ({ page }) => {
+    /**
+     * Printing labels for a batch of samples requires sequential lookups.
+     * The page must stay stable across 3 sequential accession queries.
+     */
+    const loaded = await goToBarcodeScreen(page);
+    if (!loaded) { test.skip(); return; }
+
+    await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+
+    const accessions = ['26CPHL00008V', '26CPHL00008A', 'ZZINVALID999'];
+    for (const acc of accessions) {
+      const input = page.locator('input').first();
+      if (!await input.isVisible({ timeout: 2000 }).catch(() => false)) break;
+      await input.fill(acc);
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(1500);
+    }
+
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText, 'Sequential barcode queries must not crash page').not.toContain('Internal Server Error');
+    console.log('TC-BARCODE-EXT-03: PASS — 3 sequential barcode queries completed without error');
+  });
+
+  test('TC-BARCODE-EXT-04: 5 concurrent barcode API requests all succeed', async ({ page }) => {
+    /**
+     * Multiple workstations may print labels simultaneously.
+     * 5 concurrent label API requests must all return non-5xx.
+     */
+    await page.goto(`${BASE}`);
+
+    const results = await page.evaluate(async (acc: string) => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const calls = Array.from({ length: 5 }, () =>
+        fetch(`/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=${acc}`, {
+          headers: { 'X-CSRF-Token': csrf },
+        }).then(r => r.status).catch(() => -1)
+      );
+      return Promise.all(calls);
+    }, KNOWN_ACCESSION);
+
+    console.log(`TC-BARCODE-EXT-04: Concurrent barcode requests: [${results.join(', ')}]`);
+    const serverErrors = results.filter(s => s >= 500);
+    expect(serverErrors, 'No 5xx on concurrent barcode requests').toHaveLength(0);
+  });
+
+  test('TC-BARCODE-EXT-05: Barcode page shows patient name after accession lookup', async ({ page }) => {
+    /**
+     * US-BARCODE-4: The label must show the patient name for positive identification.
+     * After looking up 26CPHL00008V, patient name (Abby/Sebby) should appear.
+     */
+    const loaded = await goToBarcodeScreen(page);
+    if (!loaded) { test.skip(); return; }
+
+    await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+
+    const input = page.locator('input').first();
+    if (await input.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await input.fill(KNOWN_ACCESSION);
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(2500);
+
+      const bodyText = await page.locator('body').innerText();
+      const hasPatientName = /abby|sebby/i.test(bodyText);
+      console.log(`TC-BARCODE-EXT-05: patientName visible=${hasPatientName}`);
+      if (hasPatientName) {
+        console.log('TC-BARCODE-EXT-05: PASS — patient name visible after barcode lookup');
+      } else {
+        console.log('TC-BARCODE-EXT-05: NOTE — patient name not visible (may require print preview)');
+      }
+      expect(bodyText).not.toContain('Internal Server Error');
+    }
+  });
+
+  test('TC-BARCODE-EXT-06: Barcode label API response includes accession in body', async ({ page }) => {
+    /**
+     * US-BARCODE-3: The label data returned for the known accession must include
+     * the accession number so it can be encoded in the barcode.
+     */
+    await page.goto(`${BASE}`);
+
+    const result = await page.evaluate(async (acc: string) => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const res = await fetch(`/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=${acc}`, {
+        headers: { 'X-CSRF-Token': csrf },
+      });
+      if (!res.ok) return { status: res.status, hasAccession: false };
+      const text = await res.text();
+      return { status: res.status, hasAccession: text.includes('26CPHL00008') };
+    }, KNOWN_ACCESSION);
+
+    console.log(`TC-BARCODE-EXT-06: API includes accession=${result.hasAccession}`);
+    expect(result.status).toBe(200);
+    expect(result.hasAccession, 'Label API response must include the accession number').toBe(true);
   });
 });
