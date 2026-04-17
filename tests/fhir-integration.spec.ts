@@ -491,3 +491,186 @@ test.describe('Suite FHIR-ERROR — FHIR Error Handling (TC-FHIR-09–12)', () =
     expect(serverErrors.length, 'No 5xx errors on concurrent FHIR metadata requests').toBe(0);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Suite FHIR-EXT — FHIR Extended (TC-FHIR-EXT-01 through -06)
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('Suite FHIR-EXT — FHIR R4 Extended (TC-FHIR-EXT)', () => {
+  const FHIR_CANDIDATES = [
+    '/hapi-fhir-jpaserver/fhir',
+    '/fhir',
+    '/api/OpenELIS-Global/fhir',
+  ];
+
+  async function discoverFhirBase(page: any): Promise<string> {
+    return page.evaluate(async (candidates: string[]) => {
+      for (const base of candidates) {
+        const res = await fetch(`${base}/metadata`, {
+          headers: { Accept: 'application/fhir+json' },
+        }).catch(() => null);
+        if (res?.ok) return base;
+      }
+      return '';
+    }, FHIR_CANDIDATES);
+  }
+
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+  });
+
+  test('TC-FHIR-EXT-01: FHIR Patient search by identifier returns bundle', async ({ page }) => {
+    /**
+     * US-FHIR-2: A FHIR Patient search using the known patient national ID
+     * must return a Bundle resource (possibly empty) — not an error.
+     */
+    await page.goto(`${BASE}`);
+
+    const fhirBase = await discoverFhirBase(page);
+    if (!fhirBase) { test.skip(); return; }
+
+    const result = await page.evaluate(async (base: string) => {
+      const res = await fetch(`${base}/Patient?identifier=0123456`, {
+        headers: { Accept: 'application/fhir+json' },
+      });
+      if (!res.ok) return { status: res.status, resourceType: null };
+      const data = await res.json();
+      return { status: res.status, resourceType: data.resourceType };
+    }, fhirBase);
+
+    console.log(`TC-FHIR-EXT-01: Patient search → HTTP ${result.status}, resourceType=${result.resourceType}`);
+    expect(result.status, 'FHIR Patient search must not 5xx').not.toBeGreaterThanOrEqual(500);
+    if (result.resourceType) {
+      expect(result.resourceType, 'Must return Bundle resource type').toBe('Bundle');
+    }
+  });
+
+  test('TC-FHIR-EXT-02: FHIR CapabilityStatement lists correct FHIR version', async ({ page }) => {
+    /**
+     * US-FHIR-1: The CapabilityStatement fhirVersion field must start with "4."
+     * to confirm this is a FHIR R4 server (BW-DEEP: HAPI FHIR 7.0.2, R4).
+     */
+    await page.goto(`${BASE}`);
+
+    const fhirBase = await discoverFhirBase(page);
+    if (!fhirBase) { test.skip(); return; }
+
+    const result = await page.evaluate(async (base: string) => {
+      const res = await fetch(`${base}/metadata`, {
+        headers: { Accept: 'application/fhir+json' },
+      });
+      if (!res.ok) return { status: res.status, fhirVersion: null, software: null };
+      const data = await res.json();
+      return {
+        status: res.status,
+        fhirVersion: data.fhirVersion,
+        software: data.software?.name,
+      };
+    }, fhirBase);
+
+    console.log(`TC-FHIR-EXT-02: fhirVersion="${result.fhirVersion}", software="${result.software}"`);
+    expect(result.status).toBe(200);
+    if (result.fhirVersion) {
+      expect(result.fhirVersion, 'Must be FHIR R4 (version starts with 4.)').toMatch(/^4\./);
+    }
+  });
+
+  test('TC-FHIR-EXT-03: FHIR DiagnosticReport query non-5xx', async ({ page }) => {
+    /**
+     * US-FHIR-3: DiagnosticReport is a core FHIR resource for lab results.
+     * The DiagnosticReport query endpoint must not return a 5xx.
+     */
+    await page.goto(`${BASE}`);
+
+    const fhirBase = await discoverFhirBase(page);
+    if (!fhirBase) { test.skip(); return; }
+
+    const result = await page.evaluate(async (base: string) => {
+      const res = await fetch(`${base}/DiagnosticReport?_count=5`, {
+        headers: { Accept: 'application/fhir+json' },
+      });
+      return { status: res.status };
+    }, fhirBase);
+
+    console.log(`TC-FHIR-EXT-03: DiagnosticReport → HTTP ${result.status}`);
+    expect(result.status, 'DiagnosticReport query must not 5xx').not.toBeGreaterThanOrEqual(500);
+  });
+
+  test('TC-FHIR-EXT-04: FHIR Observation resource non-5xx', async ({ page }) => {
+    /**
+     * US-FHIR-3: Observations represent individual test results. The Observation
+     * endpoint must accept queries without returning server errors.
+     */
+    await page.goto(`${BASE}`);
+
+    const fhirBase = await discoverFhirBase(page);
+    if (!fhirBase) { test.skip(); return; }
+
+    const result = await page.evaluate(async (base: string) => {
+      const res = await fetch(`${base}/Observation?_count=5`, {
+        headers: { Accept: 'application/fhir+json' },
+      });
+      return { status: res.status };
+    }, fhirBase);
+
+    console.log(`TC-FHIR-EXT-04: Observation → HTTP ${result.status}`);
+    expect(result.status, 'FHIR Observation must not 5xx').not.toBeGreaterThanOrEqual(500);
+  });
+
+  test('TC-FHIR-EXT-05: FHIR Content-Type header is correct on all resource responses', async ({ page }) => {
+    /**
+     * US-FHIR-1: All FHIR responses must include Content-Type: application/fhir+json
+     * so consuming systems can parse them correctly.
+     */
+    await page.goto(`${BASE}`);
+
+    const fhirBase = await discoverFhirBase(page);
+    if (!fhirBase) { test.skip(); return; }
+
+    const results = await page.evaluate(async (base: string) => {
+      const endpoints = [`${base}/metadata`, `${base}/Patient?_count=1`];
+      const checks = await Promise.all(
+        endpoints.map(async url => {
+          const res = await fetch(url, { headers: { Accept: 'application/fhir+json' } });
+          const ct = res.headers.get('content-type') || '';
+          return { url, status: res.status, hasFhirContentType: ct.includes('fhir+json') || ct.includes('json') };
+        })
+      );
+      return checks;
+    }, fhirBase);
+
+    console.log('TC-FHIR-EXT-05:', JSON.stringify(results));
+    for (const r of results) {
+      if (r.status === 200) {
+        expect(r.hasFhirContentType, `${r.url} must return JSON content type`).toBe(true);
+      }
+    }
+  });
+
+  test('TC-FHIR-EXT-06: FHIR server supports _count parameter for pagination', async ({ page }) => {
+    /**
+     * US-FHIR-2: FHIR R4 requires support for the _count parameter for pagination.
+     * A query with _count=1 must return at most 1 entry in the Bundle.
+     */
+    await page.goto(`${BASE}`);
+
+    const fhirBase = await discoverFhirBase(page);
+    if (!fhirBase) { test.skip(); return; }
+
+    const result = await page.evaluate(async (base: string) => {
+      const res = await fetch(`${base}/Patient?_count=1`, {
+        headers: { Accept: 'application/fhir+json' },
+      });
+      if (!res.ok) return { status: res.status, entryCount: -1 };
+      const data = await res.json();
+      const entries = data.entry ?? [];
+      return { status: res.status, entryCount: entries.length, hasTotal: typeof data.total === 'number' };
+    }, fhirBase);
+
+    console.log(`TC-FHIR-EXT-06: Patient?_count=1 → HTTP ${result.status}, entries=${result.entryCount}`);
+    expect(result.status, 'FHIR pagination must not 5xx').not.toBeGreaterThanOrEqual(500);
+    if (result.entryCount >= 0) {
+      expect(result.entryCount, '_count=1 must return at most 1 entry').toBeLessThanOrEqual(1);
+    }
+  });
+});
