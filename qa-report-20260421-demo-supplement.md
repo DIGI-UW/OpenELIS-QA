@@ -1100,7 +1100,225 @@ Sample Status options (2): No tests have been run for this sample, Some tests ha
 | NOTE-DEMO-11 | "Colombo South Teaching Hospital" in Region dropdown (data quality issue) | NOTE |
 | ROUTE-CORRECTION-01 | `/BatchOrderEntry` is FAIL-DEMO-01; correct route is `/SampleBatchEntrySetup` | CORRECTION |
 
-**Cumulative total all sessions:** ~113 PASS, ~19 FAIL, 0 UNKNOWN
+**Cumulative total sessions 1–9:** ~113 PASS, ~19 FAIL, 0 UNKNOWN
 - All 19 FAILs = FAIL-DEMO-01 (legacy JSP-era routes, version-specific to v3.2.0.2)
 - 1 functional bug: OGC-601 (/ModifyOrder blank page)
 - Route corrections: `/SampleBatchEntrySetup` is canonical Batch Order Entry route
+
+---
+
+## Section 20 — Results/Validation/Reports/Workplan Deep Interaction (Session 10)
+
+**Session date:** 2026-04-21  
+**Instance:** `demo.openelis-global.org` (v3.2.0.2)
+
+---
+
+### 20.1 Results By Range — `/RangeResults`
+
+| Component | Details | Result |
+|-----------|---------|--------|
+| Page structure | "From Accession Number" + "To Accession Number" inputs + Search button | ✅ PASS |
+| Input auto-format | Typed `25000020` → auto-formatted to `25-000-020` via React fiber onChange | ✅ PASS |
+| Range search | `rest/LogbookResults?labNumber=25000020&upperRangeAccessionNumber=25000040&doRange=true` → HTTP 200 | ✅ PASS |
+| Results returned | 8 results across 5 accessions (25-000-030, 25-000-039, 25-000-03F, 25-000-03G, 25-000-03L) | ✅ PASS |
+| Results columns | Sample Info, Test Date, Analyzer, Test Name, Normal Range, Accept, Current Result, Notes | ✅ PASS |
+| Save button | Present at bottom of results | ✅ PASS |
+| **NOTE-DEMO-12** | "From Accesion Number" / "To Accesion Number" — "Accesion" should be "Accession" (same as BUG-17 on testing instance) | NOTE |
+
+**TC-RANGE-01, TC-RANGE-02: PASS** — Range search via `doRange=true` flag on LogbookResults endpoint; 8 results returned with abnormal values correctly displayed.
+
+---
+
+### 20.2 Accession Validation By Range — `/AccessionValidationRange`
+
+| Component | Details | Result |
+|-----------|---------|--------|
+| Page structure | "Load Next 99 Records Starting at Lab Number" input + Search button | ✅ PASS |
+| Input auto-format | Typed `25000001` → auto-formatted to `25-000-001` | ✅ PASS |
+| API call | `rest/AccessionValidation?accessionNumber=25000001&doRange=true` → HTTP 200 | ✅ PASS |
+| Results returned | 2 pending validation items (25-000-030 Beta HCG + RBC) | ✅ PASS |
+| Bulk action buttons | Save All Normal, Save All Results, Retest All Tests | ✅ PASS |
+| Per-row buttons | Save, Retest per result row | ✅ PASS |
+
+**TC-ACCVAL-RANGE-01: PASS** — `doRange=true` loads next 99 pending validation records from a start accession.
+
+---
+
+### 20.3 Accession Validation By Date — `/AccessionValidationDate`
+
+| Result | Details |
+|--------|---------|
+| ❌ 404 | Route not present in v3.2.0.2 — Spring NoHandlerFoundException |
+
+**TC-ACCVAL-DATE-01: GAP** — `/AccessionValidationDate` not available in v3.2.0.2 (may be in later versions).
+
+---
+
+### 20.4 Print Barcode — `/PrintBarcode`
+
+| Component | Details | Result |
+|-----------|---------|--------|
+| Page structure | Two sections: Pre-Print Barcodes + Print Barcodes for Existing Orders | ✅ PASS |
+| Pre-Print: Label config | Number of label sets (default 1), Order labels per set (1), Specimen labels per set (1), Total (2) | ✅ PASS |
+| Pre-Print: Sample type dropdown | 14 options (Stoo, Histopathology specimen, IHC specimen, EDTA Tube, DBS, Urines, Serum, Plasma, Whole Blood, Respiratory Swab, Sputum, Fluid, Tissue antemortem, Tissue post mortem) | ✅ PASS |
+| Existing order lookup | `rest/SampleEdit?accessionNumber=25000030` → HTTP 200 | ✅ PASS |
+| Patient info displayed | Emily Joy Park, 16/10/1994, F, 2001101694 | ✅ PASS |
+| Label types shown | Order (25000030) + Specimen 25000030-1 (Urines, qty 1) + Specimen 25000030-2 (Whole Blood, qty 1) | ✅ PASS |
+| Print Label buttons | Per label type | ✅ PASS |
+| Print Set button | "Print set of labels (2 order labels + 1 label per specimen)" | ✅ PASS |
+
+**TC-PRINTBC-01, TC-PRINTBC-02: PASS** — Barcode printing page fully functional; patient lookup returns correct label types.
+
+---
+
+### 20.5 Routine Reports Index — `/RoutineReports`
+
+| Component | Details | Result |
+|-----------|---------|--------|
+| Page renders | Sidebar expanded to show all report categories | ✅ PASS |
+| Report categories | Patient Status Report, Aggregate Reports, Rejection Report, Activity Report (By Test Type/Panel Type/Unit), Referred Out Tests, Non-conformity (By Date/Unit/Reason), Delayed Validation, Audit Trail, Export Routine CSV | ✅ PASS |
+| Navigation | Report links navigate correctly via sidebar (query-string-parameterised hrefs) | ✅ PASS |
+
+**TC-RTRPTS-01: PASS** — `/RoutineReports` correctly expands sidebar to reveal all 10+ routine report categories.
+
+---
+
+### 20.6 Patient Status Report — `/RoutineReport?type=patient&report=patientCILNSP_vreduit`
+
+| Component | Details | Result |
+|-----------|---------|--------|
+| Page loads | Navigates correctly from sidebar link | ✅ PASS |
+| Report By Patient | Patient ID, Previous Lab Number, Last Name, First Name, DOB, Gender search fields | ✅ PASS |
+| Patient search API | `rest/patient-search-results?lastName=Park` → 1 result (Emily Joy Park confirmed) | ✅ PASS |
+| Results table | 7 columns: Last Name, First Name, Gender, DOB, Unique Health ID, National ID, Data Source | ✅ PASS |
+| Report By Lab Number | From + To accession fields, 10-char display with hidden raw value | ✅ PASS |
+| Report By Site | Site Name + ward/dept/unit fields | ✅ PASS |
+| Generate by Date | Date Type dropdown (Result Date / Open menu), Start Date, End Date, Only Reports with Results checkbox | ✅ PASS |
+| **BUG-DEMO-02** | Sort column header screen-reader descriptions render `[object Object]` (7 occurrences in hidden DIVs) — Carbon DataTable `sortDescription` prop receives object instead of string. Affects all report pages with sortable tables (Patient Status Report, AuditTrailReport, StatusResults). | BUG |
+| **Generate Printable Version** | PDF served at `/api/OpenELIS-Global/ReportPrint` → HTTP 200, Chrome native PDF viewer renders | ✅ PASS |
+| **BUG-DEMO-03** | Report PDF title renders as "null" string when no data matches criteria (null object not handled in Jasper report template) | BUG |
+
+**TC-PATRPT-01, TC-PATRPT-02, TC-PATRPT-03: PASS** (with bugs noted).
+
+---
+
+### 20.7 Study Reports — `/StudyReports`
+
+| Category | Reports | Result |
+|----------|---------|--------|
+| ARV Reports | ARV Initial V1, ARV Initial V2, ARV Follow-up V1, ARV Follow-up V2, ARV-Version | ✅ PASS |
+| EID Reports | EID Version 1, EID Version 2 | ✅ PASS |
+| VL Report | VL Version Nationale | ✅ PASS |
+| Intermediate Reports | Intermediate V1, V2, By Service, Special Request | ✅ PASS |
+| Patient Reports | Collected ARV Patient Report, Associated Patient Report | ✅ PASS |
+| Indicator | Section Performance, Delayed Validation | ✅ PASS |
+| Non-conformity Reports | By Date, By Unit and Reason, By Lab No, Notification, Follow-up Required | ✅ PASS |
+| Export | General Report, Viral Load Data Export | ✅ PASS |
+| Audit Trail | Audit Trail | ✅ PASS |
+
+**TC-STUDYRPTS-01: PASS** — 20+ study-specific report links across 9 categories.
+
+---
+
+### 20.8 Audit Trail Report — `/AuditTrailReport`
+
+| Component | Details | Result |
+|-----------|---------|--------|
+| Page structure | Lab No input + View Report button + paginated results table | ✅ PASS |
+| Lookup API | `rest/AuditTrailReport?accessionNumber=25000030` → HTTP 200 | ✅ PASS |
+| Order info panel | Priority (ROUTINE), Request Date (15/10/2025), Received Date, Next Visit Date (22/10/2025), Site Name (CIP CAMES), Program (Routine Testing), Requester (JANE DOE) | ✅ PASS |
+| Audit entries | 149 entries across 5 pages (first 30 shown) | ✅ PASS |
+| Entry coverage | Patient create (DOB, Gender, NationalID, Name) → Order create → Program Sample → 2 Samples (Urines, Whole Blood) → 30+ test assignments | ✅ PASS |
+| Table columns | Time, Item, Action, Identifier, User, Old Value, New Value | ✅ PASS |
+| **BUG-DEMO-04** | `name="display_undefined"` on display lab number input — React prop unresolved at render time (`name` receives `"display_" + undefined` because the field name variable is undefined) | BUG |
+| **BUG-DEMO-02** | `[object Object]` sort tooltip present here as well (consistent with all report pages) | BUG (dup) |
+
+**TC-AUDITTRAIL-01, TC-AUDITTRAIL-02: PASS** — 149 audit events correctly retrieved; complete order lifecycle visible.
+
+---
+
+### 20.9 Results By Status — `/StatusResults?blank=true` (Filter Interaction)
+
+| Component | Details | Result |
+|-----------|---------|--------|
+| Analysis Status filter | Set to "Accepted by technician" (value=15) via native setter + change event | ✅ PASS |
+| API call | `rest/LogbookResults?selectedAnalysisStatus=15&doRange=false&finished=false` → HTTP 200 | ✅ PASS |
+| Results returned | 88 results — perfectly matching dashboard KPI "Ready For Validation: 88" | ✅ PASS |
+| Cross-module consistency | Dashboard KPI count = StatusResults filter count = 88 | ✅ PASS |
+| Patient diversity | DEV01 accessions (Apr 2026), 26-YRL (Apr 2026), 26-RSH (Feb-Apr 2026), 25-RSH (2025), 25-000-030 (Oct 2025) | ✅ PASS |
+| Multi-language notes | Bosnian/Croatian notes visible (e.g., "snižene vrijednosti", "normalano", "normalno") | ✅ PASS |
+| Test variety | Whole Blood CBC panels, Serum chemistry (cholesterol, liver enzymes), IHC, Dengue PCR, Hep B viral load | ✅ PASS |
+
+**TC-STATUS-FILTER-01, TC-STATUS-CROSSMOD-01: PASS** — Analysis status filter fully functional; 88 results match dashboard KPI exactly, confirming cross-module data integrity.
+
+---
+
+### 20.10 Workplan By Priority — `/WorkPlanByPriority`
+
+| Component | Details | Result |
+|-----------|---------|--------|
+| Page structure | "Search By Priority" dropdown + auto-load on selection | ✅ PASS |
+| Priority options | Select Priority, Routine, ASAP, STAT, Timed, Future STAT (6 options) | ✅ PASS |
+| STAT selection | Auto-triggered `rest/WorkPlanByPriority?priority=STAT` → HTTP 200 | ✅ PASS |
+| Results returned | 13 tests for accession 25-RSH-000-05C (Received 29/11/2025 08:34 AM) | ✅ PASS |
+| Test list | CD4 Absolute count, CD4 percent, Eosinophiles (%), Lymphocytes (%), Lymphocytes (Abs), Monocytes (Abs), Neutrophiles, Neutrophiles (%), RBC, SelectA, TMCH, Viral load, WBC | ✅ PASS |
+| Action buttons | Remove (per row), Print Workplan (top + bottom) | ✅ PASS |
+| Total count header | "Total Tests = 13" | ✅ PASS |
+
+**TC-WKPLAN-PRIO-01, TC-WKPLAN-PRIO-02: PASS** — Priority workplan auto-loads on selection; 13 STAT tests returned for accession 25-RSH-000-05C.
+
+---
+
+### 20.11 Additional Route Coverage
+
+| Route | Result | Notes |
+|-------|--------|-------|
+| `/AliquotOrder` | ❌ 404 | Not available in v3.2.0.2 |
+| `/AccessionValidationDate` | ❌ 404 | Not available in v3.2.0.2 |
+
+---
+
+### 20.12 New Bugs Found — Session 10
+
+| ID | Severity | Description | Affected Pages |
+|----|----------|-------------|----------------|
+| BUG-DEMO-02 | Low | Carbon DataTable `sortDescription` prop receives JS object instead of string → screen-reader `<div>` renders "Click to sort rows by [object Object] header in ascending order" (7 hidden DIVs per table) | Patient Status Report, AuditTrailReport, StatusResults, RangeResults |
+| BUG-DEMO-03 | Low | Report PDF title renders literal string "null" when no data matches report criteria — null object not converted to empty string in Jasper report template | ReportPrint (all report types) |
+| BUG-DEMO-04 | Low | `name="display_undefined"` on AuditTrailReport display lab number input — React prop `"display_" + fieldName` where `fieldName` resolves to `undefined` at render | AuditTrailReport only |
+
+---
+
+### 20.13 Section 20 Summary
+
+| TC | Area | Result |
+|----|------|--------|
+| TC-RANGE-01 | `/RangeResults` page structure | ✅ PASS |
+| TC-RANGE-02 | Range search 25-000-020 to 25-000-040 (8 results, `doRange=true`) | ✅ PASS |
+| TC-ACCVAL-RANGE-01 | `/AccessionValidationRange` load-next-99 search | ✅ PASS |
+| TC-ACCVAL-DATE-01 | `/AccessionValidationDate` | ❌ GAP (404) |
+| TC-PRINTBC-01 | `/PrintBarcode` page structure (Pre-Print + Existing Orders sections) | ✅ PASS |
+| TC-PRINTBC-02 | Barcode lookup for 25000030 → Emily Joy Park + 3 label types | ✅ PASS |
+| TC-RTRPTS-01 | `/RoutineReports` index | ✅ PASS |
+| TC-PATRPT-01 | Patient Status Report page structure (4 search methods) | ✅ PASS |
+| TC-PATRPT-02 | Patient search API (`lastName=Park` → 1 result) | ✅ PASS |
+| TC-PATRPT-03 | Report PDF generation (HTTP 200, Chrome PDF viewer) | ✅ PASS |
+| TC-STUDYRPTS-01 | `/StudyReports` index (20+ report links, 9 categories) | ✅ PASS |
+| TC-AUDITTRAIL-01 | `/AuditTrailReport` structure + View Report button | ✅ PASS |
+| TC-AUDITTRAIL-02 | Audit trail 149 entries for 25000030 | ✅ PASS |
+| TC-STATUS-FILTER-01 | `/StatusResults` filter by Analysis Status = Accepted by technician (15) | ✅ PASS |
+| TC-STATUS-CROSSMOD-01 | 88 results matches dashboard "Ready For Validation: 88" KPI | ✅ PASS |
+| TC-WKPLAN-PRIO-01 | `/WorkPlanByPriority` page structure | ✅ PASS |
+| TC-WKPLAN-PRIO-02 | STAT priority → 13 tests, `rest/WorkPlanByPriority?priority=STAT` | ✅ PASS |
+| TC-ALIQUOT-01 | `/AliquotOrder` | ❌ GAP (404) |
+| BUG-DEMO-02 | `[object Object]` in sort header SR descriptions (Carbon DataTable) | BUG |
+| BUG-DEMO-03 | "null" string in PDF report title when no data | BUG |
+| BUG-DEMO-04 | `name="display_undefined"` on AuditTrailReport input | BUG |
+| NOTE-DEMO-12 | "Accesion" typo in RangeResults labels | NOTE |
+| NOTE-DEMO-13 | AccessionValidationDate 404 — not in v3.2.0.2 | NOTE |
+| NOTE-DEMO-14 | AliquotOrder 404 — not in v3.2.0.2 | NOTE |
+
+**Cumulative total all sessions:** ~128 PASS, ~21 FAIL/GAP
+- All route-404 FAILs = version-specific to v3.2.0.2
+- Functional bugs filed: OGC-601 (/ModifyOrder blank page)
+- New bugs documented this session: BUG-DEMO-02, BUG-DEMO-03, BUG-DEMO-04 (all Low severity — accessibility/cosmetic)
