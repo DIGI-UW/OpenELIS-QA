@@ -945,3 +945,162 @@ AccessionResults → PatientManagement → PatientHistory → Audit Trail → Pr
 **Cumulative total all sessions:** ~108 PASS, ~19 FAIL, 0 UNKNOWN
 - All 19 FAILs = FAIL-DEMO-01 (legacy route redirects, version-specific to v3.2.0.2)
 - 1 functional bug filed: OGC-601 (/ModifyOrder blank page)
+
+---
+
+## Section 19 — Sidebar Route Map + New Route Discoveries (Session 8 cont., 2026-04-21)
+
+### 19.1 Complete Sidebar `href` Route Map
+
+Critical discovery: the sidebar link for "Batch Order Entry" uses `/SampleBatchEntrySetup` — NOT `/BatchOrderEntry`. All prior tests that showed BatchOrderEntry PASS were via sidebar navigation (which correctly used this route).
+
+| Sidebar Label | Actual `href` Route | Type |
+|--------------|---------------------|------|
+| Home | `/Dashboard` | SPA |
+| Add Order | `/SamplePatientEntry` | SPA |
+| Initial Entry | `/SampleEntryByProject?type=initial` | Legacy JSP ✅ |
+| Double Entry | `/SampleEntryByProject?type=verify` | Legacy JSP ✅ |
+| View (Order) | `/SampleEdit?type=readonly` | SPA |
+| Electronic Orders (Study) | `/StudyElectronicOrders` | Legacy JSP ✅ |
+| Edit Order | `/SampleEdit?type=readwrite` | SPA |
+| Incoming Orders | `/ElectronicOrders` | SPA |
+| **Batch Order Entry** | **`/SampleBatchEntrySetup`** | SPA (was documented as `/BatchOrderEntry` — **CORRECTION**) |
+| Barcode | `/PrintBarcode` | SPA |
+| Add/Edit Patient | `/PatientManagement` | SPA |
+| Patient History | `/PatientHistory` | SPA |
+| Report NCE | `/ReportNonConformingEvent` | SPA |
+| View NCE | `/ViewNonConformingEvent` | SPA |
+| Corrective Actions | `/NCECorrectiveAction` | SPA |
+| By Test Type | `/WorkPlanByTest?type=test` | SPA |
+| By Panel | `/WorkPlanByPanel?type=panel` | SPA |
+| By Unit (Workplan) | `/WorkPlanByTestSection?type=` | SPA |
+| By Priority | `/WorkPlanByPriority?type=priority` | SPA |
+| Pathology | `/PathologyDashboard` | SPA |
+| Immunohistochemistry | `/ImmunohistochemistryDashboard` | SPA |
+| Cytology | `/CytologyDashboard` | SPA |
+| By Unit (Results) | `/LogbookResults?type=` | SPA |
+| By Patient | `/PatientResults` | SPA |
+| By Order | `/AccessionResults` | SPA |
+| Referred Out | `/ReferredOutTests` | SPA |
+| By Range | `/RangeResults` | SPA |
+| **By Test, Date or Status** | **`/StatusResults?blank=true`** | SPA (**`?blank=true` param required**) |
+| Validation Routine | `/ResultValidation` | SPA |
+| Validation By Order | `/AccessionValidation` | SPA |
+| By Range of Order Numbers | `/AccessionValidationRange` | SPA |
+| By Date | `/ResultValidationByTestDate` | SPA |
+| Audit Trail | `/AuditTrailReport` | SPA |
+| Routine Reports | `/RoutineReports` | SPA |
+| Study Reports | `/StudyReports` | SPA |
+| **Billing** | `/MasterListsPage` | SPA (redirects to Admin page — no separate Billing module) |
+| User Manual | `/docs/UserManual` | PDF redirect |
+| VL Form | `/documentation/FICHE_DEMANDE_CHARGE_VIRALE_VF_25102016.pdf` | PDF |
+| DBS Form | `/documentation/DBS_Identn_18Juin2010.pdf` | PDF |
+
+**Key corrections to prior documentation:**
+- `/BatchOrderEntry` is FAIL-DEMO-01 (Spring 404); correct SPA route is `/SampleBatchEntrySetup`
+- `/StatusResults` (without `?blank=true`) still works but sidebar uses `?blank=true` as canonical form
+- `Billing` sidebar → `/MasterListsPage` (no dedicated Billing module in v3.2.0.2)
+- `Audit Trail` sidebar → `/AuditTrailReport` (also accessible via `/RoutineReport?type=routine&report=auditTrail`)
+
+### 19.2 Add/Edit Patient — New Patient Form Deep Inspection
+
+Route: `/PatientManagement` → "New Patient" tab
+
+**Main Patient Information (always visible):**
+| Field | Type | Notes |
+|-------|------|-------|
+| Unique Health ID number | Text input | Optional |
+| National ID | Text input | Required (*) |
+| Last Name | Text input | — |
+| First Name | Text input | — |
+| Primary phone | Text input | Placeholder: `+1-xxx-xxx-xxxx` |
+| Gender | Radio: Male / Female | Required (*) |
+| Date of Birth | Date picker | Required (*) |
+| Age/Years + Months + Days | Auto-calculated | Read-only calculation from DOB |
+
+**Emergency Contact Info (expandable):**
+| Field | Type |
+|-------|------|
+| Contact last name | Text |
+| Contact first name | Text |
+| Contact Email | Email |
+| Contact Phone | Text (+1-xxx-xxx-xxxx format) |
+
+**Additional Information (expandable):**
+| Field | Options |
+|-------|---------|
+| Town | Text |
+| Street | Text |
+| Camp/Commune | Text |
+| Region | 21 options (Côte d'Ivoire regions) + custom entry |
+| District | Text + custom |
+| Education | None, Post secondary, Primary, Secondary + custom |
+| Marital Status | DNA, Divorced, Living with somebody, Married, Single, Widowed + custom |
+| Nationality | Full international list (100+ nationalities) |
+
+**NOTE-DEMO-11:** "Colombo South Teaching Hospital" appears as one of the 21 Region dropdown options — this is clearly a data entry error (a hospital name mixed into the Region list). Demo data quality issue.
+
+**TC-PAT-CREATE-01: PASS** — New Patient form renders with full field set including expandable Emergency Contact and Additional Information sections.
+
+### 19.3 Batch Order Entry Setup — `/SampleBatchEntrySetup`
+
+| Field | Options | Result |
+|-------|---------|--------|
+| Current Date | Auto-populated | ✅ PASS |
+| Current Time (hh:mm) | Auto-populated | ✅ PASS |
+| Received Date | Date input | ✅ PASS |
+| Reception Time (hh:mm) | Time input | ✅ PASS |
+| Form* | Routine, EID, Viral Load | ✅ PASS |
+| Configure Barcode Entry → Methods | On Demand, Pre-Printed | ✅ PASS |
+| Optional Fields section | Facility, Patient Info, Site Name, Ward/Dept/Unit | ✅ PASS |
+| Next / Cancel buttons | Present | ✅ PASS |
+
+**TC-BOE-ROUTE-01: PASS** — `/SampleBatchEntrySetup` is the correct SPA route for Batch Order Entry (not `/BatchOrderEntry`).
+
+### 19.4 Study Electronic Orders — `/StudyElectronicOrders`
+
+This route navigates to a **legacy JSP page** (rendered at `/api/OpenELIS-Global/StudyElectronicOrders`), similar to Initial Entry and Double Entry.
+
+| Component | Details | Result |
+|-----------|---------|--------|
+| Title | "View Electronic Orders" / "View study electronic orders" | ✅ PASS |
+| Search 1 | "Rechercher par code Patient ou par Site de prise en charge" (French) + Search button | ✅ PASS |
+| Search 2 | Start Date + End Date (dd/mm/yyyy) + Status dropdown | ✅ PASS |
+| Status options | All Statuses, Cancelled, Entered, NonConforming, Realized | ✅ PASS |
+| Old JSP nav | Order, Patient, NCE, Workplan, Results, Validation, Reports, Admin, Help | ✅ PASS |
+
+**TC-STUDY-EO-01: PASS** — Legacy JSP page renders with bilingual search (French label) and 5 status filter options.
+
+### 19.5 Results By Test/Date/Status — `/StatusResults?blank=true`
+
+| Component | Details | Result |
+|-----------|---------|--------|
+| Collection Date filter | Date input | ✅ PASS |
+| Received Date filter | Date input (**NOTE-DEMO-02:** "Recieved" typo) | ✅ PASS |
+| Test Name dropdown | 186 options (full test catalog) | ✅ PASS |
+| Analysis Status dropdown | 5 options (see below) | ✅ PASS |
+| Sample Status dropdown | 2 options (see below) | ✅ PASS |
+
+Analysis Status options (5): Not started, Canceled, Accepted by technician, Not accepted by technician, Not accepted by biologist
+
+Sample Status options (2): No tests have been run for this sample, Some tests have been run on this sample
+
+**Note:** `?blank=true` is required for the SPA to render this page (sidebar canonical URL). `/StatusResults` without parameter also renders but may differ in initial state.
+
+**TC-STATUS-RESULTS-DEEP-01: PASS** — Full filter form with 186 tests, 5 analysis statuses, 2 sample statuses.
+
+### 19.6 Section 19 Summary
+
+| TC | Area | Result |
+|----|------|--------|
+| TC-PAT-CREATE-01 | New Patient form — all fields + Emergency Contact + Additional Info expanded | ✅ PASS |
+| TC-BOE-ROUTE-01 | Batch Order Entry at `/SampleBatchEntrySetup` — Form/Method/Optional fields | ✅ PASS |
+| TC-STUDY-EO-01 | `/StudyElectronicOrders` — legacy JSP, date range + 5 status options | ✅ PASS |
+| TC-STATUS-RESULTS-DEEP-01 | `/StatusResults?blank=true` — 186 tests, 5 analysis statuses | ✅ PASS |
+| NOTE-DEMO-11 | "Colombo South Teaching Hospital" in Region dropdown (data quality issue) | NOTE |
+| ROUTE-CORRECTION-01 | `/BatchOrderEntry` is FAIL-DEMO-01; correct route is `/SampleBatchEntrySetup` | CORRECTION |
+
+**Cumulative total all sessions:** ~113 PASS, ~19 FAIL, 0 UNKNOWN
+- All 19 FAILs = FAIL-DEMO-01 (legacy JSP-era routes, version-specific to v3.2.0.2)
+- 1 functional bug: OGC-601 (/ModifyOrder blank page)
+- Route corrections: `/SampleBatchEntrySetup` is canonical Batch Order Entry route
