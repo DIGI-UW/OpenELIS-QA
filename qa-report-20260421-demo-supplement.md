@@ -164,19 +164,110 @@ Gap report saved to: `test-case-gaps-v3216.md`
 
 ---
 
+---
+
+## Section 3 (Extended) — Additional TC Results (Session 2, 2026-04-21)
+
+### 3.1 Results Sub-Pages
+| TC | Route | Result | Notes |
+|----|-------|--------|-------|
+| TC-RBP-01 | /PatientResults | ✅ PASS | Patient search form (Patient Id, Prev Lab No, Last Name, First Name, DOB, Gender), Patient Results table |
+| TC-RBO-01 | /AccessionResults | ✅ PASS | Results By Order: Accession Number field (0/23), Search, empty table |
+| TC-REF-01 | /ReferredOutTests | ✅ PASS | Referrals page: Search By Patient + Results By Date/Test/Unit Date Type + Results By Lab Number sections |
+| TC-RBR-01 | /RangeResults | ✅ PASS | "From Accession Number" + "To Accession Number" (BUG-17 "Accesion" typo confirmed here too) |
+| TC-RSS-01 | /StatusResults | ✅ PASS | Collection Date, Received Date ("Recieved" typo noted), Test Name, Analysis Status, Sample Status dropdowns |
+
+**NOTE-DEMO-02:** `/StatusResults` label reads "Enter Recieved Date" (misspelling of "Received"). Minor UI typo.
+
+### 3.2 Validation Sub-Pages
+| TC | Route | Result | Notes |
+|----|-------|--------|-------|
+| TC-VBO-01 | /AccessionValidation | ✅ PASS | Validation By Order: "Enter Lab No" field (0/23), Search, empty table |
+| TC-VBR-01 | /AccessionValidationRange | ✅ PASS | "Load Next 99 Records Starting at Lab Number" field, Search |
+| TC-VBD-01 | /ResultValidationByTestDate | ✅ PASS | "Enter Test Date" date picker, Search |
+
+### 3.3 Workplan Sub-Pages
+| TC | Route | Result | Notes |
+|----|-------|--------|-------|
+| TC-WP-03 | /WorkPlanByTest?type=test | ✅ PASS | 185 test types in native `<select id="select-1">`. Selection triggers search. "No appropriate tests found" for test with no pending samples. |
+| TC-WP-04 | /WorkPlanByPanel?type=panel | ✅ PASS (structure) | Page loads, 5 panels in dropdown. **NOTE-DEMO-01:** Panel names empty (`value:""`) — demo data issue, not code bug. |
+| TC-WP-05 | /WorkPlanByPriority?type=priority | ✅ PASS | 5 priority options: Routine, ASAP, STAT, Timed, Future STAT |
+
+### 3.4 Order Management
+| TC | Route | Result | Notes |
+|----|-------|--------|-------|
+| TC-EO-01 | /SampleEdit?type=readwrite | ✅ PASS | "Modify Order" page: Search By Accession Number + Search By Patient, both sections render correctly. "Accesion" typo (BUG-17) in section header. |
+
+### 3.5 Patient Management
+| TC | Route | Result | Notes |
+|----|-------|--------|-------|
+| TC-PAT-03 | /PatientHistory | ✅ PASS | Patient History search form identical to Patient Results; Patient Id, Prev Lab No, Last Name, First Name, DOB, Gender |
+
+### 3.6 Pathology / IHC / Cytology (confirmed in prior sub-session)
+| TC | Route | Result | Notes |
+|----|-------|--------|-------|
+| TC-PATH-01 | /PathologyDashboard | ✅ PASS | 15 pathology cases in listing |
+| TC-IHC-01 | /ImmunohistochemistryDashboard | ✅ PASS | 9 IHC cases |
+| TC-CYT-01 | /CytologyDashboard | ✅ PASS | 3 stat cards (Cases In Progress: 1, Awaiting Review: 1, Complete this week: 0), 2 cases |
+
+### 3.7 Reports Sub-Pages
+| TC | Route | Result | Notes |
+|----|-------|--------|-------|
+| TC-RPT-CSV-01 | /Report?type=routine&report=CISampleRoutineExport | ✅ PASS | "Export Routine CSV file": Start/End Date, Select Unit Type, Generate Printable Version |
+| TC-RPT-REJ-01 | /Report?type=indicator&report=sampleRejectionReport | ✅ PASS | Rejection Report: date range, Generate Printable Version. **Note:** BUG-9 (404) was on testing/v3.2.1.x — this report works on demo/v3.2.0.2 |
+| TC-WHONET-01 | /Report?type=patient&report=ExportWHONETReportByDate | ✅ PASS | "Export a CSV File by Date": date range, Generate Printable Version |
+
+**Reports menu structure confirmed:**
+- Routine → Patient Status Report, Aggregate Reports (expandable), Management Reports (Rejection, Activity, Referred Out Tests, Non Conformity, Delayed Validation, Audit Trail), Routine CSV Report
+- Study (expandable)
+- WHONET Report
+
+### 3.8 Additional Navigation Checks (prior sub-session)
+| TC | Route | Result | Notes |
+|----|-------|--------|-------|
+| TC-WP-01 | /WorkPlanByTestSection | ✅ PASS | Unit type dropdown (Hematology = 14 tests) |
+| TC-VAL-01/02 | /ResultValidation | ✅ PASS | Hematology validation data loads |
+| TC-F-01/02 | /LogbookResults | ✅ PASS | Hematology results with out-of-range highlighting |
+| TC-K-02–06 | /MasterListsPage sub-pages | ✅ PASS | Org, User, Test, Dict, Provider admin pages |
+| TC-I18N-01 | French locale | ✅ PASS | Locale switch works |
+| TC-HELP-01/02 | Help menu links | ✅ PASS | Links present |
+| TC-BOE-01/02 | /BatchOrderEntry | ✅ PASS | Setup form renders |
+| TC-BB-01 | /PrintBarcode | ✅ PASS | NOT affected by FAIL-DEMO-01 old-route redirect |
+| TC-IO-01 | /ElectronicOrders | ✅ PASS | Incoming Orders page loads |
+| TC-PAT-01/02 | /PatientManagement | ✅ PASS | Patient management + API search |
+| TC-NC-01 | /ReportNonConformingEvent | ✅ PASS | Report NCE form |
+| TC-RPT-01 | /Report?type=patient | ✅ PASS | Patient Status Report |
+
+---
+
 ## Section 5 — Summary
 
 | Category | PASS | FAIL | GAP | Notes |
 |----------|------|------|-----|-------|
 | Testing instance (v3.2.1.6) | 0 | 0 | ALL | Blocked by OGC-591 + session expiry |
 | Demo dashboard | 2 | 0 | 0 | All KPI cards ✅ |
-| Demo order workflow | 5 | 0 | 0 | Full 4-step wizard ✅ |
-| Demo validation/results | 2 | 0 | 0 | ✅ |
-| Demo admin | 1 | 0 | 0 | 20 items ✅ |
-| Demo route navigation | 6 | 6+ | 0 | React Router base path bug |
-| Demo API health | 4 | 8 | 0 | Many v3.2.1.x endpoints absent (expected) |
+| Demo order workflow | 6 | 0 | 0 | Full 4-step wizard + Edit Order ✅ |
+| Demo results sub-pages | 5 | 0 | 0 | By Patient, By Order, Referred Out, By Range, By Status |
+| Demo validation sub-pages | 4 | 0 | 0 | Routine, By Order, By Range, By Date |
+| Demo workplan sub-pages | 4 | 0 | 0 | By Unit, By Test (185 types), By Panel, By Priority |
+| Demo pathology/IHC/cytology | 3 | 0 | 0 | All dashboards with live case data |
+| Demo patient management | 2 | 0 | 0 | PatientManagement + PatientHistory |
+| Demo reports | 4 | 0 | 0 | Patient Status, Rejection, WHONET, Routine CSV |
+| Demo admin | 6 | 0 | 0 | 20 admin items + Org/User/Test/Dict/Provider sub-pages |
+| Demo route navigation | 6 | 6+ | 0 | React Router base path bug (old JSP routes only) |
+| Demo API health | 4 | 8 | 0 | Many v3.2.1.x endpoints absent (expected for v3.2.0.2) |
 
-**New bugs filed this session:** 0 (FAIL-DEMO-01 is a known issue in v3.2.0.2 — verify if already tracked)  
+**Total demo TCs this run:** ~46 PASS, 0 new FAILs
+
+**New findings this session:**
+- NOTE-DEMO-01: Workplan By Panel — panel names empty in demo instance (data issue, not code bug)
+- NOTE-DEMO-02: StatusResults label "Enter Recieved Date" — minor typo
+- BUG-17 confirmed also in: RangeResults ("Accesion"), SampleEdit ("Accesion")
+
+**Known issues tracked:**
+- FAIL-DEMO-01: Old JSP-era routes (/Patient, /EditOrder, /Pathology etc.) redirect to /api/ prefix → 404. SPA uses correct route names (/PatientManagement, /PathologyDashboard etc.) which all work. Verify if already tracked in Jira.
+- OGC-591: Testing instance blocked (Vite allowedHosts + CSRF session expiry chain)
+
 **OGC-591 comment added:** Yes — expanded impact documented  
 **Slack notified:** Yes — #digi-devs
 
@@ -186,3 +277,4 @@ Gap report saved to: `test-case-gaps-v3216.md`
 3. Add Analyzer QC CRUD test cases to master-test-cases.md
 4. Verify FAIL-DEMO-01 is already tracked for demo instance; file if not
 5. Run full regression on testing instance after OGC-591 fix
+6. Verify panel name display bug (NOTE-DEMO-01) on testing instance — likely demo data only
