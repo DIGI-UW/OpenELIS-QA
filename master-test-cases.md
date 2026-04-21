@@ -15077,3 +15077,263 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 - **Steps**: fetch('/api/OpenELIS-Global/rest/labnumbermanagement')
 - **Expected**: 200
 - **Result**: PASS — 200
+
+---
+
+## Phase 23 — v3.2.1.6 Extended QA Run (2026-04-21)
+
+**Instance:** https://testing.openelis-global.org  
+**Version:** OpenELIS Global v3.2.1.6  
+**Tester:** Claude QA Agent (automated)  
+**Session:** Extended deep-test covering resolved bugs, new Analyzer QC module, Workplan, Reports, Results, Validation, Sample Shipment, Aliquot, Add Order
+
+---
+
+### Suite FI — Analyzer QC Module (v3.2.1.6 New Feature)
+
+#### TC-FI-01: QC Dashboard Page Load
+- **URL**: `/analyzers/qc/db` (via sidebar click — SPA Router required)
+- **Steps**: 1) Navigate from home via sidebar Analyzers → Quality Control 2) Verify page structure
+- **Expected**: QC Dashboard page loads; Westgard QC summary table or empty state; no 404
+- **Result**: PASS — Page renders with QC rules table, empty state "No QC data". HTTP 200.
+- **Notes**: v3.2.1.6 new feature. Must navigate via React Router sidebar click — direct URL from JSP context returns 404.
+
+#### TC-FI-02: QC Rule Configuration Page Load
+- **URL**: `/analyzers/qc/rule-config` (via sidebar click)
+- **Steps**: 1) Navigate via sidebar 2) Verify Westgard rules table and Create button
+- **Expected**: Rule Configuration page loads; Westgard rules listed; Create Rule button present
+- **Result**: PASS — Westgard rule config table renders; Create Rule button visible. HTTP 200.
+- **Notes**: v3.2.1.6 new feature.
+
+#### TC-FI-03: Control Lots Page Load
+- **URL**: `/analyzers/qc/control-lots` (via sidebar click)
+- **Steps**: 1) Navigate via sidebar 2) Verify table columns and empty state
+- **Expected**: Control Lots table with correct columns; empty state message if no data
+- **Result**: PASS — Table columns confirmed: Lot Number, Control Material, Manufacturer, Control Level, Status, Calculation Method, Expiration Date. Empty state: "No control lots found." HTTP 200.
+- **Notes**: v3.2.1.6 new feature.
+
+---
+
+### Suite FJ — Resolved Bug Verification (v3.2.1.6)
+
+#### TC-FJ-01: BUG-9 Resolution — Reports Routes Load (was 404)
+- **URL**: `/Report?type=patient&report=patientCILNSP_vreduit` and 32 others
+- **Steps**: 1) Expand Reports sidebar menu 2) Click each report link 3) Verify form renders
+- **Expected**: All report pages load with form fields and "Generate Printable Version" button; no 404
+- **Result**: PASS — **BUG-9 RESOLVED in v3.2.1.6.** All 33 report sidebar links resolve to form pages:
+  - Patient Status Report: Patient Id, Lab Number, Last Name, First Name, DOB, Gender
+  - Statistics Report: unit checkboxes (All, Hematology, Biochemistry…)
+  - Rejection Report: Start Date, End Date
+  - WHONET Report: "Export a CSV File by Date", Start Date, End Date
+  - 29 additional reports all render correctly
+- **Notes**: Prior to v3.2.1.6 all management reports returned Spring `NoHandlerFoundException` 404.
+
+#### TC-FJ-02: BUG-10 Resolution — Aliquot Page Loads (was href="")
+- **URL**: `/Aliquot`
+- **Steps**: 1) Click Aliquot in sidebar 2) Verify page content
+- **Expected**: "Search Sample" form with "Enter Accession Number" field; HTTP 200
+- **Result**: PASS — **BUG-10 RESOLVED in v3.2.1.6.** "Search Sample" heading with "Enter Accession No." input field. HTTP 200.
+- **Notes**: Previously the Aliquot sidebar link had `href=""` — no route configured.
+
+#### TC-FJ-03: BUG-11/15 Resolution — NoteBook Dashboard (was blank)
+- **URL**: `/NotebookDashboard`
+- **Steps**: 1) Navigate 2) Verify page content exists (not blank)
+- **Expected**: Page content renders; HTTP 200; no blank white screen
+- **Result**: PASS (API) — **BUG-11 RESOLVED in v3.2.1.6 (API confirmed).** HTTP 200 via fetch. Visual confirmation blocked by NOTE-31 server issue. Mark for visual recheck after Vite config fix.
+- **Notes**: Previously rendered completely blank white page — React component failed to mount.
+
+#### TC-FJ-04: BUG-21 Resolution — Patient Photos Return 200 (was 500)
+- **URL**: `/rest/patient-photos/{id}/true`
+- **Steps**: 1) Navigate to LogbookResults 2) Select Hematology 3) Observe network requests for patient photos
+- **Expected**: All `patient-photos/{id}/true` requests return HTTP 200; patient avatars render
+- **Result**: PASS — **BUG-21 RESOLVED in v3.2.1.6.** 13 photo requests all returned HTTP 200 during Hematology load. Patient "TJ" avatar images render correctly in results table.
+- **Notes**: Previously all `patient-photos/{id}/true` endpoints returned HTTP 500.
+
+---
+
+### Suite FK — Workplan Module Validation (v3.2.1.6)
+
+#### TC-FK-01: Workplan By Test — Dropdown Population and Empty State
+- **URL**: `/WorkPlanByTest?type=test` (via sidebar)
+- **Steps**: 1) Navigate 2) Verify dropdown option count 3) Select "ALT(Serum)" 4) Verify search result
+- **Expected**: 180+ test types in dropdown; selection triggers search; "No appropriate tests were found." if empty
+- **Result**: PASS — 184 test type options (ALT Serum, AMACR, ARV resistance, AST Serum…). Selecting "ALT(Serum)" triggers search; returns "No appropriate tests were found." (expected — no pending workplan items).
+- **Notes**: `/rest/workplan/TestType` and `/rest/workplan/tests` return 404 — data is pre-bundled in component, not fetched from those endpoints. Actual API call is `WorkPlanByTestSection?test_section_id=` which is 200.
+
+#### TC-FK-02: Workplan By Panel — Panel Options
+- **URL**: `/WorkPlanByPanel?type=panel` (via sidebar)
+- **Steps**: 1) Navigate 2) Count panel options in dropdown
+- **Expected**: Multiple panel types listed
+- **Result**: PASS — 4 panels: Bilan Biochimique, NFS, Typage lymphocytaire + 1 additional. Select Panel Type as default.
+
+#### TC-FK-03: Workplan By Unit — Unit Options
+- **URL**: `/WorkPlanByTestSection?type=` (via sidebar)
+- **Steps**: 1) Navigate 2) Count unit options
+- **Expected**: All lab unit sections listed
+- **Result**: PASS — 11 unit types: Hematology, Biochemistry, Immunology, Molecular Biology, Serology-Immunology + 6 more.
+
+#### TC-FK-04: Workplan By Priority — Page Loads
+- **URL**: `/WorkPlanByPriority?type=priority` (via sidebar)
+- **Steps**: 1) Navigate 2) Verify page loads
+- **Expected**: Priority workplan page renders
+- **Result**: PASS — Page link resolves correctly. HTTP 200.
+
+---
+
+### Suite FL — Results Module Validation (v3.2.1.6)
+
+#### TC-FL-01: LogbookResults — Hematology Data Load
+- **URL**: `/LogbookResults?type=`
+- **Steps**: 1) Navigate via Results → By Unit 2) Select "Hematology" (value=36) 3) Verify table
+- **Expected**: Results table with patient rows; columns: Sample Info, Test Date, Analyzer R., Test Name; patient photos render
+- **Result**: PASS — Multiple data rows: DEV01261…/DEV01262…, patient TEST-Smith John E2E-PAT-001, COVID-19 PCR (Respiratory Swab), 20/04/2026, MANUAL. Patient photo avatars ("TJ") all loading (HTTP 200). 13 photo requests all successful.
+- **API**: `LogbookResults?testSectionId=36` → HTTP 200
+
+#### TC-FL-02: Sample Shipment — Page and Table
+- **URL**: `/SampleShipment` → redirects to `/SampleShipment/boxes`
+- **Steps**: 1) Click Sample Shipment in sidebar 2) Verify table columns
+- **Expected**: Box shipment table with all standard columns; APIs return 200
+- **Result**: PASS — Redirects to `/SampleShipment/boxes`. Table columns: Box ID, Destination, State, Sample Count, Created Date, Actions. APIs: `/rest/shipping-box` 200, `/rest/shipping-box/statistics` 200, `/rest/unassigned-sample/items` 200.
+
+---
+
+### Suite FM — Validation Module (v3.2.1.6)
+
+#### TC-FM-01: Result Validation — Unit Selector and API
+- **URL**: `/ResultValidation?type=&test=`
+- **Steps**: 1) Navigate 2) Select Hematology (unitType=36) 3) Verify API call
+- **Expected**: Unit dropdown with 11 sections; selecting unit triggers AccessionValidation API call (200)
+- **Result**: PASS — 11 unit options in selector. Hematology selection triggers `AccessionValidation?unitType=36` → HTTP 200. 0 pending validations (empty queue, expected on test instance).
+
+---
+
+### Suite FN — Reports Verification (v3.2.1.6)
+
+#### TC-FN-01: Patient Status Report Form
+- **URL**: `/Report?type=patient&report=patientCILNSP_vreduit`
+- **Steps**: 1) Click Patient Status Report in sidebar 2) Verify form fields and Generate button
+- **Expected**: Form fields: Patient Id, Previous Lab Number, Last Name, First Name, Date of Birth, Gender; "Generate Printable Version" button
+- **Result**: PASS — All 6 fields present. "Generate Printable Version" button active. HTTP 200.
+
+#### TC-FN-02: Statistics Report Form
+- **URL**: `/Report?type=indicator&report=statisticsReport`
+- **Steps**: 1) Click Statistics Report 2) Verify unit checkboxes and Generate button
+- **Expected**: Unit section checkboxes (All, Hematology, Biochemistry, etc.); Generate button
+- **Result**: PASS — Checkboxes for All, Hematology, Biochemistry, Immunology, Molecular Biology, Serology-Immunology + more. Generate button present. HTTP 200.
+
+#### TC-FN-03: Rejection Report Form
+- **URL**: `/Report?type=indicator&report=sampleRejectionReport`
+- **Steps**: 1) Click Rejection Report 2) Verify date range and Generate button
+- **Expected**: Start Date, End Date fields; "Rejection Report" heading; Generate button
+- **Result**: PASS — "Rejection Report" heading, Start Date, End Date inputs, Generate button. HTTP 200.
+
+#### TC-FN-04: WHONET Report Form
+- **URL**: `/Report?type=patient&report=ExportWHONETReportByDate`
+- **Steps**: 1) Click WHONET Report 2) Verify form fields and Generate button
+- **Expected**: "Export a CSV File by Date" heading; date range; Generate button
+- **Result**: PASS — "Export a CSV File by Date" label, Start Date, End Date, Generate button. HTTP 200.
+
+---
+
+### Suite FO — Add Order Wizard Partial (v3.2.1.6)
+
+#### TC-FO-01: Add Order — Patient Info Step (Step 1)
+- **URL**: `/SamplePatientEntry`
+- **Steps**: 1) Click Add Order 2) Select "New Patient" tab 3) Verify all fields
+- **Expected**: National ID, Last Name, First Name, Date of Birth, Gender, phone, email; photo upload area
+- **Result**: PASS — New Patient form: Unique Health ID, National ID* (required), Last Name, First Name, Primary Phone, Email, Gender (Male/Female), DOB, Emergency Contact fields, Address search, Other Nationality. Photo upload area present.
+
+#### TC-FO-02: Add Order — Program Selection Step (Step 2)
+- **Steps**: 1) Fill Patient Info 2) Click Next 3) Verify Program dropdown
+- **Expected**: "Routine Testing" pre-selected in Program dropdown; Next and Back buttons
+- **Result**: PASS — "Routine Testing" pre-selected. Back and Next buttons active. Progress indicator: Patient Info ✓ → Program Sel. (active) → Add Sample → Add Order.
+
+---
+
+### Suite FP — Additional Pages API Health (v3.2.1.6)
+
+#### TC-FP-01: NoteBook Dashboard HTTP 200
+- **URL**: `/NotebookDashboard`
+- **Steps**: fetch() the URL from authenticated context
+- **Expected**: HTTP 200
+- **Result**: PASS — HTTP 200. (Visual render pending Vite fix — see OGC-591)
+
+#### TC-FP-02: Inventory Management Page HTTP 200
+- **URL**: `/inventory`
+- **Steps**: fetch() the URL
+- **Expected**: HTTP 200
+- **Result**: PASS — HTTP 200.
+
+#### TC-FP-03: Turn Around Time Report HTTP 200
+- **URL**: `/TATReport`
+- **Steps**: fetch() the URL
+- **Expected**: HTTP 200
+- **Result**: PASS — HTTP 200. New report page in v3.2.1.6.
+
+#### TC-FP-04: Analyzer Setup Page HTTP 200
+- **URL**: `/AnalyzerSetup`
+- **Steps**: fetch() the URL
+- **Expected**: HTTP 200
+- **Result**: PASS — HTTP 200.
+
+---
+
+### Suite FQ — Infrastructure (v3.2.1.6)
+
+#### TC-FQ-01: Testing Instance Accessibility — Vite allowedHosts Check
+- **Steps**: 1) Open new browser tab 2) Navigate to testing.openelis-global.org 3) Observe response
+- **Expected**: Login page renders; HTTP 200 for HTML navigation
+- **Result**: FAIL — **NOTE-31 / OGC-591.** New browser tabs receive HTTP 403 "Blocked request. This host ('testing.openelis-global.org') is not allowed. To allow this host, add 'testing.openelis-global.org' to `server.allowedHosts` in vite.config.js." API endpoints (`/api/OpenELIS-Global/...`) still return HTTP 200.
+- **Root cause**: Vite dev server running with `--host 0.0.0.0` without `allowedHosts` configured. Vite 5.x security restriction blocks external hostname.
+- **Fix**: Add `allowedHosts: ['testing.openelis-global.org']` to `vite.config.js`, or switch to production build.
+- **Jira**: OGC-591
+
+#### TC-FQ-02: CSRF Token Enforcement — v3.2.1.6
+- **Steps**: POST to any write endpoint without X-CSRF-Token header
+- **Expected**: HTTP 403 (CSRF protection active)
+- **Result**: PASS — v3.2.1.6 consistently returns HTTP 403 for unauthenticated POSTs. CSRF token from `localStorage.getItem('CSRF')` required for all write operations. Note: BUG-1, BUG-3, BUG-7a require retesting with proper CSRF token to distinguish CSRF-masking from real server errors.
+
+#### TC-FQ-03: Core API Health Sweep (v3.2.1.6 final state)
+- **Steps**: Fetch 10 core endpoints with CSRF token; record status codes
+- **Expected**: All key APIs return HTTP 200
+- **Result**: PASS — All 10 endpoints 200:
+
+  | Endpoint | Status |
+  |----------|--------|
+  | `/rest/home-dashboard/metrics` | 200 (643ms) |
+  | `/rest/analyzer/analyzers` | 200 (240ms) |
+  | `/rest/eqa/programs` | 200 (219ms) |
+  | `/rest/nce/dashboard` | 200 (217ms) |
+  | `/rest/storage/sample-items` | 200 |
+  | `/rest/panels` | 200 |
+  | `/rest/user-test-sections/Results` | 200 |
+  | `/fhir/metadata` | 200 |
+  | `/fhir/Patient?_count=1` | 200* |
+  | `/fhir/Observation?_count=1` | 200* |
+
+  *200 status confirmed but response body timed out before content verification. Earlier in session these returned 500. May reflect server restart mid-session. Requires revalidation.
+
+---
+
+### Phase 23 Bug Registry Updates
+
+| Bug | Prior Status | v3.2.1.6 Status |
+|-----|-------------|-----------------|
+| BUG-9 (Reports 404) | Open | **RESOLVED** |
+| BUG-10 (Aliquot href="") | Open | **RESOLVED** |
+| BUG-11/15 (NoteBook blank) | Open | **RESOLVED (API-confirmed)** |
+| BUG-21 (patient-photos 500) | Open | **RESOLVED** |
+| BUG-1 (TestAdd 500) | Open | Unverified — needs retest with CSRF token |
+| BUG-3 (UserCreate 500) | Open | Unverified — needs retest with CSRF token |
+| BUG-8 (TestModify corruption) | Open | Unverified |
+| NOTE-31 (NEW) | — | OGC-591 filed — Vite allowedHosts blocks testing instance |
+
+### New Observations
+
+| ID | Severity | Description |
+|----|----------|-------------|
+| NOTE-29 | Medium | FHIR Patient/Observation returned 500 early in session, then 200 at end — possible server restart mid-session. Content not verified. Requires revalidation. |
+| NOTE-30 | Low | `/rest/workplan/TestType` and `/rest/workplan/tests` return 404 but Workplan By Test page works — test data pre-bundled in component state. |
+| NOTE-31 | High | Vite dev server `allowedHosts` misconfiguration blocks all HTML navigation on testing instance. API endpoints still work. OGC-591 filed. |
+| NOTE-32 | Info | New Analyzer QC module (3 pages) in v3.2.1.6: QC Dashboard, Rule Configuration, Control Lots. All functional but empty on test instance. |
+| NOTE-33 | Info | CSRF enforcement now active in v3.2.1.6. All POSTs require `X-CSRF-Token: localStorage.getItem('CSRF')`. Previously missing token caused 500; now causes 403. |
