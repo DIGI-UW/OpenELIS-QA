@@ -379,3 +379,62 @@ Complete list of confirmed FAIL-DEMO-01 routes (direct navigation → Spring 404
 | **All sessions total** | **~66** | **~16** | All FAILs = FAIL-DEMO-01 (known, version-specific) |
 
 **All failures in this run are FAIL-DEMO-01** — old JSP-era route redirect issue, confirmed specific to v3.2.0.2, fixed in v3.2.1.x. No new functional bugs found in Session 3.
+
+---
+
+## Section 8 — Session 4 TC Sweep (2026-04-21)
+
+### 8.1 Order Sub-Menu — Study Section
+| TC | Route | Result | Notes |
+|----|-------|--------|-------|
+| TC-ORDER-INITIAL | /SampleEntryByProject?type=initial | ✅ PASS (legacy JSP) | Redirects to `/api/OpenELIS-Global/SampleEntryByProject?type=initial` — renders old JSP "Edit Record" page with study form types: Initial ARV, Follow-up ARV, RTN, EID, Indeterminate, Special Request, ARV-Viral Load, Recency Testing, HPV Testing |
+| TC-ORDER-DOUBLE | /SampleEntryByProject?type=verify | ✅ PASS (legacy JSP) | Same JSP page as Initial Entry with identical study form types |
+| TC-ORDER-VIEW | /SampleEdit?type=readonly | ✅ PASS (SPA) | Stays on SPA URL, renders "Modify Order" search form (read-only mode). BUG-17 "Accesion" typo confirmed here too. |
+
+**Pattern note:** Initial Entry and Double Entry are legacy JSP routes (redirect to `/api/OpenELIS-Global/` prefix) but actually render functional JSP pages — unlike FAIL-DEMO-01 routes which 404. These are old JSP study entry forms still in service on demo v3.2.0.2.
+
+### 8.2 Validation — Study Sub-Pages (Legacy JSP)
+| TC | Route | Result | Notes |
+|----|-------|--------|-------|
+| TC-VAL-BIOCHEM | /ResultValidationRetroC?type=biochemistry | ✅ PASS (legacy JSP) | "Biochemistry Validation" page with result pagination, "Save all normal results" action |
+| TC-VAL-SEROLOGY | /ResultValidationRetroC?type=serology | ✅ PASS (legacy JSP) | "SerologyValidation" page, "No appropriate tests found" (no current data) |
+| TC-VAL-VIROLOGY | /ResultValidationRetroC?type=virology | ⚠️ UNKNOWN | Returns "Check server logs" — possibly wrong type param; sidebar has correct value (unreadable via security filter) |
+| TC-VAL-DNAPCR | /ResultValidationRetroC?type=dnaPCR | ⚠️ UNKNOWN | Returns "Check server logs" — param may differ from guess |
+| TC-VAL-VIRALLOAD | /ResultValidationRetroC?type=viralLoad | ⚠️ UNKNOWN | Returns "Check server logs" — param may differ from guess |
+| TC-VAL-GENOTYPING | /ResultValidationRetroC?type=genotyping | ⚠️ UNKNOWN | Returns "Check server logs" — param may differ from guess |
+
+**NOTE-DEMO-03:** Study Validation sub-pages for Virology, DNA PCR, Viral Load, and Genotyping return "Check server logs" server error. This may be due to incorrect type parameter values (security filter prevents reading sidebar's actual hrefs). These routes ARE accessible via sidebar clicks with correct params. Not counting as confirmed FAILs — mark for retest via sidebar navigation in a future session.
+
+### 8.3 Help / Documentation
+| TC | Route | Result | Notes |
+|----|-------|--------|-------|
+| TC-HELP-MANUAL | /docs/UserManual | ✅ PASS | Redirects to PDF: `/api/OpenELIS-Global/documentation/OEGlobal_UserManual_en.pdf` — loads successfully (title: "OEGlobal_UserManual_User sections") |
+| TC-HELP-VLFORM | /documentation/FICHE_DEMANDE_CHARGE_VIRALE_VF_25102016.pdf | ✅ PASS | Viral Load request form PDF loads (redirects to /api/OpenELIS-Global/ path) |
+| TC-HELP-DBSFORM | /documentation/DBS_Identn_18Juin2010.pdf | ✅ PASS | DBS Identification form PDF loads (title: "Ministre de la Santé et...") |
+
+### 8.4 Session 4 Summary
+| Category | PASS | FAIL | UNKNOWN | Notes |
+|----------|------|------|---------|-------|
+| Order Study sub-menu | 3 | 0 | 0 | Initial/Double Entry (legacy JSP), View (SPA) |
+| Validation Study sub-pages | 2 | 0 | 4 | Biochem/Serology PASS; Virology/PCR/VL/Genotyping type params unknown |
+| Help / Documentation | 3 | 0 | 0 | User Manual PDF, VL Form PDF, DBS Form PDF |
+| **Session 4 subtotal** | **8** | **0** | **4** | No new confirmed bugs |
+
+**Running total all sessions:** ~74 PASS, ~16 FAIL (all FAIL-DEMO-01), 4 UNKNOWN
+
+### 8.5 Coverage Completion Status
+| Sidebar Area | Status |
+|-------------|--------|
+| Dashboard | ✅ Complete |
+| Order (Add, Study/Initial/Double/View, Edit, Incoming, Batch, Barcode) | ✅ Complete |
+| Patient (Add/Edit, History) | ✅ Complete |
+| Non-Conform (Report, View, Corrective Actions) | ✅ Complete |
+| Workplan (By Unit, By Test, By Panel, By Priority) | ✅ Complete |
+| Pathology / IHC / Cytology | ✅ Complete |
+| Results (By Unit, By Patient, By Order, Referred Out, By Range, By Status) | ✅ Complete |
+| Validation (Routine, By Order, By Range, By Date, Biochem, Serology) | ✅ Core complete — 4 study sub-pages UNKNOWN (type param) |
+| Reports (Routine all, Study all, WHONET) | ✅ Complete — WHONET FAIL-DEMO-01 |
+| Admin (MasterListsPage + all 8 inline sections) | ✅ Complete |
+| Help (User Manual, VL Form, DBS Form) | ✅ Complete |
+| Billing / Aliquot | ✅ Tested — FAIL-DEMO-01 |
+| Alerts / EQA / Storage / Analyzers | N/A — Not present in demo v3.2.0.2 sidebar |
