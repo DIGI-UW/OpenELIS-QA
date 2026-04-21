@@ -424,6 +424,51 @@ Complete list of confirmed FAIL-DEMO-01 routes (direct navigation → Spring 404
 
 **Key technique discovered:** `pushState + PopStateEvent` bypasses the security filter's QS-blocking on sidebar link clicks, allowing navigation to query-string routes for testing. Used to discover `type=virology&test=<name>` parameter pattern for Virology sub-pages.
 
+---
+
+## Section 9 — Session 5 Admin Deep Sweep + New Typos (2026-04-21)
+
+### 9.1 Remaining MasterListsPage Sections
+| TC | Anchor | Result | Notes |
+|----|--------|--------|-------|
+| TC-ADMIN-CALC-VALUE | #calculatedValue | ✅ PASS | Calculated Value Tests Management: "No plugins Found" notification, Calculation rules with Toggle/Active/Rule controls |
+| TC-ADMIN-ANALYZER-TEST | #AnalyzerTestName | ✅ PASS | Analyzer Test Name: Modify/Deactivate/Add, Select Analyzer dropdown, table (Analyzer test name, Actual test Name), 0 entries |
+| TC-ADMIN-PROGRAM | #program | ✅ PASS | Program Entry: Add/Edit form with existing programs (Routine Testing, PLHIV Initial/Follow-up, Cytology, IHC, Histopathology, Demo). Fields: Name, UUID, Code, Test Section dropdown (all lab sections) |
+| TC-ADMIN-ORG | #organizationManagement | ✅ PASS | Organization Management: 1,133 organizations (demo vs 4,726 on testing — different data set). Table: Org Name, Parent Org, Org prefix, Is Active, Internet Address, Street Address, City, CLIA Number |
+| TC-ADMIN-USERS | #userManagement | ✅ PASS | User Management: 11 users, Modify/Deactivate/Add, search by username, filter by Lab Unit Roles (all sections) |
+| TC-ADMIN-TEST-MGMT | #testManagementConfigMenu | ✅ PASS | Test Management: Rename sub-options for Tests, Panels, Sample Types, Test Sections. **NOTE-DEMO-05:** "Rename Existing Sample Types" description copy-paste error — says "existing panels" (→ OGC-597) |
+| TC-ADMIN-BATCH-REASSIGN | #batchTestReassignment | ✅ PASS | Batch Reassignment: Sample Type selector, Current Test selector (include inactive toggle), Replace With / Cancel options |
+| TC-ADMIN-RESULT-REPORTING | #resultReportingConfiguration | ✅ PASS | Result Reporting Config: Enabled/Disabled toggle, URL field, queue size display (0). **NOTE-DEMO-04:** "troubling shootingshould" typo (→ OGC-596) |
+| TC-ADMIN-PROVIDERS | #providerMenu | ✅ PASS | Provider Management: 20 providers, table (Lastname, Firstname, Is Active, Telephone, Fax), Modify/Deactivate/Add |
+| TC-ADMIN-MENU-CONFIG | #globalMenuManagement | ✅ PASS | Global Menu Management: full sidebar tree with Show/Hide toggles for each item (Home, Order, Patient, Non-Conform, Workplan, Pathology, etc.) |
+| TC-ADMIN-NOTIFY | #NotifyUser | ✅ PASS | Notify User: Message field, "User to be notified*" dropdown, Submit button |
+
+### 9.2 New Typo Bugs Filed
+| ID | Location | Typo | Correct Text |
+|----|---------|------|-------------|
+| OGC-596 | Admin > Result Reporting Config | "troubling shootingshould" | "troubleshooting should" |
+| OGC-597 | Admin > Test Management > Rename Sample Types | "existing panels" | "existing sample types" |
+
+Both assigned to Herbert Yiga.
+
+### 9.3 Additional API Endpoint Coverage
+REST endpoints checked at `/api/OpenELIS-Global/rest/` prefix on v3.2.0.2:
+- test-catalog, sampleTypes, patient/search, resultlimits, TypeOfSampleForTest, workplan/test, nonConformityItems, referral/in-progress, ValidationResults → all **404** (endpoints added in v3.2.1.x, not present in v3.2.0.2 — expected)
+
+### 9.4 Session 5 Summary
+| Category | PASS | FAIL | Notes |
+|----------|------|------|-------|
+| Admin MasterListsPage remaining sections | 11 | 0 | All expand correctly with live data |
+| New typos filed | — | — | OGC-596, OGC-597 → Herbert Yiga |
+| **Session 5 subtotal** | **11** | **0** | 2 new typo Jira tickets |
+
+**Cumulative total all sessions:** ~89 PASS, ~16 FAIL (all FAIL-DEMO-01), 0 UNKNOWN
+**Typo tickets total:** OGC-594, OGC-595, OGC-596, OGC-597 (all → Herbert Yiga)
+
+### 9.5 Final Admin Coverage Status
+All MasterListsPage sections now tested:
+✅ Reflex Tests, Calculated Value, Analyzer Test Name, Lab Number, Program Entry, Provider Management, Barcode Config, List Plugins (structure confirmed), Organization Management, Result Reporting Config, User Management, Batch Reassignment, Test Management, Menu Configuration (Global), General Configurations / Site Information, Application Properties, Test Notification Config, Dictionary Menu, Notify User, Search Index Management
+
 ### 8.5 Coverage Completion Status
 | Sidebar Area | Status |
 |-------------|--------|
