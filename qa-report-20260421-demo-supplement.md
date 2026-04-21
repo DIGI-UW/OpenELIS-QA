@@ -479,9 +479,164 @@ All MasterListsPage sections now tested:
 | Workplan (By Unit, By Test, By Panel, By Priority) | ✅ Complete |
 | Pathology / IHC / Cytology | ✅ Complete |
 | Results (By Unit, By Patient, By Order, Referred Out, By Range, By Status) | ✅ Complete |
-| Validation (Routine, By Order, By Range, By Date, Biochem, Serology) | ✅ Core complete — 4 study sub-pages UNKNOWN (type param) |
+| Validation (Routine, By Order, By Range, By Date, Biochem, Serology, Study×6) | ✅ Complete — all 6 study sub-pages resolved (Session 4) |
 | Reports (Routine all, Study all, WHONET) | ✅ Complete — WHONET FAIL-DEMO-01 |
 | Admin (MasterListsPage + all 8 inline sections) | ✅ Complete |
 | Help (User Manual, VL Form, DBS Form) | ✅ Complete |
 | Billing / Aliquot | ✅ Tested — FAIL-DEMO-01 |
 | Alerts / EQA / Storage / Analyzers | N/A — Not present in demo v3.2.0.2 sidebar |
+
+---
+
+## Section 10 — Cross-Module Data Integrity Trace (Session 6, 2026-04-21)
+
+### 10.1 Test Design
+Traced a single live accession (`25-000-030`) across four independent UI modules to verify data consistency.
+
+| Module | Route | Expected | Result |
+|--------|-------|----------|--------|
+| Results by Accession | `/AccessionResults` | 25 tests, patient Emily Joy Park | ✅ PASS |
+| Patient Management | `/PatientManagement` | Same demographics, National ID 2001101694 | ✅ PASS |
+| Patient History | `/PatientHistory` → `/PatientResults/59` | Tests grouped Biochemistry(4) + Hematology(18) | ✅ PASS |
+| Audit Trail | `/RoutineReport?type=routine&report=auditTrail` | 149 entries, values and notes matching | ✅ PASS |
+
+**Overall: TC-XMOD-DEMO-01 — ✅ PASS**
+
+### 10.2 Accession Detail (25-000-030)
+- **Patient:** Park, Emily Joy — Female, DOB 16/10/1994, National ID 2001101694, Unique Health ID 1016199412301995
+- **Order priority:** ROUTINE — Site: CIP CAMES — Program: Routine Testing — Requester: JANE DOE
+- **Request / Received:** 15/10/2025 — **Next Visit:** 22/10/2025
+- **Samples:** 25-000-030-1 (Urines, 4 tests) + 25-000-030-2 (Whole Blood, 21 tests) = 25 tests total
+
+**Whole Blood abnormals (Whole Blood):**
+| Test | Result | Range | Flag |
+|------|--------|-------|------|
+| WBC | 11 | 4.0–10.0 | HIGH |
+| RBC | 3.60 | 4.80–5.50 | LOW |
+| MCH (TMCH) | 34.00 | 27.00–31.00 | HIGH |
+| Eosinophiles | 534.00 | 0–400 | HIGH |
+| SelectA | Positive | Negative | FLAG |
+
+**Urines abnormals:**
+| Test | Result | Range | Flag |
+|------|--------|-------|------|
+| Beta HCG | 0.90 | 0.05–0.20 | HIGH |
+
+### 10.3 Cross-Module Consistency Confirmed
+1. **AccessionResults → PatientManagement:** Patient identity matches exactly (name, DOB, gender, National ID, Unique Health ID) ✅
+2. **AccessionResults → PatientHistory:** Same 25 tests visible in history tree; Albumin=44 at 23 Oct matches ✅
+3. **AccessionResults → Audit Trail:** All result values match to decimal precision; "Redo test" notes on WBC/RBC/Eosinophiles/SelectA/Beta HCG match; "Checked" note (21/01/2026) on Beta HCG matches; test status flow traceable (Not started → Accepted by technician → Results final / Not accepted by biologist) ✅
+4. **Multi-user attribution:** User,Demo (original entry); ELIS,Open (redo notes, finalizations); Obradovic,Mira (WBC re-acceptance 08/12/2025) — all consistent with AccessionResults display ✅
+
+### 10.4 Localization Observation
+Audit trail stores result values in French UI locale ("Negatif", "Négatif") while AccessionResults displays them in English ("Negative"). This is expected bilingual behaviour — stored locale vs. display locale. No bug; NOTE only.
+
+### 10.5 Test Name Typos Found in Data
+The following test names contain typos visible across AccessionResults and the Audit Trail. These are test catalog data issues (not UI code), likely pre-existing in the demo dataset:
+
+| NOTE ID | Typo | Correct | Location |
+|---------|------|---------|----------|
+| NOTE-DEMO-06 | "Urine prenancy test" | "Urine pregnancy test" | AccessionResults, Audit Trail, PatientHistory |
+| NOTE-DEMO-07 | "Medium corpuscular volum" | "Medium corpuscular volume" | AccessionResults, Audit Trail |
+
+These appear to originate in dictionary/test catalog data rather than UI labels. Lower priority than UI string bugs; recommend a data quality pass on the demo/testing test catalog.
+
+### 10.6 Section 10 Summary
+| TC | Area | Result |
+|----|------|--------|
+| TC-XMOD-DEMO-01 | Cross-module integrity (AccessionResults → PatientMgmt → PatientHistory → Audit Trail) | ✅ PASS |
+| TC-AUDIT-DEMO-01 | Audit Trail report loads, accepts lab no, returns 149 entries, paginated 5 pages | ✅ PASS |
+| NOTE-DEMO-06 | "Urine prenancy test" typo in test catalog data | NOTE |
+| NOTE-DEMO-07 | "Medium corpuscular volum" typo in test catalog data | NOTE |
+
+**Cumulative total all sessions:** ~91 PASS, ~16 FAIL (all FAIL-DEMO-01), 0 UNKNOWN
+
+---
+
+## Section 11 — Print Barcode Deep Interaction + ResultsByStatus (Session 6, 2026-04-21)
+
+### 11.1 ResultsByStatus Route
+`/ResultsByStatus` → redirected to `/api/OpenELIS-Global/ResultsByStatus` → HTTP 404.
+**Result: FAIL-DEMO-01** (route not present in v3.2.0.2, added in v3.2.1.x).
+
+### 11.2 Print Bar Code Labels — Deep Interaction
+Route: `/PrintBarcode` — loads as React SPA. Two functional sections:
+
+**Section A — Pre-Print Barcodes**
+| Field | Behavior | Result |
+|-------|----------|--------|
+| Number of label sets counter (+ / −) | Increments 1→2; Total auto-updates 2→4 | ✅ PASS |
+| Total Labels to Print | Read-only; formula = sets × (order_per_set + specimen_per_set) | ✅ PASS |
+| Search Site Name | Text input, accepts free text | ✅ PASS |
+| Sample Type dropdown | 14 types enumerated (see below) | ✅ PASS |
+| Pre-Print Labels button | Disabled until required fields filled | ✅ PASS |
+
+Sample types available (14): Stoo, Histopathology specimen, Immunohistochemistry specimen, Tissue antemortem, EDTA Tube, Tissue post mortem, DBS, Urines, Serum, Plasma, Whole Blood, Respiratory Swab, Sputum, Fluid
+
+**NOTE-DEMO-08:** "Stoo" — sample type name truncated, should be "Stool" (confirmed 4 chars, value ID=44).
+
+**Section B — Print Barcodes for Existing Orders**
+| Step | Action | Result |
+|------|--------|--------|
+| Enter accession 25000030 | Auto-formats to 25-000-030 | ✅ PASS |
+| Submit | Loads patient: Emily Joy Park, 16/10/1994, F, National ID 2001101694 | ✅ PASS |
+| Label table rendered | 3 rows: Order (25000030), Specimen-1 (Urines), Specimen-2 (Whole Blood) | ✅ PASS |
+| Number to Print counter | Adjustable per label row | ✅ PASS |
+| Print Label buttons | Present and active per row | ✅ PASS |
+| Print Set button | Summary: "2 order labels + 1 label per specimen" | ✅ PASS |
+
+Cross-module confirmation: Print Barcode correctly resolves 25-000-030 to 2 specimens (Urines + Whole Blood) — consistent with AccessionResults, PatientHistory, and Audit Trail. **5th module confirming cross-module integrity.**
+
+### 11.3 New Typo Found
+| NOTE ID | Typo | Correct | Location |
+|---------|------|---------|----------|
+| NOTE-DEMO-08 | "Stoo" (length=4, value ID=44) | "Stool" | PrintBarcode > Sample Type dropdown |
+
+### 11.4 Section 11 Summary
+| TC | Area | Result |
+|----|------|--------|
+| TC-BARCODE-DEMO-01 | Pre-Print Barcodes — counter arithmetic, dropdown enumeration | ✅ PASS |
+| TC-BARCODE-DEMO-02 | Print for Existing Orders — accession lookup, label table, patient data | ✅ PASS |
+| TC-RESULTS-STATUS-01 | ResultsByStatus route | ❌ FAIL-DEMO-01 |
+| NOTE-DEMO-08 | "Stoo" typo in Sample Type dropdown | NOTE |
+
+**Cumulative total all sessions:** ~93 PASS, ~17 FAIL (all FAIL-DEMO-01)
+
+---
+
+## Section 12 — Edit Order + New Bugs (Session 6, 2026-04-21)
+
+### 12.1 ResultsByStatus — Additional FAIL-DEMO-01
+`/ResultsByStatus` → 404 at `/api/OpenELIS-Global/ResultsByStatus`. Added to FAIL-DEMO-01 inventory.
+
+### 12.2 Edit Order Flow
+**Search page:** `/SampleEdit?type=readwrite` loads correctly as React SPA.
+- Title: "Modify Order"
+- Two sections: "Search By Accesion Number" + "Search By Patient"
+- All fields render: Lab No (0/23), Patient Id, Previous Lab Number, Last Name, First Name, DOB, Gender, External Search
+- **NOTE-DEMO-09 (Typo):** Heading "Search By **Accesion** Number" — missing second 's' (should be "Accession")
+- Search form: ✅ PASS
+
+**Submit action:** Entering accession `25000030` and clicking Submit navigates to `/ModifyOrder?accessionNumber=25000030`.
+- `/ModifyOrder` is **not registered** in React Router — React SPA shell loads but root div remains empty
+- Page renders entirely blank (no error message, no content)
+- Confirmed on direct URL reload after 4s wait — consistently blank
+- **BUG-DEMO-01 (NEW, High):** Edit Order form submission leads to blank `/ModifyOrder` route — React Router has no handler for this path. Users cannot modify any existing order via the SPA.
+
+| TC | Step | Result |
+|----|------|--------|
+| TC-EO-DEMO-01 | `/SampleEdit?type=readwrite` loads, form renders correctly | ✅ PASS |
+| TC-EO-DEMO-02 | Submit accession → `/ModifyOrder?accessionNumber=...` renders | ❌ FAIL (blank page) |
+| NOTE-DEMO-09 | "Accesion" typo in search heading | NOTE (→ OGC-599) |
+
+### 12.3 New Items Filed
+| ID | Type | Summary |
+|----|------|---------|
+| OGC-598 | Bug (Low) | "Stoo" typo in Print Barcode sample type dropdown |
+| OGC-599 | Bug (Low) | "Accesion" typo in Edit Order search heading |
+| BUG-DEMO-01 | Bug (High) | `/ModifyOrder` route blank — Edit Order form unusable |
+
+### 12.4 Section 12 Summary
+**Cumulative total all sessions:** ~94 PASS, ~19 FAIL, 0 UNKNOWN
+- FAIL-DEMO-01 routes: ~17 (legacy routes not in v3.2.0.2)
+- BUG-DEMO-01: Edit Order `/ModifyOrder` blank page (React Router missing route)
