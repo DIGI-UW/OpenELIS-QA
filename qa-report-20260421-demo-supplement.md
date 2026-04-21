@@ -634,9 +634,314 @@ Cross-module confirmation: Print Barcode correctly resolves 25-000-030 to 2 spec
 |----|------|---------|
 | OGC-598 | Bug (Low) | "Stoo" typo in Print Barcode sample type dropdown |
 | OGC-599 | Bug (Low) | "Accesion" typo in Edit Order search heading |
-| BUG-DEMO-01 | Bug (High) | `/ModifyOrder` route blank — Edit Order form unusable |
+| OGC-601 | Bug (High) | `/ModifyOrder` route blank — Edit Order form unusable (filed 2026-04-21) |
 
 ### 12.4 Section 12 Summary
 **Cumulative total all sessions:** ~94 PASS, ~19 FAIL, 0 UNKNOWN
 - FAIL-DEMO-01 routes: ~17 (legacy routes not in v3.2.0.2)
 - BUG-DEMO-01: Edit Order `/ModifyOrder` blank page (React Router missing route)
+
+---
+
+## Section 13 — LogbookResults Deep Interaction (Session 7, 2026-04-21)
+
+### 13.1 Test Unit Dropdown Enumeration
+Route: `/LogbookResults` — Test Unit dropdown at select index 1.
+
+| Field | Value | Status |
+|-------|-------|--------|
+| Test Unit dropdown | 14 options enumerated | ✅ PASS |
+| Hematology section loads | Table renders with live data | ✅ PASS |
+| Data cross-module match | 25-000-030-2 RBC=3.60, Eosinophiles=534.00 — matches AccessionResults exactly | ✅ PASS |
+
+Test units available (14): Hematology, Biochemistry, Bacteriology, Mycobacteriology, Immunology, Parasitology, Entomology, Virology, Blood Bank, Toxicology, Urinalysis, Cytology, Pathology, Other
+
+### 13.2 Row Expand — Field Detail Verification
+Expanded row: accession 25-000-030-2, Test: Red Blood Cells Count (RBC), Whole Blood
+
+| Sub-component | Behavior | Options | Status |
+|--------------|----------|---------|--------|
+| Methods dropdown | Enabled on expand | 15: EIA, PCR, STAIN, CULTURE, PROBE, BIOCHEMICAL, Diane Test, HPLC, DNA SEQUENCING, AUTO, MANUAL, HIV_TEST_KIT, SYPHILIS_TEST_KIT, Urine, fdg | ✅ PASS |
+| "Refer test to a reference lab" checkbox | Unchecked by default; toggles correctly | — | ✅ PASS |
+| Referral Reason dropdown (pre-check) | `disabled: false` after checkbox check | — | ✅ PASS |
+| Institute dropdown (pre-check) | `disabled: false` after checkbox check | — | ✅ PASS |
+
+**Referral checkbox interaction (JS-confirmed):**
+- Checkbox `testResult[0].refer` → checked: true after click
+- `testResult[0].referralItem.referralReasonId` → disabled: false, 11 options (1 blank + 10 reasons)
+- `testResult[0].referralItem.referredInstituteId` → disabled: false, 5 options (1 blank + 4 institutes)
+
+Referral Reasons (10): Test not performed, Confirmation requested, Further testing required, Reagent expired, Reagents unavailable, Equipment failure, Verification of EQA, Specimen sent for serotyping, EQA by Repeat Testing, Other
+
+Reference Institutes (4): CEDRES, CIRBA, Colombo South Teaching Hospital, PROJECT RETROCI
+
+### 13.3 Section 13 Summary
+| TC | Area | Result |
+|----|------|--------|
+| TC-LOGBOOK-DEEP-01 | Test Unit dropdown — 14 units, Hematology table loads with live data | ✅ PASS |
+| TC-LOGBOOK-DEEP-02 | Row expand — Methods (15), Referral checkbox enables Reason (10) + Institute (4) dropdowns | ✅ PASS |
+
+**Cumulative total all sessions:** ~96 PASS, ~19 FAIL, 0 UNKNOWN
+
+---
+
+## Section 14 — Validation By Order Deep Interaction (Session 7, 2026-04-21)
+
+### 14.1 AccessionValidation Page
+Route: `/AccessionValidation` — page loads correctly.
+
+| Field | Behavior | Status |
+|-------|----------|--------|
+| Accession search | Auto-formats "25000030" → "25-000-030" (9/23 chars) | ✅ PASS |
+| Results table | Populates on search: 2 tests returned | ✅ PASS |
+| Save All Normal | Bulk checkbox in header | ✅ PASS |
+| Save All Results | Bulk checkbox in header | ✅ PASS |
+| Retest All Tests | Bulk checkbox in header | ✅ PASS |
+
+**Table columns confirmed:** Sample Info (with Copy Lab Number button), Test Name (▲ sortable), Normal Range (▲ sortable), Result, Save ☐, Retest ☐, Notes (text input), Past Notes (read-only history)
+
+**Results for 25-000-030:**
+| Test | Normal Range | Result | Past Notes |
+|------|-------------|--------|-----------|
+| Beta HCG (Urines) | 0.05 – 0.20 | 0.90 (HIGH) | "Redo test" 23/10/2025; "Checked" 21/01/2026 |
+| Red Blood Cells Count (RBC) (Whole Blood) | — | 3.60 | "DONE TWICE" 23/10/2025; "Redo test" 23/10/2025 |
+
+Cross-module check: RBC=3.60 matches AccessionResults + LogbookResults ✅
+
+### 14.2 Deep Link from Dashboard
+Clicking a Lab Number in the "Ready For Validation" KPI drill-down navigates to `/validation?type=order&accessionNumber=25RSH00006Y` — the validation page pre-populated with that accession. Result table loads immediately with all tests for the accession.
+
+### 14.3 Section 14 Summary
+| TC | Area | Result |
+|----|------|--------|
+| TC-VAL-DEEP-01 | AccessionValidation search, columns, Past Notes, bulk actions | ✅ PASS |
+| TC-VAL-DEEP-02 | Dashboard → Validation deep link (`/validation?type=order&accessionNumber=XXX`) | ✅ PASS |
+
+---
+
+## Section 15 — Dashboard KPI Click-Through (Session 7, 2026-04-21)
+
+### 15.1 KPI Card Behavior
+All 10 KPI cards are `cds--tile--clickable` elements with React onClick handlers (no `href`). Clicking expands an inline drill-down panel — no page navigation occurs. Each expanded panel has a collapse icon (↙) to return to the tile view.
+
+### 15.2 "Ready For Validation" (88)
+- Expands with tabbed lab section view: All, Biochemistry, Hematology, Serology-Immuno..., Immunology, Molecular Biology, Cytology, Virology, + more
+- Table: Priority, Order Date, Patient Id, Lab Number (clickable blue link), Test Name
+- Clicking Lab Number → navigates to `/validation?type=order&accessionNumber=XXX` (pre-populated)
+- **TC-DASH-RFV-01: PASS**
+
+### 15.3 "Electronic Orders" (3)
+- Expands with table: Priority, Order Date, Patient Id, Lab Number, Test Name
+- 3 rows: all ROUTINE, 25/09/2025, Patient ID=100005L, Lab Number and Test Name empty (unprocessed incoming orders)
+- **TC-DASH-EO-01: PASS**
+
+### 15.4 "Orders Entered By Users" (4) — 2-Level Drill-Down
+- **Level 1:** User breakdown table: First Name, Last Name, Orders Entered (clickable count)
+  - Demo User → 4 (blue clickable link)
+- **Level 2:** Clicking the count → "Orders Entered By User Today / Demo User" with lab section tabs
+  - 4 rows: ROUTINE, 21/04/2026 (today), Patient ID=42342123, Lab=26-YRL-000-00W
+  - Tests: Total cholesterol, HDL cholesterol, Triglicerides, CBC
+  - **NOTE-DEMO-10:** "Triglicerides" in test name — likely data-level typo for "Triglycerides" (not UI typo)
+- **TC-DASH-EBU-01: PASS**
+
+### 15.5 Section 15 Summary
+| TC | Area | Result |
+|----|------|--------|
+| TC-DASH-RFV-01 | Ready For Validation drill-down — tabbed, Lab Number deep links | ✅ PASS |
+| TC-DASH-EO-01 | Electronic Orders drill-down — 3 unprocessed incoming orders | ✅ PASS |
+| TC-DASH-EBU-01 | Orders Entered By Users — 2-level drill-down by user then by test | ✅ PASS |
+| NOTE-DEMO-10 | "Triglicerides" test name in today's orders (likely catalog data typo) | NOTE |
+
+**Cumulative total all sessions:** ~99 PASS, ~19 FAIL, 0 UNKNOWN
+
+---
+
+## Section 16 — Non-Conform Workflow (Session 7, 2026-04-21)
+
+### 16.1 Route Coverage
+All 3 Non-Conform sub-pages load correctly via sidebar navigation:
+
+| Page | Route | Title | Status |
+|------|-------|-------|--------|
+| Report Non-Conforming Event | `/ReportNonConformingEvent` | Report Non-Conforming Event (NCE) | ✅ PASS |
+| View New Non-Conforming Events | `/ViewNonConformingEvent` | View New Non Conform Event | ✅ PASS |
+| Corrective Actions | `/NCECorrectiveAction` | Nonconforming Events Corrective Action | ✅ PASS |
+
+Note: Direct URL navigation (`window.location.href`) to these routes causes Spring redirect (FAIL-DEMO-01). Must use React Router (sidebar navigation) to access them.
+
+### 16.2 Report NCE Search Interaction
+Search By options (4): Last Name, First Name, Patient Identification Code, Lab Number
+
+Search by Lab Number "25000030" returns:
+- Lab Number: 25000030
+- Specimens: ☐ Urines (25000030-1) + ☐ Whole Blood (25000030-2)
+- "Go to NCE Reporting Form" button appears after search
+
+Cross-module confirmation: Both specimens match AccessionResults, PrintBarcode, PatientHistory ✅ (6th module confirming cross-module integrity for accession 25-000-030)
+
+### 16.3 Section 16 Summary
+| TC | Area | Result |
+|----|------|--------|
+| TC-NCE-DEMO-01 | All 3 Non-Conform pages load via sidebar | ✅ PASS |
+| TC-NCE-DEMO-02 | Report NCE search by Lab Number returns correct specimens | ✅ PASS |
+
+**Cumulative total all sessions:** ~101 PASS, ~19 FAIL, 0 UNKNOWN
+
+---
+
+## Section 17 — Workplan & Cytology Dashboard (Session 7, 2026-04-21)
+
+### 17.1 Workplan Sub-Pages
+Workplan sidebar expands with 4 sub-items: By Test Type, By Panel, By Unit, By Priority.
+
+**Workplan By Test** (`/WorkPlanByTest?type=test`):
+- Title: "Workplan By Test"
+- "Select Test Type" dropdown: **185 test types** (full catalog enumeration)
+- Selecting "Red Blood Cells Count (RBC)(Whole Blood)" loads workplan immediately
+- Result: Total Tests = 1 — accession 25-RSH-000-05C, Received 29/11/2025 08:34 AM
+- Table: Remove ☐, Accession Number (clickable link), Received Date
+- "Print Workplan" button (appears above and below table)
+- **TC-WP-DEMO-01: PASS**
+
+### 17.2 Cytology Dashboard (Bonus Discovery)
+Route: `/CytologyDashboard` — navigated to accidentally via sidebar; fully functional.
+
+| Component | Details | Status |
+|-----------|---------|--------|
+| Stat cards (3) | Cases in Progress: 1; Awaiting Cytopathologist Review: 1; Complete (week 14-21/04/2026): 0 | ✅ PASS |
+| Search bar | "Search by LabNo or Family Name" | ✅ PASS |
+| "My cases" filter | Checkbox | ✅ PASS |
+| Status filter dropdown | Default: "In Progress" | ✅ PASS |
+| Case table | 2 rows — see below | ✅ PASS |
+
+Cases shown:
+| Request Date | Status | Last Name | First Name | Technician | Cytopathologist | Lab Number |
+|-------------|--------|-----------|------------|-----------|----------------|-----------|
+| 2026-02-09 | PREPARING_SLIDES | Georgescu | Florina | ELIS,Open | — | 26RSH00000X |
+| 2025-10-14 | READY_FOR_CYTOPATHOLOGIST | Lazaro | Via | ELIS,Open | grujic,igor | 25000034 |
+
+**TC-CYTO-DEMO-01: PASS**
+
+### 17.3 Section 17 Summary
+| TC | Area | Result |
+|----|------|--------|
+| TC-WP-DEMO-01 | Workplan By Test — 185 types, RBC loads 1 result with Print Workplan button | ✅ PASS |
+| TC-CYTO-DEMO-01 | Cytology Dashboard — 3 stat cards, search, status filter, 2 cases with real data | ✅ PASS |
+
+**Cumulative total all sessions:** ~103 PASS, ~19 FAIL, 0 UNKNOWN
+
+---
+
+## Section 18 — Deep Interaction Sweep (Session 8, 2026-04-21)
+
+### 18.1 AccessionResults — Deep Interaction
+Route: `/AccessionResults`
+
+Search method: Character-by-character typing required to trigger React state update on the Carbon text input (native `nativeInputValueSetter` + `Event('input')` alone insufficient; must append char-by-char).
+
+| Field | Behavior | Result |
+|-------|----------|--------|
+| Accession input | Auto-formats to "25-000-030" (9/23 chars) on submit | ✅ PASS |
+| Results table | 1-25 of 25 items, all on one page | ✅ PASS |
+| Table columns | Sample Info, Test Date, Analyzer Result, Test Name, Normal Range, Accept ☐, Result (editable), Current Result, Notes | ✅ PASS |
+| In-line result entry | 23 text input fields (one per test result) + Accept checkboxes | ✅ PASS |
+| Past notes visible | WBC: "Done Twice"/"Redo test"; RBC: "DONE TWICE"/"Redo test" | ✅ PASS |
+| NC/rejected legend | "= Sample or Order is nonconforming or Test has been rejected" label present | ✅ PASS |
+
+**Note:** AccessionResults is a combined view + in-line validation entry page (not read-only). Users can accept and enter results directly from this view.
+
+**TC-ACC-RESULTS-DEEP-01: PASS** — all 25 tests for 25-000-030 load with Accept/Result entry fields.
+
+### 18.2 Pathology Case View — Drill-Down
+Dashboard: `/PathologyDashboard` → Click row "Gabriel Ashainna Hennessy" → `/PathologyCaseView/32`
+
+| Component | Details | Result |
+|-----------|---------|--------|
+| Breadcrumb | Home > Pathology DashBoard > Pathology | ✅ PASS |
+| Patient header | "GAH — Gabriel Ashainna Hennessy ♀ Female 21 yrs" | ✅ PASS |
+| Accession / Date | 2500003F / 2025-10-14 | ✅ PASS |
+| Requester / Facility | DOE JANE / CAMES Yopougon | ✅ PASS |
+| Specimen fields | ADRENAL GLAND, Partial Organ, Lumpectomy, Unit No: 02567485745 | ✅ PASS |
+| Status dropdown | 8 stages: Grossing → Cutting → Processing → Slicing for Slides → Staining → Ready for Pathologist → Additional Pathologist Request → Completed | ✅ PASS |
+| Technician dropdown | 11 users | ✅ PASS |
+| Pathologist dropdown | 8 users | ✅ PASS |
+| Reports section | "Add Report" button | ✅ PASS |
+| Blocks section | "Number of Blocks to add" counter + "Add Block(s)" button | ✅ PASS |
+| Slides section | "Number of Slides to add" counter + "Add Slide(s)" button | ✅ PASS |
+| Exam fields | Gross Exam + Microscopy Exam text areas | ✅ PASS |
+| Conclusion | Text Conclusion + "Refer to ImmunoHistochemistry" option | ✅ PASS |
+
+**TC-PATH-CASE-01: PASS** — full case management form with all workflow stages and interactive fields.
+
+### 18.3 IHC Case View — Drill-Down + Cross-Module
+Dashboard: `/ImmunohistochemistryDashboard` (9 cases) → Click "Kebe Kebede / 25RSH00006Y" → `/ImmunohistochemistryCaseView/79`
+
+| Component | Details | Result |
+|-----------|---------|--------|
+| Breadcrumb | Home > Immunohistochemistry DashBoard > Immunohistochemistry | ✅ PASS |
+| Patient header | "KK — Kebe Kebede ♀ Female 19 yrs" | ✅ PASS |
+| Accession / Date | 25RSH00006Y / 2025-12-23 | ✅ PASS |
+| Requester / Facility | DOE JANE / CSR FARAKO | ✅ PASS |
+| Specimen fields | Block Number: 112200 | ✅ PASS |
+| Status dropdown | 3 stages: In Progress → Ready for Pathologist → Completed | ✅ PASS |
+| Results section | Same inline result entry table as AccessionResults | ✅ PASS |
+
+**Cross-module:** 25RSH00006Y appears in IHC case view AND in Dashboard "Ready For Validation" KPI drill-down (Section 15.2) — confirmed consistent.
+
+**TC-IHC-CASE-01: PASS** — IHC case drill-down loads with correct patient, specimen, and inline results.
+
+**IHC Dashboard stat cards:** Cases in Progress: 9 | Awaiting IHC Review: 0 | Complete (week 14-21/04/2026): 0
+
+### 18.4 Results By Patient — Deep Interaction
+Route: `/PatientResults`
+
+| Step | Action | Result |
+|------|--------|--------|
+| Search | Last Name "Park" → 1 result: Emily Joy Park (2001101694, F, 16/10/1994) | ✅ PASS |
+| Patient selection | Radio button click in search results row triggers patient result load | ✅ PASS |
+| Results table | 1-25 of 25 items — same 25 tests as AccessionResults for 25-000-030 | ✅ PASS |
+| Data consistency | RBC=3.60, WBC=11, Past notes match AccessionResults exactly | ✅ PASS |
+
+**TC-PAT-RESULTS-DEEP-01: PASS** — patient search loads via radio selection, all 25 tests match AccessionResults exactly (7th cross-module consistency touch for 25-000-030).
+
+### 18.5 Workplan By Unit — Deep Interaction
+Route: `/WorkPlanByTestSection`
+
+Unit type dropdown: 14 options (Biochemistry, Hematology, Serology-Immunology, Immunology, Molecular Biology, Cytology, Virology, Serology, Pathology, Immunohistochemistry, Virology Viral Load, serum, microbiology, Parasitology)
+
+Selected: **Hematology** (value=36)
+
+| Component | Result |
+|-----------|--------|
+| Total Tests label | "Total Tests = 12" | ✅ PASS |
+| Print Workplan button | Present above table | ✅ PASS |
+| Table columns | Remove ☐, Accession Number, Test Name, Received Date | ✅ PASS |
+| Data rows | 3 accessions with pending Hematology tests | ✅ PASS |
+
+Accessions with pending Hematology work:
+| Accession | Tests | Received |
+|-----------|-------|---------|
+| 25-000-030 | Eosinophiles (Whole Blood) | 15/10/2025 11:32 AM |
+| 25-RSH-000-05C | Eosinophiles (%), Lymphocytes (%), Lymphocytes (Abs), Monocytes (Abs), Neutrophiles (%), Neutrophiles, RBC, TMCH, WBC (all Whole Blood) | 29/11/2025 08:34 AM |
+| 26-RSH-000-00L | WBC (Whole Blood) + more | 27/01/2026 |
+
+**Cross-module:** 25-000-030 appears in Workplan — 8th module confirming cross-module data integrity.
+
+**TC-WP-UNIT-DEEP-01: PASS** — 14 unit types, Hematology returns 12 pending tests across 3 accessions with Remove checkboxes and Print Workplan action.
+
+### 18.6 Section 18 Summary
+| TC | Area | Result |
+|----|------|--------|
+| TC-ACC-RESULTS-DEEP-01 | AccessionResults — 25 tests, inline Accept/Result entry, 23 input fields | ✅ PASS |
+| TC-PATH-CASE-01 | Pathology Case View — /PathologyCaseView/32, full form with Blocks/Slides/Exams | ✅ PASS |
+| TC-IHC-CASE-01 | IHC Case View — /ImmunohistochemistryCaseView/79, inline results + cross-module | ✅ PASS |
+| TC-PAT-RESULTS-DEEP-01 | Results By Patient — radio selection loads 25 tests matching AccessionResults | ✅ PASS |
+| TC-WP-UNIT-DEEP-01 | Workplan By Unit — 14 types, Hematology=12 pending tests, 3 accessions | ✅ PASS |
+| OGC-601 (filed) | BUG-DEMO-01: /ModifyOrder blank page — Edit Order form submission non-functional | ❌ BUG |
+
+**Cross-module integrity:** accession 25-000-030 now confirmed across **8 independent modules**:
+AccessionResults → PatientManagement → PatientHistory → Audit Trail → PrintBarcode → NCE Search → Workplan → PatientResults
+
+**Cumulative total all sessions:** ~108 PASS, ~19 FAIL, 0 UNKNOWN
+- All 19 FAILs = FAIL-DEMO-01 (legacy route redirects, version-specific to v3.2.0.2)
+- 1 functional bug filed: OGC-601 (/ModifyOrder blank page)
