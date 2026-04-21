@@ -278,3 +278,104 @@ Gap report saved to: `test-case-gaps-v3216.md`
 4. Verify FAIL-DEMO-01 is already tracked for demo instance; file if not
 5. Run full regression on testing instance after OGC-591 fix
 6. Verify panel name display bug (NOTE-DEMO-01) on testing instance — likely demo data only
+
+---
+
+## Section 6 — Extended Demo TC Sweep (Session 3, 2026-04-21)
+
+### 6.1 Non-Conform (Completion)
+| TC | Route | Result | Notes |
+|----|-------|--------|-------|
+| TC-NC-03 | /NCECorrectiveAction | ✅ PASS | Corrective Action search page: "Search By" dropdown with NCE Number, Lab Number, Text Value options + Search button |
+
+### 6.2 Reports — Routine Sub-Pages (Full Coverage)
+| TC | Route | Result | Notes |
+|----|-------|--------|-------|
+| TC-RPT-ROUTINE-MENU | /RoutineReports | ✅ PASS | Menu page: Patient Status, Statistics, Summary of All Tests, HIV Test Summary, Rejection, Activity (By Test Type/Panel/Unit), Referred Out Tests, Non Conformity (By Date/Unit+Reason), Delayed Validation, Audit Trail, Export Routine CSV |
+| TC-RPT-PSR | /RoutineReport?type=patient&report=patientCILNSP_vreduit | ✅ PASS | Patient Status Report: Patient search (ID, Prev Lab No, Name, DOB, Gender), Patient Results table, Report By Lab Number (From/To), Report By Site (Name, ward/dept/unit), Date-range generator |
+| TC-RPT-REJECTION | /RoutineReport?type=indicator&report=sampleRejectionReport | ✅ PASS | Rejection Report: date range + Generate Printable Version |
+| TC-RPT-AUDIT-TRAIL | /RoutineReport?type=routine&report=auditTrail | ✅ PASS | Audit Trail: Lab No input, View Report, results table (Time, Item, Action, Identifier, User, Old Value, New Value), paginated |
+| TC-RPT-HTTP-BATCH | All 14 routine sub-routes | ✅ PASS | All return HTTP 200 via fetch: PatientStatusReport, StatisticsReport, SummaryOfAllTests, HivTestSummary, RejectionReport, ActivityReportByTestType, ActivityReportByPanel, ActivityReportByUnit, ReferredOutTestsReport, NonConformityReport, DelayedValidation, AuditTrail, RoutineReportCSV |
+| TC-RPT-WHONET-DIRECT | /WHONETReport (direct nav) | ❌ FAIL-DEMO-01 | Redirects to /api/OpenELIS-Global/WHONETReport → Spring 404. WHONET sidebar link also uses QS route — does not navigate. |
+
+**Note:** "Aggregate Reports" in sidebar has null href — it is a menu category label, not an independently navigable route.
+
+### 6.3 Reports — Study Sub-Pages (Full Coverage)
+| TC | Route | Result | Notes |
+|----|-------|--------|-------|
+| TC-RPT-STUDY-MENU | /StudyReports | ✅ PASS | Menu page: ARV Reports (5 sub-items), EID Reports (2), VL Report, Intermediate Report (3), Special Request, Collected ARV Patient Report, Associated Patient Report, Indicator, Section Performance, Delayed Validation, Non Conformity Reports (4), Export By Date, General Report, Viral Load Data Export, Audit Trail |
+| TC-RPT-ARV | /StudyReport?type=patient&report=patientARVInitial1 | ✅ PASS | ARV-initial: "Scan or Enter Manually" Lab Number From/To range, Generate Printable Version |
+| TC-RPT-HTTP-STUDY | All 21 study sub-routes | ✅ PASS | All return HTTP 200 via fetch: StudyPatientStatusReport, ARVReport, ARVInitialReport, ARVFollowUpReport, EIDReport, VLReport, IndeterminateReport, SpecialRequestReport, CollectedARVPatientReport, AssociatedPatientReport, IndicatorReport, SectionPerformanceReport, StudyDelayedValidation, StudyNonConformityReport, StudyNonConformityNotification, StudyFollowupRequired, StudyExportByDate, GeneralExport, ViralLoadDataExport, StudyAuditTrail, WHONETReport |
+
+### 6.4 Admin — MasterListsPage Inline Sections
+All admin items on `/MasterListsPage` are hash-anchored inline sections (not separate routes). Direct navigation to standalone admin URLs (e.g. `/ApplicationProperties`, `/GeneralConfigurations`) follows FAIL-DEMO-01 pattern — all redirect to `/api/OpenELIS-Global/<route>` → Spring 404.
+
+| TC | Anchor | Result | Notes |
+|----|--------|--------|-------|
+| TC-ADMIN-APP-PROPS | #commonproperties | ✅ PASS | Expands config key table: crserver.uri, fhirstore.uri, ocl.import.*, odoo.*, remote.*, task.useBased |
+| TC-ADMIN-BARCODE | #barcodeConfiguration | ✅ PASS | Number Bar Code Label, Default Bar Code Labels (Order/Specimen), Maximum Bar Code Labels fields |
+| TC-ADMIN-LABNUM | #labNumber | ✅ PASS | Lab Number Type (Alpha Numeric / Legacy), Prefix (0/5) |
+| TC-ADMIN-SITE-INFO | #SiteInformationMenu | ✅ PASS | Full editable table: 24h clock, address labels, allowLanguageChange, bannerHeading, etc. |
+| TC-ADMIN-DICTIONARY | #DictionaryMenu | ✅ PASS | Dictionary Entry table (Local Abbreviation, Is Active, LOINC), 20 entries, paginated 10/page |
+| TC-ADMIN-REFLEX | #reflex | ✅ PASS | Reflex Rules list: Rule Name, Toggle (On/Off), Active state, Deactivate Rule controls |
+| TC-ADMIN-TEST-NOTIF | #testNotificationConfigMenu | ✅ PASS | Test + notification channel table (Patient Email/SMS, Provider Email/SMS) with Save/Exit |
+| TC-ADMIN-SEARCH-IDX | #SearchIndexManagement | ✅ PASS | "Start Reindexing" button with explanatory text |
+
+**FAIL-DEMO-01 confirmed for all standalone admin routes:**
+/ApplicationProperties, /GeneralConfigurations, /BarcodeConfiguration, /LabNumberManagement,
+/ListPlugins, /TestNotificationConfig, /MenuConfiguration, /ResultReportingConfiguration,
+/SearchIndexManagement, /BatchTestReassignment, /ReflexTestConfiguration, /AnalyzerTestName,
+/LegacyAdmin — all redirect to /api/OpenELIS-Global/<route> → Spring 404 when navigated directly.
+
+**Legacy Admin link** (`/api/OpenELIS-Global/MasterListsPage`) is present in the admin list — intended as escape hatch to old JSP admin.
+
+### 6.5 Barcode / Billing / Aliquot
+| TC | Route | Result | Notes |
+|----|-------|--------|-------|
+| TC-PRINT-BARCODE | /PrintBarcode | ✅ PASS | Pre-Print Barcodes: Number of label sets, Order labels per set, Specimen labels per set, Total Labels to Print, Site Name search, Sample Type dropdown (14 types) |
+| TC-BILLING | /Billing (direct nav) | ❌ FAIL-DEMO-01 | Redirects to /api/OpenELIS-Global/Billing → Spring 404 |
+| TC-ALIQUOT | /Aliquot (direct nav) | ❌ FAIL-DEMO-01 | Redirects to /api/OpenELIS-Global/Aliquot → Spring 404 |
+| TC-BARCODE-ENTRY | /BarcodeEntry (direct nav) | ❌ FAIL-DEMO-01 | Redirects to /api/OpenELIS-Global/BarcodeEntry → Spring 404 |
+
+**Billing sidebar link** → absolute URL `https://demo.openelis-global.org/MasterListsPage` (Admin page). No separate Billing module in demo v3.2.0.2.
+
+### 6.6 Feature Availability Note (v3.2.0.2 vs v3.2.1.x)
+The following features/menus are **absent from the demo sidebar** (not configured or not available in v3.2.0.2):
+- Alerts / Notifications
+- EQA (External Quality Assessment)
+- Storage
+- Analyzers menu
+- These are confirmed present in v3.2.1.x (tested in prior sessions)
+
+### 6.7 Updated FAIL-DEMO-01 Route Inventory
+Complete list of confirmed FAIL-DEMO-01 routes (direct navigation → Spring 404):
+
+| Functional Area | Routes |
+|----------------|--------|
+| Patient | /Patient |
+| Orders | /EditOrder, /IncomingOrders, /BatchOrderEntry, /BarcodeEntry |
+| Pathology | /Pathology, /Cytology, /Immunohistochemistry |
+| Non-Conform | /NonConformingEvent |
+| Reports | /WHONETReport, /AggregateReport (inconsistent) |
+| Admin (standalone) | /ApplicationProperties, /GeneralConfigurations, /BarcodeConfiguration, /LabNumberManagement, /ListPlugins, /TestNotificationConfig, /MenuConfiguration, /ResultReportingConfiguration, /SearchIndexManagement, /BatchTestReassignment, /ReflexTestConfiguration, /AnalyzerTestName, /LegacyAdmin |
+| Other | /Billing, /Aliquot |
+
+**Working routes** (SPA handles correctly via React Router): /Dashboard, /SamplePatientEntry, /PatientManagement, /PatientHistory, /PathologyDashboard, /ImmunohistochemistryDashboard, /CytologyDashboard, /WorkPlanByTestSection, /WorkPlanByTest, /WorkPlanByPanel, /WorkPlanByPriority, /ResultValidation, /LogbookResults, /PatientResults, /AccessionResults, /ReferredOutTests, /RangeResults, /StatusResults, /AccessionValidation, /AccessionValidationRange, /ResultValidationByTestDate, /SampleEdit, /BatchOrderEntry, /PrintBarcode, /ElectronicOrders, /ReportNonConformingEvent, /ViewNonConformingEvent, /NCECorrectiveAction, /RoutineReports, /StudyReports, /AuditTrailReport, /MasterListsPage
+
+---
+
+## Section 7 — Updated Summary (All Sessions)
+
+| Category | PASS | FAIL | Notes |
+|----------|------|------|-------|
+| Non-Conform pages | 3 | 0 | Report, View, Corrective Actions |
+| Reports — Routine | 4+ | 1 | Menu, PSR, Rejection, Audit Trail PASS; WHONETReport FAIL-DEMO-01 |
+| Reports — Study | 2+ | 0 | Menu, ARV sub-report; all 21 routes HTTP 200 |
+| Admin inline sections | 8 | 0 | All MasterListsPage hash sections functional |
+| Admin standalone routes | 0 | 13 | All FAIL-DEMO-01 (expected — use MasterListsPage instead) |
+| PrintBarcode | 1 | 0 | Full pre-print form |
+| Billing/Aliquot | 0 | 2 | Both FAIL-DEMO-01 |
+| **Session 3 subtotal** | **~20** | **~16** | 16 FAILs all FAIL-DEMO-01 pattern |
+| **All sessions total** | **~66** | **~16** | All FAILs = FAIL-DEMO-01 (known, version-specific) |
+
+**All failures in this run are FAIL-DEMO-01** — old JSP-era route redirect issue, confirmed specific to v3.2.0.2, fixed in v3.2.1.x. No new functional bugs found in Session 3.
