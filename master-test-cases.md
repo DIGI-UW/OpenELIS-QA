@@ -15337,3 +15337,114 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 | NOTE-31 | High | Vite dev server `allowedHosts` misconfiguration blocks all HTML navigation on testing instance. API endpoints still work. OGC-591 filed. |
 | NOTE-32 | Info | New Analyzer QC module (3 pages) in v3.2.1.6: QC Dashboard, Rule Configuration, Control Lots. All functional but empty on test instance. |
 | NOTE-33 | Info | CSRF enforcement now active in v3.2.1.6. All POSTs require `X-CSRF-Token: localStorage.getItem('CSRF')`. Previously missing token caused 500; now causes 403. |
+
+
+---
+
+### Suite FR — Calculated Values Deep (v3.2.1.6)
+
+#### TC-FR-01: Calculated Value Management Page Load
+- **URL**: `/MasterListsPage/calculatedValue`
+- **Steps**: Navigate to page; wait for React hydration
+- **Expected**: Page renders with existing calculations listed; Add/Remove controls visible
+- **Result**: PASS — Page loads. Existing calculations render with toggle, name, operations, and Submit button per rule.
+
+#### TC-FR-02: Math Functions API
+- **Steps**: `fetch('/api/OpenELIS-Global/rest/math-functions')`
+- **Expected**: HTTP 200; JSON array with `+`, `-`, `*`, `/` entries
+- **Result**: PASS — Returns `[{"id":"+","value":"Plus"},{"id":"-","value":"Minus"},{"id":"/","value":"Divided By"},{"id":"*","value":"Multiplied By"}]`
+
+#### TC-FR-03: Test Display Beans — Urines Only
+- **Steps**: `fetch('/api/OpenELIS-Global/rest/test-display-beans?sampleType=1')`; also try sampleType=2,3,4
+- **Expected**: sampleType=1 returns HTTP 200 with numeric tests; sampleType=2/3/4 may fail
+- **Result**: PASS for sampleType=1 (4 tests: Albumin id=6, Beta HCG id=10, Proteinuria dipstick id=12, Urine pregnancy test id=11). FAIL (500) for sampleType=2,3,4 — known gap, no blocking impact on most workflows.
+
+#### TC-FR-04: Create Calculated Value — Urines Numeric Test
+- **Steps**: POST `/rest/test-calculation` with `{sampleId:1, testId:10, operations:[TEST_RESULT, MATH_FUNCTION, INTEGER]}`; verify CSRF header included; verify operation types use `"INTEGER"` not `"CONSTANT"`
+- **Expected**: HTTP 200; calculation persisted
+- **Result**: PASS — `"Albumin Conversion mg/dL to mg/L"` (testId=10 per DB, operations use INTEGER type) saved successfully. **NOTE:** sampleId=1/testId=6 combination causes HTTP 500; use testId=10 for Urines or sampleId=2 (Serum) for reliable saves.
+
+#### TC-FR-05: Create Calculated Value — Serum Numeric Test
+- **Steps**: POST `/rest/test-calculation` with `{sampleId:2, testId:387, operations:[TEST_RESULT(value="387"), MATH_FUNCTION("/"), INTEGER("40")]}` with CSRF token
+- **Expected**: HTTP 200; calculation persisted
+- **Result**: PASS — `"ALT Serum Ratio Calc"` (Serum/ALT÷40) saved as id=7. Serum (sampleId=2) saves reliably even though `/rest/test-display-beans?sampleType=2` returns 500 in the UI.
+
+#### TC-FR-06: GET All Calculated Values
+- **Steps**: `fetch('/api/OpenELIS-Global/rest/test-calculations')`
+- **Expected**: HTTP 200; JSON array of all saved calculations with `id`, `name`, `sampleId`, `testId`, `operations[]`
+- **Result**: PASS — Returns 2 calculations. Operation types confirmed: `TEST_RESULT`, `MATH_FUNCTION`, `INTEGER`, `PATIENT_ATTRIBUTE`. Operation `value` field is always a string in the DB even for numeric values.
+
+---
+
+### Suite FS — Programs Admin Deep (v3.2.1.6)
+
+#### TC-FS-01: Programs Management Page Load
+- **URL**: `/MasterListsPage/Program` (or equivalent admin route)
+- **Steps**: Navigate to Admin → Programs
+- **Expected**: Page renders with list of existing programs; Add Program form accessible
+- **Result**: PASS — Programs page loads; existing programs list visible.
+
+#### TC-FS-02: GET Programs API
+- **Steps**: `fetch('/api/OpenELIS-Global/rest/programs')`
+- **Expected**: HTTP 200; JSON array of program objects
+- **Result**: PASS — Returns existing programs list with id, name, and associated fields.
+
+#### TC-FS-03: Add Program — FHIR Timeout Bug (OGC-636)
+- **Steps**: 1) Navigate to Admin → Programs 2) Fill in new program name and questionnaire fields 3) Click Save
+- **Expected**: HTTP 200; program saved; success notification
+- **Actual**: Request hangs indefinitely; eventually returns HTTP 503 (proxy timeout) or no response. Program may or may not be saved in DB.
+- **Root cause**: `ProgramController.createProgram()` calls `fhirPersistanceService.updateFhirResourceInFhirStore(questionnaire)` after DB save. FHIR server is unreachable on this instance → method blocks indefinitely → proxy times out.
+- **Result**: **FAIL — OGC-636** (High severity). Verify against fixed instance: should return 200 within 5 seconds.
+- **Regression check**: After fix, confirm: (a) program appears in GET /rest/programs, (b) response time <5s, (c) no 503.
+
+#### TC-FS-04: Program FHIR Decoupling Verification (post-fix)
+- **Steps**: After OGC-636 fix: POST new program; time the response
+- **Expected**: HTTP 200 within 5 seconds; program in DB; FHIR sync happens async or is retried on failure
+- **Result**: NOT YET TESTED — pending OGC-636 fix
+
+---
+
+### Suite FT — Reflex Tests Deep (v3.2.1.6)
+
+#### TC-FT-01: Reflex Tests Management Page Load
+- **URL**: `/MasterListsPage/reflex`
+- **Steps**: Navigate to page; wait for hydration
+- **Expected**: Existing rules listed with condition/action fields; "Add Rule" button visible; AutoComplete fields for test search present
+- **Result**: PASS — Page loads. Existing saved rule renders. Overall/Sample/Relation dropdowns and Search Test AutoComplete fields visible.
+
+#### TC-FT-02: Reflex Options and Rules APIs
+- **Steps**: `GET /rest/reflexrule-options`; `GET /rest/reflexrules`
+- **Expected**: Both return HTTP 200; options include relation types (EQUALS, GREATER_THAN, LESS_THAN, etc.) and overall options (ANY, ALL); rules returns array of saved rules
+- **Result**: PASS — Both return 200. Relation options include 9 values. GET reflexrules returns saved rules with conditions and actions arrays.
+
+#### TC-FT-03: AutoComplete Test Search — Type-to-Load
+- **Steps**: 1) Select sample type in condition dropdown (e.g. Urines=1) 2) Type a single character (e.g. "a") in the "Search Test" AutoComplete 3) Observe suggestion list
+- **Expected**: Suggestion list populates with tests matching the typed character for the selected sample type
+- **Result**: PASS — Typing "a" with Urines selected shows `Albumin(Urines)`, `Beta HCG(Urines)`, etc. Typing "b" shows Beta HCG. **NOTE:** This step is required to properly populate React state — submitting without using the AutoComplete leaves `testId` empty, causing server 500. The `form_input` tool alone is insufficient; the suggestion item must be clicked.
+
+#### TC-FT-04: Save Reflex Rule — Valid Condition Test (Albumin)
+- **Steps**: 1) Fill rule name 2) Select Urines + type "a" + click "Albumin(Urines)" in AutoComplete 3) Set relation GREATER_THAN, value 300 4) Select action sample + test 5) Submit
+- **Expected**: HTTP 200; rule persisted; success notification
+- **Actual**: HTTP 503 (proxy timeout) — but rule IS saved in DB. UI shows error notification. (OGC-638)
+- **Result**: **PARTIAL PASS (data saved) / UX FAIL — OGC-638**. Confirm save via `GET /rest/reflexrules` — rule appears with correct conditions and actions.
+- **Regression check after OGC-638 fix**: Response should be HTTP 200 within 5s; success notification shown.
+
+#### TC-FT-05: Save Reflex Rule — Test with No TestResult Records (OGC-637)
+- **Steps**: Repeat TC-FT-04 but select Beta HCG, HGB, ALT, or any test without configured result ranges as the condition test
+- **Expected**: Either HTTP 200 (rule saved) or clear validation error explaining missing configuration
+- **Actual**: HTTP 500 "Check server logs" — rule NOT saved. `TestReflexServiceImpl.processReflexRule()` calls `results.get(0)` on empty list → IndexOutOfBoundsException
+- **Result**: **FAIL — OGC-637** (High). Affects Beta HCG (testId=10), HGB (testId=15), ALT (testId=387), Proteinuria dipstick (testId=12), and all other tests without configured TestResult records.
+- **Regression check after OGC-637 fix**: Rule should save OR return HTTP 400 with message "Test has no configured result records — configure test results before creating reflex rules."
+
+#### TC-FT-06: Duplicate Condition Test Constraint
+- **Steps**: After successfully saving a rule with Albumin as condition (TC-FT-04), attempt to save a second rule also using Albumin as condition
+- **Expected**: Either: (a) second rule saves (if multiple rules per test are supported) or (b) clear validation error
+- **Actual**: HTTP 500 — unique DB constraint on TestAnalyte prevents second rule for same condition test
+- **Result**: **FAIL** — implicit uniqueness constraint with no user-facing error. One rule per condition test is the current limit. UI gives no indication of this constraint.
+- **Severity**: Medium — usability gap; requires documentation or UI-level enforcement with clear messaging.
+
+#### TC-FT-07: GET Reflex Rules — Verify Persisted State
+- **Steps**: After save attempts: `GET /rest/reflexrules`
+- **Expected**: Returns all saved rules with full detail: `ruleName`, `overall`, `conditions[{sampleId, testId, relation, value}]`, `actions[{sampleId, reflexTestId, internalNote}]`
+- **Result**: PASS — Returns saved rules. Note: `testName` and `reflexTestName` fields are empty strings in GET response (display names not persisted). `testAnalyteId` populated after save.
+
