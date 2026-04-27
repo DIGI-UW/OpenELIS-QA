@@ -15447,4 +15447,299 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 - **Steps**: After save attempts: `GET /rest/reflexrules`
 - **Expected**: Returns all saved rules with full detail: `ruleName`, `overall`, `conditions[{sampleId, testId, relation, value}]`, `actions[{sampleId, reflexTestId, internalNote}]`
 - **Result**: PASS — Returns saved rules. Note: `testName` and `reflexTestName` fields are empty strings in GET response (display names not persisted). `testAnalyteId` populated after save.
+---
+
+### Suite HN — Calculated Values DEEP Interaction (v3.2.1.6)
+
+#### TC-HN-01: Add Rule Button Appends New Form
+- **Steps**: Load `/MasterListsPage/calculatedValue`; click the "+ Rule" IconButton; observe DOM
+- **Expected**: A new blank calculation form appends below existing ones; rule count increments
+- **Result**: PASS — New form appears with empty fields and all operation-type buttons (Test Result, Math Function, Integer, Patient Attribute).
+
+#### TC-HN-02: Operation Type Buttons — All Four Present and Clickable
+- **Steps**: For a new calculation form, click each of the four operation-add buttons in sequence: "Test Result", "Mathematical Function", "Integer", "Patient Attribute"
+- **Expected**: Each click appends a new operation row of the corresponding type with appropriate input controls
+- **Result**: PASS — TEST_RESULT adds sample+AutoComplete row; MATH_FUNCTION adds symbol select; INTEGER adds number input; PATIENT_ATTRIBUTE adds AGE/WEIGHT select.
+
+#### TC-HN-03: Insert Operation Between Existing Operations
+- **Steps**: With 3 operations already added, use the per-row "Insert Operation" select dropdown (between rows) to insert a new MATH_FUNCTION between rows 1 and 2
+- **Expected**: New operation inserted at correct index; subsequent operations shift down; `order` values reassigned on submit
+- **Result**: PASS — `splice(operationIndex+1, 0, operation)` in React state; order assigned at submit time via `operationIndex` loop.
+
+#### TC-HN-04: Remove Operation Row
+- **Steps**: Add 3 operations; click the "–" (Subtract icon) button on the middle row
+- **Expected**: Middle row removed; remaining rows renumber correctly on submit
+- **Result**: PASS — `splice(operationIndex, 1)` removes correctly. No orphan state.
+
+#### TC-HN-05: Formula Preview Renders in Real Time
+- **Steps**: Add TEST_RESULT (Albumin), MATH_FUNCTION (+), PATIENT_ATTRIBUTE (AGE); observe the formula preview section
+- **Expected**: Preview shows `'Albumin(Urines)' + AGE ⟶ '[target test]'`
+- **Result**: PASS — Preview updates reactively as operations are added/changed.
+
+#### TC-HN-06: Client-Side Formula Validation — Invalid Expression Caught
+- **Steps**: Construct a formula with two consecutive MATH_FUNCTION operations (e.g. `6 + *`) and submit
+- **Expected**: `eval()` throws SyntaxError; error notification shown; no POST fired
+- **Result**: PASS — `eval("6 + * 10")` throws SyntaxError; Carbon error notification displays "Invalid Calculation Logic : ..."; no network request sent.
+
+#### TC-HN-07: PATIENT_ATTRIBUTE AGE Substituted to "0" Before Eval
+- **Steps**: Build formula: TEST_RESULT(Albumin=6) `+` PATIENT_ATTRIBUTE(AGE); observe that submit succeeds (doesn't eval "6 + AGE")
+- **Expected**: `replaceString("6 + AGE ", "AGE", "0")` → `eval("6 + 0")` = 6 → valid; POST fires
+- **Result**: PASS — AGE and WEIGHT are replaced with "0" before eval. Formula `"6 + 0"` evaluates to 6; submit proceeds.
+
+#### TC-HN-08: PATIENT_ATTRIBUTE WEIGHT Option Available
+- **Steps**: Add PATIENT_ATTRIBUTE operation; open the select dropdown
+- **Expected**: Options include "Patient Age(Years)" (value=AGE) and "Patient Weight(Kg)" (value=WEIGHT)
+- **Result**: PASS — Both options present. WEIGHT replaced with "0" before eval same as AGE.
+
+#### TC-HN-09: Division by Zero — Client-Side Eval Throws
+- **Steps**: Build formula: TEST_RESULT(6) `/` INTEGER(0); submit
+- **Expected**: `eval("6 / 0")` = Infinity in JS (does NOT throw); submit fires; server may accept or reject
+- **Result**: **NOTE** — `6 / 0` evaluates to `Infinity` in JavaScript, not an exception. The client-side guard does NOT catch this. Server receives the payload. Verify server handles Infinity gracefully or add client-side Infinity check.
+
+#### TC-HN-10: Duplicate Calculation Name
+- **Steps**: POST two calculations with identical `name` values
+- **Expected**: Second POST returns 400 or 409 with "Duplicate Calculation Name" message
+- **Actual**: Server returns HTTP 500 on duplicate name. Error notification: "Duplicate Calculation Name or Error while saving"
+- **Result**: FAIL (presentation) — Error is shown but HTTP 500 is inappropriate for a validation error; should be 400/409. The UI message is correct. **NOTE-NEW-01**: Duplicate name check is done at DB level (unique constraint) not application level.
+
+#### TC-HN-11: Operation Value Type Consistency — STRING Required for All Values
+- **Steps**: POST calculation where INTEGER operation has `value: 10` (number) vs `value: "10"` (string)
+- **Expected**: Both accepted (Jackson coercion) or only string accepted
+- **Result**: **NOTE** — GET response returns all operation values as strings. POST with integer value returns 400 (HttpMessageNotReadableException for wrong type on enum fields). Use strings for operation values to be safe.
+
+#### TC-HN-12: MATH_FUNCTION Operation Requires No sampleId
+- **Steps**: POST calculation where MATH_FUNCTION operation has `sampleId: null` vs `sampleId: 1`
+- **Expected**: Both accepted; sampleId irrelevant for MATH_FUNCTION
+- **Result**: PASS — Server ignores sampleId on MATH_FUNCTION. GET response shows no sampleId field on MATH_FUNCTION operations.
+
+#### TC-HN-13: Toggle Off Disables Calculation
+- **Steps**: Load existing calculation; toggle the "toggle button" switch to off; save
+- **Expected**: Calculation saved with `toggled: false`; GET returns `"toggled":false`
+- **Result**: PASS — Toggled state persisted. `toggled:false` collapses the formula editing section in UI.
+
+#### TC-HN-14: Deactivate Calculation via API
+- **Steps**: POST `/rest/deactivate-test-calculation/{id}` with `{}` body
+- **Expected**: HTTP 200; calculation deactivated; no longer appears in active list
+- **Result**: Untested directly. Controller calls `testCalculationService.deactivate(id)`. **Regression check**: Verify deactivated calculation is excluded from `/rest/test-calculations` GET response on next load.
+
+#### TC-HN-15: Calculation Order Field Set at Submit Time
+- **Steps**: Add 3 operations; verify initial `order: null`; submit; GET the saved calculation
+- **Expected**: Saved operations have `order: 0, 1, 2` matching their position
+- **Result**: PASS — `handleSubmit` iterates `operation.order = operationIndex` before POST. GET confirms `"order":0`, `"order":1`, `"order":2`.
+
+#### TC-HN-16: test-display-beans-map Endpoint
+- **Steps**: `GET /rest/test-display-beans-map?samplesTypes=1,2` with CSRF token
+- **Expected**: HTTP 200; JSON map keyed by sampleTypeId, each value an array of tests
+- **Result**: Untested — used internally by `loadCalculationList` on page load to build test name display. Add to regression suite. Expected shape: `{"1": [{id, value, resultType}], "2": [...]}`.
+
+#### TC-HN-17: Calculation for Final Result Test — D (Dictionary) Type
+- **Steps**: Select a dict-type test (e.g. Proteinuria dipstick, testId=12) as the FINAL RESULT test; observe UI
+- **Expected**: A dictionary value selector appears for the `result` field; POST sends `result: "1100"` (dict value ID)
+- **Result**: PASS (UI renders) — `getResultInputByResultType("D", ...)` renders a Select with dictionary options. Server acceptance untested for dict-type final result.
+
+#### TC-HN-18: Calculation Submit Button Disables After Click
+- **Steps**: Click Submit on a valid calculation; observe button state while request is in-flight
+- **Expected**: Submit button disabled during submission (`isSubmitting: true`); re-enabled after response (whether success or error)
+- **Result**: PASS — `setIsSubmitting(true)` on submit, `setIsSubmitting(false)` in callback. Prevents double-submit.
+
+#### TC-HN-19: Saved Calculation Submit Button Permanently Disabled
+- **Steps**: After successful save (HTTP 200 response), observe submit button state
+- **Expected**: Button disabled with `element.disabled = true`; user cannot re-submit same calculation
+- **Result**: PASS — `handleCalculationSubmited` sets `element.disabled = true` on 200. Requires page reload to edit.
+
+#### TC-HN-20: IS_IN_NORMAL_RANGE / IS_OUTSIDE_NORMAL_RANGE Substitution
+- **Steps**: Build formula using PATIENT_ATTRIBUTE-style value `"IS_IN_NORMAL_RANGE"`; submit
+- **Expected**: Substituted to `">=0 && 1<=10"` before eval; formula evaluates; POST fires
+- **Result**: Untested. `replaceString` handles this substitution. Verify server accepts and interprets this value. No UI control exposes this value directly — internal/programmatic only.
+
+---
+
+### Suite HO — Programs Admin DEEP Interaction (v3.2.1.6)
+
+#### TC-HO-01: Programs Page — Existing Programs Render
+- **Steps**: Navigate to Programs admin page; wait for list to load
+- **Expected**: Existing programs shown with name, active status, edit controls
+- **Result**: PASS — Programs list loads from `/rest/programs`.
+
+#### TC-HO-02: GET Single Program by ID
+- **Steps**: `GET /rest/program/{id}` for a known program ID
+- **Expected**: HTTP 200; single program object with all fields (id, name, questionnaireUUID, active, etc.)
+- **Result**: Untested via direct API. Verify shape matches what the edit form expects.
+
+#### TC-HO-03: Program Required Fields Validation
+- **Steps**: Attempt to POST `/rest/program` with missing required fields (empty name)
+- **Expected**: HTTP 400 with field-level validation error
+- **Actual**: Unknown — POST hangs on FHIR call regardless of payload validity (OGC-636)
+- **Result**: **BLOCKED — OGC-636**. Regression check after fix: empty name should return 400 before FHIR call.
+
+#### TC-HO-04: Program Name — Special Characters
+- **Steps**: POST program with name containing special characters: `"HIV/TB Co-infection (Pilot)"`
+- **Expected**: Saved correctly; GET returns exact name string; no encoding issues
+- **Result**: **BLOCKED — OGC-636**. Regression check after fix: verify name round-trips correctly through DB and FHIR questionnaire title.
+
+#### TC-HO-05: Program with Questionnaire UUID Field
+- **Steps**: POST program with explicit `questionnaireUUID` vs without
+- **Expected**: If not provided, server generates UUID; if provided, uses supplied value
+- **Result**: **BLOCKED — OGC-636**. Regression check: confirm UUID present in GET response; confirm it matches the FHIR Questionnaire resource ID.
+
+#### TC-HO-06: Edit Existing Program Name
+- **Steps**: PUT/POST `/rest/program/{id}` with updated name
+- **Expected**: HTTP 200; updated name reflected in GET; FHIR resource updated
+- **Result**: **BLOCKED — OGC-636** (FHIR sync blocks all writes).
+
+#### TC-HO-07: Deactivate Program
+- **Steps**: POST deactivation endpoint for a program
+- **Expected**: Program `active` set to false; no longer appears in active program lists (e.g. Add Order program dropdown)
+- **Result**: Untested. Regression check: confirm deactivated program excluded from `/rest/programs?active=true` and Add Order dropdown.
+
+#### TC-HO-08: Program Appears in Add Order Program Dropdown
+- **Steps**: After creating a program, navigate to Add Order → Program step; observe program dropdown
+- **Expected**: Newly created program appears in the list; selectable
+- **Result**: Untested end-to-end (blocked by OGC-636 for create). Regression check: POST program → navigate to `/AddOrder` → Step 2 (Program) → verify program name in dropdown.
+
+#### TC-HO-09: Program Count — GET All Programs
+- **Steps**: `GET /rest/programs`; count items; create new program; GET again
+- **Expected**: Count increments by 1
+- **Result**: **BLOCKED — OGC-636**. Regression check pattern: pre-count → POST → post-count = pre-count + 1.
+
+#### TC-HO-10: FHIR Questionnaire Structure Validation (post-OGC-636 fix)
+- **Steps**: After fix, POST new program; then `GET /fhir/Questionnaire/{questionnaireUUID}`
+- **Expected**: FHIR Questionnaire resource exists with status=active, title=programName, resourceType=Questionnaire
+- **Result**: NOT YET TESTABLE. Regression check after OGC-636 fix.
+
+#### TC-HO-11: Concurrent Program Creation
+- **Steps**: Fire 3 simultaneous POST requests to `/rest/program` with different names
+- **Expected**: All 3 succeed; 3 distinct programs created; no race condition
+- **Result**: **BLOCKED — OGC-636**. Post-fix regression: use Promise.all to fire concurrently; verify 3 HTTP 200s and 3 DB records.
+
+#### TC-HO-12: Program Response Time Benchmark (post-OGC-636 fix)
+- **Steps**: POST `/rest/program`; measure end-to-end response time
+- **Expected**: Response time < 2000ms (DB write only, no blocking FHIR call in request path)
+- **Result**: NOT YET TESTABLE. When OGC-636 is fixed with async FHIR pattern: median response time should be <500ms. Threshold: >5000ms = FAIL (FHIR still in request path).
+
+#### TC-HO-13: Program Deleted from Admin — Referential Integrity
+- **Steps**: Delete a program that is referenced by existing orders
+- **Expected**: Either soft-delete (deactivate) or referential integrity error preventing hard delete
+- **Result**: Untested. Add to regression suite. Hard deletes of referenced programs should not be possible.
+
+#### TC-HO-14: Program Admin Page — Carbon Table Pagination
+- **Steps**: Create 15+ programs; reload Programs admin page
+- **Expected**: Pagination controls appear; default page size respected; navigation works
+- **Result**: Untested. Gap — verify Carbon DataTable pagination renders correctly for large program lists.
+
+---
+
+### Suite HP — Reflex Tests DEEP Interaction (v3.2.1.6)
+
+#### TC-HP-01: Rule with ALL Overall Option (All Conditions Must Match)
+- **Steps**: Create rule with `overall: "ALL"` and two conditions; submit
+- **Expected**: Rule saved with `overall: "ALL"`; semantically: both conditions must be true simultaneously before reflex fires
+- **Result**: Untested end-to-end (blocked by OGC-637 for most tests). Regression check: verify `overall` persisted correctly in GET response.
+
+#### TC-HP-02: BETWEEN Relation — Requires value2 Field
+- **Steps**: Create rule with `relation: "BETWEEN"`, `value: "10"`, `value2: "50"` on condition
+- **Expected**: Rule saved; both value and value2 persisted; condition interpreted as "between 10 and 50"
+- **Result**: Untested. `value2` defaults to "0" in form state — must be explicitly set for BETWEEN. Regression check: GET response shows `"value":"10","value2":"50"`.
+
+#### TC-HP-03: INSIDE_NORMAL_RANGE and OUTSIDE_NORMAL_RANGE Relations
+- **Steps**: Create rules using `INSIDE_NORMAL_RANGE` and `OUTSIDE_NORMAL_RANGE` relations
+- **Expected**: No numeric value field required; server interprets against configured reference ranges for the test
+- **Result**: Untested. These relations use the test's configured normal range rather than a hard-coded threshold. Verify the Relation dropdown is the only required field for these options.
+
+#### TC-HP-04: NOT_EQUALS and EQUALS Relations
+- **Steps**: Create rule with `relation: "EQUALS"`, `value: "1100"` (dict value ID for Proteinuria+ result)
+- **Expected**: Rule saves (if condition test has TestResult records); fires when test result exactly equals the specified dict value
+- **Result**: **FAIL — OGC-637** for Proteinuria dipstick (testId=12) — no TestResult records. Regression check after fix: EQUALS with dict value ID should save and trigger correctly.
+
+#### TC-HP-05: LESS_THAN_OR_EQUAL and GREATER_THAN_OR_EQUAL
+- **Steps**: Create rule with `relation: "LESS_THAN_OR_EQUAL"` and `relation: "GREATER_THAN_OR_EQUAL"` on Albumin
+- **Expected**: Rules saved; boundary values inclusive
+- **Result**: **BLOCKED** — second Albumin rule fails on TestAnalyte unique constraint. Post-OGC-637 regression: verify boundary inclusivity with a result exactly at threshold.
+
+#### TC-HP-06: Multiple Conditions in One Rule (ANY)
+- **Steps**: Create rule with `overall: "ANY"` and two separate conditions (e.g. Albumin >300 OR Albumin <20)
+- **Expected**: Both conditions saved under same rule; GET returns `conditions` array with 2 entries
+- **Result**: Untested. Blocked by unique TestAnalyte constraint — second condition with same testId likely fails. Regression check after OGC-637 fix.
+
+#### TC-HP-07: Multiple Actions in One Rule
+- **Steps**: Create rule with one condition and two action entries in the `actions` array
+- **Expected**: Both actions saved; both reflexes triggered when condition fires
+- **Result**: Untested. Verify `actions` array accepts >1 entry and all are persisted.
+
+#### TC-HP-08: addNotification Flag — Y vs N
+- **Steps**: Create rule with `addNotification: "N"` in action
+- **Expected**: Rule saved with notification suppressed; no notification generated when reflex fires
+- **Result**: Untested. Form defaults to "Y". Verify GET returns `"addNotification":"N"` when explicitly set.
+
+#### TC-HP-09: External Note Field Persistence
+- **Steps**: Create rule with non-empty `externalNote` value
+- **Expected**: External note persisted in DB; GET response includes `externalNote` with correct value
+- **Result**: Untested. Internal note verified to save (Rule #2). External note untested separately.
+
+#### TC-HP-10: Rule Toggle Off at Creation
+- **Steps**: Create rule with `toggled: false`
+- **Expected**: Rule saved inactive; does not fire; form shows collapsed state on reload
+- **Result**: Untested. Verify `toggled: false` persists and GET returns `"toggled":false`.
+
+#### TC-HP-11: AutoComplete Filters by Sample Type
+- **Steps**: 1) Select Serum (sampleId=2) in condition sample dropdown 2) Type "a" in Search Test
+- **Expected**: Suggestions show only Serum tests (ALT, AST, etc.), NOT Urines tests (Albumin)
+- **Result**: **BLOCKED** — `/rest/test-display-beans?sampleType=2` returns HTTP 500 on this instance. Regression check on fixed instance: verify suggestions are sample-type-scoped.
+
+#### TC-HP-12: AutoComplete Clears on Sample Type Change
+- **Steps**: Select Urines → type "a" → select Albumin → change sample to Whole Blood → observe Search Test field
+- **Expected**: Previously selected test cleared from AutoComplete; testId reset in state
+- **Result**: Untested. The form has a commented-out `resetOperationValue` call: `/*resetCalculationValue(index, calculation)*/`. This may mean changing sample does NOT clear the selected test, leaving a stale testId. **Gap** — verify testId is cleared on sample change.
+
+#### TC-HP-13: testName Display Field Empty in GET Response
+- **Steps**: Save rule; GET `/rest/reflexrules`; inspect `testName` and `reflexTestName` fields
+- **Expected**: These are display-only fields populated by AutoComplete; server does not persist them
+- **Actual**: GET returns `"testName":""` and `"reflexTestName":""` always — only IDs are persisted
+- **Result**: PASS (expected behavior) — **NOTE**: UI must re-resolve test display names from IDs on page reload using the sample test list. If test-display-beans is broken for a sample type, saved rules for that sample type will show blank test names in the edit form.
+
+#### TC-HP-14: Rule Reload — Existing Rules Render on Page Load
+- **Steps**: Save a rule; navigate away; return to `/MasterListsPage/reflex`
+- **Expected**: Saved rules render in the form with correct name, sample, relation, value; conditions and actions populated
+- **Result**: PARTIAL PASS — Rule name, overall, relation, value render correctly. TestName AutoComplete shows blank (testName not persisted — see TC-HP-13). The testId IS in state from loaded data but display name requires test-display-beans lookup.
+
+#### TC-HP-15: Rule Name — Special Characters and Unicode
+- **Steps**: Create rule with name `"Albumin >300 → β-HCG Reflex"` (contains →, β)
+- **Expected**: Saved and returned correctly with Unicode intact
+- **Result**: PASS — Rule `#2` saved with `→` character in ruleName. DB round-trips Unicode correctly.
+
+#### TC-HP-16: Condition sampleId — String vs Integer Type
+- **Steps**: POST rule with `conditions[0].sampleId: 1` (integer) vs `"1"` (string)
+- **Expected**: Both accepted; GET returns string "1"
+- **Result**: PASS (string) — UI form always sends string sampleId ("1", "2", etc.). GET returns string. Both Jackson-coerced on receive, but string is the safe canonical form.
+
+#### TC-HP-17: Submit Button State During In-Flight Request
+- **Steps**: Click Submit; observe submit button immediately; observe after response
+- **Expected**: No duplicate submission possible (button doesn't disable on reflex form — check source)
+- **Result**: **NOTE** — `ReflexRuleForm` does not appear to have `isSubmitting` state like `CalculatedValueForm` does. Verify: if double-clicking Submit fires two POSTs simultaneously, could create duplicate rules or trigger the duplicate TestAnalyte constraint. **Gap** — add submit debounce/disable.
+
+#### TC-HP-18: Rule Delete — Remove Rule Button
+- **Steps**: With 2+ rules on screen, click "Remove Rule" on one; confirm modal; submit
+- **Expected**: Rule deactivated via `POST /rest/deactivate-test-calculation/{id}` (or equivalent reflex endpoint); rule no longer in GET /rest/reflexrules
+- **Result**: Untested. Verify the deactivation endpoint for reflex rules and confirm it differs from the calculation deactivation endpoint.
+
+#### TC-HP-19: TestAnalyte Unique Constraint — User-Facing Handling
+- **Steps**: Attempt to save second rule with Albumin (testId=6) as condition; observe response
+- **Expected**: Clear user message: "A reflex rule already exists for this test. Each test can only be the condition trigger for one rule."
+- **Actual**: HTTP 500 "Check server logs" with no actionable information
+- **Result**: **FAIL** — DB constraint violation surfaces as opaque 500. Requires either: (a) application-level uniqueness check before DB insert with 400 response, or (b) UI-level enforcement preventing duplicate condition test selection.
+
+#### TC-HP-20: Reflex Rule Trigger Integration Test (end-to-end)
+- **Steps**: 1) Save rule: Albumin >300 → reflex Beta HCG 2) Create a new order with Albumin test 3) Enter result >300 for Albumin 4) Validate result 5) Observe if Beta HCG reflex order is created
+- **Expected**: Reflex order for Beta HCG automatically created/flagged upon Albumin result validation
+- **Result**: NOT YET TESTED — requires full order → result → validation workflow with reflex logic enabled. Key regression check after OGC-637/638 fixes.
+
+#### TC-HP-21: reflexrule-options API — Full Enumeration
+- **Steps**: `GET /rest/reflexrule-options`
+- **Expected**: Returns all valid relation types and overall options
+- **Result**: PASS — Returns both `numericRelationOptions` (EQUALS, NOT_EQUALS, INSIDE_NORMAL_RANGE, OUTSIDE_NORMAL_RANGE, LESS_THAN_OR_EQUAL, GREATER_THAN_OR_EQUAL, LESS_THAN, GREATER_THAN, BETWEEN) and `overAllOptions` (ANY, ALL). Verify 9 relation options and 2 overall options present.
+
+#### TC-HP-22: POST Reflex Rule — CSRF Enforcement
+- **Steps**: POST `/rest/reflexrule` without `X-CSRF-Token` header
+- **Expected**: HTTP 403 (CSRF rejection)
+- **Result**: PASS — HTTP 403 returned for missing CSRF token, consistent with v3.2.1.6 CSRF enforcement (NOTE-33).
 
