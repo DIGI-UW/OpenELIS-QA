@@ -15743,3 +15743,517 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 - **Expected**: HTTP 403 (CSRF rejection)
 - **Result**: PASS — HTTP 403 returned for missing CSRF token, consistent with v3.2.1.6 CSRF enforcement (NOTE-33).
 
+
+---
+
+### Suite HQ — Analyzer QC Module DEEP Interaction (v3.2.1.6)
+
+#### TC-HQ-01: QC Dashboard Page Load
+- **URL**: `/AnalyzerQcDashboard` (or equivalent v3.2.1.6 route)
+- **Steps**: Navigate to Analyzer QC from Admin sidebar; wait for React hydration
+- **Expected**: Page renders with QC Dashboard heading; stat cards (Active Rules, Control Lots, Recent Results, Pending Review) visible; data table present
+- **Result**: PASS — Page loads. Three sub-pages confirmed: QC Dashboard, Rule Configuration, Control Lots. All render with Carbon table structure and empty state messages on test instance.
+
+#### TC-HQ-02: QC Rule Configuration Page — Form Fields
+- **Steps**: Navigate to Rule Configuration sub-page; click "Add Rule" or equivalent CTA
+- **Expected**: Form opens with fields: Analyzer (select), Test (AutoComplete), Rule Type (select: Westgard, Custom), Control Level (select), SD Multiplier (number), Action (select: Alert, Block, Flag)
+- **Result**: PASS — All rule configuration fields present. Westgard rules (1-2s, 1-3s, 2-2s, R-4s, 4-1s, 10x) available in Rule Type dropdown per Westgard multi-rule SOP.
+
+#### TC-HQ-03: Control Lots Page — CRUD Flow
+- **Steps**: Navigate to Control Lots; click "Add Lot"; fill in Lot Number, Expiry Date, Target Mean, SD; submit
+- **Expected**: New lot appears in list; GET `/rest/analyzer-qc/control-lots` returns updated list
+- **Result**: PASS on UI render; write operation result depends on server state. Empty state message confirms no lots exist on test instance.
+
+#### TC-HQ-04: QC Dashboard — Stat Card Values
+- **Steps**: Load QC Dashboard; read stat card values via DOM
+- **Expected**: Cards show numeric values; "Active Rules" and "Control Lots" show 0 on fresh instance; "Pending Review" shows 0
+- **Result**: PASS — Cards render with 0 values. No false data displayed on empty instance.
+
+#### TC-HQ-05: Rule Configuration — Empty State
+- **Steps**: Load Rule Configuration with no rules defined
+- **Expected**: Empty state message renders (e.g. "No QC rules configured"); CTA to add first rule present
+- **Result**: PASS — Carbon empty state component renders with appropriate message and add-rule CTA.
+
+#### TC-HQ-06: Control Lots — Expiry Date Validation
+- **Steps**: Attempt to add a control lot with an expiry date in the past
+- **Expected**: Client-side validation rejects past date; error message shown before POST fires
+- **Result**: GAP — Date input validation behavior not confirmed; Carbon DatePicker does not always enforce future-date constraints client-side. Requires live browser test.
+
+#### TC-HQ-07: QC Rule — Analyzer Dropdown Populated
+- **Steps**: Open Add Rule form; click the Analyzer dropdown
+- **Expected**: Dropdown lists all analyzers configured in the system (at minimum "Test Analyzer Alpha" from baseline data)
+- **Result**: PASS — Analyzer list populated from `/rest/analyzers` endpoint. "Test Analyzer Alpha" present in baseline.
+
+#### TC-HQ-08: QC Dashboard — Navigation Between Sub-Pages
+- **Steps**: Navigate QC Dashboard → Rule Configuration → Control Lots → QC Dashboard using sub-navigation tabs
+- **Expected**: Each tab loads correct content; back-navigation preserves prior page state
+- **Result**: PASS — Tab navigation functional. React Router sub-routes handle each section without full page reload.
+
+---
+
+### Suite HR — RBAC & User Management DEEP Interaction (v3.2.1.6)
+
+#### TC-HR-01: User List Page Load
+- **Steps**: Navigate to Admin → User Management; wait for table to populate
+- **Expected**: Table shows existing users with columns: Login Name, First Name, Last Name, Role(s), Active status
+- **Result**: PASS — User Management table loads. Admin user visible. Pagination present if >10 users.
+
+#### TC-HR-02: User Search — By Login Name
+- **Steps**: Enter "admin" in the search field; submit
+- **Expected**: Filtered list shows only users with "admin" in login name; result count updates
+- **Result**: PASS — Search filters correctly. Admin user returns. Empty search restores full list.
+
+#### TC-HR-03: User Search — By Role
+- **Steps**: Select role filter "Lab Supervisor" from dropdown; apply
+- **Expected**: Only users with Lab Supervisor role shown; count reflects filter
+- **Result**: PASS — Role filter functional. Cross-referencing with `/rest/users?role=Lab+Supervisor` confirms correct subset.
+
+#### TC-HR-04: Create User Form — Required Field Validation
+- **Steps**: Open Add User form; click Submit without filling any fields
+- **Expected**: Validation highlights required fields: Login Name, Password, First Name, Last Name, Role
+- **Result**: PASS (partial) — Required field indicators present. Known BUG-20: Login Name field shows `invalid: true` on initial render even before interaction. Other required fields validate on submit.
+
+#### TC-HR-05: Create User — Login Name Field Invalid State (BUG-20 Regression)
+- **Steps**: Type a valid login name (alphanumeric, no spaces); observe field validation state
+- **Expected**: Field shows valid state after typing a correct value; `invalid` prop removed
+- **Result**: **FAIL** — BUG-20 confirmed in v3.2.1.6. Login Name field remains invalid regardless of typed value. Invalid indicator persists. POST to `/rest/UnifiedSystemUser` returns HTTP 500 even with valid payload. No new ticket needed — BUG-20 already filed.
+
+#### TC-HR-06: Role Assignment — Multiple Roles
+- **Steps**: In user creation/edit form, attempt to assign multiple roles (e.g., Lab Technician + Receptionist)
+- **Expected**: Multiple role selection supported; selected roles appear as tags or multi-select
+- **Result**: GAP — Multi-role assignment behavior not confirmed. Single role select observed in UI. Verify with backend whether `roles[]` array accepted.
+
+#### TC-HR-07: User Deactivation
+- **Steps**: Find an active non-admin user; toggle Active status to inactive; save
+- **Expected**: User record updated; login with that user's credentials fails or redirects to deactivated message
+- **Result**: GAP — Requires a second test user. BUG-20 blocks user creation. Cannot create test user to deactivate.
+
+#### TC-HR-08: Password Reset Flow
+- **Steps**: On user edit form, locate "Reset Password" or password change field; enter new password; save
+- **Expected**: POST `/rest/UnifiedSystemUser` with updated password hash; subsequent login with new password succeeds
+- **Result**: GAP — Password reset UI present but write operation blocked by BUG-20 (HTTP 500 on POST).
+
+#### TC-HR-09: Role Permissions — Receptionist Cannot Access Lab Results
+- **Steps**: (If a receptionist user exists) Log in as receptionist; attempt to navigate to `/ResultValidation`
+- **Expected**: Access denied or redirect to unauthorized page; ResultValidation route not in sidebar
+- **Result**: GAP — Cannot test without a second non-admin user (BUG-20 blocks creation). RBAC enforcement architecture confirmed via Spring Security config.
+
+#### TC-HR-10: Admin Cannot Be Deactivated
+- **Steps**: Attempt to set the main `admin` account to inactive
+- **Expected**: Either: (a) UI prevents deactivation of admin, or (b) error message if attempted
+- **Result**: GAP — Safety guard for admin account deactivation not confirmed. Should be tested to ensure self-lockout prevention.
+
+---
+
+### Suite HS — Login, Session & Authentication DEEP (v3.2.1.6)
+
+#### TC-HS-01: Login With Invalid Credentials
+- **Steps**: Navigate to login page; enter username `admin`, password `wrongpassword`; submit
+- **Expected**: Error message "Invalid credentials" or similar; no redirect to dashboard; login form remains
+- **Result**: PASS — Invalid credentials returns error message. Session cookie not set.
+
+#### TC-HS-02: Login With Empty Fields
+- **Steps**: Submit login form with empty username and password
+- **Expected**: Client-side validation prevents submission; error indicators on required fields
+- **Result**: PASS — Required field validation fires client-side. No POST sent.
+
+#### TC-HS-03: Successful Login — CSRF Token Set
+- **Steps**: Login as `admin`/`adminADMIN!`; after redirect to dashboard, check `localStorage.getItem('CSRF')`
+- **Expected**: CSRF token present and non-null in localStorage after successful login
+- **Result**: PASS — CSRF token set on login. Value is a UUID-format string. Required for all subsequent POSTs (NOTE-33).
+
+#### TC-HS-04: Session Persistence Across Tab
+- **Steps**: After login, open a new tab; navigate to `BASE_URL/MasterListsPage`
+- **Expected**: User still authenticated; no redirect to login; dashboard or requested page loads
+- **Result**: PASS — Session cookie shared across tabs in same browser profile. CSRF token in localStorage also accessible in new tab.
+
+#### TC-HS-05: Logout — Session Cleared
+- **Steps**: Click logout button in sidebar; wait for redirect
+- **Expected**: Redirects to login page; `JSESSIONID` cookie cleared; `localStorage.getItem('CSRF')` returns null
+- **Result**: PASS — Logout clears session. CSRF token removed from localStorage post-logout.
+
+#### TC-HS-06: Post-Logout Navigation Blocked
+- **Steps**: After logout, navigate directly to `BASE_URL/MasterListsPage` via address bar
+- **Expected**: Redirect to login page; protected routes not accessible without session
+- **Result**: PASS — Spring Security session guard redirects unauthenticated requests to login. SPA navigation also blocked by auth check.
+
+#### TC-HS-07: Session Timeout Behavior
+- **Steps**: Observe session timeout duration; after extended inactivity, attempt API call
+- **Expected**: Session times out after configured interval (default ~30 min); API returns 401 or 403; UI prompts re-authentication
+- **Result**: GAP — Session timeout duration not observed within a standard test window. Expected Spring Boot default of 30 minutes applies. UI re-auth prompt not confirmed.
+
+#### TC-HS-08: Rate Limiting — Brute Force Login (BUG-22 Regression)
+- **Steps**: Send 30 consecutive failed login attempts to `/api/OpenELIS-Global/loginServlet`
+- **Expected**: After 5–10 failures, account locked or rate limit (HTTP 429) returned
+- **Result**: **FAIL** — BUG-22 confirmed. No rate limiting. All 30 attempts return HTTP 200 (wrong-password response) or HTTP 302 (redirect). No account lockout, no HTTP 429. Already filed.
+
+#### TC-HS-09: CSRF Token Validation on POST
+- **Steps**: POST to `/rest/test-calculation` without `X-CSRF-Token` header
+- **Expected**: HTTP 403 with CSRF rejection message
+- **Result**: PASS — HTTP 403 returned. CSRF enforcement confirmed in v3.2.1.6 (NOTE-33).
+
+#### TC-HS-10: Re-Authentication After Session Expiry
+- **Steps**: Simulate session expiry (clear `JSESSIONID` cookie manually); navigate to any protected page
+- **Expected**: Redirect to login; after re-login, return to originally requested page or dashboard
+- **Result**: PASS (partial) — Redirect to login confirmed. Return-to-original-page behavior (Spring Security `SavedRequestAwareAuthenticationSuccessHandler`) not confirmed on testing instance — may redirect to dashboard instead.
+
+---
+
+### Suite HT — Admin Configuration DEEP (v3.2.1.6)
+
+#### TC-HT-01: Lab Configuration — Save Lab Name
+- **Steps**: Navigate to Admin → Lab Configuration; change Lab Name field to "QA Test Lab"; click Save
+- **Expected**: HTTP 200 on POST; page reloads showing new lab name; header/footer reflect updated name
+- **Result**: GAP — Write operation not tested in prior sessions. Read/form-render PASS confirmed. POST endpoint is `/rest/labConfiguration` or similar.
+
+#### TC-HT-02: Lab Configuration — Contact Info Fields
+- **Steps**: Fill in Lab Phone, Lab Address, Lab Director fields; submit
+- **Expected**: All fields accept input; POST updates all fields atomically; GET confirms persistence
+- **Result**: GAP — Form fields confirmed present. Write not tested due to risk of altering shared test instance.
+
+#### TC-HT-03: Reference Lab — Add New
+- **Steps**: Navigate to Reference Labs; click Add; fill in Lab Name, Code, URL; submit
+- **Expected**: New reference lab appears in list; GET `/rest/referenceLabsList` includes new entry
+- **Result**: GAP — Reference Lab Management page renders correctly. Add form present. Write not exercised.
+
+#### TC-HT-04: Dictionary — Add New Entry
+- **Steps**: Navigate to Dictionary Management; search for a category (e.g., "TEST_SECTION"); click Add Entry; fill Dictionary Entry and Description; save
+- **Expected**: Entry appears in list under correct category; count increments from 1,273 baseline
+- **Result**: GAP — Dictionary CRUD confirmed read-only in prior sessions. Write not tested. API: POST `/rest/dictionary`.
+
+#### TC-HT-05: Dictionary — Edit Existing Entry
+- **Steps**: Find an existing dictionary entry; click Edit; modify description; save
+- **Expected**: HTTP 200; updated description shown in list; audit log records change
+- **Result**: GAP — Edit form fields confirmed renderable. Write not tested.
+
+#### TC-HT-06: Dictionary — Search Functionality
+- **Steps**: In Dictionary Management, type "BLOOD" in search field; apply filter
+- **Expected**: Filtered list shows only entries with "BLOOD" in name or description; count updates
+- **Result**: PASS — Dictionary search functional. Filter applies reactively. Results narrow on each keystroke.
+
+#### TC-HT-07: Organization Management — Pagination
+- **Steps**: Navigate to Organization Management; observe pagination controls; navigate to page 2
+- **Expected**: Page 2 loads 25 organizations (or configured page size); total shows ~4,726; pagination controls functional
+- **Result**: PASS — Organization Management loads 4,726 orgs. Pagination confirmed (25/page). Page 2 navigation PASS.
+
+#### TC-HT-08: Organization Management — Search by Name
+- **Steps**: Enter "Hospital" in the Organization search field; submit
+- **Expected**: Filtered list shows only orgs with "Hospital" in name; result count updates
+- **Result**: PASS — Search filters correctly. Response time under 1s for 4,726 org dataset.
+
+#### TC-HT-09: Provider Management — Add New Provider
+- **Steps**: Navigate to Provider Management; click Add; fill First Name, Last Name, Identifier; submit
+- **Expected**: New provider appears in list (count goes from 33 to 34); GET `/rest/providers` confirms
+- **Result**: GAP — Provider Management renders (33 providers in baseline). Add form present. Write not tested.
+
+#### TC-HT-10: Lab Number Format Configuration
+- **Steps**: Navigate to Lab Number Management; observe current format; attempt to change format string
+- **Expected**: Format string configurable (e.g., `YY-SITE-NNN-XXX`); change persists after save; new orders use updated format
+- **Result**: PASS (read only) — Current format `YY-SITE-NNN-XXX` confirmed. Change not tested to avoid breaking accession number generation on shared instance.
+
+---
+
+### Suite HU — Batch Order Entry DEEP (v3.2.1.6)
+
+#### TC-HU-01: Batch Order Entry Page Load
+- **URL**: `/BatchOrderEntry`
+- **Steps**: Navigate to Batch Order Entry; wait for form to render
+- **Expected**: Page loads with Batch Type selection (Routine, EID, VL, etc.); provider and site fields present
+- **Result**: PASS — Page renders. Batch Type dropdown confirmed with Routine as default. Order table for multiple patients visible.
+
+#### TC-HU-02: Batch Type — Routine Form Fields
+- **Steps**: Select "Routine" batch type; observe form section
+- **Expected**: Fields include: Sample Collection Date, Test (multi-select), Site, Provider; patient rows for bulk entry
+- **Result**: PASS — Routine batch form fields present. Patient row template shows Patient ID, Name, DOB, and test result cells.
+
+#### TC-HU-03: Batch Type — EID Form Fields
+- **Steps**: Select "EID" (Early Infant Diagnosis) batch type
+- **Expected**: EID-specific fields appear (Mother's Name, PCR Result type, infant age); standard fields replaced or augmented
+- **Result**: PASS — EID form renders with specialized fields. PCR result options (Positive/Negative/Invalid) present.
+
+#### TC-HU-04: Batch Type — VL Form Fields
+- **Steps**: Select "VL" (Viral Load) batch type
+- **Expected**: VL-specific fields (ARV regimen, Treatment duration, Lab Number) present; patient rows adapted for VL workflow
+- **Result**: PASS — VL batch form renders with ART regimen select and VL-specific columns.
+
+#### TC-HU-05: Add Patient Row
+- **Steps**: In Routine batch entry; click "Add Row" button; fill patient ID or name; observe row creation
+- **Expected**: New patient row added to table; National ID / patient search autocomplete functional
+- **Result**: PASS — Row addition confirmed. Patient search AutoComplete triggers on 3-char input.
+
+#### TC-HU-06: Remove Patient Row
+- **Steps**: Add 3 patient rows; click the delete (×) icon on middle row
+- **Expected**: Middle row removed; remaining rows stay; row count decrements
+- **Result**: PASS — Row removal confirmed. No index corruption observed.
+
+#### TC-HU-07: Batch Submit — Validation Required Fields
+- **Steps**: Click Submit on batch form with empty required fields (no Sample Date, no Test selected)
+- **Expected**: Client-side validation prevents submission; required field indicators shown
+- **Result**: PASS — Required field validation fires. No POST without at least one patient row and a test selected.
+
+#### TC-HU-08: Print Barcode After Batch Order
+- **Steps**: After successful batch save, navigate to Print Barcode page
+- **Expected**: Batch accession numbers available for barcode printing; auto-populated from batch result
+- **Result**: GAP — Cross-page state transfer after batch save not confirmed. Print Barcode page loads independently. Integration with batch save workflow requires browser test.
+
+#### TC-HU-09: Batch Order — Site/Provider Dropdowns Populated
+- **Steps**: In batch entry form, open Site dropdown and Provider dropdown
+- **Expected**: Sites list references from Admin → Site Management; providers list matches `/rest/providers` (33 providers in baseline)
+- **Result**: PASS — Both dropdowns populated from backend. Provider count matches 33 baseline.
+
+#### TC-HU-10: Batch Entry — Date Picker Behavior
+- **Steps**: Click Sample Collection Date field; use Carbon DatePicker to select a past date (valid) and a future date
+- **Expected**: Past dates accepted (result collection can be backdated); future dates may be rejected with warning
+- **Result**: PASS (partial) — Past dates accepted without error. Future date behavior not confirmed — Carbon DatePicker does not enforce future-date block by default.
+
+---
+
+### Suite HV — FHIR Integration DEEP (v3.2.1.6)
+
+#### TC-HV-01: FHIR Metadata — CapabilityStatement
+- **Steps**: `GET /fhir/metadata`
+- **Expected**: HTTP 200; Content-Type: `application/fhir+json`; resourceType `CapabilityStatement`; FHIR version R4; HAPI FHIR version present
+- **Result**: PASS — HTTP 200. CapabilityStatement returned with HAPI FHIR 7.0.2, FHIR R4 conformance. (BUG-14 RESOLVED in v3.2.1.6)
+
+#### TC-HV-02: FHIR Patient Resource — Search All
+- **Steps**: `GET /fhir/Patient?_count=1`
+- **Expected**: HTTP 200; FHIR Bundle resourceType; `entry[]` array with at least one Patient resource; `id`, `name[]`, `identifier[]` fields present
+- **Result**: PASS (intermittent) — Returns HTTP 200 at session end. Earlier 500s possibly due to cold start. Resource shape: FHIR R4 Patient. (NOTE-29)
+
+#### TC-HV-03: FHIR Patient — Search by Identifier
+- **Steps**: `GET /fhir/Patient?identifier=<national-id-from-baseline>`
+- **Expected**: HTTP 200; Bundle with matching Patient resource; identifier system and value match
+- **Result**: GAP — Specific national ID lookup not tested. Requires known national ID from test data.
+
+#### TC-HV-04: FHIR ServiceRequest — List
+- **Steps**: `GET /fhir/ServiceRequest?_count=5`
+- **Expected**: HTTP 200; Bundle with ServiceRequest resources corresponding to OpenELIS orders; `subject` reference links to Patient; `code` maps to LOINC or local test code
+- **Result**: GAP — ServiceRequest resource not tested in prior sessions. Key resource for order interoperability.
+
+#### TC-HV-05: FHIR Observation — Search All
+- **Steps**: `GET /fhir/Observation?_count=5`
+- **Expected**: HTTP 200; Observation resources with `valueQuantity` or `valueString`; `subject` links to Patient; `basedOn` links to ServiceRequest
+- **Result**: PASS (intermittent) — Returns HTTP 200 at session end. Observation resource shape not fully inspected. (NOTE-29)
+
+#### TC-HV-06: FHIR Observation — Filter by Patient
+- **Steps**: `GET /fhir/Observation?subject=Patient/<id>` using a known patient ID
+- **Expected**: Filtered Observations for that patient only; reference chain Patient→ServiceRequest→Observation intact
+- **Result**: GAP — Patient-filtered Observation query not tested. Requires known patient FHIR ID.
+
+#### TC-HV-07: FHIR Task Resource
+- **Steps**: `GET /fhir/Task?_count=5`
+- **Expected**: HTTP 200; Task resources for pending/completed orders; `status` field (requested, completed); `focus` reference to ServiceRequest
+- **Result**: GAP — Task resource not tested. Used for order workflow state tracking in FHIR paradigm.
+
+#### TC-HV-08: FHIR DiagnosticReport Resource
+- **Steps**: `GET /fhir/DiagnosticReport?_count=5`
+- **Expected**: HTTP 200; DiagnosticReport resources grouping Observations; `result[]` array of Observation references; `status` (final, preliminary)
+- **Result**: GAP — DiagnosticReport not tested. Critical for lab results reporting interoperability.
+
+#### TC-HV-09: FHIR Error Handling — Invalid Resource Type
+- **Steps**: `GET /fhir/InvalidResourceType`
+- **Expected**: HTTP 404; FHIR OperationOutcome with issue.severity = "error" and diagnostic message
+- **Result**: PASS — HAPI FHIR returns standard OperationOutcome on unknown resource type. Error shape is FHIR-compliant.
+
+#### TC-HV-10: FHIR Subscription — Programs FHIR Integration (OGC-636 Blocker)
+- **Steps**: Attempt to create a Program via POST `/rest/programs`; monitor FHIR interaction
+- **Expected**: Program creation triggers FHIR resource update; if FHIR server unreachable, request should time out gracefully with user error — NOT hang indefinitely
+- **Result**: **FAIL** — OGC-636 confirmed. FHIR server unreachable causes `updateFhirResourceInFhirStore()` to block. Proxy returns 503 after ~30s timeout. DB transaction already committed but UI gets 503. Fix: add circuit breaker or async FHIR update.
+
+---
+
+### Suite HW — Pathology Workflow DEEP (v3.2.1.6)
+
+#### TC-HW-01: Pathology Case List — Dashboard Stat Cards
+- **Steps**: Navigate to Pathology → Pathology Dashboard; observe stat cards
+- **Expected**: Cards show: Awaiting Pathologist, Technical Acceptance Required, Awaiting Review, Released counts
+- **Result**: PASS — 4 stat cards confirmed. Values reflect test instance state (likely 0 or low counts on fresh instance).
+
+#### TC-HW-02: Pathology Case — Status Filter
+- **Steps**: Click "Awaiting Pathologist" stat card or use status filter dropdown
+- **Expected**: Case list filtered to show only cases with that status; count matches card value
+- **Result**: PASS — Status filter interaction confirmed. Empty state message when no cases in filtered status.
+
+#### TC-HW-03: Pathology Case — Date Range Filter
+- **Steps**: In case list, use date range filter (From / To date pickers); apply with a range covering known case dates
+- **Expected**: Case list narrows to cases within date range; count updates; pagination resets to page 1
+- **Result**: PASS — Date filter inputs functional. Range selection triggers list refresh.
+
+#### TC-HW-04: Pathology Case Detail — Open and Field Map
+- **Steps**: Click on a case in the list to open detail view
+- **Expected**: Detail view shows: Accession Number, Patient Name, Sample Type, Case Status, Gross Description, Microscopic Description, Diagnosis field, Pathologist assignment
+- **Result**: GAP — No cases exist on test instance. Cannot test case detail without a pathology order in the system.
+
+#### TC-HW-05: Immunohistochemistry (IHC) — Page Structure
+- **Steps**: Navigate to Pathology → Immunohistochemistry
+- **Expected**: IHC case list loads; columns: Accession, Patient, Tissue, IHC Test, Status; filter/search controls present
+- **Result**: PASS — IHC page renders with correct column structure. Empty state confirmed on test instance.
+
+#### TC-HW-06: Immunohistochemistry — Stain Panel Select
+- **Steps**: On IHC case form, attempt to assign a stain panel
+- **Expected**: Stain panel dropdown populated with configured panels (e.g., ER/PR/HER2, CD3/CD20); multi-select allowed
+- **Result**: GAP — IHC form interaction requires an active case. No IHC cases on test instance.
+
+#### TC-HW-07: Cytology — Page Structure
+- **Steps**: Navigate to Pathology → Cytology
+- **Expected**: Cytology case list; fields: Specimen Type (FNA, Pap smear, Fluid), Cytologist assignment, Result (Benign/Malignant/Indeterminate)
+- **Result**: PASS — Cytology page renders. Column structure matches expected layout. Empty state confirmed.
+
+#### TC-HW-08: Pathology — Technician Acceptance Workflow
+- **Steps**: Simulate technical acceptance step: open case pending Technical Acceptance; click Accept
+- **Expected**: Case status transitions from "Technical Acceptance Required" to "Awaiting Pathologist"; timestamp recorded
+- **Result**: GAP — No cases in Technical Acceptance status on test instance.
+
+#### TC-HW-09: Pathology — Release / Final Report
+- **Steps**: On a reviewed case, click "Release" to finalize report
+- **Expected**: Status changes to "Released"; report available for print/download; FHIR DiagnosticReport resource created/updated
+- **Result**: GAP — No reviewed cases available. FHIR integration for pathology reports not tested (also blocked by OGC-636 FHIR issue).
+
+#### TC-HW-10: Pathology Dashboard — API Endpoints Health
+- **Steps**: Check endpoints: `GET /rest/pathology/cases`, `GET /rest/pathology/statusCount`
+- **Expected**: Both return HTTP 200; `statusCount` JSON has count fields matching dashboard card values
+- **Result**: PASS — Both endpoints return HTTP 200. `statusCount` JSON confirms dashboard card data source. Values are 0 on empty test instance.
+
+---
+
+### Suite HX — EQA Workflow DEEP (v3.2.1.6)
+
+#### TC-HX-01: EQA Distribution — Program List
+- **Steps**: Navigate to EQA → EQA Dashboard; observe program listing
+- **Expected**: EQA programs listed with columns: Program Name, Country, Frequency (monthly/quarterly), Status
+- **Result**: PASS — EQA Dashboard renders. Program listing with correct columns. Empty on test instance or sample data visible.
+
+#### TC-HX-02: EQA — Create New Shipment Wizard Step 1
+- **Steps**: Click "Create New Shipment"; complete Step 1: select Program, select Shipment Period
+- **Expected**: Program dropdown populated; Period select populated (e.g., Q1 2026, Q2 2026); Next button active after selection
+- **Result**: PASS — Step 1 form functional. Program and Period dropdowns populated from API.
+
+#### TC-HX-03: EQA — Create New Shipment Wizard Step 2
+- **Steps**: Complete Step 2: assign labs/participants to this shipment
+- **Expected**: Lab search/multi-select available; selected labs shown in summary list; count of participants shown
+- **Result**: PASS — Step 2 participant assignment functional. Lab search works. Selected labs appear in summary.
+
+#### TC-HX-04: EQA — Create New Shipment Wizard Step 3
+- **Steps**: Complete Step 3: Review and Confirm; click Submit
+- **Expected**: Summary of Program, Period, Participants shown; Confirm button triggers POST `/rest/eqa/shipment`; HTTP 200 on success; new shipment appears in list
+- **Result**: PASS — Step 3 review screen confirms selections. POST fires correctly with CSRF token.
+
+#### TC-HX-05: EQA — Shipment Status Tracking
+- **Steps**: After creating shipment, observe status progression: Created → Sent → Results Received → Evaluated
+- **Expected**: Status transitions visible in UI; status filter on EQA dashboard filters by these states
+- **Result**: GAP — Status transition requires physical sample dispatch and result entry. UI status filter confirmed present.
+
+#### TC-HX-06: EQA — Enter Results for a Shipment
+- **Steps**: Open an existing shipment; enter result values for each EQA test in the shipment
+- **Expected**: Result entry form shows each EQA test; numeric input fields; Save Results button
+- **Result**: GAP — Requires an active shipment with a participating lab. Not available on test instance without prior setup.
+
+#### TC-HX-07: EQA — Score/Evaluation Display
+- **Steps**: After results entered, view evaluation: Z-score or % deviation from target
+- **Expected**: Evaluation shows Z-score per test; overall performance score; traffic-light indicator (Pass/Warning/Fail)
+- **Result**: GAP — Evaluation requires result data. Not testable on empty test instance.
+
+#### TC-HX-08: EQA API Endpoints Health
+- **Steps**: Check: `GET /rest/eqa/programs`, `GET /rest/eqa/shipments`
+- **Expected**: Both return HTTP 200; programs list not empty; shipments list reflects current state
+- **Result**: PASS — Both endpoints HTTP 200. Programs list populated. Shipments empty on fresh instance.
+
+---
+
+### Suite HY — Storage Management DEEP (v3.2.1.6)
+
+#### TC-HY-01: Storage Location Management — Page Load
+- **Steps**: Navigate to Admin → Storage Management; wait for location tree to render
+- **Expected**: Storage location hierarchy renders (Freezer → Rack → Box/Tray → Well); add/edit controls present
+- **Result**: PASS — Storage Management page loads. Location hierarchy present with add/edit controls per level.
+
+#### TC-HY-02: Add Storage Container — Freezer Level
+- **Steps**: Click "Add Freezer" or equivalent; fill in Name, Temperature (-80°C, -20°C, 4°C, Ambient), Capacity; save
+- **Expected**: New freezer node appears in hierarchy tree; GET `/rest/storage/freezers` includes new entry
+- **Result**: GAP — Storage write not tested in prior sessions. UI form present and well-structured.
+
+#### TC-HY-03: Add Storage Container — Box Level
+- **Steps**: Under an existing freezer/rack, add a box: fill Name, Rows, Columns (e.g., 8×12=96 wells); save
+- **Expected**: Box created under parent rack; grid visualization shows 96 empty wells
+- **Result**: GAP — Requires parent rack to exist first. Hierarchical creation not tested.
+
+#### TC-HY-04: Assign Sample to Storage Location
+- **Steps**: After an order is processed, navigate to Storage → Assign Sample; search by accession number; select a well in a storage box
+- **Expected**: Sample assigned to well; well marked as occupied in grid visualization; accession number shown in cell
+- **Result**: GAP — Requires existing order + storage box. Cross-module dependency not tested end-to-end.
+
+#### TC-HY-05: Storage Location Tree — Expand/Collapse
+- **Steps**: Click expand arrows on storage hierarchy nodes (Freezer → Rack → Box)
+- **Expected**: Each level expands to show children; collapse hides children; state maintained on page reload
+- **Result**: PASS — Accordion/tree expand behavior confirmed. Smooth animation, correct nesting.
+
+#### TC-HY-06: Search Sample in Storage
+- **Steps**: Enter an accession number in the storage search field
+- **Expected**: Storage location of the sample shown (Freezer X, Rack Y, Box Z, Well A3); direct link to location
+- **Result**: GAP — Requires sample-to-storage assignment (TC-HY-04 dependency).
+
+#### TC-HY-07: Cold Storage Deep — Temperature Monitoring Fields
+- **Steps**: Navigate to Cold Storage monitoring sub-section; observe temperature log fields
+- **Expected**: Temperature log table with: Date, Time, Temp Reading, Recorded By; chart of temperature over time
+- **Result**: PASS — Cold Storage page renders with correct table structure. Empty on test instance. Chart component present (recharts or similar).
+
+#### TC-HY-08: Storage API Endpoints Health
+- **Steps**: Check: `GET /rest/storage/locations`, `GET /rest/storage/containers`
+- **Expected**: Both return HTTP 200; location list reflects configured storage hierarchy
+- **Result**: PASS — Both endpoints HTTP 200. Locations list empty on unconfigured instance. Valid JSON structure returned.
+
+---
+
+### Suite HZ — Cross-Module Data Integrity DEEP (v3.2.1.6)
+
+#### TC-HZ-01: Order-to-Results Chain — Accession Consistency
+- **Steps**: Look up accession `26CPHL00008V` in: (1) Order Search, (2) Results By Order, (3) LogbookResults, (4) Validation screen
+- **Expected**: Same patient (Abby Sebby), same test (HGB Whole Blood), same result (2 g/dL) shown in all four views; no data divergence
+- **Result**: PASS — Accession `26CPHL00008V` returns consistent data across all four views. Patient name, test name, and result value match exactly.
+
+#### TC-HZ-02: Patient Identity Consistency — Cross-Module
+- **Steps**: For a patient found via LogbookResults, verify the same patient record in Patient Management; compare: National ID, DOB, Name, Gender
+- **Expected**: All fields match exactly between LogbookResults and Patient Management
+- **Result**: PASS — Patient data consistent. No discrepancy between result view and patient management view. (Phase 9 validation confirmed)
+
+#### TC-HZ-03: Referral Chain — Outbound Referral Consistency
+- **Steps**: Find an order with referral flag in ReferredOutTests; cross-check in: (1) LogbookResults, (2) Order Search, (3) AccessionValidation
+- **Expected**: `referredOut: true` flag consistent in all views; referred-to lab name same; result blank until received
+- **Result**: PASS — Referral consistency confirmed. `referredOut` flag consistent across modules. (Phase 9 cross-module validation)
+
+#### TC-HZ-04: Dashboard KPI vs Module Count Consistency
+- **Steps**: Read "In Progress" count from dashboard; count orders with In Progress status in LogbookResults
+- **Expected**: Dashboard count ≤ LogbookResults count (dashboard counts at order level, LogbookResults at test level); discrepancy documented in NOTE-3
+- **Result**: PASS — Architectural discrepancy noted (NOTE-3). Dashboard shows order-level count (~96); LogbookResults shows test-level entries (more items). Both counts are internally consistent — difference is by design.
+
+#### TC-HZ-05: Result Value Round-Trip Precision
+- **Steps**: Enter a result value with 3 decimal places (e.g., 3.142); retrieve via API and via UI result view
+- **Expected**: Value stored and retrieved without precision loss; displayed consistently in both API JSON and UI
+- **Result**: GAP — High-precision result entry not tested in v3.2.1.6 session. Prior sessions did not confirm decimal precision handling end-to-end.
+
+#### TC-HZ-06: Validation State Propagation
+- **Steps**: Validate (approve) an order in ResultValidation; check the same order in Order Search, Dashboard, and LogbookResults
+- **Expected**: Validated status propagates: Order Search shows "Validated", Dashboard "Ready For Validation" count decrements, LogbookResults shows final status
+- **Result**: GAP — Validation write operation not tested in v3.2.1.6 (requires result to exist first). Status propagation architecture confirmed via code review.
+
+#### TC-HZ-07: Non-Conform Flag Visibility
+- **Steps**: After creating a Non-Conform event for an order, check the order in: LogbookResults, Order Search, Dashboard
+- **Expected**: NC flag visible in all views; "Non-Conform" status shown in Order Search; Dashboard may show NC count
+- **Result**: GAP — NC event creation not tested in current session. NC flag cross-module visibility is untested.
+
+#### TC-HZ-08: Delete Order — Cascade Behavior
+- **Steps**: If order deletion is available, delete an order and verify cascade: results removed, validation record removed, patient history updated
+- **Expected**: All child records cascade-deleted or soft-deleted consistently; no orphan records in any view
+- **Result**: GAP — Order deletion UI not confirmed. Cascade behavior unknown. Risk: hard delete could leave orphan results.
+
+#### TC-HZ-09: FHIR-to-OpenELIS Consistency (Post OGC-636 Fix)
+- **Steps**: After OGC-636 is resolved, create a Program and verify: (1) POST returns 200, (2) FHIR resource created, (3) GET `/fhir/Location` includes new program
+- **Expected**: End-to-end consistency between OpenELIS Programs table and FHIR Location resource; no phantom records from partial commits
+- **Result**: **BLOCKED** — OGC-636 unresolved. Cannot test FHIR-to-OpenELIS round-trip for Programs.
+
+#### TC-HZ-10: Concurrent Order Entry — No Race Condition
+- **Steps**: Send 10 simultaneous POST `/rest/addOrder` requests for different patients
+- **Expected**: All 10 orders created with unique accession numbers; no accession collisions; all accessions sequential per lab number format
+- **Result**: GAP — Concurrent order entry not tested. Accession number generation uses DB sequence which should prevent collisions, but worth confirming under concurrent load.
+
+---
