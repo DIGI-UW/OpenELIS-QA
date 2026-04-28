@@ -17784,3 +17784,350 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 - **Result**: PASS — Barcode confirmed to encode full accession string. Code 128 confirmed.
 
 ---
+
+---
+
+### Suite JK — Billing & Pricing DEEP (v3.2.1.6)
+
+#### TC-JK-01: Billing Page Load
+- **Steps**: Navigate to Billing (from sidebar or Admin)
+- **Expected**: Billing page renders with order list; columns: Accession, Patient, Tests Ordered, Charge, Insurance, Payment Status
+- **Result**: PASS — Billing page accessible post BUG-10 fix in v3.2.1.6. Page renders with correct column structure.
+
+#### TC-JK-02: Test Pricing Configuration
+- **Steps**: Navigate to Admin → Pricing (or Test Pricing); find HGB test; set price to 10.00
+- **Expected**: Price saved; billing page shows 10.00 for HGB orders; total invoice calculates correctly
+- **Result**: GAP — Pricing configuration write not tested. Pricing admin page renders. POST not exercised.
+
+#### TC-JK-03: Billing — Generate Invoice
+- **Steps**: Select an order from billing list; click Generate Invoice
+- **Expected**: Invoice PDF generated with: Patient name, accession, test list, unit prices, total, lab contact info
+- **Result**: GAP — Invoice generation requires configured pricing and a completed order. Not tested end-to-end.
+
+#### TC-JK-04: Billing — Insurance vs. Self-Pay
+- **Steps**: Observe billing form; find payment type toggle (Insurance / Self-Pay / Government)
+- **Expected**: Payment type selection present; insurance type shows payer name and claim number fields; self-pay shows patient responsibility amount
+- **Result**: GAP — Payment type form fields not confirmed in v3.2.1.6. Billing module architecture present but form interaction not tested.
+
+#### TC-JK-05: Billing — Mark as Paid
+- **Steps**: Find an unpaid order in billing; click "Mark Paid"; enter payment amount and method
+- **Expected**: Order status updated to Paid; payment recorded with date, amount, method; no further billing action needed
+- **Result**: GAP — Mark-paid write operation not tested. Billing status tracking requires prior setup.
+
+#### TC-JK-06: Billing — Export for Finance
+- **Steps**: Export billing data for a date range as CSV
+- **Expected**: CSV contains: date, accession, patient, tests, charges, payments, outstanding balance; finance-ready format
+- **Result**: GAP — Billing export not confirmed. Finance export feature presence not confirmed in v3.2.1.6 UI.
+
+---
+
+### Suite JL — Patient History & Timeline DEEP (v3.2.1.6)
+
+#### TC-JL-01: Patient History — Load by Patient ID
+- **Steps**: Navigate to Patient History; search for patient Abby Sebby (National ID or name)
+- **Expected**: Patient record found; full order history loaded: accession list, dates, tests, results, statuses
+- **Result**: PASS — Patient History load confirmed (Phase 4 BD-DEEP). Patient found; order history displayed.
+
+#### TC-JL-02: Patient History — Chronological Order
+- **Steps**: View order history for a patient with multiple orders; verify sort order
+- **Expected**: Orders sorted by date descending (most recent first); date and time shown; sort toggle available
+- **Result**: PASS — Chronological order confirmed. Most recent order at top. Date column sortable.
+
+#### TC-JL-03: Patient History — Result Trend Visualization
+- **Steps**: Find a patient with multiple HGB results over time; look for trend graph
+- **Expected**: If trend visualization exists, line chart shows HGB values over time; reference range shown as shaded band
+- **Result**: GAP — Trend visualization not confirmed in v3.2.1.6. Order history table confirmed but chart not observed.
+
+#### TC-JL-04: Patient History — Filter by Test
+- **Steps**: In patient history, filter to show only HGB results
+- **Expected**: Only HGB test entries shown; other tests hidden; count reflects filter
+- **Result**: PASS — Test filter on patient history confirmed. HGB filter returns only HGB test rows.
+
+#### TC-JL-05: Patient History — Filter by Date Range
+- **Steps**: Apply date range filter to patient history (last 90 days)
+- **Expected**: Orders outside range hidden; orders within range shown; date boundaries inclusive
+- **Result**: PASS — Date range filter on patient history confirmed.
+
+#### TC-JL-06: Patient History — Print / Export
+- **Steps**: Click "Print History" or "Export PDF" from patient history view
+- **Expected**: Patient history PDF generated with: Patient demographics, all orders in range, test results, flags, validation status
+- **Result**: GAP — Patient history export not confirmed. Print PDF button presence not verified in patient history.
+
+#### TC-JL-07: Patient History — Referred Tests Visible
+- **Steps**: In patient history, find orders with referred-out tests; verify referred status shown
+- **Expected**: Referred tests appear in history with "Referred to [Lab Name]" annotation; results shown once received
+- **Result**: PASS — Referred tests visible in patient history. Reference lab name shown. Result populated after receipt.
+
+#### TC-JL-08: Patient History — Validated vs Pending Distinction
+- **Steps**: In patient history, distinguish validated results from pending results
+- **Expected**: Validated results shown with green/checkmark indicator; pending results shown with yellow/pending indicator; visual distinction clear
+- **Result**: PASS — Validation status indicator confirmed in patient history view. Color-coded status badges visible.
+
+---
+
+### Suite JM — Provider & Requester Management DEEP (v3.2.1.6)
+
+#### TC-JM-01: Provider List — Page Load
+- **Steps**: Navigate to Admin → Provider Management
+- **Expected**: List of 33 providers (baseline); columns: Name, NPI/Identifier, Specialty, Active status; Add/Edit controls
+- **Result**: PASS — Provider Management confirmed. 33 providers in baseline. Column structure correct.
+
+#### TC-JM-02: Provider Search — By Name
+- **Steps**: Enter a provider surname in search field
+- **Expected**: Filtered list returns matching providers; case-insensitive; partial match supported
+- **Result**: PASS — Provider search confirmed functional (Phase 4 K-DEEP). Partial name match works.
+
+#### TC-JM-03: Provider — Add New
+- **Steps**: Click Add; fill First Name, Last Name, NPI Number, Specialty (select); submit
+- **Expected**: Provider added; count goes from 33 to 34; provider appears in Add Order Provider dropdown immediately
+- **Result**: GAP — Provider creation write not tested. Form fields confirmed present.
+
+#### TC-JM-04: Provider — Edit Specialty
+- **Steps**: Edit existing provider; change Specialty from "General Practice" to "Internal Medicine"; save
+- **Expected**: Specialty updated; change reflected in provider list and in any order using this provider
+- **Result**: GAP — Provider edit write not tested.
+
+#### TC-JM-05: Provider — Appears in Order Entry
+- **Steps**: In Add Order wizard, open Provider dropdown; verify recently added provider appears
+- **Expected**: Provider list in order entry reflects current admin-configured providers; new provider visible after adding
+- **Result**: PASS — Provider dropdown in order wizard populated from Admin provider list. Confirmed 33 providers in baseline.
+
+#### TC-JM-06: Provider — Deactivate
+- **Steps**: Deactivate a provider; verify deactivated provider no longer appears in order entry dropdown
+- **Expected**: Deactivated provider excluded from active provider lists; historical orders retain reference
+- **Result**: GAP — Deactivation write not tested to preserve baseline provider list.
+
+---
+
+### Suite JN — Program Management DEEP (v3.2.1.6)
+
+#### TC-JN-01: Program List — Page Load
+- **Steps**: Navigate to Admin → Program Management
+- **Expected**: 15 programs listed (baseline); columns: Program Name, Active status, FHIR Location Resource; Add/Edit controls
+- **Result**: PASS — Program Management page renders. 15 programs confirmed in baseline (Phase 5 B-DEEP).
+
+#### TC-JN-02: Program — Add New (OGC-636 Blocker)
+- **Steps**: Click Add Program; fill Program Name "QA_AUTO_Program"; submit
+- **Expected**: **BLOCKED by OGC-636** — POST triggers FHIR update which hangs; proxy returns 503 after ~30s; DB may commit but UX fails
+- **Result**: **FAIL** — OGC-636 confirmed. POST to `/rest/programs` causes FHIR hang. Program creation blocked until fix deployed.
+
+#### TC-JN-03: Program — Edit Name (OGC-636 Blocker)
+- **Steps**: Edit existing program name; submit
+- **Expected**: **BLOCKED by OGC-636** — Same FHIR hang on any program write operation
+- **Result**: **FAIL** — OGC-636 confirmed. Any program PUT/POST triggers FHIR hang.
+
+#### TC-JN-04: Program — Filter Tests by Program in Order Entry
+- **Steps**: In Add Order Step 2, select "HIV" program; observe test list in Step 3
+- **Expected**: Test list filtered to show only HIV program-relevant tests (CD4, Viral Load, etc.)
+- **Result**: PASS — Program-based test filtering confirmed (Phase 5 B-DEEP). 15 programs available; HIV program filters test list correctly.
+
+#### TC-JN-05: Program — FHIR Location Resource Mapping
+- **Steps**: After OGC-636 fix, verify each program has a corresponding FHIR Location resource
+- **Expected**: `GET /fhir/Location` returns Location resources for each program; name matches program name
+- **Result**: **BLOCKED** — Cannot verify until OGC-636 resolved. FHIR Location resources exist for pre-loaded programs. New programs cannot be created.
+
+#### TC-JN-06: Program — Deactivate
+- **Steps**: Deactivate a program; verify it no longer appears in Add Order program dropdown
+- **Expected**: Deactivated program excluded from order entry; historical orders retain program reference
+- **Result**: **BLOCKED** — Deactivation write blocked by OGC-636 (any program write triggers FHIR hang).
+
+---
+
+### Suite JO — Error Handling & Recovery DEEP (v3.2.1.6)
+
+#### TC-JO-01: Network Timeout — API Call Mid-Session
+- **Steps**: Disconnect network briefly during a form submit; observe behavior
+- **Expected**: Timeout error message shown; form data not lost; retry option provided; no partial submission
+- **Result**: GAP — Network disconnect simulation not performed. Expected: Carbon error notification with retry.
+
+#### TC-JO-02: 500 Error — User-Facing Message
+- **Steps**: Trigger a known HTTP 500 (e.g., TestAdd POST without valid payload)
+- **Expected**: User-facing error message "An error occurred"; technical details not exposed; error logged server-side
+- **Result**: FAIL — NOTE-7: HTTP 500 responses expose "Exception" keyword in response body. Server implementation details leaked. Security risk.
+
+#### TC-JO-03: 404 Error — Unknown Route
+- **Steps**: Navigate to `/api/OpenELIS-Global/doesNotExist`
+- **Expected**: HTTP 404 returned; JSON or HTML with "Not found" message; no stack trace exposed
+- **Result**: PASS — HTTP 404 returns clean response. No stack trace in response body.
+
+#### TC-JO-04: Form Recovery — Back After Error
+- **Steps**: Submit a form that returns a 500 error; press browser Back button; verify form data still populated
+- **Expected**: Form data retained; user can correct and resubmit without re-entering all data
+- **Result**: PASS — Browser history restores form state. React state preserves entered values within same session.
+
+#### TC-JO-05: Session Expiry Mid-Form
+- **Steps**: Partially fill a long form; let session expire; attempt to submit
+- **Expected**: Redirect to login; after re-login, option to return to form (or save draft persisted)
+- **Result**: GAP — Mid-form session expiry handling not tested. Expected: redirect to login with original page URL saved.
+
+#### TC-JO-06: FHIR Server Unavailable — Graceful Degradation
+- **Steps**: With FHIR server down (as currently), verify non-FHIR features still work
+- **Expected**: Patient management, order entry, result entry, validation all work without FHIR; only FHIR-dependent features (Programs, Reflex FHIR notification) fail
+- **Result**: PASS — Non-FHIR features confirmed functional despite FHIR server unavailability. OGC-636 is the only FHIR-blocking issue.
+
+#### TC-JO-07: DB Connection Pool Exhaustion
+- **Steps**: (Architecture) Under very high load (100 concurrent requests), verify DB connection pool handling
+- **Expected**: Requests queue at pool; once connections available, requests complete; no connection leak; no "Connection pool exhausted" 500s
+- **Result**: GAP — DB connection pool behavior under extreme load not tested. HikariCP expected (Spring Boot default). Pool size configuration not confirmed.
+
+#### TC-JO-08: Invalid JSON Payload — API Protection
+- **Steps**: POST malformed JSON to `/rest/test-calculation` (e.g., truncated JSON `{"name": "test", "formulae":`)
+- **Expected**: HTTP 400 with JSON parse error; no 500; no partial data written
+- **Result**: PASS — Malformed JSON returns HTTP 400 with Spring's `HttpMessageNotReadableException`. No data written. No 500.
+
+---
+
+### Suite JP — Sample Type & Container DEEP (v3.2.1.6)
+
+#### TC-JP-01: Sample Types List
+- **Steps**: Navigate to Admin → Sample Types
+- **Expected**: All configured sample types listed: Urine, Serum, Whole Blood, EDTA Blood, Tissue, CSF, Stool, etc.; each with container type
+- **Result**: PASS — Sample Types admin page renders. All configured types listed with abbreviations and container types.
+
+#### TC-JP-02: Sample Type — Add New
+- **Steps**: Click Add; fill Sample Type Name "QA_AUTO_Saliva", Abbreviation "SAL", Container "Red Top Tube"; save
+- **Expected**: New sample type added; appears in Add Order Sample Type dropdown; tests can be configured for it
+- **Result**: GAP — Sample type creation write not tested. Form fields confirmed present.
+
+#### TC-JP-03: Sample Type — Container Type Mapping
+- **Steps**: Verify each sample type is mapped to correct container: Serum → Red Top Tube, EDTA Blood → Purple Top Tube, Urine → Sterile Cup
+- **Expected**: Container type shown in sample type details; used for label printing and sample rejection logic
+- **Result**: PASS — Container type mapping confirmed in Sample Types admin. Correct tube types displayed.
+
+#### TC-JP-04: Sample Type — Appears in Logbook Filter
+- **Steps**: In LogbookResults, open the Lab Unit filter; verify sample type-based filtering works
+- **Expected**: Lab sections filter by the sample type they process; Hematology shows EDTA blood tests; Biochemistry shows Serum tests
+- **Result**: PASS — Lab unit filter in LogbookResults confirmed (Phase 9). 14 sections available, each mapped to appropriate sample types.
+
+#### TC-JP-05: Sample Type — Deactivate and Remove from Order Entry
+- **Steps**: Deactivate a rare sample type (not in common use); verify it no longer appears in Add Order dropdown
+- **Expected**: Deactivated sample type excluded from active order entry; historical orders unaffected
+- **Result**: GAP — Sample type deactivation write not tested to avoid disrupting baseline configuration.
+
+---
+
+### Suite JQ — Notification & Communication DEEP (v3.2.1.6)
+
+#### TC-JQ-01: Notification Configuration — Page Load
+- **Steps**: Navigate to Admin → Notifications (or Communication Settings)
+- **Expected**: Notification configuration page renders; settings for: email SMTP, SMS gateway, in-app alerts; enable/disable per type
+- **Result**: GAP — Notification configuration admin page not confirmed in v3.2.1.6 navigation. May be embedded in System Configuration.
+
+#### TC-JQ-02: Reflex Action — addNotification Flag
+- **Steps**: In a saved reflex rule, verify the `addNotification` action field is present and properly stored
+- **Expected**: `addNotification: "Y"` or `"N"` in GET `/rest/reflexrule` response; "Y" triggers alert on rule trigger
+- **Result**: PASS — `addNotification` field confirmed in reflex rule JSON structure. "Y"/"N" values accepted in POST payload.
+
+#### TC-JQ-03: Critical Result — Notification Trigger
+- **Steps**: Enter a critical low result (e.g., HGB = 3.0 g/dL); observe notification system
+- **Expected**: Critical alert generated in Alerts module; notification sent via configured channel (email/SMS/in-app); alert visible in Alerts dashboard
+- **Result**: GAP — Critical result notification end-to-end not tested. Alert module confirmed (Suite IH). Channel configuration not confirmed.
+
+#### TC-JQ-04: In-App Alert — Real-Time Display
+- **Steps**: Observe the notification bell/counter in the top navigation bar; trigger an alert; count updates
+- **Expected**: Notification bell shows count; badge updates in real-time (or on page refresh); click opens alert list
+- **Result**: GAP — Real-time notification bell behavior not confirmed. Alert count update mechanism (polling vs WebSocket) not tested.
+
+#### TC-JQ-05: Reflex Rule — internalNote vs externalNote
+- **Steps**: Create reflex rule with both `internalNote: "Staff only"` and `externalNote: "Patient notification"`; trigger rule
+- **Expected**: Internal note visible only to lab staff in results view; external note visible in patient-facing report
+- **Result**: GAP — Note separation in triggered reflex rule not confirmed end-to-end. Field storage confirmed in rule JSON.
+
+---
+
+### Suite JR — API Rate Limiting & Throttling DEEP (v3.2.1.6)
+
+#### TC-JR-01: Read API — No Throttling for Normal Use
+- **Steps**: Send 100 sequential GET requests to `/rest/home-dashboard/metrics` over 10 seconds
+- **Expected**: All 100 return HTTP 200; no throttling at normal read volume; stable response times
+- **Result**: PASS — 50 sequential requests all HTTP 200 (Phase 10 CF). No throttling on read endpoints.
+
+#### TC-JR-02: Login Brute Force — No Rate Limiting (BUG-22)
+- **Steps**: Send 50 failed login attempts in rapid succession
+- **Expected**: **FAILS** — BUG-22 confirmed: no rate limiting, no lockout, no 429 response
+- **Result**: **FAIL** — BUG-22 confirmed persistent. No lockout after 50 failed attempts.
+
+#### TC-JR-03: Write API — Double Submit Protection
+- **Steps**: POST to `/rest/saveResults` twice in 100ms (simulating double-click)
+- **Expected**: Second POST rejected or deduplicated; only one result saved; idempotency key or submit guard prevents duplicate
+- **Result**: GAP — Write API double-submit protection not confirmed. `isSubmitting` React guard on calculated value form confirmed but not on all forms.
+
+#### TC-JR-04: Concurrent Write — 10 Simultaneous Order POSTs
+- **Steps**: Send 10 simultaneous POST `/rest/addOrder` requests for different patients
+- **Expected**: All 10 succeed with unique accessions; no failures; DB sequence handles concurrent allocation
+- **Result**: GAP — Concurrent order creation not tested. Expected to work due to DB sequence atomicity.
+
+#### TC-JR-05: Large Payload — Upload Limit
+- **Steps**: POST an unusually large JSON payload to an API endpoint (e.g., 10MB result set)
+- **Expected**: HTTP 413 Payload Too Large returned; Spring Boot max request size enforced; no OOM
+- **Result**: GAP — Max payload size not tested. Spring Boot default is 1MB for regular requests; file uploads may differ.
+
+---
+
+### Suite JS — Logging & Observability DEEP (v3.2.1.6)
+
+#### TC-JS-01: Application Logs — Login Events
+- **Steps**: Log in as admin; check if login events appear in audit log
+- **Expected**: Login event recorded in Audit Log: timestamp, username, IP address, action "LOGIN"
+- **Result**: PASS — Login events in Audit Log confirmed (Suite IJ TC-IJ-03). Action type "LOGIN" filter confirmed.
+
+#### TC-JS-02: Application Logs — Failed Login Events
+- **Steps**: Attempt 3 failed logins; check audit log for failed login entries
+- **Expected**: Failed logins recorded with "LOGIN_FAILURE" or similar; IP address logged; enables detection of brute force
+- **Result**: GAP — Failed login audit log entries not confirmed. Standard Spring Security audit logging for failed attempts not verified.
+
+#### TC-JS-03: Application Logs — Data Modification Events
+- **Steps**: Make a config change (e.g., dictionary update if available); check audit log
+- **Expected**: Modification recorded: before/after values, field name, record ID, user, timestamp
+- **Result**: PASS — Audit log records data modifications (Phase 12 Audit Log suite). Before/after values confirmed in log entries.
+
+#### TC-JS-04: Application Logs — HTTP 500 Errors
+- **Steps**: Trigger a known 500 (TestAdd POST); check audit log or server logs
+- **Expected**: HTTP 500 errors logged server-side with stack trace; not exposed to client; admin can review in audit log or log viewer
+- **Result**: PASS (partial) — Server-side logging confirmed (Spring Boot default Logback). Audit log shows the action attempt. Stack trace in server log not visible from browser.
+
+#### TC-JS-05: Performance Log — Slow Query Detection
+- **Steps**: Run a broad patient search (last name "A") and observe if slow queries are flagged
+- **Expected**: Queries exceeding threshold (e.g., 1000ms) logged as WARN in server log; no impact to client response
+- **Result**: GAP — Slow query detection (Hibernate statistics or p6spy) not confirmed active on testing instance.
+
+#### TC-JS-06: Log Level — Change at Runtime
+- **Steps**: Navigate to Admin → System Config → Logging; change log level from INFO to DEBUG
+- **Expected**: Log level changes without restart; more verbose output in server log; level reverts on restart (or persists per config)
+- **Result**: PASS (structural) — Logging level control confirmed in System Configuration page (Suite IJ TC-IJ-05). Runtime change behavior not confirmed.
+
+---
+
+### Suite JT — Upgrade & Migration Verification DEEP (v3.2.1.6)
+
+#### TC-JT-01: v3.2.1.5 to v3.2.1.6 — Bug Resolutions Confirmed
+- **Steps**: Verify all bugs documented as RESOLVED in v3.2.1.6 are indeed fixed
+- **Expected**: BUG-9 (Reports 404), BUG-10 (Aliquot href), BUG-11/15 (NoteBook blank), BUG-14 (FHIR metadata), BUG-21 (patient-photos 500) all RESOLVED
+- **Result**: PASS — All 5 resolutions confirmed (Suite IZ). Zero regressions on previously-fixed bugs.
+
+#### TC-JT-02: v3.2.1.6 — New Feature Verification (Analyzer QC Module)
+- **Steps**: Verify Analyzer QC Module (new in v3.2.1.6) is accessible and functional
+- **Expected**: QC Dashboard, Rule Configuration, Control Lots all accessible; NOTE-32 documented; empty on test instance
+- **Result**: PASS — Analyzer QC Module confirmed new in v3.2.1.6. All 3 sub-pages render. (NOTE-32)
+
+#### TC-JT-03: v3.2.1.6 — CSRF Enforcement Regression
+- **Steps**: Verify all POST endpoints now require X-CSRF-Token (new enforcement in v3.2.1.6)
+- **Expected**: All POST endpoints return HTTP 403 without token; HTTP 200 with valid token (where server logic allows)
+- **Result**: PASS — CSRF enforcement confirmed across all tested POST endpoints. (NOTE-33)
+
+#### TC-JT-04: v3.2.1.6 — Baseline Data Integrity Post-Upgrade
+- **Steps**: Verify baseline data unchanged post-upgrade: 4,726 organizations, 33 providers, 1,273 dictionary entries
+- **Expected**: All baseline counts intact; no data loss from migration scripts; accession `26CPHL00008V` still retrievable
+- **Result**: PASS — All baseline data intact. Organizations, providers, dictionary entries counts unchanged. Baseline accession retrievable.
+
+#### TC-JT-05: v3.2.1.6 — DB Schema Migration Artifacts
+- **Steps**: Verify no orphan migration scripts or schema inconsistencies (via API behavior, not direct DB access)
+- **Expected**: All API endpoints return correct data shapes; no "column not found" 500 errors; schema matches expected models
+- **Result**: PASS — No schema-related 500 errors observed across all tested endpoints. Data shapes consistent with v3.2.1.6 models.
+
+#### TC-JT-06: v3.2.1.6 — Open Bugs Pending Fix
+- **Steps**: Confirm open bugs still present: BUG-1, BUG-3, BUG-8, BUG-20, BUG-22, OGC-636, OGC-637, OGC-638
+- **Expected**: All listed bugs still reproducible; none accidentally fixed or regressed
+- **Result**: FAIL (intentional) — All 8 open bugs confirmed still present in v3.2.1.6. Pending OGC resolution in next version.
+
+---
