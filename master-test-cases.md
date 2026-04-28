@@ -16950,3 +16950,479 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 - **Result**: GAP — Responsive layout not tested in prior QA sessions. OpenELIS Carbon UI targets desktop clinical use but responsive behavior not confirmed.
 
 ---
+
+---
+
+### Suite IQ — Sample Reception DEEP (v3.2.1.6)
+
+#### TC-IQ-01: Sample Reception Page Load
+- **Steps**: Navigate to Sample Entry or Sample Reception page
+- **Expected**: Page renders with accession input field, sample type selector, collection date, and collector fields; submit button present
+- **Result**: PASS — Sample Entry page loads. Form fields confirmed. SampleEntry payload is 59KB (Phase 11 CK).
+
+#### TC-IQ-02: Sample Reception — Scan Accession Barcode
+- **Steps**: Focus the accession input field; simulate barcode scan by pasting a complete accession string `26CPHL00008V`; observe auto-submit behavior
+- **Expected**: Barcode scan triggers form population; accession validated against existing orders; patient and test details auto-load
+- **Result**: PASS — Accession paste triggers lookup. Patient Abby Sebby and HGB test load from accession `26CPHL00008V`.
+
+#### TC-IQ-03: Sample Reception — Multiple Samples Same Patient
+- **Steps**: Accept two different sample types (Urine, Serum) for the same patient within one session
+- **Expected**: Both samples received under same patient; separate accessions generated or existing accession updated; no patient duplication
+- **Result**: GAP — Multi-sample same-patient reception not tested in sequence. Individual sample receipt confirmed.
+
+#### TC-IQ-04: Sample Reception — Rejection at Receipt
+- **Steps**: Receive a sample; check "Reject Sample" option; select rejection reason (Hemolyzed, Quantity Insufficient, Wrong Tube); submit
+- **Expected**: Sample flagged as rejected at receipt; NC event auto-generated (or prompted); order moved to Rejected state; rejected sample not added to workplan
+- **Result**: GAP — Sample rejection at receipt point not tested. NC event auto-generation link not confirmed.
+
+#### TC-IQ-05: Sample Reception — Priority Override at Receipt
+- **Steps**: Receive sample for a Routine order; at receipt, change Priority to STAT
+- **Expected**: Priority updated from Routine to STAT; order appears in STAT workplan; audit log records priority change
+- **Result**: GAP — Priority override at receipt not confirmed. Editing fields at receipt step requires browser test.
+
+#### TC-IQ-06: Sample Reception — Time Stamp Auto-Set
+- **Steps**: Receive a sample; observe Reception Date/Time field
+- **Expected**: Reception timestamp auto-populated with current date/time; editable if backdating needed; timezone matches server
+- **Result**: PASS — Reception timestamp auto-populated. Current date/time shown. Editable field for backdating. Server timezone UTC confirmed.
+
+#### TC-IQ-07: Sample Reception — Duplicate Receipt Guard
+- **Steps**: Attempt to receive a sample for an accession that has already been received
+- **Expected**: Warning "Sample already received for this accession"; option to update or cancel; no duplicate receipt record created
+- **Result**: GAP — Duplicate receipt guard not tested. Depends on order state machine implementation.
+
+#### TC-IQ-08: Sample Reception — API Health
+- **Steps**: Check `GET /rest/sampleEntry`, `POST /rest/sampleEntry` response shapes
+- **Expected**: GET returns form config data; POST requires accession, sampleType, collectionDate, collectionTime, receivedDate
+- **Result**: PASS — SampleEntry GET returns 59KB payload with full form configuration. POST shape confirmed from network inspection.
+
+---
+
+### Suite IR — i18n / Internationalization DEEP (v3.2.1.6)
+
+#### TC-IR-01: French Language Switch
+- **Steps**: Navigate to Profile/Settings; switch language to French; reload page
+- **Expected**: UI renders in French; navigation labels translated; form field labels in French; date format changes to DD/MM/YYYY
+- **Result**: PASS — Language switch confirmed (Phase 5 T-DEEP). EN→FR toggle works. French translation 51.4% complete (NOTE-16: BUG-16).
+
+#### TC-IR-02: French Translation Coverage — Navigation Labels
+- **Steps**: In French mode, inspect all sidebar navigation labels
+- **Expected**: All navigation items translated; no raw i18n key strings (e.g., no "admin.menu.results" displayed raw)
+- **Result**: PASS (partial) — Major navigation labels translated. BUG-16: 48.6% of strings still in English due to incomplete translation file. Raw keys not shown — English fallback used.
+
+#### TC-IR-03: French Translation — Form Field Labels
+- **Steps**: In French mode, navigate to Add Order wizard; observe field labels
+- **Expected**: "National ID" → "Identifiant National"; "Date of Birth" → "Date de Naissance"; "First Name" → "Prénom"
+- **Result**: PASS (partial) — Core demographic labels translated. Some UI elements fall back to English. Date format switches to DD/MM/YYYY.
+
+#### TC-IR-04: French Translation — Error Messages
+- **Steps**: In French mode, trigger a validation error on order form
+- **Expected**: Error message in French; no English error text mixed in; tone and phrasing appropriate
+- **Result**: GAP — French error messages not confirmed. English fallback likely for error strings not yet translated.
+
+#### TC-IR-05: Language Restore After Logout
+- **Steps**: Set language to French; logout; log back in
+- **Expected**: Language preference persisted (cookie or localStorage); UI returns in French after re-login
+- **Result**: PASS — Language preference persisted post-logout/re-login (Phase 5 T-DEEP). Session language setting survives logout.
+
+#### TC-IR-06: i18n — Date Format Consistency
+- **Steps**: In French mode, observe date display in: order form, workplan table, audit log, reports
+- **Expected**: All date displays use DD/MM/YYYY format consistently; no mixed EN/FR date formats on same page
+- **Result**: PASS (partial) — Date format switches in most views. Carbon DatePicker format confirmed. Some legacy table cells may not respect locale.
+
+#### TC-IR-07: i18n — Number Format (Decimal Separator)
+- **Steps**: In French mode, observe numeric result values in results table
+- **Expected**: French number format uses comma as decimal separator (e.g., "5,2" not "5.2"); or EN format if not localized
+- **Result**: GAP — Number format localization not tested. OpenELIS may not implement number format per locale — worth confirming to ensure clinical result readability.
+
+#### TC-IR-08: Translation Stats API
+- **Steps**: Check `/rest/i18n/stats` or equivalent
+- **Expected**: Returns completion percentage per language: French 51.4%, English 100%; counts of translated vs. total strings
+- **Result**: PASS — Translation stats confirmed (Phase 4 K-DEEP). French 51.4% (1,120/2,180 entries). API returns these figures.
+
+#### TC-IR-09: Language Switch — Persisted in localStorage
+- **Steps**: Switch language; check `localStorage.getItem('selectedLanguage')` or equivalent key
+- **Expected**: Language preference stored in localStorage; survives tab close and reopen
+- **Result**: PASS — Language preference stored. Confirmed survives tab session. Locale key present in localStorage.
+
+#### TC-IR-10: i18n — RTL Language Support (Future)
+- **Steps**: Check if Arabic or other RTL language option is present in language selector
+- **Expected**: RTL languages not currently in dropdown (not in scope for v3.2.1.6); no RTL CSS applied; layout remains LTR
+- **Result**: PASS — No RTL languages in selector. LTR layout only. RTL support not in scope.
+
+---
+
+### Suite IS — Security Headers & CSP DEEP (v3.2.1.6)
+
+#### TC-IS-01: X-Frame-Options Header
+- **Steps**: Inspect response headers for any page request
+- **Expected**: `X-Frame-Options: DENY` or `SAMEORIGIN`; prevents clickjacking in iframe
+- **Result**: PASS — X-Frame-Options header confirmed (Phase 10 CC). Clickjacking protection active.
+
+#### TC-IS-02: Content Security Policy — Directive Coverage
+- **Steps**: Inspect `Content-Security-Policy` response header
+- **Expected**: Directives include: `default-src`, `script-src`, `style-src`, `img-src`, `connect-src`; restricts to known origins
+- **Result**: PASS (with NOTE) — CSP header present. NOTE-4: `unsafe-inline` and `unsafe-eval` in `script-src` weaken protection. React build requires these but should be tightened with nonces.
+
+#### TC-IS-03: HSTS Header
+- **Steps**: Inspect `Strict-Transport-Security` header
+- **Expected**: HSTS present with `max-age` ≥ 31536000 (1 year); `includeSubDomains` recommended
+- **Result**: PASS — HSTS header confirmed (Phase 10 CC). Enforces HTTPS-only connections.
+
+#### TC-IS-04: X-XSS-Protection Header
+- **Steps**: Inspect `X-XSS-Protection` response header
+- **Expected**: `X-XSS-Protection: 1; mode=block` or absent (modern browsers use CSP instead)
+- **Result**: PASS — X-XSS-Protection confirmed (Phase 10 CC). Header present as defense-in-depth for older browsers.
+
+#### TC-IS-05: Referrer-Policy Header
+- **Steps**: Inspect `Referrer-Policy` response header
+- **Expected**: `Referrer-Policy: strict-origin-when-cross-origin` or similar restrictive policy
+- **Result**: **FAIL** — NOTE-5: Referrer-Policy NOT SET. Information leakage risk — referrer headers may expose internal URL paths to third-party resources. Already documented.
+
+#### TC-IS-06: SQL Injection — All Search Inputs
+- **Steps**: Test SQL injection payloads in: patient name search, accession search, dictionary search, organization search
+- **Expected**: All inputs sanitized; no SQL error in response; no data exfiltration; parameterized queries confirmed
+- **Result**: PASS — SQL injection testing confirmed safe (Phase 10 CE). All payloads return empty results or validation error; no SQL error messages.
+
+#### TC-IS-07: XSS — Reflected Input Sanitization
+- **Steps**: Submit XSS payloads in patient name, search fields: `<script>alert(1)</script>`, `"><img src=x onerror=alert(1)>`, `<svg onload=alert(1)>`
+- **Expected**: Payloads not executed; reflected in JSON response safely escaped; no DOM injection
+- **Result**: PASS — XSS confirmed safe (Phase 10 CD). React's JSX escaping prevents reflection. JSON responses escape special characters.
+
+#### TC-IS-08: CSRF — All POST Endpoints Require Token
+- **Steps**: POST to `/rest/test-calculation`, `/rest/reflexrule`, `/rest/addOrder` without X-CSRF-Token
+- **Expected**: All return HTTP 403; no state change on server; CSRF protection applied uniformly
+- **Result**: PASS — CSRF enforcement confirmed across all POST endpoints tested (NOTE-33). HTTP 403 without token.
+
+#### TC-IS-09: Session Cookie — Secure and HttpOnly Flags
+- **Steps**: Inspect `Set-Cookie` header for JSESSIONID after login
+- **Expected**: `HttpOnly` flag set (prevents JS access); `Secure` flag set (HTTPS-only); `SameSite=Strict` or `Lax`
+- **Result**: PASS — JSESSIONID HttpOnly confirmed. Secure flag depends on HTTPS deployment (testing instance uses HTTPS). SameSite not confirmed.
+
+#### TC-IS-10: Authorization — API Without Session
+- **Steps**: Clear all cookies; directly fetch `/rest/home-dashboard/metrics` without session
+- **Expected**: HTTP 401 or 302 redirect to login; no data returned unauthenticated
+- **Result**: PASS — Unauthenticated API access returns HTTP 302 redirect to login (Phase 10 CH). No data leakage.
+
+---
+
+### Suite IT — Data Export & Import DEEP (v3.2.1.6)
+
+#### TC-IT-01: CSV Export — Patient List
+- **Steps**: Navigate to Patient Management; click Export CSV (if available)
+- **Expected**: CSV file download triggered; columns match visible table (Patient ID, Name, DOB, National ID, Gender); one row per patient
+- **Result**: GAP — CSV export from Patient Management not confirmed as available in v3.2.1.6. Export button not observed.
+
+#### TC-IT-02: CSV Export — Test Results
+- **Steps**: Navigate to Reports or Results view; find CSV export option; apply date range filter; export
+- **Expected**: CSV contains all results in range: Accession, Patient, Test, Result, Unit, Reference Range, Flag, Validation Status
+- **Result**: GAP — CSV result export not confirmed. PDF report export confirmed (Phase 4 L-DEEP). CSV format may not be available.
+
+#### TC-IT-03: WHONET Export — File Format Validation
+- **Steps**: Generate WHONET export; inspect file structure
+- **Expected**: WHONET .whonet or .csv format; columns: Lab, Patient, Organism, Antibiotic codes; compatible with WHONET 5.6 software
+- **Result**: GAP — File format not inspected. WHONET report page loads (POST BUG-9 fix). Export download not triggered.
+
+#### TC-IT-04: Bulk Patient Import
+- **Steps**: Navigate to Admin → Patient Import (if available); upload a CSV with patient demographics
+- **Expected**: Import processes rows; success count shown; errors flagged by row number; duplicate National IDs rejected
+- **Result**: GAP — Bulk patient import feature not confirmed in v3.2.1.6 UI. May not be implemented.
+
+#### TC-IT-05: Bulk Test Result Import
+- **Steps**: Navigate to Admin or Results; find bulk result import (CSV or HL7 batch)
+- **Expected**: Bulk import accepted; each row mapped to order+test; validation errors by row; successful imports appear in validation queue
+- **Result**: GAP — Bulk result import not confirmed. Analyzer integration (CSV flat file) is the primary bulk import mechanism.
+
+#### TC-IT-06: Analyzer Result Import — CSV
+- **Steps**: Simulate analyzer CSV upload via Analyzer Management; upload a sample CSV file with results
+- **Expected**: Results parsed; matched to accessions; appear in Logbook Results for validation; unmatched accessions flagged
+- **Result**: GAP — Analyzer CSV upload requires an analyzer configured with CSV protocol. Test Analyzer Alpha on instance uses a different protocol. Full CSV import test requires specific setup.
+
+---
+
+### Suite IU — Analyzer Management DEEP (v3.2.1.6)
+
+#### TC-IU-01: Analyzer List Page Load
+- **Steps**: Navigate to Admin → Analyzer Management
+- **Expected**: List of configured analyzers; columns: Name, Type, Protocol, Status (Active/Inactive); add/edit/delete controls
+- **Result**: PASS — Analyzer Management page loads. "Test Analyzer Alpha" present in baseline. Column structure confirmed.
+
+#### TC-IU-02: Analyzer Search / Filter
+- **Steps**: Type "Alpha" in the analyzer search field
+- **Expected**: List filters to show only "Test Analyzer Alpha"; case-insensitive search
+- **Result**: PASS — Search functional (Phase 4 M-DEEP). Filters to matching analyzer.
+
+#### TC-IU-03: Add Analyzer Form — Field Set
+- **Steps**: Click "Add New Analyzer"; observe form
+- **Expected**: Fields: Analyzer Name, Manufacturer, Model, Protocol (HL7, ASTM, CSV), Connection Type (MLLP, Serial, File), Port, IP Address, Test Mappings
+- **Result**: PASS — Add Analyzer form fields confirmed (Phase 4 M-DEEP). All major fields present. Protocol dropdown populated.
+
+#### TC-IU-04: Analyzer Test Mapping
+- **Steps**: In Analyzer detail, navigate to Test Mappings tab; observe existing mappings
+- **Expected**: Mapping table shows: Analyzer Test Code → OpenELIS Test; sample type; result type (numeric, text)
+- **Result**: PASS — Test mapping table present (Phase 8 BM-DEEP). Mapping structure confirmed. Analyzer Error Dashboard shows mapping issues.
+
+#### TC-IU-05: Analyzer — Add Test Mapping
+- **Steps**: In Test Mappings, click Add; enter Analyzer Code "HGB_RESULT" → map to OpenELIS test "HGB Whole Blood"
+- **Expected**: Mapping saved; new row appears in mapping table; subsequent analyzer results using this code are mapped correctly
+- **Result**: GAP — Mapping write not tested. Form fields confirmed. POST endpoint for mappings not exercised.
+
+#### TC-IU-06: Analyzer QC — Error Dashboard
+- **Steps**: Navigate to Analyzer QC → Error Dashboard (v3.2.1.6 new module)
+- **Expected**: Error table shows: Analyzer Name, Error Type, Timestamp, Resolution Status; filter by analyzer and date
+- **Result**: PASS — Analyzer Error Dashboard confirmed (Phase 8 BM-DEEP). Error indicators and filter controls present. Empty on test instance.
+
+#### TC-IU-07: Analyzer Status — Active/Inactive Toggle
+- **Steps**: Find an analyzer; toggle its status to Inactive; confirm
+- **Expected**: Analyzer status changes; inactive analyzers no longer receive data routing; status visible in list
+- **Result**: GAP — Status toggle write not tested. Toggle control UI confirmed present.
+
+#### TC-IU-08: Analyzer — Delete with Confirmation
+- **Steps**: Attempt to delete "Test Analyzer Alpha"; observe confirmation dialog
+- **Expected**: Confirmation dialog: "Are you sure? This will remove all analyzer mappings."; Cancel keeps analyzer; Confirm deletes
+- **Result**: GAP — Deletion confirmation dialog not tested. Risk: deleting baseline analyzer removes test data. Not exercised to preserve instance integrity.
+
+---
+
+### Suite IV — Pathology Case Creation DEEP (v3.2.1.6)
+
+#### TC-IV-01: Order Entry — Pathology Sample Type
+- **Steps**: In Add Order wizard Step 2, select Sample Type "Tissue" or "Biopsy"
+- **Expected**: Pathology-specific tests appear in Step 3 test list (Histopathology, Frozen Section, etc.); sample type routes to Pathology workflow
+- **Result**: GAP — Tissue/Biopsy sample type availability depends on instance configuration. Pathology test routing not confirmed in v3.2.1.6.
+
+#### TC-IV-02: Pathology Case — Gross Description Entry
+- **Steps**: Open a pathology case; click Edit; fill Gross Description text area (specimen size, color, consistency)
+- **Expected**: Rich text or plain text accepted; field saves; character limit not exceeded; prints in pathology report
+- **Result**: GAP — Requires an active pathology case. No cases on test instance.
+
+#### TC-IV-03: Pathology Case — Microscopic Description Entry
+- **Steps**: After technical acceptance, enter Microscopic Description
+- **Expected**: Textarea accepts detailed histological description; saves correctly; associated with case; appears in final report
+- **Result**: GAP — Requires case in post-technical-acceptance state.
+
+#### TC-IV-04: Pathology Case — Diagnosis Field
+- **Steps**: Enter diagnosis (e.g., "Invasive Ductal Carcinoma, Grade 2"); set ICD-10 code if field exists
+- **Expected**: Diagnosis text saved; ICD-10 lookup or free-text entry; diagnosis appears in DiagnosticReport FHIR resource
+- **Result**: GAP — Requires case in Awaiting Pathologist state.
+
+#### TC-IV-05: Pathology — Multiple Cassette Support
+- **Steps**: For a surgical specimen, add multiple cassettes (A1, A2, A3); describe each separately
+- **Expected**: Multiple cassette records created; each cassette has independent description; summarized in final report
+- **Result**: GAP — Multi-cassette handling not confirmed in v3.2.1.6. Feature may be present for complex specimens.
+
+#### TC-IV-06: Pathology — Report Generation
+- **Steps**: After diagnosis entry, click "Generate Report"; observe output
+- **Expected**: Pathology report PDF generated with: Patient info, Accession, Specimen Description, Gross/Microscopic findings, Diagnosis, Pathologist signature
+- **Result**: GAP — Report generation requires completed case.
+
+---
+
+### Suite IW — EQA Scoring DEEP (v3.2.1.6)
+
+#### TC-IW-01: EQA — Target Value Configuration
+- **Steps**: In EQA program setup, configure target values for each analyte (e.g., HGB target = 12.5 g/dL, SD = 0.8)
+- **Expected**: Target value and SD saved; Z-score calculation uses these values: Z = (result - target) / SD
+- **Result**: GAP — Target value configuration requires admin setup. Not tested on current instance.
+
+#### TC-IW-02: EQA — Z-Score Calculation Accuracy
+- **Steps**: Enter a participant result of 11.7 g/dL for HGB (target 12.5, SD 0.8); observe Z-score
+- **Expected**: Z = (11.7 - 12.5) / 0.8 = -1.0; score shows -1.0; classification "Acceptable" (|Z| ≤ 2)
+- **Result**: GAP — Z-score calculation not tested. Requires result entry on an active EQA shipment.
+
+#### TC-IW-03: EQA — Performance Classification
+- **Steps**: Observe scoring thresholds: Excellent (|Z| < 1), Acceptable (|Z| ≤ 2), Unacceptable (|Z| > 2)
+- **Expected**: Traffic-light display: green/yellow/red per threshold; participant sees their performance category
+- **Result**: GAP — Visual scoring display not confirmed. EQA evaluation logic documented in source but not UI-tested.
+
+#### TC-IW-04: EQA — Feedback Report to Participant
+- **Steps**: After evaluation, generate feedback report for a participating lab
+- **Expected**: Report shows: lab results, Z-scores, peer group statistics (mean, SD, CV%), performance category; downloadable PDF
+- **Result**: GAP — Feedback report generation not tested. PDF structure not confirmed.
+
+#### TC-IW-05: EQA — Shipment Summary
+- **Steps**: View a completed shipment summary
+- **Expected**: Summary shows: total participants, response rate %, overall pass rate %, outlier count; per-analyte statistics
+- **Result**: GAP — Completed shipment data not available on test instance.
+
+#### TC-IW-06: EQA — API Endpoint for Scores
+- **Steps**: `GET /rest/eqa/scores?shipmentId=1` (or similar)
+- **Expected**: HTTP 200; JSON array with participant scores, Z-scores, and performance classifications
+- **Result**: GAP — EQA scores endpoint not tested. Endpoint path not confirmed.
+
+---
+
+### Suite IX — Aliquot / Specimen Management DEEP (v3.2.1.6)
+
+#### TC-IX-01: Aliquot Page Load
+- **Steps**: Navigate to Aliquot (specimen sub-sampling) page
+- **Expected**: Page renders with accession input; aliquot count field; target container type select; aliquot tube labels preview
+- **Result**: PASS — Aliquot page confirmed accessible post BUG-10 fix. `href=""` resolved in v3.2.1.6.
+
+#### TC-IX-02: Aliquot — Enter Accession and Load
+- **Steps**: Enter accession `26CPHL00008V`; submit
+- **Expected**: Original specimen details load; patient name, sample type, volume fields; aliquot count and volume per aliquot fields
+- **Result**: PASS — Accession lookup confirmed functional. Patient details load from accession.
+
+#### TC-IX-03: Aliquot — Set Aliquot Count
+- **Steps**: Set aliquot count to 3; observe volume calculation
+- **Expected**: Volume per aliquot = total volume / 3; aliquot label IDs generated (e.g., 26CPHL00008V-A1, -A2, -A3)
+- **Result**: GAP — Volume calculation behavior and aliquot ID generation not confirmed. UI controls for count present.
+
+#### TC-IX-04: Aliquot — Save and Print Labels
+- **Steps**: Configure aliquots; click Save and Print
+- **Expected**: Aliquot records created; label print dialog opens for each aliquot tube; labels contain barcode + ID
+- **Result**: GAP — Aliquot save write not tested. Print dialog behavior not confirmed.
+
+#### TC-IX-05: Aliquot — Link to Parent Specimen
+- **Steps**: After aliquoting, check parent specimen record
+- **Expected**: Parent shows aliquot count and references to child aliquot IDs; child aliquots reference parent
+- **Result**: GAP — Parent-child linking not confirmed. Requires save operation to complete.
+
+#### TC-IX-06: Aliquot — Volume Insufficient Guard
+- **Steps**: Attempt to create 10 aliquots from a 5mL specimen (0.5mL each) when minimum volume is 1mL per aliquot
+- **Expected**: Validation error "Insufficient volume for requested aliquot count"; no aliquots created
+- **Result**: GAP — Volume validation depends on configured minimum per test. Not tested.
+
+---
+
+### Suite IY — Help & Documentation DEEP (v3.2.1.6)
+
+#### TC-IY-01: Help Menu — Page Load
+- **Steps**: Click the Help menu item in the navigation
+- **Expected**: Help page or external documentation link opens; content relevant to OpenELIS usage
+- **Result**: PASS — Help menu accessible post BUG-11/15 fix. NoteBook blank resolved in v3.2.1.6.
+
+#### TC-IY-02: Help — About Page
+- **Steps**: Navigate to About (via Help menu or footer)
+- **Expected**: Shows: Application name "OpenELIS Global", version "3.2.1.6", license (Mozilla Public License), repository link
+- **Result**: PASS — About page confirmed. Version 3.2.1.6 shown. License and repository links present.
+
+#### TC-IY-03: Help — Context-Sensitive Help (If Available)
+- **Steps**: On Add Order form, look for a "?" icon or Help link adjacent to complex fields
+- **Expected**: Context help tooltip or modal explains the field purpose (e.g., "National ID: Enter the national health ID issued by the ministry")
+- **Result**: GAP — Context-sensitive help not observed in v3.2.1.6. Global Help link present. Field-level help not confirmed.
+
+#### TC-IY-04: NoteBook — Page Load
+- **Steps**: Navigate to NoteBook from Help or sidebar
+- **Expected**: NoteBook renders with notes list and add note form; existing notes visible
+- **Result**: PASS — NoteBook confirmed accessible and non-blank post BUG-15 fix in v3.2.1.6.
+
+#### TC-IY-05: NoteBook — Add Note
+- **Steps**: In NoteBook, click Add Note; enter title and body; save
+- **Expected**: Note saved; appears in NoteBook list with timestamp; note persists on page reload
+- **Result**: GAP — NoteBook write not tested. Page renders correctly (PASS). Write behavior not exercised.
+
+#### TC-IY-06: Help — External Documentation Link
+- **Steps**: Find link to external OpenELIS documentation (docs.openelis-global.org or similar)
+- **Expected**: Link opens external documentation site in new tab; not a 404
+- **Result**: GAP — External documentation link presence and validity not confirmed.
+
+---
+
+### Suite IZ — Regression Suite — Known Bug Verification (v3.2.1.6)
+
+#### TC-IZ-01: BUG-1 — TestAdd POST 500 (CSRF-Corrected Retest)
+- **Steps**: POST `/rest/TestAdd` with valid payload AND correct `X-CSRF-Token` header
+- **Expected**: With CSRF token, HTTP 500 should persist if bug is real (not a CSRF issue); or HTTP 200 if CSRF was the only problem
+- **Result**: **FAIL** (CONFIRMED) — BUG-1 confirmed in v3.2.1.6 even with CSRF token. POST returns HTTP 500. Server-side validation or DB constraint causes failure. Separate from CSRF.
+
+#### TC-IZ-02: BUG-3 — UserCreate POST 500 (CSRF-Corrected Retest)
+- **Steps**: POST `/rest/UnifiedSystemUser` with valid new-user payload AND correct CSRF token
+- **Expected**: HTTP 200 if CSRF was the issue; HTTP 500 if server-side bug persists (BUG-3 + BUG-20 compound)
+- **Result**: **FAIL** (CONFIRMED) — BUG-3 + BUG-20: POST returns HTTP 500 even with valid CSRF token. Login Name always invalid in UI (BUG-20). Combined failures block user creation.
+
+#### TC-IZ-03: BUG-8 — TestModify Data Corruption (Retest)
+- **Steps**: POST `/rest/TestModifyEntry` with all original values for an existing test; then GET the test and compare fields
+- **Expected**: HTTP 200 but verify: (a) reference ranges preserved, (b) panel association preserved, (c) all fields round-trip correctly
+- **Result**: **FAIL** (WORSE) — BUG-8 confirmed: HTTP 200 but silent data corruption. Reference ranges cleared, panel association dropped. Severity upgraded from Medium to High.
+
+#### TC-IZ-04: BUG-9 — Reports 404 (Confirmed RESOLVED)
+- **Steps**: Navigate to all 11 report type pages; verify no 404 responses
+- **Expected**: All report pages return HTTP 200; Patient Status report at `/Report?type=patient` functional
+- **Result**: PASS — BUG-9 RESOLVED in v3.2.1.6. All report pages accessible. Patient Status report generates correctly.
+
+#### TC-IZ-05: BUG-10 — Aliquot href="" (Confirmed RESOLVED)
+- **Steps**: Navigate to Aliquot page from sidebar
+- **Expected**: Sidebar link navigates to Aliquot page (not href="" no-op)
+- **Result**: PASS — BUG-10 RESOLVED in v3.2.1.6. Aliquot link navigates correctly.
+
+#### TC-IZ-06: BUG-14 — FHIR Metadata Timeout (Confirmed RESOLVED)
+- **Steps**: `GET /fhir/metadata`
+- **Expected**: HTTP 200 with CapabilityStatement; no timeout
+- **Result**: PASS — BUG-14 RESOLVED. FHIR metadata endpoint returns valid R4 CapabilityStatement (HAPI FHIR 7.0.2).
+
+#### TC-IZ-07: BUG-21 — Patient Photos 500 (Confirmed RESOLVED)
+- **Steps**: `GET /rest/patient-photos/<id>/true`
+- **Expected**: HTTP 200 or 404 (no photo); NOT 500
+- **Result**: PASS — BUG-21 RESOLVED in v3.2.1.6. Patient photo endpoints no longer return blanket 500.
+
+#### TC-IZ-08: BUG-22 — No Rate Limiting on Login (Persistence Check)
+- **Steps**: Send 30 failed login attempts; check for any 429 or account lockout after attempt 20
+- **Expected**: Still no rate limiting (bug persists — OGC filed); confirm no change in behavior
+- **Result**: **FAIL** (PERSISTENT) — BUG-22 confirmed still present. No rate limiting observed. All 30 attempts processed without throttling or lockout.
+
+#### TC-IZ-09: OGC-636 — Programs FHIR Hang (Persistence Check)
+- **Steps**: POST `/rest/programs` with a valid program payload and CSRF token
+- **Expected**: Bug persists — FHIR server unavailable causes hang; proxy returns 503 after ~30s; DB commits but UI gets error
+- **Result**: **FAIL** (PERSISTENT) — OGC-636 confirmed. FHIR server unreachable. Proxy timeout ~30s. DB side effects unclear without manual inspection.
+
+#### TC-IZ-10: OGC-637 — Reflex IndexOutOfBounds (Persistence Check)
+- **Steps**: POST `/rest/reflexrule` for any test ID except those with TestResult records (Albumin only); observe response
+- **Expected**: Bug persists — HTTP 500 for tests without TestResult records; only Albumin (testId=6) works
+- **Result**: **FAIL** (PERSISTENT) — OGC-637 confirmed. All test IDs except Albumin return HTTP 500. `results.get(0)` throws IndexOutOfBoundsException for tests with no TestResult records.
+
+#### TC-IZ-11: OGC-638 — Reflex 503 UX Gap (Persistence Check)
+- **Steps**: POST valid reflex rule for Albumin; observe 503 response but check DB for persistence
+- **Expected**: Bug persists — 503 from proxy but rule IS saved; user sees error but data is committed; UX gap
+- **Result**: **FAIL** (PERSISTENT) — OGC-638 confirmed. Albumin reflex rule saves correctly (GET confirms persistence) but POST returns 503 due to FHIR hang. UX misleads user into thinking save failed.
+
+#### TC-IZ-12: NOTE-3 — Dashboard API Typos (Persistence Check)
+- **Steps**: Inspect `/rest/home-dashboard/metrics` JSON field names
+- **Expected**: Typos persist: `patiallyCompletedToday`, `orderEnterdByUserToday`, `unPritendResults`, `incomigOrders`, `averageTurnAroudTime`
+- **Result**: PASS (confirmed typos persist) — NOTE-3: All 5 API field name typos confirmed present in v3.2.1.6. Cosmetic/low priority. Frontend maps these correctly. No functional impact.
+
+---
+
+### Suite JA — End-to-End Workflow Trace DEEP (v3.2.1.6)
+
+#### TC-JA-01: Full Order Lifecycle — Entry to Validation
+- **Steps**: (1) Place new order via Add Order wizard for new patient; (2) receive sample; (3) enter result in LogbookResults; (4) validate in ResultValidation; (5) verify in patient history
+- **Expected**: Each step transitions order state correctly; accession visible in all views at each stage; final validated result in patient history
+- **Result**: GAP — Full E2E lifecycle requires write operations at each step. Individual steps confirmed; full chain not tested in sequence due to write operation bugs (BUG-1, BUG-20).
+
+#### TC-JA-02: Referral Lifecycle — Create to Result Receipt
+- **Steps**: (1) Place order; (2) refer test to reference lab; (3) enter referral result from external lab; (4) validate; (5) check patient history
+- **Expected**: Order status tracks through: In Progress → Referred → Result Received → Validated; reference lab recorded in patient history
+- **Result**: GAP — Steps 1-2 confirmed. Steps 3-5 not tested (write blocked for step 3).
+
+#### TC-JA-03: Non-Conform Lifecycle — Flag to Resolution
+- **Steps**: (1) Create order; (2) flag as NC at sample receipt; (3) auto-generate NC event; (4) resolve corrective action; (5) verify order returned to workflow
+- **Expected**: NC event persists; corrective action links to NC event; after resolution, order re-enters active workflow or is formally rejected
+- **Result**: GAP — NC at receipt not tested. NC event creation not confirmed in v3.2.1.6.
+
+#### TC-JA-04: Batch Order to Results Entry
+- **Steps**: (1) Place 5 orders via Batch Order Entry; (2) load workplan for the test type; (3) enter results for all 5; (4) batch validate
+- **Expected**: All 5 orders complete lifecycle; workplan shows all 5; results entered efficiently; batch validation clears the queue
+- **Result**: GAP — Batch → workplan → results → validation chain not tested end-to-end. Individual components confirmed.
+
+#### TC-JA-05: Analyzer Result Import to Validation
+- **Steps**: (1) Simulate analyzer sending result (CSV or HL7); (2) verify result appears in LogbookResults; (3) validate result; (4) check FHIR Observation created
+- **Expected**: Analyzer result mapped to correct accession and test; validation completes; FHIR Observation resource updated
+- **Result**: GAP — Analyzer result injection not testable without live analyzer or simulator on test instance.
+
+#### TC-JA-06: EQA Shipment to Score E2E
+- **Steps**: (1) Create EQA shipment; (2) assign labs; (3) enter results for participating lab; (4) evaluate; (5) generate feedback report
+- **Expected**: Full EQA cycle from shipment to score; Z-score calculated correctly; feedback PDF generated
+- **Result**: GAP — E2E EQA requires multiple-session coordination and result data entry.
+
+#### TC-JA-07: Patient Merge Workflow
+- **Steps**: (1) Find two patient records for the same person (duplicate); (2) initiate merge; (3) select primary record; (4) confirm merge; (5) verify all orders consolidated under primary
+- **Expected**: Merge successful; duplicate patient deactivated; all orders/results moved to primary; search no longer returns duplicate
+- **Result**: PASS (structural) — Patient Merge page structure and wizard confirmed (Phase 4 H-DEEP). Write not tested (no known duplicates on test instance).
+
+#### TC-JA-08: Program-Based Test Routing
+- **Steps**: (1) Create order with HIV program; (2) verify CD4 tests appear in program-filtered test list; (3) submit order; (4) verify order routed to HIV program workplan section
+- **Expected**: Program selection filters available tests; ordered tests appear in program-specific workplan view; program metadata attached to result
+- **Result**: GAP — Program-based routing requires OGC-636 fix (Programs write blocked). Program filtering in test list confirmed (Phase 5 B-DEEP).
+
+---
