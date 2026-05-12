@@ -60,6 +60,7 @@ This makes cleanup easy and avoids collisions with real data.
 Before navigating, read the detailed test scenarios from:
 - `references/test-cases.md` — original 50 suites with steps, URLs, and success criteria
 - `../master-test-cases.md` (writable copy in outputs) — extended with Phase 4 DEEP suites
+- `madagascar-uat-test-suite.md` (repo root) — Madagascar e-SIL UAT test suite v2.0; covers all LO-xx/DU-xx client acceptance requirements for mgtest.openelis-global.org; run alongside standard suites when testing the Madagascar deployment
 
 Also scan the outputs folder for prior QA reports. Cross-reference the known bug list
 (Section 8 below) so you don't re-file duplicate tickets.
