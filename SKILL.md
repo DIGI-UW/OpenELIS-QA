@@ -4,9 +4,9 @@ description: >
   Automated QA testing skill for OpenELIS Global covering 167+ test suites and ~488 test cases. Tests: Orders, Validation, Results, Patient Management, Dashboard, Admin (28+ pages), Reports (all 11), Referrals, Workplan, FHIR, i18n, Accessibility, Pathology, Analyzers, EQA, Alerts, Storage, Batch Entry, Barcode, and more. Includes DEEP interaction suites: search/filter, form interaction, error handling, performance, cross-module data integrity, security (CSRF/XSS/SQLi), WCAG accessibility, E2E order tracing, report PDF generation, and Madagascar e-SIL UAT coverage (LO-xx/DU-xx). Drives a real browser session via Claude in Chrome and produces a pass/fail report with Jira tickets.
 ---
 
-# OpenELIS Global QA Skill — v6 (2026-05-12 lab-readiness rewrite)
+# OpenELIS Global QA Skill — v6.1 (2026-05-12 lab-readiness rewrite + blocking-bug etiquette)
 
-**v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. See full Change Log at end of file.
+**v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 11.5 Blocking-Bug Etiquette, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. See full Change Log at end of file.
 
 You are a QA automation agent for OpenELIS Global. Your job is to navigate a live OpenELIS
 instance in Chrome, execute requested test suites, log every action with screenshots, generate
@@ -61,7 +61,7 @@ This makes cleanup easy and avoids collisions with real data.
 
 Before adding new findings, re-verify the current state of the **top 5 critical open bugs** plus any bug touched in the previous session:
 
-1. Re-run the exact evidence steps documented in the bug table or Validation History.
+1. Re-run the exact evidence steps documented in the bug table or Validation History — **but only the non-destructive ones**. For bugs whose evidence step would hang the browser or exhaust the connection pool (BUG-31 Carbon Accept checkbox `.click()`, BUG-38 NCE POST hang), use the indirect evidence path: API probe with `read_network_requests`, DOM inspection of the relevant control's React props, or live-network-capture comparison against the bug's documented signature. **Do NOT re-trigger the destructive UI action just to "confirm."**
 2. Record one of: **STILL PRESENT** (with new screenshot or capture), **RESOLVED** (with confirming endpoint behavior), or **CHANGED** (with new evidence describing the change).
 3. Update the bug table in this SKILL with the calibration result.
 
@@ -1217,6 +1217,28 @@ Chains are end-to-end workflows that cross 3+ modules. They are not optional —
 
 A test phase that does not include any Chains may not report a maturity above M2 for any module touched.
 
+### Section 11.5 — Blocking-Bug Etiquette (applies to Chains, Personas, Calibration, and Y-RECON)
+
+A "mandatory" step in v6 means **must be attempted and reported on** — not "must complete successfully before continuing." Real bugs in mandatory chains are a feature of the design, not a defect: that's how Order Lifecycle (Chain A) surfaces BUG-37 and Rejection (Chain B) surfaces BUG-29 every session until they're fixed. The dashboard going red on those chains is the system working as intended.
+
+The exception is when a mandated step would actively damage the session — hang the tab, exhaust Chrome's 6-connection-per-origin pool, or otherwise prevent subsequent suites from running. In that case, the step gets **BLOCKED**, not FAIL, and the session continues.
+
+**Rule:** When a mandated step hits a known browser-hanging or pool-exhausting bug:
+
+1. **Do NOT perform the destructive action.** No `.click()` on the Carbon Accept checkbox (BUG-31). No retried POST to `/rest/reportnonconformingevent` (BUG-38). No second tab opening on a known-hanging endpoint while a first tab is still pending.
+2. **Mark the step BLOCKED.** Record the bug number and a one-line note: "Step blocked by BUG-XX; not re-attempted to preserve session."
+3. **Mark the parent chain or persona PARTIAL** if any other step in the chain/persona did complete; otherwise BLOCKED.
+4. **Continue to the next chain, persona, or suite.** Do not abort the session.
+
+**Known blockers as of v6:**
+- **BUG-31** — Carbon Accept checkbox `.click()` hangs the browser tab for ~60s. Affects Chain A (result entry leg), Chain C (reflex trigger), Chain D (calculated value), Persona PB (Bench Tech), Persona PC (Validating Biologist, validation save path).
+- **BUG-38** — `POST /rest/reportnonconformingevent` hangs indefinitely and pool-exhausts after the first call. Affects Chain B (NCE-creation leg), Persona PE (QA Officer, file-NCE step).
+- **BUG-32** (resolved in v3.2.1.6 but historical) — Verify per Step 0.5 before assuming OK.
+
+**API substitution is allowed for blocking-bug legs of a chain.** If the destructive UI step has a non-destructive API equivalent (e.g., POST result via REST instead of clicking Accept), use the API and tag the chain leg as `API-substituted`. The chain still PASSes if the round-trip read-back matches; the substitution is logged so the UI gap stays visible.
+
+**What this rule is not.** It is not permission to mark a chain BLOCKED whenever it's inconvenient. A chain that FAILs because the feature is broken (BUG-29 rejection → NCE; BUG-37 patient-order linkage) is a genuine FAIL and must be reported as such. BLOCKED is reserved for "performing the next step would prevent further testing."
+
 ---
 
 ## Section 12 — Personas: Day-in-the-life Walk-throughs
@@ -1257,6 +1279,10 @@ The assertion failure mode catches counter-drift bugs that would otherwise be in
 ---
 
 ## Change log
+
+### v6.1 (2026-05-12) — Blocking-bug etiquette
+- Step 0.5: Calibration must use indirect evidence path for destructive bugs (BUG-31, BUG-38). Never re-trigger a known browser-hanging action.
+- Section 11.5: Blocking-Bug Etiquette rule — when a mandated step would hang the session, mark BLOCKED + PARTIAL and continue. Clarifies that "mandatory" means "must be attempted and reported on," not "must succeed." Lists current known blockers (BUG-31, BUG-38) and allows API substitution for destructive-UI legs of chains.
 
 ### v6 (2026-05-12) — Lab-readiness lens
 - Step 0.5: Calibration step before each new test phase.
