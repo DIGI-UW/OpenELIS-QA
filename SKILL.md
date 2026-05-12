@@ -1,10 +1,12 @@
 ---
 name: openelis-test-catalog-qa
 description: >
-  Automated QA testing skill for OpenELIS Global covering 167+ test suites and ~488 test cases across the full application. Tests: Orders (including full 4-step wizard E2E), Validation, Results, Patient Management, Dashboard, Admin (28+ pages), Admin Config Deep Tests (12 pages), Reports (all 11), Referrals, Workplan, FHIR, i18n, Accessibility, Pathology, Analyzers, EQA Distribution Deep Tests, EQA Admin Program Management, EQA Create Shipment Wizard, Alerts Dashboard Deep Tests, EQA Sidebar Navigation, Storage, Batch Entry, Barcode, E2E Rejection Workflow, Provider & Organization CRUD, Fine-Grained Form Verification (User Management, Edit Order, Batch Order Entry), Deep Endpoint Testing, and UI Order Creation E2E. Includes DEEP interaction suites testing search, filter, form interaction, error handling, performance, cross-module data integrity, security (CSRF/XSS/SQLi), WCAG accessibility, end-to-end order tracing, report PDF generation, EQA spec-vs-implementation gap analysis, field-level form verification against Confluence user manual, and full order creation wizard testing. Drives a real browser session via Claude in Chrome and produces a pass/fail report with Jira tickets for failures.
+  Automated QA testing skill for OpenELIS Global covering 167+ test suites and ~488 test cases. Tests: Orders, Validation, Results, Patient Management, Dashboard, Admin (28+ pages), Reports (all 11), Referrals, Workplan, FHIR, i18n, Accessibility, Pathology, Analyzers, EQA, Alerts, Storage, Batch Entry, Barcode, and more. Includes DEEP interaction suites: search/filter, form interaction, error handling, performance, cross-module data integrity, security (CSRF/XSS/SQLi), WCAG accessibility, E2E order tracing, report PDF generation, and Madagascar e-SIL UAT coverage (LO-xx/DU-xx). Drives a real browser session via Claude in Chrome and produces a pass/fail report with Jira tickets.
 ---
 
-# OpenELIS Global QA Skill — v5
+# OpenELIS Global QA Skill — v6 (2026-05-12 lab-readiness rewrite)
+
+**v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. See full Change Log at end of file.
 
 You are a QA automation agent for OpenELIS Global. Your job is to navigate a live OpenELIS
 instance in Chrome, execute requested test suites, log every action with screenshots, generate
@@ -52,6 +54,35 @@ This makes cleanup easy and avoids collisions with real data.
 - **Config key:** `eqaEnabled` — "If true, the EQA checkbox appears on Order Entry allowing a sample to be marked as an EQA sample"
 - **How to enable:** Close main sidebar (hamburger menu) to reveal admin sub-menu → expand "General Configurations" → click "Order Entry Configuration" → select `eqaEnabled` row radio → click Modify → set value to `true` → Save
 - **IMPORTANT:** Suite FK must run before Suites FL–FP. Without `eqaEnabled = true`, EQA features will not appear in Order Entry or sidebar navigation.
+
+---
+
+## Step 0.5 — Calibration (Mandatory before any new test phase)
+
+Before adding new findings, re-verify the current state of the **top 5 critical open bugs** plus any bug touched in the previous session:
+
+1. Re-run the exact evidence steps documented in the bug table or Validation History.
+2. Record one of: **STILL PRESENT** (with new screenshot or capture), **RESOLVED** (with confirming endpoint behavior), or **CHANGED** (with new evidence describing the change).
+3. Update the bug table in this SKILL with the calibration result.
+
+Skip calibration only if the previous session ran ≤ 24 hours ago against the same instance.
+
+Calibration prevents the recurring drift seen in Validation History — bugs marked Done that regress (BUG-46), bugs retracted and re-assigned (BUG-23, BUG-38), false positives carried for multiple rounds (the 2026-04-20 cluster of OGC-535/562/563/565/566/568).
+
+---
+
+## Step 0.6 — Data Census (Mandatory before any E2E or persona suite)
+
+Before running any chain or persona that depends on existing data, run a one-call census:
+
+- Patient search by `lastName=A` — record count.
+- LogbookResults for the busiest unit (Hematology on most installs) — record count.
+- Dashboard KPIs JSON (`GET /rest/home-dashboard/metrics`) — record `ordersInProgress`, `ordersReadyForValidation`, `unPritendResults`.
+- Recent accessions list (admin lab number page or a known query) — record range.
+
+**If patient count = 0 AND logbook count = 0 AND Dashboard shows zeros:** the test instance has been reset. Halt all E2E and persona work and either (a) re-seed with the `QA_AUTO_*` prefix dataset, or (b) note in the report header that the instance is empty and limit testing to render-only checks.
+
+This prevents the Phase 14 NOTE-14 pattern: silently running an E2E suite on an empty database and reporting PASS for nothing.
 
 ---
 
@@ -544,6 +575,25 @@ If a URL returns 404, try alternates before marking as GAP. Record the working U
 
 ---
 
+## Section 5.5 — Feature Maturity Rubric
+
+Every module gets an explicit Maturity rating per test phase. A "PASS" tag does not say how mature; the rating does. Aggregate reports must summarize counts by maturity, not by pass count.
+
+| Rating | Name | Criterion |
+|--------|------|-----------|
+| **M0** | Stub | Sidebar link or page renders, but body is empty or shows raw i18n keys. NoteBook on v3.2.1.4 was M0. Billing on most installs is M0. |
+| **M1** | Form-only | UI renders with form fields and dropdowns. Submit either returns 4xx/5xx, or returns 200 but no read-back is possible. Inventory Storage Locations is M1 (POST 500, BUG-40). EQA participants is M1 on most installs. |
+| **M2** | Saves | Writes return 2xx and the data appears in a subsequent read on the same endpoint. Patient create is M2. Order create returns 200 but linkage to patient is M1, so the order as a whole is M1.5 (BUG-37). |
+| **M3** | Round-trips | Writes persist and read back via a *different* endpoint or screen (UI write → API read, or UI write → admin read). Reference-range edits should be M3 to expose BUG-8. Most admin pages are M3. |
+| **M4** | Cross-links | Data written in module A correctly affects module B. A rejected sample reaching the Rejection Report. A validated result appearing on the Patient Status Report PDF. A reflex rule firing on result entry. Currently most cross-links are unverified. |
+| **M5** | Reportable | The feature produces compliant outputs that satisfy a regulator or auditor — PDF reports with correct branding, FHIR resources that round-trip cleanly, audit trails for sensitive actions, cold-chain excursions logged with corrective actions linked. |
+
+A module is rated at the lowest M-level any of its sub-features hits. Inventory module overall is M1 (storage locations broken). Reports module on v3.2.1.6 is M2 at most (renders + generates) until cross-link tests are added.
+
+**Acceptance criterion change:** A test phase report must list maturity per module, not just pass count. Example: "EQA Module — M1: all UIs render, none round-trip. Maturity unchanged from v3.2.1.4."
+
+---
+
 ## Section 6 — React/Carbon Component Workarounds
 
 ### 6.1 — Native Setter Pattern (React-controlled inputs)
@@ -603,6 +653,25 @@ The React SPA at `/login` and legacy JSP admin at `/OpenELIS-Global/LoginPage` m
 separate sessions. Features behind legacy JSP auth (TestAdd, TestModifyEntry, FHIR) may
 require a separate authentication flow. Cookie/session sharing between the two is unreliable.
 
+### 6.5 — No bug filed against a 404 without live capture (MANDATORY)
+
+OpenELIS Global uses a hybrid architecture:
+
+- **Legacy JSP/Struts pages** at `/api/OpenELIS-Global/<PageName>`
+- **React SPA REST calls** at `/rest/<endpoint>` — where the endpoint name often does NOT match the page name
+
+Examples from the 2026-04-20 false-positive cluster (6 Jira tickets closed):
+- Dictionary page → `/rest/DictionaryMenu` (not `/rest/dictionary`)
+- Patient search → `/rest/patient-search-results` (not `/rest/patient`)
+- Provider → JSP `/api/OpenELIS-Global/ProviderMenu` (no `/rest/provider`)
+- LogbookResults filter → `?testSectionId=N` (not `?labUnit=N`)
+- Reports → JSP `/api/OpenELIS-Global/ReportPrint` (not `/rest/report/*`)
+- Organization → JSP `/api/OpenELIS-Global/Organization` (no `/rest/organizationSearch`)
+
+**Rule.** Before filing a bug against a 404 on a REST endpoint, use `read_network_requests` to capture what the browser actually calls when a real user performs the action. If the captured path returns 200 but your guessed path returns 404, the bug is a false positive — file no ticket.
+
+**Apply this rule to:** every BUG-* candidate whose only evidence is `GET /rest/X → 404`. The verification step is non-optional.
+
 ---
 
 ## Section 7 — Error Handling
@@ -619,6 +688,47 @@ require a separate authentication flow. Cookie/session sharing between the two i
 | Carbon checkbox hang (60s) | Do NOT retry `.click()`. Use DOM workaround or mark BLOCKED (BUG-2 EXTENDED) |
 | FHIR endpoint timeout | Mark FAIL referencing BUG-14. Do not wait longer than 60s. |
 | Blank page after navigation | React SPA routing issue — try sidebar navigation instead of direct URL |
+
+---
+
+## Section 7.5 — Round-trip Write Verification (MANDATORY for all write tests)
+
+Every TC that involves a write (POST/PUT/DELETE) MUST be paired with a read-back step in the same TC. The TC fails if the read-back does not match the write.
+
+**Pattern:**
+
+1. **Write** — perform the action via the UI or API. Record the request payload.
+2. **Read-back via a different surface** — fetch the same resource through a different path than the write. Prefer the screen the user would next visit (Modify Order after Add Order; Patient Search after Patient Create; Admin list after Admin Create).
+3. **Diff** — every field in the write payload must appear in the read-back response with the same value. Missing or changed fields are **FAIL**.
+
+**Examples of read-backs that would have caught past bugs:**
+
+| Bug | Write | Required read-back |
+|-----|-------|--------------------|
+| BUG-8 TestModify | POST `/rest/TestModifyEntry` | `GET /rest/test-list?id=X`; compare normal ranges field-by-field |
+| BUG-37 patient-order linkage | Add Order wizard submit | Modify Order on the new accession; assert patient name appears |
+| BUG-29 rejection workflow | Reject Sample checkbox on Order Entry | (1) Rejection Report PDF for the date range, assert sample appears; (2) NCE list, assert NCE created; (3) Dashboard `ordersRejectedToday`, assert counter increased |
+| Site Branding | PUT `/rest/site-branding` color | Generate Patient Status Report PDF, assert color appears on header |
+| Reflex rule | POST `/rest/reflexrule` | Enter triggering result, assert downstream test appears in Workplan |
+
+**Diff rule for arrays and nested fields:** Every element matters. A reflex rule with 3 conditions that comes back with 2 is **FAIL**, not "minor discrepancy."
+
+---
+
+## Section 7.6 — Acceptance Criteria Standard
+
+Every TC must declare its Acceptance Criterion in one of the following forms. The form appears in the TC log line.
+
+- **RENDER** — page or component renders; specific DOM elements exist. Default for "page loads" checks. Lowest tier.
+- **FUNCTION** — a primary user action completes without error (button click leads to 200, navigation occurs, dialog closes).
+- **PERSIST** — written data appears in a subsequent same-endpoint read.
+- **ROUND-TRIP** — written data appears in a different endpoint or screen.
+- **CROSS-LINK** — data written in one module correctly affects another.
+- **REPORTABLE** — output passes regulatory criteria (PDF generated with correct branding, FHIR resource validated, audit entry created).
+
+A test phase that reports only RENDER acceptance criteria for a module is required to rate the module at **M1 maximum**, regardless of how many TCs passed.
+
+A test phase that reports a higher-tier criterion must include the evidence (read-back diff, cross-module verification, PDF content excerpt).
 
 ---
 
@@ -726,6 +836,27 @@ require a separate authentication flow. Cookie/session sharing between the two i
 
 If you encounter a new failure that matches one of these bugs in a **different** area,
 note it as "BUG-X extending to Suite Y" rather than filing a new ticket.
+
+---
+
+## Section 8.5 — Partial-Feature Audit (Required quarterly + on major version bumps)
+
+Once per quarter, and on every major version bump, run the Partial-Feature Audit. The audit is a deliberate hunt for features that pass the standard render-PASS criterion but are functionally incomplete. The output is a list of M0–M2 modules ranked by lab impact.
+
+**Procedure:**
+
+1. **Enumerate visible features.** From the sidebar, every top-level item is a candidate. List every screen the user can reach.
+2. **For each screen, check four signals:**
+   - **a.** Are there i18n keys leaking through? (Suggests an unmaintained branch — see BUG-43, BUG-44, BUG-47, NOTE-35.)
+   - **b.** Do any primary buttons return 4xx/5xx? (Inventory Reports Generate, NCE submit, Storage Locations POST.)
+   - **c.** Is there a filter that doesn't filter? (BUG-41 Inventory active filter; BUG-60 LogbookResults pre-v3.2.1.6.)
+   - **d.** Does a "successful" write read back missing fields? (BUG-8 TestModify.)
+3. **For each module, rate Maturity M0–M5** (Section 5.5). Document the evidence.
+4. **Lab Impact rank.** For each M0–M2 module, write one sentence: "A lab needing X cannot do X because Y." Sort the list by severity.
+
+The audit produces a delivery document, not a Jira fire-hose. File Jira tickets only for the top 10 issues, ranked by lab impact. The rest go in the audit report as a prioritization backlog.
+
+**Seed list of suspect features (audit baseline, 2026-05-12):** Inventory storage locations (M1, BUG-40), Inventory Reports (M1, BUG-45), Inventory active filter (M2-broken, BUG-41), Cold Storage compliance loop (M2 unverified), EQA distribution (M1 without config), Reflex rules (M2 unverified), Calculated values (M2 unverified), Pathology workflow progression (M2 unverified), Rejection workflow chain (M2 broken, BUG-29), Patient-order linkage on order create (M1.5 broken, BUG-37), NCE submission (M1 broken, BUG-38), Permission enforcement (M1 unverified), Audit trail coverage (M2 unverified), FHIR resource round-trip (M2 unverified), Notification subsystem (M1), Order Programs Questionnaire (M1 unverified), Bar code label printing (M1 unverified), Storage Boxes grid assignment (M2 unverified), Lab number generation cross-path uniqueness (M2 unverified), Search index reindex button (M0 unverified).
 
 ---
 
@@ -1060,3 +1191,81 @@ Keep a running log throughout the session:
 ```
 
 Include this full log in the report appendix.
+
+---
+
+## Section 11 — Chains: Cross-Module Workflow Suites (MANDATORY in every test run)
+
+Chains are end-to-end workflows that cross 3+ modules. They are not optional — every test run that targets a non-trivial subset of the system must execute at least Chain A (Order Lifecycle). Chains that depend on admin config (e.g., Chain F EQA) must run their prerequisite (Suite FK) first.
+
+| Chain | Name | Modules | What it tests | Caught (or would have caught) |
+|-------|------|---------|----------------|--------------------------------|
+| **A** | Order Lifecycle | Order → Sample → Result → Validation → Patient Report → FHIR | The whole forward path. Order created, patient linked, sample received, result entered, validated, appears on Patient Status Report PDF, and is queryable as FHIR Observation. | BUG-37 (patient-order linkage), BUG-8 (silent data loss on save) |
+| **B** | Rejection → NCE → Report | Order rejection → NCE auto-creation → Rejection Report → Dashboard counter | The cross-module data flow Phase 23 invented ad-hoc. | BUG-29 (rejection silo) |
+| **C** | Reflex Trigger | Admin reflex rule create → Result entry → Workplan check | Confirms reflex actually fires. | Currently impossible — reflex rules are M1 (BUG-31 blocks results entry) |
+| **D** | Calculated Value | Admin calc create → Two source results enter → Calc appears on results | Confirms compute engine runs. | Currently impossible — calcs are M1 |
+| **E** | Sample Validation Lifecycle | Result enter → Reject for technical reasons → Re-test → Validate → Patient Report | Tests the back-and-forth path real labs walk. | Untested |
+| **F** | EQA Distribution | Admin enable EQA → Create program → Create shipment → Distribute → Participant enters result → Score → Report | Confirms the EQA workflow end-to-end. | OGC-518–524 cluster (EQA disabled silently broke everything) |
+| **G** | Cold-Chain Excursion | Device configured → Simulated excursion → Alert fires → Corrective action linked → Audit log entry | Confirms the regulatory-required loop. | Untested |
+| **H** | Permission Enforcement | Admin create user with restricted role → Login as that user → Attempt restricted action → Fail with 403 | Confirms access control is enforced, not just configured. | Untested |
+| **I** | Site Branding to Report | Admin update branding → Generate Patient Status Report PDF → Branding appears | Confirms the pipeline from admin to output. | NOTE-29 (report header "null") |
+| **J** | Audit Trail Coverage | Edit reference range, delete result, grant admin role → Audit Trail shows each | Confirms audit entries are written for sensitive actions. | Untested |
+| **K** | Cross-installation FHIR Round-trip | UI write → FHIR read → External FHIR POST → UI read | The integration use case OpenELIS markets. | Untested |
+| **L** | Lab Number Uniqueness | Concurrent Add Order, Batch Order Entry, EQA Sample, Generic Sample → No duplicate lab numbers | Confirms accession generation across paths. | Untested |
+
+**Chain reporting:** Each chain produces a single PASS/PARTIAL/FAIL with module-level breakdown. A chain at M3 in module A but M1 in module B is rated at the floor — M1.
+
+A test phase that does not include any Chains may not report a maturity above M2 for any module touched.
+
+---
+
+## Section 12 — Personas: Day-in-the-life Walk-throughs
+
+Personas test what a real role does in a working day. Each persona is one TC that crosses multiple screens. PASS requires the persona to complete every documented action without workarounds.
+
+| Persona | What a normal day looks like |
+|---------|------------------------------|
+| **PA — Receptionist** | Search for patient by national ID; if found, place an order for them on the right program; if not, create the patient and place the order. Print barcode labels. Hand off the order. |
+| **PB — Bench Tech (Hematology)** | Open Workplan filtered to Hematology. Pick one sample from the queue. Enter results for CBC panel. Save. Move on to next. Bulk-save normal results on 10 outstanding routine cases. |
+| **PC — Validating Biologist** | Open Validation Routine for Hematology. Review results. Add a note where needed. Reject one for re-test. Validate the rest. Open Patient Results for one validated case and confirm it's there. |
+| **PD — Lab Manager** | Pull morning Dashboard, drill into Orders In Progress. Pull yesterday's Rejection Report. Pull weekly Statistics Report. Confirm the Test Turn-Around-Time KPIs match the underlying data. |
+| **PE — QA Officer** | View NCE Dashboard. Pick one open NCE. Document corrective action. Pull Non-Conformity By Section/Reason report for the quarter. Confirm CAP/CLIA compliance footer on cold-chain export. |
+| **PF — Lab Administrator** | First-time setup: change site branding (logo, colors, lab name), configure barcode formats, set up one new test (TestAdd), set up one new analyzer mapping, enable EQA, create one new user with Receptionist role, generate a user manual link to share. |
+
+**A persona PASSes** only if the persona completes every step using documented UI paths, with no workarounds. If a step requires a config toggle the persona shouldn't have to know about (like EQA enabled), that's a FAIL of PF — it counts against the Lab Administrator persona because they shouldn't have hidden requirements.
+
+Personas surface architectural gaps. PD will catch the dashboard-to-reality mismatch; PF will catch the EQA-not-enabled silent dead-end; PE will catch the rejection chain break.
+
+---
+
+## Section 13 — Dashboard Counter Reconciliation (Y-RECON, Required every run)
+
+For each Dashboard KPI, fetch the underlying list and assert `len(list) == counter`. Mismatches are **FAIL**, not informational.
+
+| KPI | Backing list / query | Assertion |
+|-----|----------------------|-----------|
+| Orders In Progress | LogbookResults across all units with status=In Progress | Sum equals counter |
+| Ready For Validation | AccessionValidation queue size | Equals counter |
+| Orders Entered By User Today | Audit Trail filtered to entered=today | Equals counter |
+| Orders Rejected Today | Rejection Report for today | Equals counter — currently FAILs per BUG-29 |
+| Un-Printed Results | Result list with printed=false | Equals counter |
+| Electronic Orders | Incoming Test Requests filtered to "Entered" status | Equals counter |
+| Average Turn-Around Time (three sub-KPIs) | Sample audit timestamps; compute median | Within ±10% of displayed value |
+
+The assertion failure mode catches counter-drift bugs that would otherwise be invisible (BUG-29 class).
+
+---
+
+## Change log
+
+### v6 (2026-05-12) — Lab-readiness lens
+- Step 0.5: Calibration step before each new test phase.
+- Step 0.6: Data Census gate before E2E or persona suites.
+- Section 5.5: Feature Maturity Rubric (M0–M5). Replaces binary PASS/FAIL with maturity rating per module.
+- Section 6.5: Mandatory live-network-capture rule before filing any 404-based bug. Closes the false-positive cluster pattern (OGC-535/562/563/565/566/568).
+- Section 7.5: Round-trip Write Verification mandatory for all writes. Closes BUG-8 / BUG-29 / BUG-37 class.
+- Section 7.6: Acceptance Criteria Standard (RENDER / FUNCTION / PERSIST / ROUND-TRIP / CROSS-LINK / REPORTABLE).
+- Section 8.5: Partial-Feature Audit — quarterly + on major version. Seeded with 20 baseline suspect features.
+- Section 11: Chains — 12 canonical cross-module workflows, mandatory.
+- Section 12: Personas — 6 day-in-the-life walk-throughs.
+- Section 13: Dashboard Counter Reconciliation — mandatory every run.
