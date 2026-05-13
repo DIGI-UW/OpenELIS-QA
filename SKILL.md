@@ -4,7 +4,7 @@ description: >
   Automated QA testing skill for OpenELIS Global covering 167+ test suites and ~488 test cases. Tests: Orders, Validation, Results, Patient Management, Dashboard, Admin (28+ pages), Reports (all 11), Referrals, Workplan, FHIR, i18n, Accessibility, Pathology, Analyzers, EQA, Alerts, Storage, Batch Entry, Barcode, and more. Includes DEEP interaction suites: search/filter, form interaction, error handling, performance, cross-module data integrity, security (CSRF/XSS/SQLi), WCAG accessibility, E2E order tracing, report PDF generation, and Madagascar e-SIL UAT coverage (LO-xx/DU-xx). Drives a real browser session via Claude in Chrome and produces a pass/fail report with Jira tickets.
 ---
 
-# OpenELIS Global QA Skill — v6.13 (2026-05-13 + v6.12 corrections applied in-place + Chain I rewrite)
+# OpenELIS Global QA Skill — v6.14 (2026-05-13 + A1-bis Dashboard drill-down capture + first chain end-to-end PASS)
 
 **v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture) + 6.5a (harness-enforced via `helpers/networkCapture.ts`), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 11.5 Blocking-Bug Etiquette, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. **v6.13:** v6.12's pilot-grounded shape corrections applied in-place across all 12 chains + 6 personas + _common.ts; Chain I rewritten with the wrong labName premise dropped; `helpers/_common-v612-patch.ts` sidecar deleted. See full Change Log at end of file.
 
@@ -1363,6 +1363,27 @@ The assertion failure mode catches counter-drift bugs that would otherwise be in
 ---
 
 ## Change log
+
+### v6.14 (2026-05-13 evening) — A1-bis mgdev session: Dashboard drill-down captured + first chain to PASS end-to-end
+
+15 minutes of live testing against mgdev.openelis-global.org v3.2.1.8 (newer release than the A1 pilot's testing v3.2.1.6). The v6.13 SKILL was freshly installed via the .skill package.
+
+**Methodology under test verdict: PASS.** The session surfaced one new endpoint shape (the Dashboard tile drill-down) and produced the first chain to PASS end-to-end live (Chain I).
+
+Concrete captures:
+
+- **Dashboard tile drill-down endpoint pattern:** `GET /api/OpenELIS-Global/rest/home-dashboard/{TYPE}` returns `{paging, displayItems[]}`. ORDERS_READY_FOR_VALIDATION returned 4 displayItems matching the KPI of 4 exactly — **§13 Y-RECON now works correctly with this endpoint** and the NEW-1 retraction is fully validated.
+- **Verified enum names:** ORDERS_IN_PROGRESS, ORDERS_READY_FOR_VALIDATION (canonical), ORDERS_REJECTED_TODAY, ORDERS_COMPLETED_TODAY, ORDERS_ENTERED_BY_USER_TODAY, UN_PRINTED_RESULTS — all return 200. Two return 400 (ORDERS_PARTIALLY_COMPLETED_TODAY, ELECTRONIC_ORDERS) — server-side enum names differ; needs another UI click to capture.
+- **Chain I PASS end-to-end live:** read primaryColor `#0f62fe` → PUT `#a335ee` → readback matches → restore confirmed. First chain in the catalog to PASS all steps in a real session.
+- **Module maturity upgrades from live evidence:** Dashboard M1.5 → M3 on mgdev; Site Branding M3 confirmed live; FHIR M3 mgdev confirmed.
+
+Session report at `a1bis-session-report-2026-05-13.md`.
+
+`helpers/apiShapes.ts` gains:
+- `DashboardDrillDownResponse` and `DashboardDrillDownItem` interfaces.
+- `DASHBOARD_TILE_TYPES` enum of verified-working URL types.
+
+The two remaining A1-bis items (SamplePatientEntry POST capture, eqaEnabled JSP form capture) are unblocked but require another short live session to drive their respective UI flows.
 
 ### v6.13 (2026-05-13) — v6.12 corrections applied in-place + Chain I rewrite
 Closes the loop opened by v6.12. The v6.12 PR documented the 10 spec corrections via `apiShapes.ts` and shipped them as a sidecar patch file (`helpers/_common-v612-patch.ts`) without editing the chain/persona specs in place. v6.13 applies the corrections directly:
