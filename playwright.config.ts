@@ -111,6 +111,36 @@ export default defineConfig({
       },
     },
 
+    // --- Chain C: Reflex Trigger (Phase B3) ---
+    // Six-step end-to-end. API-substituted per §11.5 (BUG-31). Step 5
+    // is the definitive engine-fired check: does a reflex rule actually
+    // produce its target test when the trigger result is entered?
+    {
+      name: 'chain-c',
+      testMatch: 'tests/chains/chain-c-reflex-trigger.spec.ts',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/user.json',
+      },
+    },
+
+    // --- Chain D: Calculated Value (Phase B3) ---
+    // Seven-step end-to-end. Discovers an active calc rule, seeds an
+    // order carrying all its operands, enters every operand via API,
+    // checks the calc was produced (5), has a value (6), and the math
+    // is plausible (7). Three distinct fail modes mapped to three
+    // expects.
+    {
+      name: 'chain-d',
+      testMatch: 'tests/chains/chain-d-calculated-value.spec.ts',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/user.json',
+      },
+    },
+
     // --- Core QA: all test suites using cached auth + test data ---
     {
       name: 'qa-dashboard',

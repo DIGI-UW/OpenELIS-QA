@@ -4,7 +4,7 @@ description: >
   Automated QA testing skill for OpenELIS Global covering 167+ test suites and ~488 test cases. Tests: Orders, Validation, Results, Patient Management, Dashboard, Admin (28+ pages), Reports (all 11), Referrals, Workplan, FHIR, i18n, Accessibility, Pathology, Analyzers, EQA, Alerts, Storage, Batch Entry, Barcode, and more. Includes DEEP interaction suites: search/filter, form interaction, error handling, performance, cross-module data integrity, security (CSRF/XSS/SQLi), WCAG accessibility, E2E order tracing, report PDF generation, and Madagascar e-SIL UAT coverage (LO-xx/DU-xx). Drives a real browser session via Claude in Chrome and produces a pass/fail report with Jira tickets.
 ---
 
-# OpenELIS Global QA Skill — v6.6 (2026-05-12 lab-readiness rewrite + blocking-bug etiquette + calibration sweep + bug-revalidation cross-link + bulk seed script + Chain A + Chain B specs)
+# OpenELIS Global QA Skill — v6.7 (2026-05-12 lab-readiness rewrite + blocking-bug etiquette + calibration sweep + bug-revalidation cross-link + bulk seed script + Chains A/B/C/D specs)
 
 **v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 11.5 Blocking-Bug Etiquette, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. See full Change Log at end of file.
 
@@ -1228,8 +1228,8 @@ Chains are end-to-end workflows that cross 3+ modules. They are not optional —
 |-------|------|---------|----------------|--------------------------------|
 | **A** ✅ | Order Lifecycle | Order → Sample → Result → Validation → Patient Report → FHIR | The whole forward path. Order created, patient linked, sample received, result entered, validated, appears on Patient Status Report PDF, and is queryable as FHIR Observation. **Implemented** as `tests/chains/chain-a-order-lifecycle.spec.ts` (run via `--project=chain-a`). 8 named steps each with explicit acceptance criterion per §7.6. Steps 3-4 use API substitutes per §11.5 (BUG-31 blocks the Carbon Accept checkbox). | BUG-37 (patient-order linkage), BUG-8 (silent data loss on save) |
 | **B** ✅ | Rejection → NCE → Report | Order rejection → NCE auto-creation → Rejection Report → Dashboard counter | The cross-module data flow Phase 23 invented ad-hoc. **Implemented** as `tests/chains/chain-b-rejection.spec.ts` (run via `--project=chain-b`). 8 steps; Steps 5/6/7/8 each map to one of the four distinct BUG-29 symptoms (A: qa_event creation, D: View NCE search, B: Rejection Report PDF, C: Dashboard counter), so a partial fix to BUG-29 surfaces clearly *which* subsystem was patched. Step 3 uses API substitute per §11.5 (Reject Sample is a Carbon checkbox, BUG-31 family). | BUG-29 (rejection silo) |
-| **C** | Reflex Trigger | Admin reflex rule create → Result entry → Workplan check | Confirms reflex actually fires. | Currently impossible — reflex rules are M1 (BUG-31 blocks results entry) |
-| **D** | Calculated Value | Admin calc create → Two source results enter → Calc appears on results | Confirms compute engine runs. | Currently impossible — calcs are M1 |
+| **C** ✅ | Reflex Trigger | Admin reflex rule create → Result entry → Workplan check | Confirms reflex actually fires. **Implemented** as `tests/chains/chain-c-reflex-trigger.spec.ts` (run via `--project=chain-c`). 6 steps with API substitute per §11.5 (BUG-31 bypass). Step 5 is the definitive engine-fired check — gives a clean PASS or FAIL answer to "do reflex rules actually fire?" — the question Phase 28 left unverified. | BUG-31 (UI path) — but API substitute lets us probe the engine directly |
+| **D** ✅ | Calculated Value | Admin calc create → Two source results enter → Calc appears on results | Confirms compute engine runs. **Implemented** as `tests/chains/chain-d-calculated-value.spec.ts` (run via `--project=chain-d`). 7 steps. Discovers an active calc rule, seeds an order with all its operand tests, enters every operand via API, checks the calc test was produced (Step 5) AND has a value (Step 6) AND the math is plausible (Step 7). Three distinct fail modes, three distinct expects. | BUG-31 (UI path) — but API substitute lets us probe the engine directly |
 | **E** | Sample Validation Lifecycle | Result enter → Reject for technical reasons → Re-test → Validate → Patient Report | Tests the back-and-forth path real labs walk. | Untested |
 | **F** | EQA Distribution | Admin enable EQA → Create program → Create shipment → Distribute → Participant enters result → Score → Report | Confirms the EQA workflow end-to-end. | OGC-518–524 cluster (EQA disabled silently broke everything) |
 | **G** | Cold-Chain Excursion | Device configured → Simulated excursion → Alert fires → Corrective action linked → Audit log entry | Confirms the regulatory-required loop. | Untested |
@@ -1305,6 +1305,13 @@ The assertion failure mode catches counter-drift bugs that would otherwise be in
 ---
 
 ## Change log
+
+### v6.7 (2026-05-12) — Chains C + D Reflex/Calc engines (Phase B3)
+- Chain C (`tests/chains/chain-c-reflex-trigger.spec.ts`, 6 steps) and Chain D (`tests/chains/chain-d-calculated-value.spec.ts`, 7 steps) implemented together. Both API-substituted per §11.5 because BUG-31 blocks the UI result-entry step.
+- These are the two chains the prior catalog could *never* verify — Phase 28 admin tests confirmed both engines have working CRUD pages, but no test had ever observed either engine actually firing because BUG-31 blocked the result-entry step that would trigger one.
+- Chain C Step 5 = definitive PASS/FAIL on "does the reflex engine fire on API writes?"
+- Chain D Steps 5/6/7 split the calc engine check into three distinct symptoms: (5) calc test row produced, (6) row has a value, (7) value math is plausible. A partial-fix scenario (engine adds row but doesn't compute) surfaces clearly.
+- Both chains reuse `tests/chains/_common.ts` with zero changes. Chain D adds its own multi-test order POST inline rather than extending the shared helper — kept for clarity until the pattern repeats.
 
 ### v6.6 (2026-05-12) — Chain B Rejection → NCE → Report implemented (Phase B2)
 - Second chain from §11 is now a Playwright spec: `tests/chains/chain-b-rejection.spec.ts`. 8 named steps. The key design choice: Steps 5, 6, 7, 8 each probe one of the *four distinct symptoms* of BUG-29 (qa_event creation gap, View NCE search empty, Rejection Report PDF 503, Dashboard counter stuck at 0) so a partial fix surfaces clearly which subsystem was patched — not "rejection workflow FAILed" as a single opaque red light.
