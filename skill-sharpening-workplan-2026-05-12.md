@@ -257,3 +257,77 @@ These remain on the wishlist but aren't covered here:
 - **Disaster recovery / backup-restore.** Out of QA scope; ops concern.
 
 If any of these become priorities, they'll need their own skill, not bolt-ons to this one.
+
+---
+
+## Phase A1-bis — Live capture of the still-unknown shapes (NEXT SESSION)
+
+The 2026-05-13 A1 pilot validated 10 endpoint shape corrections that landed in v6.12 + v6.13. Three shapes were left as TODO inside the specs because they require driving the real UI (Playwright `page.goto` + form interaction + watching the network panel) — not just probing endpoints from JS.
+
+A1-bis is the focused follow-up live session that captures these three shapes and produces v6.14.
+
+### What to capture (priority order)
+
+1. **`POST /rest/SamplePatientEntry` payload from a successful UI order placement.**
+   Chain A Step 2 fails today because the inferred payload returns 400. The fix is to:
+   - Drive the Add Order wizard end-to-end through the UI on mgdev (4 steps: Patient Info → Program → Add Sample → Add Order)
+   - Watch the Chrome Network panel for the final POST
+   - Save the payload JSON to `helpers/apiShapes.ts` as `SamplePatientEntrySubmitPayload`
+   - Update Chain A Step 2 + Chain D Step 2 + Persona PA Step 4 to use the captured shape
+
+2. **eqaEnabled JSP form interaction.**
+   Persona PF Step 4 currently BLOCKS because `/rest/SampleEntryConfigurationMenu` returns 404. The actual toggle is at the JSP page `/api/OpenELIS-Global/SampleEntryConfigurationMenu`. Capture:
+   - The HTML form structure (input name attributes)
+   - The POST URL the form submits to
+   - The expected payload (form-encoded vs JSON)
+   - Whether the round-trip persists after submission
+   Document in `helpers/apiShapes.ts` as `eqaEnabledJspForm` constants. Update Persona PF Step 4 + Chain F Step 1 to drive the JSP form correctly.
+
+3. **Dashboard tile drill-down queue endpoints.**
+   Each Dashboard KPI tile (Orders In Progress, Ready For Validation, etc.) is clickable and drills down to a list view. Each drill-down hits a REST endpoint. Capture:
+   - Click each tile on a fresh Dashboard load (with browser DevTools Network open)
+   - Record the URL pattern for each queue
+   - Document in `helpers/apiShapes.ts` under a new `DashboardDrillDown` section
+   - Update Persona PD Step 2 (Y-RECON KPI vs list reconciliation) to use the real queue endpoints, not the wrong-endpoint probes that produced NEW-1's retracted false alarm
+
+### Method
+
+- Use `mcp__Claude_in_Chrome__captureAround` (the §6.5a / §6.5b helper) during each UI interaction
+- Save evidence to `.auth/captures/a1bis-<topic>-<timestamp>.json`
+- Update `helpers/apiShapes.ts` with each newly captured shape
+- Use `assertBugEvidence` in any new bug claims that come out of the session
+
+### Expected outputs
+
+- `helpers/apiShapes.ts` v3 (additions only, no removals)
+- v6.14 SKILL bump with change log entry referencing the captures
+- New chain spec entries or updates for the 3 captured shapes
+- (Possibly) a new chain — Chain F-bis or a Persona PF rewrite — using the captured eqaEnabled form payload
+
+### Expected duration
+
+30–60 minutes live Chrome time per shape, so 1.5–3 hours total. Can split across two sessions if needed: SamplePatientEntry first (highest leverage — unblocks Chain A + D + PA), then eqaEnabled + Dashboard.
+
+### Pre-flight checklist
+
+Before starting A1-bis:
+- Confirm a fresh Chrome session with DevTools accessible
+- Confirm credentials for mgdev (or whichever instance has data — mgdev v3.2.1.8 had only 10 patients but a working order entry path)
+- Have `helpers/apiShapes.ts` and `helpers/networkCapture.ts` open as references
+- Ensure no destructive operations from prior sessions are pending (per §11.5)
+
+### Acceptance for A1-bis as a whole
+
+A1-bis is done when:
+- All three shapes are captured and committed to `apiShapes.ts`
+- Chain A Step 2 + Chain D Step 2 + Persona PA Step 4 + Persona PF Step 4 + Persona PD Step 2 all run without "spec inferred shape" failures
+- A v6.14 SKILL bump documents the captures and the change log entry
+- The pilot session report (or a new A1-bis report) records the actual UI paths used and any new candidate bugs found
+
+### What A1-bis is NOT for
+
+- Filing new OpenELIS bugs (that's the bug-revalidation skill's job, post-capture)
+- Adding new chains or personas (Phase B / C are done — adding more is workplan Phase D's territory)
+- Reverse-engineering the result-entry endpoints (BUG-31 still blocks UI; result entry via API was already documented in v6.12)
+
+A1-bis is a focused 3-capture sprint. Anything else that comes up gets added to a backlog and triaged in a follow-up.
