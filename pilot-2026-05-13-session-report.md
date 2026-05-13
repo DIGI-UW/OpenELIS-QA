@@ -88,23 +88,17 @@
 
 ## NEW findings (real OpenELIS issues, not spec bugs)
 
-### NEW-1 — Y-RECON mismatch: Dashboard vs Logbook
+### ~~NEW-1~~ — RETRACTED same-day after user correction
 
-**Severity:** Medium (visibility issue at the management layer)
-**Evidence:**
-- `GET /rest/home-dashboard/metrics` → `ordersInProgress: 14`
-- `GET /rest/LogbookResults` (unfiltered) → `testResult: []` (0 items)
-- `GET /rest/LogbookResults?testUnitId={36,56,59,136}` → 0 items each
-- `GET /rest/AccessionValidation` → empty queue (`searchFinished` flag absent)
+**Severity:** ~~Medium~~ N/A (spec misunderstanding, not a real bug)
 
-A lab manager looking at the Dashboard sees 14 orders waiting for result entry. A bench tech opening the Logbook sees nothing to work on. They're looking at the same system, and it's telling them different things.
+**Original claim:** Dashboard says orders in queue while LogbookResults returns 0; same on testing v3.2.1.6 (14/0) and mgdev v3.2.1.8 (4/0).
 
-**Possible explanations** (testing not exhaustive in this pilot):
-- Filter param mismatch: `testUnitId`, `testSectionId`, or another param needed to surface in-progress orders
-- Backing query for the KPI is stale (perhaps from a pre-data-wipe state — see Phase 14 NOTE-14 precedent)
-- The "In Progress" KPI counts something other than what LogbookResults exposes
+**Correction (received from Casey 2026-05-13):** `LogbookResults` is the screen/endpoint where techs **enter results into orders**, not a list of all-orders-in-progress. The lab workflow is **Order → Result Entry (Logbook) → Validation**, three distinct stages. `Dashboard.ordersInProgress` counts orders awaiting result entry; `Dashboard.ordersReadyForValidation` counts orders whose results have been entered and now await biologist review. The React SPA fetches each queue's list from URLs that need to be discovered via live UI navigation, not from `LogbookResults`.
 
-**Action:** File as a real bug after live retest confirms the mismatch persists. SKILL §13 Y-RECON was designed exactly for this catch — the methodology is doing its job.
+**What this means for the methodology:** §6.5b applies recursively — the same "infer endpoint from naming pattern" mistake that produced the 04-20 false-positive cluster (OGC-535/562/...) ALSO produced this NEW-1 false alarm at the spec-author layer. The fix is the same: drive the actual UI (click Dashboard tile → watch network → capture the real URL → record in `apiShapes.ts`).
+
+**Action:** None on OpenELIS side. The retraction itself is a methodology finding worth keeping — it justifies §6.5b being a hard rule, not a soft recommendation.
 
 ### NEW-2 — ReportPrint?report=patient returned HTTP 500
 
@@ -203,7 +197,7 @@ After compiling the initial pilot findings, the corrected `apiShapes.ts` was val
 
 **Two upgrades from the 2-instance evidence:**
 
-- **NEW-1 promoted from candidate to confirmed bug.** Y-RECON mismatch replicates on mgdev: Dashboard reports `ordersReadyForValidation: 4` but `LogbookResults` (unfiltered) returns `testResult: []`. Two instances, two confirmations. File as a real OpenELIS bug.
+- **NEW-1 RETRACTED — not a Y-RECON mismatch, a spec misunderstanding.** Casey corrected the workflow on the same day: LogbookResults is the *result entry* surface, not a queue of all orders awaiting attention. Dashboard's `ordersInProgress` and `ordersReadyForValidation` count different queues that are fetched by the SPA via URLs not yet captured via live UI navigation. Both "matching" data points (14/0 testing, 4/0 mgdev) were wrong-endpoint probes, not real mismatches. **Methodology meta-finding:** §6.5b applies recursively — the same false-positive pattern that the 04-20 cluster produced at the bug-filing layer also produced this false alarm at the spec-author layer. Hardens the case for §6.5b being a mandatory rule, not optional advice.
 - **NEW-3 (FHIR metadata) is testing-instance specific.** On mgdev v3.2.1.8, `GET /api/OpenELIS-Global/fhir/metadata` returns a valid HAPI FHIR CapabilityStatement JSON. So the HTML-shell response on testing is a regression or deployment difference, not a fundamental BUG-14 reopen. BUG-14 stays Resolved with a footnote "broken on testing instance — investigate deployment."
 
 **Schema deltas observed (additive only, not breaking):**
