@@ -166,6 +166,50 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
     },
 
+    // --- Persona PA: Receptionist (Phase C) ---
+    {
+      name: 'persona-pa',
+      testMatch: 'tests/personas/persona-pa-receptionist.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+    // --- Persona PB: Bench Tech Hematology (Phase C) ---
+    {
+      name: 'persona-pb',
+      testMatch: 'tests/personas/persona-pb-bench-tech.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+    // --- Persona PC: Validating Biologist (Phase C) ---
+    {
+      name: 'persona-pc',
+      testMatch: 'tests/personas/persona-pc-validating-biologist.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+    // --- Persona PD: Lab Manager (Phase C) ---
+    {
+      name: 'persona-pd',
+      testMatch: 'tests/personas/persona-pd-lab-manager.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+    // --- Persona PE: QA Officer (Phase C) ---
+    {
+      name: 'persona-pe',
+      testMatch: 'tests/personas/persona-pe-qa-officer.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+    // --- Persona PF: Lab Administrator (Phase C) ---
+    // Includes afterAll cleanup that restores branding + eqaEnabled toggle.
+    {
+      name: 'persona-pf',
+      testMatch: 'tests/personas/persona-pf-lab-administrator.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+
     // --- Chain E: Sample Validation Lifecycle (Phase B6) ---
     // 6 steps. Result enter → retest reject → re-enter → validate → confirm on report.
     {

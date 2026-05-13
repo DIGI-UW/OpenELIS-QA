@@ -4,7 +4,7 @@ description: >
   Automated QA testing skill for OpenELIS Global covering 167+ test suites and ~488 test cases. Tests: Orders, Validation, Results, Patient Management, Dashboard, Admin (28+ pages), Reports (all 11), Referrals, Workplan, FHIR, i18n, Accessibility, Pathology, Analyzers, EQA, Alerts, Storage, Batch Entry, Barcode, and more. Includes DEEP interaction suites: search/filter, form interaction, error handling, performance, cross-module data integrity, security (CSRF/XSS/SQLi), WCAG accessibility, E2E order tracing, report PDF generation, and Madagascar e-SIL UAT coverage (LO-xx/DU-xx). Drives a real browser session via Claude in Chrome and produces a pass/fail report with Jira tickets.
 ---
 
-# OpenELIS Global QA Skill — v6.10 (2026-05-13 + Phase E2 network capture helper enforces §6.5)
+# OpenELIS Global QA Skill — v6.11 (2026-05-13 + Phase C: all 6 §12 Personas implemented)
 
 **v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture) + 6.5a (harness-enforced via `helpers/networkCapture.ts`), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 11.5 Blocking-Bug Etiquette, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. See full Change Log at end of file.
 
@@ -1305,16 +1305,18 @@ Personas test what a real role does in a working day. Each persona is one TC tha
 
 | Persona | What a normal day looks like |
 |---------|------------------------------|
-| **PA — Receptionist** | Search for patient by national ID; if found, place an order for them on the right program; if not, create the patient and place the order. Print barcode labels. Hand off the order. |
-| **PB — Bench Tech (Hematology)** | Open Workplan filtered to Hematology. Pick one sample from the queue. Enter results for CBC panel. Save. Move on to next. Bulk-save normal results on 10 outstanding routine cases. |
-| **PC — Validating Biologist** | Open Validation Routine for Hematology. Review results. Add a note where needed. Reject one for re-test. Validate the rest. Open Patient Results for one validated case and confirm it's there. |
-| **PD — Lab Manager** | Pull morning Dashboard, drill into Orders In Progress. Pull yesterday's Rejection Report. Pull weekly Statistics Report. Confirm the Test Turn-Around-Time KPIs match the underlying data. |
-| **PE — QA Officer** | View NCE Dashboard. Pick one open NCE. Document corrective action. Pull Non-Conformity By Section/Reason report for the quarter. Confirm CAP/CLIA compliance footer on cold-chain export. |
-| **PF — Lab Administrator** | First-time setup: change site branding (logo, colors, lab name), configure barcode formats, set up one new test (TestAdd), set up one new analyzer mapping, enable EQA, create one new user with Receptionist role, generate a user manual link to share. |
+| **PA — Receptionist** ✅ | Search for patient by national ID; if found, place an order for them on the right program; if not, create the patient and place the order. Print barcode labels. Hand off the order. |
+| **PB — Bench Tech (Hematology)** ✅ | Open Workplan filtered to Hematology. Pick one sample from the queue. Enter results for CBC panel. Save. Move on to next. Bulk-save normal results on 10 outstanding routine cases. |
+| **PC — Validating Biologist** ✅ | Open Validation Routine for Hematology. Review results. Add a note where needed. Reject one for re-test. Validate the rest. Open Patient Results for one validated case and confirm it's there. |
+| **PD — Lab Manager** ✅ | Pull morning Dashboard, drill into Orders In Progress. Pull yesterday's Rejection Report. Pull weekly Statistics Report. Confirm the Test Turn-Around-Time KPIs match the underlying data. |
+| **PE — QA Officer** ✅ | View NCE Dashboard. Pick one open NCE. Document corrective action. Pull Non-Conformity By Section/Reason report for the quarter. Confirm CAP/CLIA compliance footer on cold-chain export. |
+| **PF — Lab Administrator** ✅ | First-time setup: change site branding (logo, colors, lab name), configure barcode formats, set up one new test (TestAdd), set up one new analyzer mapping, enable EQA, create one new user with Receptionist role, generate a user manual link to share. |
 
 **A persona PASSes** only if the persona completes every step using documented UI paths, with no workarounds. If a step requires a config toggle the persona shouldn't have to know about (like EQA enabled), that's a FAIL of PF — it counts against the Lab Administrator persona because they shouldn't have hidden requirements.
 
 Personas surface architectural gaps. PD will catch the dashboard-to-reality mismatch; PF will catch the EQA-not-enabled silent dead-end; PE will catch the rejection chain break.
+
+**Implementation (Phase C, 2026-05-13):** all 6 personas are Playwright specs under `tests/personas/`. Each is one `test.describe.serial` with 4–6 steps. They reuse `tests/chains/_common.ts` (apiCall, markStep) and where appropriate `helpers/networkCapture.ts` from Phase E2. Run individually via `--project=persona-pa` through `--project=persona-pf`. PF includes `test.afterAll` cleanup that restores site branding and the eqaEnabled toggle even on mid-test failure.
 
 ---
 
@@ -1337,6 +1339,17 @@ The assertion failure mode catches counter-drift bugs that would otherwise be in
 ---
 
 ## Change log
+
+### v6.11 (2026-05-13) — Phase C: all 6 §12 Personas implemented
+- 6 new specs under `tests/personas/`. Each is a day-in-the-life walk-through for one role, written as a single test.describe.serial that fails cleanly when the role hits a hidden requirement, missing UI path, or broken cross-module link.
+- PA Receptionist (~190 lines, 6 steps): patient search → create → order → barcode print. Catches BUG-37 at Step 5 (the receptionist hands off an order whose patient isn't linked).
+- PB Bench Tech Hematology (~140 lines, 4 steps): Workplan filter → result entry × N → round-trip → bulk-save normals. API-substituted per §11.5 because BUG-31 hangs the Carbon Accept checkbox.
+- PC Validating Biologist (~110 lines, 4 steps): Validation queue → reject one for retest with note → validate rest → confirm on Patient Results. Depends on PB having entered something.
+- PD Lab Manager (~150 lines, 5 steps): Dashboard → KPI vs underlying-list reconciliation (§13) → Rejection Report PDF (BUG-29 catch) → Statistics Report PDF (BUG-42 catch) → TAT sanity.
+- PE QA Officer (~150 lines, 5 steps): NCE Dashboard → BUG-29 sanity check (zero NCEs + rejections today = silo confirmed at people layer) → corrective action → quarterly Non-Conformity report → CAP/CLIA cold-chain compliance footer.
+- PF Lab Administrator (~200 lines, 6 steps + afterAll cleanup): site branding round-trip → barcode config → TestAdd (BUG-1/BUG-12 catch) → **enable EQA (the hidden-requirement catch that previously cost 7 cancelled tickets, OGC-518–524)** → create restricted user (BUG-3 catch) → User Manual PDF link.
+
+All 6 personas marked ✅ in §12. Workplan Phase C status: complete. Remaining workplan items: D (FRS spec-walks), E3–E7 (more tooling), F (reports + upstream), A1 (live pilot).
 
 ### v6.10 (2026-05-13) — Phase E2 Live Network Capture Helper
 - `helpers/networkCapture.ts` — new module turning §6.5 from "discipline" into "harness-enforced contract." Exports `startCapture`, `captureAround`, `saveAsEvidence`, `assertBugEvidence`, `assert404Observed`, `summarize`.
