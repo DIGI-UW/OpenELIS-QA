@@ -99,7 +99,7 @@ test.describe.serial('Chain A — Order Lifecycle', () => {
     }
 
     const linkedNationalId = (typeof readback.body === 'object' && readback.body !== null)
-      ? ((readback.body as { patientProperties?: { nationalId?: string } }).patientProperties?.nationalId)
+      ? ((readback.body as { nationalId?: string }).nationalId)
       : undefined;
 
     if (linkedNationalId !== order!.patientNationalId) {

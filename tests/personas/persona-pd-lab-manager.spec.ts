@@ -53,7 +53,7 @@ test.describe.serial('Persona PD — Lab Manager', () => {
     let actualCount = 0;
     for (const sectionId of sections) {
       const r = await apiCall<{ logbookList?: Array<unknown> }>(
-        page, `/api/OpenELIS-Global/rest/LogbookResults?testSectionId=${sectionId}&status=IN_PROGRESS`
+        page, `/api/OpenELIS-Global/rest/LogbookResults?testUnitId=${sectionId}&status=IN_PROGRESS`
       );
       if (r.ok && typeof r.body === 'object' && r.body !== null) {
         actualCount += (((r.body as { logbookList?: Array<unknown> }).logbookList) || []).length;

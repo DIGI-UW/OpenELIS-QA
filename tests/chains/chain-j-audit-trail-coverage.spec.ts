@@ -67,11 +67,11 @@ test.describe.serial('Chain J — Audit Trail Coverage', () => {
 
   test('Step 3 — Edit a patient field (PERSIST, sensitive action 2)', async ({ page }) => {
     await page.goto(BASE);
-    const search = await apiCall<{ patientList?: Array<{ patientPK?: string }> }>(
+    const search = await apiCall<{ patientSearchResults?: Array<{ patientID?: string }> }>(
       page, '/api/OpenELIS-Global/rest/patient-search-results?lastName=QA_AUTO'
     );
     const pp = (search.ok && typeof search.body === 'object' && search.body !== null)
-      ? ((search.body as { patientList?: Array<{ patientPK?: string }> }).patientList?.[0]?.patientPK)
+      ? ((search.body as { patientSearchResults?: Array<{ patientID?: string }> }).patientSearchResults?.[0]?.patientID)
       : undefined;
     if (!pp) {
       markStep('J', 3, 'BLOCKED', 'No QA_AUTO_ patient — Step 2 sensitive action skipped');

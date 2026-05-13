@@ -55,18 +55,18 @@ test.describe.serial('Chain L — Lab Number Uniqueness', () => {
     await page.goto(BASE);
     await page.waitForLoadState('networkidle');
 
-    const p = await apiCall<{ patientList?: Array<{ nationalId?: string; patientPK?: string }> }>(
+    const p = await apiCall<{ patientSearchResults?: Array<{ nationalId?: string; patientID?: string }> }>(
       page, '/api/OpenELIS-Global/rest/patient-search-results?lastName=QA_AUTO'
     );
     if (!p.ok || typeof p.body !== 'object' || p.body === null) {
       markStep('L', 1, 'FAIL', `patient-search-results HTTP ${p.status}`); expect(p.ok).toBeTruthy(); return;
     }
-    const patients = ((p.body as { patientList?: Array<{ nationalId?: string; patientPK?: string }> }).patientList) || [];
+    const patients = ((p.body as { patientSearchResults?: Array<{ nationalId?: string; patientID?: string }> }).patientSearchResults) || [];
     if (patients.length === 0) {
       markStep('L', 1, 'FAIL', 'No QA_AUTO_ patient — run --project=seed-data first');
       expect(patients.length).toBeGreaterThan(0); return;
     }
-    patientPK = patients[0].patientPK!;
+    patientPK = patients[0].patientID!;
     patientNationalId = patients[0].nationalId!;
 
     const t = await apiCall<{ testList?: Array<{ id?: string; sampleTypeId?: string; testSectionName?: string }> }>(

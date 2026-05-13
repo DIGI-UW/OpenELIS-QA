@@ -37,7 +37,7 @@ test.describe.serial('Persona PB — Bench Tech (Hematology)', () => {
     await page.goto(BASE);
     await page.waitForLoadState('networkidle');
     const r = await apiCall<{ logbookList?: Array<{ accessionNumber?: string; testId?: string }> }>(
-      page, `/api/OpenELIS-Global/rest/LogbookResults?testSectionId=${HEMATOLOGY_SECTION_ID}`
+      page, `/api/OpenELIS-Global/rest/LogbookResults?testUnitId=${HEMATOLOGY_SECTION_ID}`
     );
     if (!r.ok) {
       markStep(PERSONA, 1, 'FAIL', `LogbookResults HTTP ${r.status}`); expect(r.ok).toBeTruthy(); return;

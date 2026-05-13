@@ -31,7 +31,7 @@ test.describe.serial('Persona PC — Validating Biologist', () => {
     await page.goto(BASE);
     await page.waitForLoadState('networkidle');
     const r = await apiCall<{ validationList?: Array<{ accessionNumber?: string; testId?: string }> }>(
-      page, `/api/OpenELIS-Global/rest/ResultValidation?testSectionId=${HEMATOLOGY_SECTION_ID}`
+      page, `/api/OpenELIS-Global/rest/ResultValidation?testUnitId=${HEMATOLOGY_SECTION_ID}`
     );
     if (!r.ok) {
       markStep(PERSONA, 1, 'FAIL', `ResultValidation HTTP ${r.status}`);

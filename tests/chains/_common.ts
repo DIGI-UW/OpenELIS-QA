@@ -104,7 +104,7 @@ export async function apiCall<T = unknown>(
 export interface ChainOrderRef {
   accession: string;
   patientNationalId: string;
-  patientPK: string;
+  patientID: string;
   testId: string;
   testName: string;
   sampleType: string;
@@ -126,19 +126,19 @@ export interface ChainOrderRef {
 export async function findOrSeedOrder(page: Page): Promise<ChainOrderRef | null> {
   // Step a: look for an existing QA_AUTO_ patient with an open order
   const patientSearch = await apiCall<{
-    patientList?: Array<{ nationalId?: string; patientPK?: string }>;
+    patientSearchResults?: Array<{ nationalId?: string; patientID?: string }>;
   }>(page, `/api/OpenELIS-Global/rest/patient-search-results?lastName=QA_AUTO`);
 
   if (patientSearch.ok && typeof patientSearch.body === 'object' && patientSearch.body !== null) {
-    const patients = (patientSearch.body as { patientList?: Array<{ nationalId?: string; patientPK?: string }> }).patientList || [];
+    const patients = (patientSearch.body as { patientSearchResults?: Array<{ nationalId?: string; patientID?: string }> }).patientSearchResults || [];
     if (patients.length > 0) {
       // Pull their accessions via LogbookResults filtered by patient
       // (this endpoint is what powers the Modify Order patient search)
       for (const p of patients.slice(0, 5)) {
-        if (!p.patientPK) continue;
+        if (!p.patientID) continue;
         const list = await apiCall<{ logbookList?: Array<{ accessionNumber?: string; testId?: string; testName?: string; sampleType?: string }> }>(
           page,
-          `/api/OpenELIS-Global/rest/LogbookResults?patientPK=${encodeURIComponent(p.patientPK)}`
+          `/api/OpenELIS-Global/rest/LogbookResults?patientPK=${encodeURIComponent(p.patientID)}`
         );
         if (list.ok && typeof list.body === 'object' && list.body !== null) {
           const items = (list.body as { logbookList?: Array<{ accessionNumber?: string; testId?: string; testName?: string; sampleType?: string }> }).logbookList || [];
@@ -146,7 +146,7 @@ export async function findOrSeedOrder(page: Page): Promise<ChainOrderRef | null>
             return {
               accession: items[0].accessionNumber,
               patientNationalId: p.nationalId || '',
-              patientPK: p.patientPK,
+              patientID: p.patientID,
               testId: items[0].testId || '',
               testName: items[0].testName || '',
               sampleType: items[0].sampleType || '',
@@ -225,4 +225,108 @@ export function markStep(chain: string, n: number, status: StepStatus, descripti
   const tag = `[Chain ${chain} · Step ${n} · ${status}]`;
   // eslint-disable-next-line no-console
   console.log(detail ? `${tag} ${description} — ${detail}` : `${tag} ${description}`);
+}
+
+// =============================================================================
+// v6.13 — Folded from helpers/_common-v612-patch.ts (live-pilot grounded)
+// =============================================================================
+
+import {
+  LAB_UNIT_IDS,
+  LOGBOOK_FILTER_PARAM,
+} from '../../helpers/apiShapes';
+
+export { LAB_UNIT_IDS, LOGBOOK_FILTER_PARAM };
+
+export interface AcquireAccessionResult {
+  accession: string | null;
+  source: string;
+  /** True when the Dashboard claims orders exist but we couldn't find any */
+  yReconMismatch: boolean;
+  /** Detail message for the spec's `markStep` call */
+  detail: string;
+}
+
+/**
+ * Probe multiple paths to find any accession the current session can operate on.
+ *
+ * NOTE (v6.13 honest update): the 2026-05-13 pilot's NEW-1 "Y-RECON
+ * mismatch" was retracted after user correction — LogbookResults is the
+ * *result entry* surface, not a queue of all orders awaiting attention.
+ * So the `yReconMismatch` flag this helper raises should be treated as a
+ * candidate to investigate (via §6.5a live capture), NOT as a confirmed
+ * Y-RECON bug. The right way to validate Y-RECON is to drive the actual
+ * UI Dashboard tile drill-down and capture the real queue endpoint.
+ */
+export async function acquireAnyAccession(page: import('@playwright/test').Page): Promise<AcquireAccessionResult> {
+  // 1. Try LogbookResults unfiltered
+  const lb = await apiCall<{ testResult?: Array<{ accessionNumber?: string }> }>(
+    page,
+    '/api/OpenELIS-Global/rest/LogbookResults'
+  );
+  if (lb.ok && typeof lb.body === 'object' && lb.body !== null) {
+    const items = (lb.body as { testResult?: Array<{ accessionNumber?: string }> }).testResult || [];
+    if (items.length > 0 && items[0].accessionNumber) {
+      return {
+        accession: items[0].accessionNumber,
+        source: 'LogbookResults unfiltered',
+        yReconMismatch: false,
+        detail: `Acquired ${items[0].accessionNumber} from ${items.length} Logbook items`,
+      };
+    }
+  }
+  // 2. Try LogbookResults per lab unit (correct param: testUnitId, NOT testSectionId)
+  for (const [name, id] of Object.entries(LAB_UNIT_IDS)) {
+    const r = await apiCall<{ testResult?: Array<{ accessionNumber?: string }> }>(
+      page,
+      `/api/OpenELIS-Global/rest/LogbookResults?${LOGBOOK_FILTER_PARAM}=${id}`
+    );
+    if (!r.ok || typeof r.body !== 'object' || r.body === null) continue;
+    const items = (r.body as { testResult?: Array<{ accessionNumber?: string }> }).testResult || [];
+    if (items.length > 0 && items[0].accessionNumber) {
+      return {
+        accession: items[0].accessionNumber,
+        source: `LogbookResults ${name}`,
+        yReconMismatch: false,
+        detail: `Acquired ${items[0].accessionNumber} from ${name} (${id})`,
+      };
+    }
+  }
+  // 3. Check Dashboard — if it shows orders exist but Logbook returned 0, flag
+  //    as POSSIBLE Y-RECON gap. Investigation via UI capture is required to
+  //    confirm; this is not by itself a confirmed bug (see NOTE above).
+  const dash = await apiCall<{ ordersInProgress?: number; ordersReadyForValidation?: number }>(
+    page,
+    '/api/OpenELIS-Global/rest/home-dashboard/metrics'
+  );
+  let dashboardSays = 0;
+  if (dash.ok && typeof dash.body === 'object' && dash.body !== null) {
+    const m = dash.body as { ordersInProgress?: number; ordersReadyForValidation?: number };
+    dashboardSays = (m.ordersInProgress || 0) + (m.ordersReadyForValidation || 0);
+  }
+  return {
+    accession: null,
+    source: 'none',
+    yReconMismatch: dashboardSays > 0,
+    detail:
+      dashboardSays > 0
+        ? `Dashboard says ${dashboardSays} orders awaiting attention but no LogbookResults found. ` +
+          `POSSIBLE Y-RECON gap — investigate by driving the UI Dashboard tile drill-down and capturing ` +
+          `the actual queue endpoint (per SKILL §6.5b). Do NOT file as confirmed bug without that capture.`
+        : `No orders exist on this instance — chain BLOCKED, run --project=seed-data first (SKILL §0.6a).`,
+  };
+}
+
+/**
+ * Reminder helper: eqaEnabled toggle (Chain F precondition, Persona PF Step 4)
+ * is at the JSP page `/api/OpenELIS-Global/SampleEntryConfigurationMenu` —
+ * the `/rest/SampleEntryConfigurationMenu` REST endpoint returns 404.
+ * Specs that need this toggle must drive the JSP form via page.goto + UI
+ * interaction, not via JSON POST.
+ */
+export function eqaEnabledRequiresJspNotRest(): never {
+  throw new Error(
+    'v6.12 finding: eqaEnabled is at the JSP page, NOT the equivalent /rest path. ' +
+    'Drive the JSP form via Playwright UI navigation, not JSON POST.'
+  );
 }

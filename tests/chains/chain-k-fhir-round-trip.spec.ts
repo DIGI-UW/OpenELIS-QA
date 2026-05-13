@@ -147,12 +147,12 @@ test.describe.serial('Chain K — FHIR Round-trip', () => {
     if (!postedPatientId) test.skip();
     await page.goto(BASE);
     // Search UI patient list for our QA_AUTO_FHIR_ prefix
-    const r = await apiCall<{ patientList?: Array<{ nationalId?: string; lastName?: string }> }>(
+    const r = await apiCall<{ patientSearchResults?: Array<{ nationalId?: string; lastName?: string }> }>(
       page, `/api/OpenELIS-Global/rest/patient-search-results?lastName=QA_AUTO_Chain_K`
     );
     if (!r.ok) { markStep('K', 6, 'FAIL', `patient-search HTTP ${r.status}`); expect(r.ok).toBeTruthy(); return; }
     const found = (typeof r.body === 'object' && r.body !== null)
-      ? ((r.body as { patientList?: Array<{ lastName?: string }> }).patientList || []).some(p => p.lastName === 'QA_AUTO_Chain_K')
+      ? ((r.body as { patientSearchResults?: Array<{ lastName?: string }> }).patientSearchResults || []).some(p => p.lastName === 'QA_AUTO_Chain_K')
       : false;
     if (!found) {
       markStep('K', 6, 'FAIL',

@@ -139,12 +139,12 @@ export async function census(page: Page): Promise<SeedCensus> {
   const result = emptyCensus();
 
   // QA_AUTO patients via patient-search-results
-  const patientSearch = await apiCall<{ patientList?: Array<unknown> }>(
+  const patientSearch = await apiCall<{ patientSearchResults?: Array<unknown> }>(
     page,
     `/api/OpenELIS-Global/rest/patient-search-results?lastName=${encodeURIComponent(QA_PREFIX)}`
   );
   if (patientSearch.ok && typeof patientSearch.body === 'object' && patientSearch.body !== null) {
-    const list = (patientSearch.body as { patientList?: unknown[] }).patientList;
+    const list = (patientSearch.body as { patientSearchResults?: unknown[] }).patientSearchResults;
     if (Array.isArray(list)) result.patients = list.length;
   }
 
@@ -233,7 +233,7 @@ export async function discoverTestCatalog(
 interface CreatePatientResult {
   ok: boolean;
   nationalId: string;
-  patientPK?: string;
+  patientID?: string;
   error?: string;
 }
 
@@ -272,20 +272,20 @@ async function createPatient(page: Page, index: number): Promise<CreatePatientRe
   }
 
   // Round-trip verify per SKILL §7.5
-  const verify = await apiCall<{ patientList?: Array<{ nationalId?: string; patientPK?: string }> }>(
+  const verify = await apiCall<{ patientSearchResults?: Array<{ nationalId?: string; patientID?: string }> }>(
     page,
     `/api/OpenELIS-Global/rest/patient-search-results?nationalId=${encodeURIComponent(nid)}`
   );
   if (!verify.ok || typeof verify.body !== 'object' || verify.body === null) {
     return { ok: false, nationalId: nid, error: 'Round-trip read failed: search returned no body' };
   }
-  const list = (verify.body as { patientList?: Array<{ nationalId?: string; patientPK?: string }> }).patientList || [];
+  const list = (verify.body as { patientSearchResults?: Array<{ nationalId?: string; patientID?: string }> }).patientSearchResults || [];
   const found = list.find(p => p.nationalId === nid);
   if (!found) {
     return { ok: false, nationalId: nid, error: 'Round-trip read failed: patient not found after create' };
   }
 
-  return { ok: true, nationalId: nid, patientPK: found.patientPK };
+  return { ok: true, nationalId: nid, patientPK: found.patientID };
 }
 
 /**
@@ -415,7 +415,7 @@ async function createOrder(
     verify.ok &&
     typeof verify.body === 'object' &&
     verify.body !== null &&
-    ((verify.body as { patientProperties?: { nationalId?: string } }).patientProperties?.nationalId ===
+    ((verify.body as { nationalId?: string }).nationalId ===
       patientNationalId);
 
   return { ok: true, accession, patientLinked: !!linked };
@@ -444,15 +444,15 @@ export async function seedOrders(
   }
 
   // Build the patient pool: existing QA_AUTO_ patients + freshly created
-  const allQaPatients = await apiCall<{ patientList?: Array<{ nationalId?: string; patientPK?: string }> }>(
+  const allQaPatients = await apiCall<{ patientSearchResults?: Array<{ nationalId?: string; patientID?: string }> }>(
     page,
     `/api/OpenELIS-Global/rest/patient-search-results?lastName=${encodeURIComponent(QA_PREFIX)}`
   );
   const patientPool: Array<{ nationalId: string; patientPK: string }> = [];
   if (allQaPatients.ok && typeof allQaPatients.body === 'object' && allQaPatients.body !== null) {
-    const list = (allQaPatients.body as { patientList?: Array<{ nationalId?: string; patientPK?: string }> }).patientList || [];
+    const list = (allQaPatients.body as { patientSearchResults?: Array<{ nationalId?: string; patientID?: string }> }).patientSearchResults || [];
     for (const p of list) {
-      if (p.nationalId && p.patientPK) patientPool.push({ nationalId: p.nationalId, patientPK: p.patientPK });
+      if (p.nationalId && p.patientID) patientPool.push({ nationalId: p.nationalId, patientPK: p.patientID });
     }
   }
   if (patientPool.length === 0) {
@@ -472,7 +472,7 @@ export async function seedOrders(
   for (let i = 0; i < needed; i++) {
     const patient = patientPool[i % patientPool.length];
     const test = testEntries[i % testEntries.length];
-    const result = await createOrder(page, patient.nationalId, patient.patientPK, test);
+    const result = await createOrder(page, patient.nationalId, patient.patientID, test);
     if (result.ok && result.accession) {
       state.created.orders.push(result.accession);
       if (!result.patientLinked) {
