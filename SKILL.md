@@ -4,7 +4,7 @@ description: >
   Automated QA testing skill for OpenELIS Global covering 167+ test suites and ~488 test cases. Tests: Orders, Validation, Results, Patient Management, Dashboard, Admin (28+ pages), Reports (all 11), Referrals, Workplan, FHIR, i18n, Accessibility, Pathology, Analyzers, EQA, Alerts, Storage, Batch Entry, Barcode, and more. Includes DEEP interaction suites: search/filter, form interaction, error handling, performance, cross-module data integrity, security (CSRF/XSS/SQLi), WCAG accessibility, E2E order tracing, report PDF generation, and Madagascar e-SIL UAT coverage (LO-xx/DU-xx). Drives a real browser session via Claude in Chrome and produces a pass/fail report with Jira tickets.
 ---
 
-# OpenELIS Global QA Skill — v6.4 (2026-05-12 lab-readiness rewrite + blocking-bug etiquette + calibration sweep + bug-revalidation cross-link + bulk seed script)
+# OpenELIS Global QA Skill — v6.5 (2026-05-12 lab-readiness rewrite + blocking-bug etiquette + calibration sweep + bug-revalidation cross-link + bulk seed script + Chain A spec)
 
 **v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 11.5 Blocking-Bug Etiquette, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. See full Change Log at end of file.
 
@@ -1226,7 +1226,7 @@ Chains are end-to-end workflows that cross 3+ modules. They are not optional —
 
 | Chain | Name | Modules | What it tests | Caught (or would have caught) |
 |-------|------|---------|----------------|--------------------------------|
-| **A** | Order Lifecycle | Order → Sample → Result → Validation → Patient Report → FHIR | The whole forward path. Order created, patient linked, sample received, result entered, validated, appears on Patient Status Report PDF, and is queryable as FHIR Observation. | BUG-37 (patient-order linkage), BUG-8 (silent data loss on save) |
+| **A** ✅ | Order Lifecycle | Order → Sample → Result → Validation → Patient Report → FHIR | The whole forward path. Order created, patient linked, sample received, result entered, validated, appears on Patient Status Report PDF, and is queryable as FHIR Observation. **Implemented** as `tests/chains/chain-a-order-lifecycle.spec.ts` (run via `--project=chain-a`). 8 named steps each with explicit acceptance criterion per §7.6. Steps 3-4 use API substitutes per §11.5 (BUG-31 blocks the Carbon Accept checkbox). | BUG-37 (patient-order linkage), BUG-8 (silent data loss on save) |
 | **B** | Rejection → NCE → Report | Order rejection → NCE auto-creation → Rejection Report → Dashboard counter | The cross-module data flow Phase 23 invented ad-hoc. | BUG-29 (rejection silo) |
 | **C** | Reflex Trigger | Admin reflex rule create → Result entry → Workplan check | Confirms reflex actually fires. | Currently impossible — reflex rules are M1 (BUG-31 blocks results entry) |
 | **D** | Calculated Value | Admin calc create → Two source results enter → Calc appears on results | Confirms compute engine runs. | Currently impossible — calcs are M1 |
@@ -1305,6 +1305,12 @@ The assertion failure mode catches counter-drift bugs that would otherwise be in
 ---
 
 ## Change log
+
+### v6.5 (2026-05-12) — Chain A Order Lifecycle implemented (Phase B1)
+- First chain from §11 Chains is now an actual Playwright spec: `tests/chains/chain-a-order-lifecycle.spec.ts`. Eight named steps (1: acquire order, 2: BUG-37 linkage check, 3: result entry via API substitute, 4: validation, 5: PDF generation, 6: PDF content match, 7: FHIR Observation fetch, 8: round-trip value match).
+- Each step declares its §7.6 Acceptance Criterion (RENDER / FUNCTION / PERSIST / ROUND-TRIP / CROSS-LINK / REPORTABLE) and references the SKILL section that mandates it. Steps 3 and 4 use API substitutes per §11.5 because BUG-31 blocks the UI path.
+- Added `tests/chains/_common.ts` with reusable helpers: CSRF-aware `apiCall`, `findOrSeedOrder`, minimal PDF text extractor (no external deps), structured step logger. Same helpers will power Chains B–L.
+- Playwright project `chain-a` depends only on `setup`, not `data-setup`, so it can run against any seeded instance via the §0.6a script.
 
 ### v6.4 (2026-05-12) — Bulk seed script (Phase E1)
 - Step 0.6 Data Census now has an 0.6a "Bulk seed script" sub-section with invocation commands. The seed script (`seed-data.setup.ts` + `helpers/seed-factory.ts` + `helpers/seed-config.ts` in the repo) is idempotent, round-trip-verifies every write per §7.5, detects and counts BUG-37 instances as it runs, and writes a machine-readable summary to `.auth/seed-state.json`.

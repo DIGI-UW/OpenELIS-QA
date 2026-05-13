@@ -78,6 +78,20 @@ export default defineConfig({
         storageState: '.auth/user.json',
       },
     },
+    // --- Chain A: Order Lifecycle (Phase B1) — opt-in via --project=chain-a ---
+    // Eight-step end-to-end spec per SKILL §11. Validates the full forward
+    // path from Add Order through FHIR Observation. Requires QA_AUTO_ data
+    // (run --project=seed-data first if instance is empty). FAIL at Step 2
+    // is the canonical BUG-37 catch — expected until that bug is fixed.
+    {
+      name: 'chain-a',
+      testMatch: 'tests/chains/chain-a-order-lifecycle.spec.ts',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/user.json',
+      },
+    },
 
     // --- Core QA: all test suites using cached auth + test data ---
     {
