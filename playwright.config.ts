@@ -93,6 +93,24 @@ export default defineConfig({
       },
     },
 
+    // --- Chain B: Rejection → NCE → Report (Phase B2) ---
+    // Eight-step end-to-end spec per SKILL §11. Each of the four
+    // BUG-29 symptoms (qa_event creation gap, View NCE empty,
+    // Rejection Report PDF 503, Dashboard counter stuck) maps to a
+    // distinct step + expect() so partial fixes surface clearly.
+    // Expected to FAIL on the current testing instance — that is the
+    // point. Currently chains B's failure is documented as the catch
+    // for OGC-515 / BUG-29 (rejection silo).
+    {
+      name: 'chain-b',
+      testMatch: 'tests/chains/chain-b-rejection.spec.ts',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/user.json',
+      },
+    },
+
     // --- Core QA: all test suites using cached auth + test data ---
     {
       name: 'qa-dashboard',
