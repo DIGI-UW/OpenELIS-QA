@@ -4,9 +4,9 @@ description: >
   Automated QA testing skill for OpenELIS Global covering 167+ test suites and ~488 test cases. Tests: Orders, Validation, Results, Patient Management, Dashboard, Admin (28+ pages), Reports (all 11), Referrals, Workplan, FHIR, i18n, Accessibility, Pathology, Analyzers, EQA, Alerts, Storage, Batch Entry, Barcode, and more. Includes DEEP interaction suites: search/filter, form interaction, error handling, performance, cross-module data integrity, security (CSRF/XSS/SQLi), WCAG accessibility, E2E order tracing, report PDF generation, and Madagascar e-SIL UAT coverage (LO-xx/DU-xx). Drives a real browser session via Claude in Chrome and produces a pass/fail report with Jira tickets.
 ---
 
-# OpenELIS Global QA Skill — v6.9 (2026-05-12 lab-readiness rewrite + blocking-bug etiquette + calibration sweep + bug-revalidation cross-link + bulk seed script + all 12 Chains A–L implemented)
+# OpenELIS Global QA Skill — v6.10 (2026-05-13 + Phase E2 network capture helper enforces §6.5)
 
-**v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 11.5 Blocking-Bug Etiquette, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. See full Change Log at end of file.
+**v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture) + 6.5a (harness-enforced via `helpers/networkCapture.ts`), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 11.5 Blocking-Bug Etiquette, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. See full Change Log at end of file.
 
 You are a QA automation agent for OpenELIS Global. Your job is to navigate a live OpenELIS
 instance in Chrome, execute requested test suites, log every action with screenshots, generate
@@ -696,6 +696,38 @@ Examples from the 2026-04-20 false-positive cluster (6 Jira tickets closed):
 
 **Apply this rule to:** every BUG-* candidate whose only evidence is `GET /rest/X → 404`. The verification step is non-optional.
 
+### 6.5a — Harness-enforced capture (Phase E2)
+
+The §6.5 rule above was previously enforced by **discipline**. As of Phase E2 the harness enforces it. Use `helpers/networkCapture.ts`:
+
+```typescript
+import { captureAround, assertBugEvidence, assert404Observed } from '../../helpers/networkCapture';
+
+test('Step X — verify Dictionary endpoint is reached', async ({ page }, testInfo) => {
+  const { session } = await captureAround(page, async () => {
+    await page.goto(`${BASE}/MasterListsPage/DictionaryMenu`);
+    await page.waitForLoadState('networkidle');
+  });
+
+  // BEFORE filing a 404 bug against /rest/dictionary, prove the app
+  // actually called that path. If it doesn't (likely — see the
+  // 2026-04-20 cluster), this throws with a descriptive error and
+  // saves the capture as evidence in .auth/captures/.
+  assertBugEvidence(testInfo, session, '/rest/dictionary', 'BUG-51-candidate');
+
+  // Then prove the call returned 404 (not 200/500/etc.)
+  assert404Observed(session, '/rest/dictionary', 'BUG-51-candidate');
+});
+```
+
+**What the helper does:**
+
+- `startCapture(page)` and `captureAround(page, action)` attach Playwright `request`/`response` listeners, buffer the traffic, and return a `CaptureSession` with `.captures`, `.failed`, `.notFound` slices.
+- `saveAsEvidence(testInfo, session, label)` writes the session to `.auth/captures/<label>-<timestamp>.json` AND attaches it to the Playwright test report. Auth/cookie headers are redacted automatically so the evidence file is safe to commit or paste into a Jira ticket.
+- `assertBugEvidence(testInfo, session, claimedPath, bugLabel)` throws with a descriptive error if the app never called `claimedPath` during the capture window. The error message references the OGC-535/562/563/565/566/568 cluster precedent and points at the actual paths the app did call — so the next test iteration probes the right endpoint.
+
+**Discipline → enforcement.** A test that tries to file a bug against `/rest/dictionary` without `assertBugEvidence` should be considered incomplete. CI should flag specs that mark a 404 as FAIL without first calling either `assertBugEvidence` or `assert404Observed`.
+
 ---
 
 ## Section 7 — Error Handling
@@ -1305,6 +1337,12 @@ The assertion failure mode catches counter-drift bugs that would otherwise be in
 ---
 
 ## Change log
+
+### v6.10 (2026-05-13) — Phase E2 Live Network Capture Helper
+- `helpers/networkCapture.ts` — new module turning §6.5 from "discipline" into "harness-enforced contract." Exports `startCapture`, `captureAround`, `saveAsEvidence`, `assertBugEvidence`, `assert404Observed`, `summarize`.
+- §6.5a added with usage example. Tests that mark a 404 as FAIL without first calling `assertBugEvidence` (which throws if the app never actually called the claimed-broken path) should be considered incomplete.
+- Auth/cookie headers automatically redacted in saved evidence files, so capture JSON is safe to commit and safe to paste into Jira tickets.
+- Closes the loop on the 2026-04-20 false-positive cluster (OGC-535/562/563/565/566/568) at the infrastructure level — the next time someone tries to file a 404 bug against a path the app doesn't call, the harness blocks the bug ticket with a descriptive error pointing at the actual paths captured during the action.
 
 ### v6.9 (2026-05-12) — Chains E/F/G/H/J/K/L complete (Phases B5–B11)
 - All 12 §11 chains are now Playwright specs in `tests/chains/`. Five (A, B, C, D, I) landed earlier; seven (L, E, F, G, H, J, K) added in this bump.
