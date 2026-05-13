@@ -4,7 +4,7 @@ description: >
   Automated QA testing skill for OpenELIS Global covering 167+ test suites and ~488 test cases. Tests: Orders, Validation, Results, Patient Management, Dashboard, Admin (28+ pages), Reports (all 11), Referrals, Workplan, FHIR, i18n, Accessibility, Pathology, Analyzers, EQA, Alerts, Storage, Batch Entry, Barcode, and more. Includes DEEP interaction suites: search/filter, form interaction, error handling, performance, cross-module data integrity, security (CSRF/XSS/SQLi), WCAG accessibility, E2E order tracing, report PDF generation, and Madagascar e-SIL UAT coverage (LO-xx/DU-xx). Drives a real browser session via Claude in Chrome and produces a pass/fail report with Jira tickets.
 ---
 
-# OpenELIS Global QA Skill — v6.11 (2026-05-13 + Phase C: all 6 §12 Personas implemented)
+# OpenELIS Global QA Skill — v6.12 (2026-05-13 + Phase A1 pilot + §6.5b authoring-time capture rule + apiShapes.ts)
 
 **v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture) + 6.5a (harness-enforced via `helpers/networkCapture.ts`), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 11.5 Blocking-Bug Etiquette, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. See full Change Log at end of file.
 
@@ -728,6 +728,28 @@ test('Step X — verify Dictionary endpoint is reached', async ({ page }, testIn
 
 **Discipline → enforcement.** A test that tries to file a bug against `/rest/dictionary` without `assertBugEvidence` should be considered incomplete. CI should flag specs that mark a 404 as FAIL without first calling either `assertBugEvidence` or `assert404Observed`.
 
+### 6.5b — Use captureAround when authoring NEW spec steps (v6.12)
+
+The 2026-05-13 A1 pilot found 10 spec bugs in the chains and personas — every one of them was the spec author (me) inferring an endpoint shape from documents rather than from live capture. `patient-search-results` returns `{patientSearchResults}` not `{patientList}`. Patient ID is `patientID` not `patientPK`. LogbookResults filter is `?testUnitId=N` not `?testSectionId=N`. None of these would have shipped if the helper had been used at *authoring* time, not just at *bug-filing* time.
+
+**Rule (v6.12):** before adding a new step to any chain or persona that calls a non-trivial endpoint, the author MUST first capture the equivalent action via the live UI (or via direct probe) and validate the response shape. Patterns:
+
+```typescript
+// Authoring pattern — probe before committing the spec
+const { session } = await captureAround(page, async () => {
+  await page.goto(`${BASE}/some-page`);
+  await page.waitForLoadState('networkidle');
+});
+console.log(summarize(session));
+// Inspect session.captures to find the actual endpoint + payload shape
+// Update helpers/apiShapes.ts with the discovered keys
+// Then write the spec step against the real shape
+```
+
+**Source of truth:** `helpers/apiShapes.ts` (added in v6.12) holds the live-validated response types and key constants. Every chain/persona spec that reads a REST response should import from there rather than typing keys inline. When a new endpoint is introduced or a shape changes, update `apiShapes.ts` in the same commit.
+
+**Practical effect:** the next round of chain/persona corrections (post-pilot) and any future chain/persona additions should not re-inference any shape that isn't already validated in `apiShapes.ts`. If you find yourself typing a field name from memory, stop and run `captureAround` first.
+
 ---
 
 ## Section 7 — Error Handling
@@ -807,7 +829,9 @@ A test phase that reports a higher-tier criterion must include the evidence (rea
 | BUG-11/15 | ~~Medium~~ **Resolved (API); v3.2.1.5 fully implemented** | `/NotebookDashboard` renders completely blank white page. **2026-04-21:** HTTP 200 confirmed; React component now mounts. v3.2.1.5: NoteBook fully implemented with KPI cards (Total Entries, Drafts, Pending Review, Finalized This Week) and Projects/All Entries tabs. Close ticket. | AP (NoteBook) |
 | BUG-12 | Medium | TestAdd JSP form: Reporting Test Name inputs lack `name` attributes. Values never submitted to server. | A (TestAdd form) |
 | BUG-13 | **Critical** | `GET /TestModifyEntry` returns HTTP 500 after failed TestAdd. Possible orphan data poisoning. Regression. | A (TestModify) |
-| BUG-14 | ~~High~~ **Resolved** | `/api/fhir/metadata` now returns HTTP 200 with valid CapabilityStatement (HAPI FHIR 7.0.2, FHIR R4, 5 resources: Observation, OperationDefinition, Organization, Patient, Practitioner). Resolved in v3.2.1.3. | R (FHIR) — BW-DEEP |
+| BUG-14 | ~~High~~ **Resolved (testing-instance regression noted)** | `/api/fhir/metadata` returned HTTP 200 valid CapabilityStatement in v3.2.1.3. **2026-05-13 cross-validation:** mgdev.openelis-global.org v3.2.1.8 returns a valid HAPI FHIR CapabilityStatement (BUG-14 truly resolved on that newer build). testing.openelis-global.org v3.2.1.6 returns HTML SPA shell — testing-instance specific regression / deployment difference, not a fundamental code regression. Investigate deployment of testing instance. | R (FHIR) — BW-DEEP |
+| NEW-1 | **Confirmed (2-instance)** | **NEW (Pilot 2026-05-13)** Y-RECON mismatch at Dashboard / Logbook layer. `GET /rest/home-dashboard/metrics` reports orders in queue. `GET /rest/LogbookResults` (any filter combination tried) returns `testResult: []`. Lab manager and bench tech see different realities. **Confirmed on TWO instances:** testing.openelis-global.org v3.2.1.6 (14 in-progress / 0 logbook) AND mgdev.openelis-global.org v3.2.1.8 (4 ready-for-validation / 0 logbook). Caught by SKILL §13 Y-RECON design exactly as intended. Ready to file as a real OpenELIS bug. | Dashboard, Logbook |
+| NEW-2 | Medium | **NEW (Pilot 2026-05-13)** `GET /api/OpenELIS-Global/ReportPrint?report=patient&type=patient&accessionNumber=X` returned HTTP 500 with a 19-byte body. Test used a patient nationalId where a lab number was expected, so this may be invalid-accession-mishandling rather than a real bug — but a well-designed API would return 400 for bad input, not 500. Possibly BUG-42 extending to the `patient` report type. Retest with a known-real accession. | Reports — Patient Status |
 | NOTE-1 | Low (UX) | Non-existent routes return raw JSON 404 (`NoHandlerFoundException`) instead of user-friendly error page. | W-DEEP (error handling) |
 | BUG-16 | Medium | French locale shows 2 raw i18n keys (`banner.menu.alerts`, `banner.menu.eqa.distribution`) and 14 untranslated English items (Storage, Analyzers modules). | T-DEEP (i18n) |
 | BUG-17 | Low | Results By Range | "Accesion" typo in both From/To labels |
@@ -1339,6 +1363,19 @@ The assertion failure mode catches counter-drift bugs that would otherwise be in
 ---
 
 ## Change log
+
+### v6.12 (2026-05-13) — Phase A1 pilot + spec corrections grounded in live capture
+The v6 methodology was run live against testing.openelis-global.org for the first time. 35 minutes of live Chrome time surfaced 3 candidate real findings (NEW-1 Y-RECON mismatch, NEW-2 ReportPrint 500, NEW-3 FHIR metadata HTML shell) and 10 spec bugs in the chains and personas. The methodology is doing its job — §13 Y-RECON caught NEW-1 on first try; §6.5 stopped me filing the false-positive endpoint paths I'd inferred from documents.
+The single most important lesson: every one of the 10 spec bugs was the author (me) inferring an endpoint shape from documents rather than from live capture. **§6.5b "Use captureAround when authoring NEW spec steps" closes that gap** — the network capture helper from v6.10 is now mandatory at authoring time, not just at bug-filing time.
+Added:
+- §6.5b authoring-time capture rule with a code snippet showing the pattern.
+- `helpers/apiShapes.ts` as single source of truth for the corrected response shapes: `patientSearchResults` key, `patientID` field, `birthdate` field, `labUnitList` for lab section IDs, `testUnitId` logbook filter param, `SampleEdit` Struts form top-level fields, `site-branding` schema (no `labName`), FHIR base path candidates, EQA enablement only at JSP not REST.
+- `_common.ts` corrections: `findOrSeedOrder` reads the right keys; new `acquireAnyAccession(page)` helper that turns the Y-RECON Dashboard-vs-Logbook gap into a single clear assertion result.
+- 3 new candidate findings (NEW-1, NEW-2, NEW-3) added to the bug table.
+- BUG-14 marked as possibly regressed pending live retest.
+- The full pilot session report is `pilot-2026-05-13-session-report.md` in the repo.
+Module maturity downgrades from live evidence: Order Workflow M1.5 → M1, Dashboard M2 → M1.5, Reports M2 → M1.5, FHIR M3 → M1.5. The `maturity-dashboard.html` should be regenerated.
+Workplan status: A1 ✅. Remaining: A1 follow-up retests on NEW-1/2/3 with corrected specs, Phase D spec-walks, Phase E3-E7 tooling, Phase F upstream PRs.
 
 ### v6.11 (2026-05-13) — Phase C: all 6 §12 Personas implemented
 - 6 new specs under `tests/personas/`. Each is a day-in-the-life walk-through for one role, written as a single test.describe.serial that fails cleanly when the role hits a hidden requirement, missing UI path, or broken cross-module link.
