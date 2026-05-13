@@ -63,6 +63,163 @@ export default defineConfig({
         storageState: '.auth/user.json',
       },
     },
+    // --- Optional bulk seed (Phase E1) — opt-in via --project=seed-data ---
+    // Runs after auth, NOT a default dependency of qa-* projects.
+    // Invoke when SKILL §0.6 Data Census returns zero, or to populate a
+    // fresh instance with QA_AUTO_-prefixed patients and orders.
+    // Reads SEED_DRY_RUN, SEED_VERIFY_ONLY, SEED_TARGET_PATIENTS,
+    // SEED_TARGET_ORDERS environment variables. See SKILL §0.6a.
+    {
+      name: 'seed-data',
+      testMatch: 'seed-data.setup.ts',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/user.json',
+      },
+    },
+    // --- Chain A: Order Lifecycle (Phase B1) — opt-in via --project=chain-a ---
+    // Eight-step end-to-end spec per SKILL §11. Validates the full forward
+    // path from Add Order through FHIR Observation. Requires QA_AUTO_ data
+    // (run --project=seed-data first if instance is empty). FAIL at Step 2
+    // is the canonical BUG-37 catch — expected until that bug is fixed.
+    {
+      name: 'chain-a',
+      testMatch: 'tests/chains/chain-a-order-lifecycle.spec.ts',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/user.json',
+      },
+    },
+
+    // --- Chain B: Rejection → NCE → Report (Phase B2) ---
+    // Eight-step end-to-end spec per SKILL §11. Each of the four
+    // BUG-29 symptoms (qa_event creation gap, View NCE empty,
+    // Rejection Report PDF 503, Dashboard counter stuck) maps to a
+    // distinct step + expect() so partial fixes surface clearly.
+    // Expected to FAIL on the current testing instance — that is the
+    // point. Currently chains B's failure is documented as the catch
+    // for OGC-515 / BUG-29 (rejection silo).
+    {
+      name: 'chain-b',
+      testMatch: 'tests/chains/chain-b-rejection.spec.ts',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/user.json',
+      },
+    },
+
+    // --- Chain C: Reflex Trigger (Phase B3) ---
+    // Six-step end-to-end. API-substituted per §11.5 (BUG-31). Step 5
+    // is the definitive engine-fired check: does a reflex rule actually
+    // produce its target test when the trigger result is entered?
+    {
+      name: 'chain-c',
+      testMatch: 'tests/chains/chain-c-reflex-trigger.spec.ts',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/user.json',
+      },
+    },
+
+    // --- Chain D: Calculated Value (Phase B3) ---
+    // Seven-step end-to-end. Discovers an active calc rule, seeds an
+    // order carrying all its operands, enters every operand via API,
+    // checks the calc was produced (5), has a value (6), and the math
+    // is plausible (7). Three distinct fail modes mapped to three
+    // expects.
+    {
+      name: 'chain-d',
+      testMatch: 'tests/chains/chain-d-calculated-value.spec.ts',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/user.json',
+      },
+    },
+
+    // --- Chain I: Site Branding → Report (Phase B4) ---
+    // Six steps. Verifies admin SiteInformation labName propagates all
+    // the way through to the Patient Status Report PDF header.
+    // NOTE-16 catch: PDFs render "null" when labName is unset. Includes
+    // afterAll cleanup that restores any modified labName even on
+    // mid-test failure.
+    {
+      name: 'chain-i',
+      testMatch: 'tests/chains/chain-i-site-branding-to-report.spec.ts',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/user.json',
+      },
+    },
+
+    // --- Chain L: Lab Number Uniqueness (Phase B5) ---
+    // 4 steps. Burst-creates 10 orders in parallel; asserts distinct accessions.
+    {
+      name: 'chain-l',
+      testMatch: 'tests/chains/chain-l-lab-number-uniqueness.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+
+    // --- Chain E: Sample Validation Lifecycle (Phase B6) ---
+    // 6 steps. Result enter → retest reject → re-enter → validate → confirm on report.
+    {
+      name: 'chain-e',
+      testMatch: 'tests/chains/chain-e-sample-validation-lifecycle.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+
+    // --- Chain F: EQA Distribution (Phase B7) ---
+    // 6 steps. Step 1 BAILs clean if eqaEnabled config is false — solves the
+    // OGC-518–524 cluster pattern. Step 5 catches BUG-39.
+    {
+      name: 'chain-f',
+      testMatch: 'tests/chains/chain-f-eqa-distribution.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+
+    // --- Chain G: Cold-Chain Excursion (Phase B8) ---
+    // 5 steps. BAILs clean if no Cold Storage device configured.
+    {
+      name: 'chain-g',
+      testMatch: 'tests/chains/chain-g-cold-chain-excursion.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+
+    // --- Chain H: Permission Enforcement (Phase B9) ---
+    // 4 steps + afterAll cleanup. Multi-context login for restricted user.
+    {
+      name: 'chain-h',
+      testMatch: 'tests/chains/chain-h-permission-enforcement.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+
+    // --- Chain J: Audit Trail Coverage (Phase B10) ---
+    // 5 steps. Sensitive actions → audit entry → required fields populated.
+    {
+      name: 'chain-j',
+      testMatch: 'tests/chains/chain-j-audit-trail-coverage.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+
+    // --- Chain K: FHIR Round-trip (Phase B11) ---
+    // 6 steps. Forward (UI→FHIR), write, reverse (FHIR→UI). BLOCKED if read-only.
+    {
+      name: 'chain-k',
+      testMatch: 'tests/chains/chain-k-fhir-round-trip.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
 
     // --- Core QA: all test suites using cached auth + test data ---
     {

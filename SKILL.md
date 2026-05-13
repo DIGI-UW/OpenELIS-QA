@@ -4,7 +4,7 @@ description: >
   Automated QA testing skill for OpenELIS Global covering 167+ test suites and ~488 test cases. Tests: Orders, Validation, Results, Patient Management, Dashboard, Admin (28+ pages), Reports (all 11), Referrals, Workplan, FHIR, i18n, Accessibility, Pathology, Analyzers, EQA, Alerts, Storage, Batch Entry, Barcode, and more. Includes DEEP interaction suites: search/filter, form interaction, error handling, performance, cross-module data integrity, security (CSRF/XSS/SQLi), WCAG accessibility, E2E order tracing, report PDF generation, and Madagascar e-SIL UAT coverage (LO-xx/DU-xx). Drives a real browser session via Claude in Chrome and produces a pass/fail report with Jira tickets.
 ---
 
-# OpenELIS Global QA Skill — v6.3 (2026-05-12 lab-readiness rewrite + blocking-bug etiquette + calibration sweep + bug-revalidation cross-link)
+# OpenELIS Global QA Skill — v6.9 (2026-05-12 lab-readiness rewrite + blocking-bug etiquette + calibration sweep + bug-revalidation cross-link + bulk seed script + all 12 Chains A–L implemented)
 
 **v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 11.5 Blocking-Bug Etiquette, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. See full Change Log at end of file.
 
@@ -82,7 +82,29 @@ Before running any chain or persona that depends on existing data, run a one-cal
 - Dashboard KPIs JSON (`GET /rest/home-dashboard/metrics`) — record `ordersInProgress`, `ordersReadyForValidation`, `unPritendResults`.
 - Recent accessions list (admin lab number page or a known query) — record range.
 
-**If patient count = 0 AND logbook count = 0 AND Dashboard shows zeros:** the test instance has been reset. Halt all E2E and persona work and either (a) re-seed with the `QA_AUTO_*` prefix dataset, or (b) note in the report header that the instance is empty and limit testing to render-only checks.
+**If patient count = 0 AND logbook count = 0 AND Dashboard shows zeros:** the test instance has been reset. Halt all E2E and persona work and either (a) re-seed with the bulk seed script (preferred), or (b) note in the report header that the instance is empty and limit testing to render-only checks.
+
+### 0.6a — Bulk seed script (re-seeding from zero)
+
+Run the bulk seed script when census returns zero:
+
+```bash
+# Via Playwright (recommended):
+npx playwright test --project=seed-data
+
+# Standalone CLI for ad-hoc seeding:
+SEED_DRY_RUN=1 npx playwright test --project=seed-data    # census-only preview
+SEED_TARGET_PATIENTS=50 SEED_TARGET_ORDERS=100 npx playwright test --project=seed-data
+```
+
+The script (`seed-data.setup.ts` plus `helpers/seed-factory.ts` and `helpers/seed-config.ts`):
+
+- Censuses existing `QA_AUTO_` prefixed records, then creates only the delta to reach targets (50 patients, 100 orders across 5 lab sections by default).
+- Round-trip verifies every write per §7.5 — patients via `/rest/patient-search-results`, orders via `/rest/SampleEdit` (which is the Modify Order backing endpoint).
+- Detects and counts BUG-37 instances (order saved but patient linkage broken). Reports the count in the summary table and `.auth/seed-state.json`.
+- Does NOT attempt to force orders into IN_PROGRESS / READY_FOR_VALIDATION / REJECTED states — blocked by BUG-31. Those states reflect whatever is naturally present (analyzer imports, prior tests). See §11.5 Blocking-Bug Etiquette.
+
+After seeding succeeds, re-run the Step 0.6 census to confirm targets are met, then proceed to E2E/persona suites.
 
 This prevents the Phase 14 NOTE-14 pattern: silently running an E2E suite on an empty database and reporting PASS for nothing.
 
@@ -1204,18 +1226,18 @@ Chains are end-to-end workflows that cross 3+ modules. They are not optional —
 
 | Chain | Name | Modules | What it tests | Caught (or would have caught) |
 |-------|------|---------|----------------|--------------------------------|
-| **A** | Order Lifecycle | Order → Sample → Result → Validation → Patient Report → FHIR | The whole forward path. Order created, patient linked, sample received, result entered, validated, appears on Patient Status Report PDF, and is queryable as FHIR Observation. | BUG-37 (patient-order linkage), BUG-8 (silent data loss on save) |
-| **B** | Rejection → NCE → Report | Order rejection → NCE auto-creation → Rejection Report → Dashboard counter | The cross-module data flow Phase 23 invented ad-hoc. | BUG-29 (rejection silo) |
-| **C** | Reflex Trigger | Admin reflex rule create → Result entry → Workplan check | Confirms reflex actually fires. | Currently impossible — reflex rules are M1 (BUG-31 blocks results entry) |
-| **D** | Calculated Value | Admin calc create → Two source results enter → Calc appears on results | Confirms compute engine runs. | Currently impossible — calcs are M1 |
-| **E** | Sample Validation Lifecycle | Result enter → Reject for technical reasons → Re-test → Validate → Patient Report | Tests the back-and-forth path real labs walk. | Untested |
-| **F** | EQA Distribution | Admin enable EQA → Create program → Create shipment → Distribute → Participant enters result → Score → Report | Confirms the EQA workflow end-to-end. | OGC-518–524 cluster (EQA disabled silently broke everything) |
-| **G** | Cold-Chain Excursion | Device configured → Simulated excursion → Alert fires → Corrective action linked → Audit log entry | Confirms the regulatory-required loop. | Untested |
-| **H** | Permission Enforcement | Admin create user with restricted role → Login as that user → Attempt restricted action → Fail with 403 | Confirms access control is enforced, not just configured. | Untested |
-| **I** | Site Branding to Report | Admin update branding → Generate Patient Status Report PDF → Branding appears | Confirms the pipeline from admin to output. | NOTE-29 (report header "null") |
-| **J** | Audit Trail Coverage | Edit reference range, delete result, grant admin role → Audit Trail shows each | Confirms audit entries are written for sensitive actions. | Untested |
-| **K** | Cross-installation FHIR Round-trip | UI write → FHIR read → External FHIR POST → UI read | The integration use case OpenELIS markets. | Untested |
-| **L** | Lab Number Uniqueness | Concurrent Add Order, Batch Order Entry, EQA Sample, Generic Sample → No duplicate lab numbers | Confirms accession generation across paths. | Untested |
+| **A** ✅ | Order Lifecycle | Order → Sample → Result → Validation → Patient Report → FHIR | The whole forward path. Order created, patient linked, sample received, result entered, validated, appears on Patient Status Report PDF, and is queryable as FHIR Observation. **Implemented** as `tests/chains/chain-a-order-lifecycle.spec.ts` (run via `--project=chain-a`). 8 named steps each with explicit acceptance criterion per §7.6. Steps 3-4 use API substitutes per §11.5 (BUG-31 blocks the Carbon Accept checkbox). | BUG-37 (patient-order linkage), BUG-8 (silent data loss on save) |
+| **B** ✅ | Rejection → NCE → Report | Order rejection → NCE auto-creation → Rejection Report → Dashboard counter | The cross-module data flow Phase 23 invented ad-hoc. **Implemented** as `tests/chains/chain-b-rejection.spec.ts` (run via `--project=chain-b`). 8 steps; Steps 5/6/7/8 each map to one of the four distinct BUG-29 symptoms (A: qa_event creation, D: View NCE search, B: Rejection Report PDF, C: Dashboard counter), so a partial fix to BUG-29 surfaces clearly *which* subsystem was patched. Step 3 uses API substitute per §11.5 (Reject Sample is a Carbon checkbox, BUG-31 family). | BUG-29 (rejection silo) |
+| **C** ✅ | Reflex Trigger | Admin reflex rule create → Result entry → Workplan check | Confirms reflex actually fires. **Implemented** as `tests/chains/chain-c-reflex-trigger.spec.ts` (run via `--project=chain-c`). 6 steps with API substitute per §11.5 (BUG-31 bypass). Step 5 is the definitive engine-fired check — gives a clean PASS or FAIL answer to "do reflex rules actually fire?" — the question Phase 28 left unverified. | BUG-31 (UI path) — but API substitute lets us probe the engine directly |
+| **D** ✅ | Calculated Value | Admin calc create → Two source results enter → Calc appears on results | Confirms compute engine runs. **Implemented** as `tests/chains/chain-d-calculated-value.spec.ts` (run via `--project=chain-d`). 7 steps. Discovers an active calc rule, seeds an order with all its operand tests, enters every operand via API, checks the calc test was produced (Step 5) AND has a value (Step 6) AND the math is plausible (Step 7). Three distinct fail modes, three distinct expects. | BUG-31 (UI path) — but API substitute lets us probe the engine directly |
+| **E** ✅ | Sample Validation Lifecycle | Result enter → Reject for technical reasons → Re-test → Validate → Patient Report | Tests the back-and-forth path real labs walk. **Implemented** as `tests/chains/chain-e-sample-validation-lifecycle.spec.ts` (run via `--project=chain-e`). 6 steps. Step 6 catches the case where both the initial wrong value AND the corrected value appear on the report (history-without-current-marker bug). | Distinct from BUG-29 (sample rejection); tests RESULT rejection. |
+| **F** ✅ | EQA Distribution | Admin enable EQA → Create program → Create shipment → Distribute → Participant enters result → Score → Report | Confirms the EQA workflow end-to-end. **Implemented** as `tests/chains/chain-f-eqa-distribution.spec.ts` (run via `--project=chain-f`). 6 steps. Step 1 explicitly checks the eqaEnabled config precondition and BAILs with the fix path if false — alone solves the OGC-518–524 cluster of silently-cancelled tickets. Step 5 catches BUG-39. | OGC-518–524 cluster, BUG-39 |
+| **G** ✅ | Cold-Chain Excursion | Device configured → Simulated excursion → Alert fires → Corrective action linked → Audit log entry | Confirms the regulatory-required loop. **Implemented** as `tests/chains/chain-g-cold-chain-excursion.spec.ts` (run via `--project=chain-g`). 5 steps. BAILs cleanly if no device configured (most common case). Hardware-substitute: API path to insert a synthetic excursion event. Real Modbus/BACnet sensor integration remains out of scope (workplan E6). | CAP/CLIA gap — most installs have no devices configured |
+| **H** ✅ | Permission Enforcement | Admin create user with restricted role → Login as that user → Attempt restricted action → Fail with 403 | Confirms access control is enforced, not just configured. **Implemented** as `tests/chains/chain-h-permission-enforcement.spec.ts` (run via `--project=chain-h`). 4 steps + afterAll cleanup. Spawns a second browser context to log in as the restricted user. Distinguishes 401 (session) from 403 (forbidden). Dependent on BUG-3 / BUG-20 (UserCreate). | BUG-3, BUG-20 |
+| **I** ✅ | Site Branding to Report | Admin update branding → Generate Patient Status Report PDF → Branding appears | Confirms the pipeline from admin to output. **Implemented** as `tests/chains/chain-i-site-branding-to-report.spec.ts` (run via `--project=chain-i`). 6 steps. Step 3 explicitly checks the NOTE-16 root cause (labName set/empty). Step 5 catches "null" tokens in PDF body. Step 6 is the strongest test — modify labName → regenerate → assert change appears → restore via `test.afterAll`. | NOTE-16 (report header "null"), NOTE-29 (Contact Tracing "null") |
+| **J** ✅ | Audit Trail Coverage | Edit reference range, delete result, grant admin role → Audit Trail shows each | Confirms audit entries are written for sensitive actions. **Implemented** as `tests/chains/chain-j-audit-trail-coverage.spec.ts` (run via `--project=chain-j`). 5 steps. Step 4 maps each sensitive action to a corresponding audit entry. Step 5 verifies entries have who/when/what fields populated — the regulatory minimum. | Audit coverage previously unverified |
+| **K** ✅ | Cross-installation FHIR Round-trip | UI write → FHIR read → External FHIR POST → UI read | The integration use case OpenELIS markets. **Implemented** as `tests/chains/chain-k-fhir-round-trip.spec.ts` (run via `--project=chain-k`). 6 steps. Step 4 verifies UI→FHIR projection (forward). Step 5 attempts FHIR POST (write surface). Step 6 verifies FHIR→UI back-projection (reverse). BLOCKED clean if FHIR is read-only. | BUG-56 territory; integration footgun for EMR projects |
+| **L** ✅ | Lab Number Uniqueness | Concurrent Add Order, Batch Order Entry, EQA Sample, Generic Sample → No duplicate lab numbers | Confirms accession generation across paths. **Implemented** as `tests/chains/chain-l-lab-number-uniqueness.spec.ts` (run via `--project=chain-l`). 4 steps. Burst-creates 10 orders in parallel via Promise.all inside page.evaluate (matches concurrent-user workload). Year-rollover scenario documented as manual-only. | Sample-identification disaster risk |
 
 **Chain reporting:** Each chain produces a single PASS/PARTIAL/FAIL with module-level breakdown. A chain at M3 in module A but M1 in module B is rated at the floor — M1.
 
@@ -1283,6 +1305,47 @@ The assertion failure mode catches counter-drift bugs that would otherwise be in
 ---
 
 ## Change log
+
+### v6.9 (2026-05-12) — Chains E/F/G/H/J/K/L complete (Phases B5–B11)
+- All 12 §11 chains are now Playwright specs in `tests/chains/`. Five (A, B, C, D, I) landed earlier; seven (L, E, F, G, H, J, K) added in this bump.
+- Chain L (Lab Number Uniqueness): 4 steps, burst-creates 10 orders in parallel inside one `page.evaluate`, asserts all returned accessions are distinct, then asserts they share the configured prefix. Catches generator races.
+- Chain E (Sample Validation Lifecycle): 6 steps. Distinct from Chain B's sample rejection — this tests RESULT rejection (retest workflow). Step 6 catches the case where both initial wrong value AND corrected value appear on the report.
+- Chain F (EQA Distribution): 6 steps. Step 1 explicitly checks the eqaEnabled config precondition with a clear fix path, solving the OGC-518–524 cluster pattern. Step 5 catches BUG-39.
+- Chain G (Cold-Chain Excursion): 5 steps. BAILs cleanly if no Cold Storage device configured (most common case). Uses API-direct excursion insertion as hardware-substitute; the real sensor-integration test is out of scope (workplan E6).
+- Chain H (Permission Enforcement): 4 steps with afterAll cleanup. Spawns a second browser context to log in as a restricted user. Distinguishes 401 (session) from 403 (forbidden). Dependent on BUG-3.
+- Chain J (Audit Trail Coverage): 5 steps. Performs 2-3 sensitive actions, then verifies each produced an audit entry with identifying who/when/what fields populated.
+- Chain K (FHIR Round-trip): 6 steps. Forward direction (UI→FHIR read), write surface (FHIR POST), and reverse direction (FHIR→UI back-projection). BLOCKED clean if FHIR is read-only.
+
+Every chain reuses `tests/chains/_common.ts` with zero changes — `apiCall`, `findOrSeedOrder`, `extractPdfText`, `markStep` all proven sufficient for the full set. Workplan Phase B (chains) is complete; the remaining workplan items move to Phase C (Personas).
+
+### v6.8 (2026-05-12) — Chain I Site Branding → Report (Phase B4)
+- Fifth §11 chain implemented. `tests/chains/chain-i-site-branding-to-report.spec.ts` (6 steps). First chain that can plausibly PASS on the current testing instance (admin write path already proven in Phase 36 Chain C; only the admin→report propagation remained unverified).
+- Step 3 explicitly probes the NOTE-16 root cause — labName empty/null in SiteInformation. If found unset, the chain reports clearly that PDFs will show "null" because the upstream config is empty (different bug class than "pipeline is broken").
+- Step 6 is the strongest test in the chain: modify labName → regenerate PDF → assert the new value appears → `test.afterAll` restores the original. Catches stale-cache and pipeline-lossy issues that Step 5 (read existing config) can't.
+- Uses defensive endpoint probing per §6.5 — tries SiteInformation, siteInformation, SiteInformationMenu in priority order; bails with a clear error if none responds.
+
+### v6.7 (2026-05-12) — Chains C + D Reflex/Calc engines (Phase B3)
+- Chain C (`tests/chains/chain-c-reflex-trigger.spec.ts`, 6 steps) and Chain D (`tests/chains/chain-d-calculated-value.spec.ts`, 7 steps) implemented together. Both API-substituted per §11.5 because BUG-31 blocks the UI result-entry step.
+- These are the two chains the prior catalog could *never* verify — Phase 28 admin tests confirmed both engines have working CRUD pages, but no test had ever observed either engine actually firing because BUG-31 blocked the result-entry step that would trigger one.
+- Chain C Step 5 = definitive PASS/FAIL on "does the reflex engine fire on API writes?"
+- Chain D Steps 5/6/7 split the calc engine check into three distinct symptoms: (5) calc test row produced, (6) row has a value, (7) value math is plausible. A partial-fix scenario (engine adds row but doesn't compute) surfaces clearly.
+- Both chains reuse `tests/chains/_common.ts` with zero changes. Chain D adds its own multi-test order POST inline rather than extending the shared helper — kept for clarity until the pattern repeats.
+
+### v6.6 (2026-05-12) — Chain B Rejection → NCE → Report implemented (Phase B2)
+- Second chain from §11 is now a Playwright spec: `tests/chains/chain-b-rejection.spec.ts`. 8 named steps. The key design choice: Steps 5, 6, 7, 8 each probe one of the *four distinct symptoms* of BUG-29 (qa_event creation gap, View NCE search empty, Rejection Report PDF 503, Dashboard counter stuck at 0) so a partial fix surfaces clearly which subsystem was patched — not "rejection workflow FAILed" as a single opaque red light.
+- Step 3 uses API substitute per §11.5 (Reject Sample is a Carbon checkbox, same BUG-31 family).
+- Adds a "PARTIAL" status to Step 7's PDF-content check: PDF generates but is empty for today's rejections — a soft signal that BUG-29 reaches all the way through to the report layer.
+- Reuses `tests/chains/_common.ts` helpers introduced in v6.5 with no changes.
+
+### v6.5 (2026-05-12) — Chain A Order Lifecycle implemented (Phase B1)
+- First chain from §11 Chains is now an actual Playwright spec: `tests/chains/chain-a-order-lifecycle.spec.ts`. Eight named steps (1: acquire order, 2: BUG-37 linkage check, 3: result entry via API substitute, 4: validation, 5: PDF generation, 6: PDF content match, 7: FHIR Observation fetch, 8: round-trip value match).
+- Each step declares its §7.6 Acceptance Criterion (RENDER / FUNCTION / PERSIST / ROUND-TRIP / CROSS-LINK / REPORTABLE) and references the SKILL section that mandates it. Steps 3 and 4 use API substitutes per §11.5 because BUG-31 blocks the UI path.
+- Added `tests/chains/_common.ts` with reusable helpers: CSRF-aware `apiCall`, `findOrSeedOrder`, minimal PDF text extractor (no external deps), structured step logger. Same helpers will power Chains B–L.
+- Playwright project `chain-a` depends only on `setup`, not `data-setup`, so it can run against any seeded instance via the §0.6a script.
+
+### v6.4 (2026-05-12) — Bulk seed script (Phase E1)
+- Step 0.6 Data Census now has an 0.6a "Bulk seed script" sub-section with invocation commands. The seed script (`seed-data.setup.ts` + `helpers/seed-factory.ts` + `helpers/seed-config.ts` in the repo) is idempotent, round-trip-verifies every write per §7.5, detects and counts BUG-37 instances as it runs, and writes a machine-readable summary to `.auth/seed-state.json`.
+- Targets 50 patients and 100 orders spread across 5 lab sections; status-transition seeding (IN_PROGRESS / READY_FOR_VALIDATION / REJECTED) intentionally not attempted while BUG-31 blocks the result-entry UI. Documented as an open item for workplan Phase B Chain C/D.
 
 ### v6.3 (2026-05-12) — Bug-revalidation cross-link
 - Step 0.5 Calibration now explicitly references the `openelis-bug-revalidation` companion SKILL v1.1, which handles each new FAIL after calibration. The two protocols are designed to work together: this SKILL governs pre-phase calibration of known bugs; the companion SKILL governs reproducibility confirmation of new FAILs. Destructive bugs (BUG-31, BUG-38) use indirect evidence in both protocols.
