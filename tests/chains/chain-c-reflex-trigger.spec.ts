@@ -279,7 +279,7 @@ test.describe.serial('Chain C — Reflex Trigger', () => {
 
     const list = await apiCall<{ logbookList?: Array<{ accessionNumber?: string; testId?: string }> }>(
       page,
-      `/api/OpenELIS-Global/rest/LogbookResults?patientPK=${encodeURIComponent(order!.patientPK)}`
+      `/api/OpenELIS-Global/rest/LogbookResults?patientPK=${encodeURIComponent(order!.patientID)}`
     );
     if (!list.ok) {
       markStep('C', 6, 'FAIL', `LogbookResults returned HTTP ${list.status}`);

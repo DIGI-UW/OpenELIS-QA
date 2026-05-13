@@ -4,9 +4,9 @@ description: >
   Automated QA testing skill for OpenELIS Global covering 167+ test suites and ~488 test cases. Tests: Orders, Validation, Results, Patient Management, Dashboard, Admin (28+ pages), Reports (all 11), Referrals, Workplan, FHIR, i18n, Accessibility, Pathology, Analyzers, EQA, Alerts, Storage, Batch Entry, Barcode, and more. Includes DEEP interaction suites: search/filter, form interaction, error handling, performance, cross-module data integrity, security (CSRF/XSS/SQLi), WCAG accessibility, E2E order tracing, report PDF generation, and Madagascar e-SIL UAT coverage (LO-xx/DU-xx). Drives a real browser session via Claude in Chrome and produces a pass/fail report with Jira tickets.
 ---
 
-# OpenELIS Global QA Skill — v6.12 (2026-05-13 + Phase A1 pilot + §6.5b authoring-time capture rule + apiShapes.ts)
+# OpenELIS Global QA Skill — v6.13 (2026-05-13 + v6.12 corrections applied in-place + Chain I rewrite)
 
-**v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture) + 6.5a (harness-enforced via `helpers/networkCapture.ts`), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 11.5 Blocking-Bug Etiquette, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. See full Change Log at end of file.
+**v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture) + 6.5a (harness-enforced via `helpers/networkCapture.ts`), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 11.5 Blocking-Bug Etiquette, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. **v6.13:** v6.12's pilot-grounded shape corrections applied in-place across all 12 chains + 6 personas + _common.ts; Chain I rewritten with the wrong labName premise dropped; `helpers/_common-v612-patch.ts` sidecar deleted. See full Change Log at end of file.
 
 You are a QA automation agent for OpenELIS Global. Your job is to navigate a live OpenELIS
 instance in Chrome, execute requested test suites, log every action with screenshots, generate
@@ -1363,6 +1363,16 @@ The assertion failure mode catches counter-drift bugs that would otherwise be in
 ---
 
 ## Change log
+
+### v6.13 (2026-05-13) — v6.12 corrections applied in-place + Chain I rewrite
+Closes the loop opened by v6.12. The v6.12 PR documented the 10 spec corrections via `apiShapes.ts` and shipped them as a sidecar patch file (`helpers/_common-v612-patch.ts`) without editing the chain/persona specs in place. v6.13 applies the corrections directly:
+
+- `tests/chains/_common.ts`: `findOrSeedOrder` now reads `patientSearchResults` (not `patientList`), uses `patientID` (not `patientPK`) on object property reads, `ChainOrderRef.patientID` field renamed. `acquireAnyAccession()` and `eqaEnabledRequiresJspNotRest()` folded in from the sidecar.
+- Across all 12 chain specs + 6 persona specs: mechanical replacement of `patientList`→`patientSearchResults`, `patient.patientPK`→`patient.patientID`, `patientProperties.nationalId`→top-level `nationalId` on SampleEdit, `?testSectionId=N`→`?testUnitId=N` on Logbook filter URLs. (URL params `?patientPK=` and POST-payload sending keys `{patientProperties: {patientPK: ...}}` retained pending live capture confirmation — left as TODO.)
+- `tests/chains/chain-i-site-branding-to-report.spec.ts` rewritten end-to-end. The original premise "PDF reports show 'null' when SiteInformation.labName is missing" was based on the assumption that labName lives in site-branding or SiteInformation — neither was true per the pilot. The rewritten Chain I tests what IS testable today: site-branding round-trip (read → modify primaryColor → confirm → restore). Reduced from 6 steps to 4 steps. The labName/PDF check moves to a future chain that drives the JSP admin form via Playwright UI.
+- `helpers/_common-v612-patch.ts` deleted.
+
+After v6.13 the chains are runnable end-to-end at the spec level — though several still depend on live capture for the SamplePatientEntry POST shape and the eqaEnabled JSP form interaction.
 
 ### v6.12 (2026-05-13) — Phase A1 pilot + spec corrections grounded in live capture
 The v6 methodology was run live against testing.openelis-global.org for the first time. 35 minutes of live Chrome time surfaced 3 candidate real findings (NEW-1 Y-RECON mismatch, NEW-2 ReportPrint 500, NEW-3 FHIR metadata HTML shell) and 10 spec bugs in the chains and personas. The methodology is doing its job — §13 Y-RECON caught NEW-1 on first try; §6.5 stopped me filing the false-positive endpoint paths I'd inferred from documents.

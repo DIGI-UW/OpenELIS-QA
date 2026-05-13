@@ -141,7 +141,7 @@ test.describe.serial('Chain D — Calculated Value', () => {
     // only creates a single-test order, so Chain D issues its own order
     // creation against the discovered operands. Patient acquisition reuses
     // the same patient-search-results probe.
-    const patientResp = await apiCall<{ patientList?: Array<{ nationalId?: string; patientPK?: string }> }>(
+    const patientResp = await apiCall<{ patientSearchResults?: Array<{ nationalId?: string; patientID?: string }> }>(
       page, `/api/OpenELIS-Global/rest/patient-search-results?lastName=QA_AUTO`
     );
     if (!patientResp.ok) {
@@ -150,7 +150,7 @@ test.describe.serial('Chain D — Calculated Value', () => {
       return;
     }
     const patients = (typeof patientResp.body === 'object' && patientResp.body !== null)
-      ? ((patientResp.body as { patientList?: Array<{ nationalId?: string; patientPK?: string }> }).patientList || [])
+      ? ((patientResp.body as { patientSearchResults?: Array<{ nationalId?: string; patientID?: string }> }).patientSearchResults || [])
       : [];
     if (patients.length === 0) {
       markStep('D', 2, 'FAIL', 'No QA_AUTO_ patient available; run seed-data first.');
@@ -162,7 +162,7 @@ test.describe.serial('Chain D — Calculated Value', () => {
     // Build a multi-test order POST. Sample type is taken from the rule
     // if available; otherwise default to 1 (Urines on most instances).
     const payload = {
-      patientProperties: { patientPK: p.patientPK, nationalId: p.nationalId, patientUpdateStatus: 'UPDATE' },
+      patientProperties: { patientPK: p.patientID, nationalId: p.nationalId, patientUpdateStatus: 'UPDATE' },
       sampleOrderItems: {
         newSampleEntry: 'true',
         collectionDate: new Date().toISOString().slice(0, 10),

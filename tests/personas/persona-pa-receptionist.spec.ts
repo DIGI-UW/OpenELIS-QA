@@ -43,7 +43,7 @@ test.describe.serial('Persona PA — Receptionist', () => {
   test('Step 1 — Patient search by national ID (RENDER)', async ({ page }) => {
     await page.goto(BASE);
     await page.waitForLoadState('networkidle');
-    const r = await apiCall<{ patientList?: Array<unknown> }>(
+    const r = await apiCall<{ patientSearchResults?: Array<unknown> }>(
       page, `/api/OpenELIS-Global/rest/patient-search-results?nationalId=${encodeURIComponent(NATIONAL_ID)}`
     );
     if (!r.ok) {
@@ -51,14 +51,14 @@ test.describe.serial('Persona PA — Receptionist', () => {
       expect(r.ok).toBeTruthy(); return;
     }
     const items = (typeof r.body === 'object' && r.body !== null)
-      ? ((r.body as { patientList?: Array<unknown> }).patientList || [])
+      ? ((r.body as { patientSearchResults?: Array<unknown> }).patientSearchResults || [])
       : [];
     markStep(PERSONA, 1, 'PASS', `Search returned ${items.length} matches (expected 0 for fresh ID)`);
   });
 
   test('Step 2 — Create new patient since search was empty (PERSIST)', async ({ page }) => {
     await page.goto(BASE);
-    const create = await apiCall<{ patientPK?: string }>(
+    const create = await apiCall<{ patientID?: string }>(
       page, '/api/OpenELIS-Global/rest/patient-management', {
         method: 'POST',
         body: {
@@ -77,11 +77,11 @@ test.describe.serial('Persona PA — Receptionist', () => {
       expect(create.ok).toBeTruthy(); return;
     }
     // Round-trip to retrieve patientPK
-    const verify = await apiCall<{ patientList?: Array<{ patientPK?: string }> }>(
+    const verify = await apiCall<{ patientSearchResults?: Array<{ patientID?: string }> }>(
       page, `/api/OpenELIS-Global/rest/patient-search-results?nationalId=${encodeURIComponent(NATIONAL_ID)}`
     );
     patientPK = (verify.ok && typeof verify.body === 'object' && verify.body !== null)
-      ? ((verify.body as { patientList?: Array<{ patientPK?: string }> }).patientList?.[0]?.patientPK ?? null)
+      ? ((verify.body as { patientSearchResults?: Array<{ patientID?: string }> }).patientSearchResults?.[0]?.patientID ?? null)
       : null;
     if (!patientPK) {
       markStep(PERSONA, 2, 'FAIL', 'Patient created but PK not found in search');
@@ -141,7 +141,7 @@ test.describe.serial('Persona PA — Receptionist', () => {
   test('Step 5 — Verify order in Edit Order (ROUND-TRIP, BUG-37 catch)', async ({ page }) => {
     if (!accession) test.skip();
     await page.goto(BASE);
-    const r = await apiCall<{ patientProperties?: { nationalId?: string } }>(
+    const r = await apiCall<{ nationalId?: string }>(
       page, `/api/OpenELIS-Global/rest/SampleEdit?labNumber=${encodeURIComponent(accession!)}`
     );
     if (!r.ok) {
@@ -149,7 +149,7 @@ test.describe.serial('Persona PA — Receptionist', () => {
       expect(r.ok).toBeTruthy(); return;
     }
     const linkedId = (typeof r.body === 'object' && r.body !== null)
-      ? ((r.body as { patientProperties?: { nationalId?: string } }).patientProperties?.nationalId)
+      ? ((r.body as { nationalId?: string }).nationalId)
       : undefined;
     if (linkedId !== NATIONAL_ID) {
       markStep(PERSONA, 5, 'FAIL',
