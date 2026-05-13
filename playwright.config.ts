@@ -141,6 +141,22 @@ export default defineConfig({
       },
     },
 
+    // --- Chain I: Site Branding → Report (Phase B4) ---
+    // Six steps. Verifies admin SiteInformation labName propagates all
+    // the way through to the Patient Status Report PDF header.
+    // NOTE-16 catch: PDFs render "null" when labName is unset. Includes
+    // afterAll cleanup that restores any modified labName even on
+    // mid-test failure.
+    {
+      name: 'chain-i',
+      testMatch: 'tests/chains/chain-i-site-branding-to-report.spec.ts',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/user.json',
+      },
+    },
+
     // --- Core QA: all test suites using cached auth + test data ---
     {
       name: 'qa-dashboard',

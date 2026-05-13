@@ -4,7 +4,7 @@ description: >
   Automated QA testing skill for OpenELIS Global covering 167+ test suites and ~488 test cases. Tests: Orders, Validation, Results, Patient Management, Dashboard, Admin (28+ pages), Reports (all 11), Referrals, Workplan, FHIR, i18n, Accessibility, Pathology, Analyzers, EQA, Alerts, Storage, Batch Entry, Barcode, and more. Includes DEEP interaction suites: search/filter, form interaction, error handling, performance, cross-module data integrity, security (CSRF/XSS/SQLi), WCAG accessibility, E2E order tracing, report PDF generation, and Madagascar e-SIL UAT coverage (LO-xx/DU-xx). Drives a real browser session via Claude in Chrome and produces a pass/fail report with Jira tickets.
 ---
 
-# OpenELIS Global QA Skill — v6.7 (2026-05-12 lab-readiness rewrite + blocking-bug etiquette + calibration sweep + bug-revalidation cross-link + bulk seed script + Chains A/B/C/D specs)
+# OpenELIS Global QA Skill — v6.8 (2026-05-12 lab-readiness rewrite + blocking-bug etiquette + calibration sweep + bug-revalidation cross-link + bulk seed script + Chains A/B/C/D/I specs)
 
 **v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 11.5 Blocking-Bug Etiquette, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. See full Change Log at end of file.
 
@@ -1234,7 +1234,7 @@ Chains are end-to-end workflows that cross 3+ modules. They are not optional —
 | **F** | EQA Distribution | Admin enable EQA → Create program → Create shipment → Distribute → Participant enters result → Score → Report | Confirms the EQA workflow end-to-end. | OGC-518–524 cluster (EQA disabled silently broke everything) |
 | **G** | Cold-Chain Excursion | Device configured → Simulated excursion → Alert fires → Corrective action linked → Audit log entry | Confirms the regulatory-required loop. | Untested |
 | **H** | Permission Enforcement | Admin create user with restricted role → Login as that user → Attempt restricted action → Fail with 403 | Confirms access control is enforced, not just configured. | Untested |
-| **I** | Site Branding to Report | Admin update branding → Generate Patient Status Report PDF → Branding appears | Confirms the pipeline from admin to output. | NOTE-29 (report header "null") |
+| **I** ✅ | Site Branding to Report | Admin update branding → Generate Patient Status Report PDF → Branding appears | Confirms the pipeline from admin to output. **Implemented** as `tests/chains/chain-i-site-branding-to-report.spec.ts` (run via `--project=chain-i`). 6 steps. Step 3 explicitly checks the NOTE-16 root cause (labName set/empty). Step 5 catches "null" tokens in PDF body. Step 6 is the strongest test — modify labName → regenerate → assert change appears → restore via `test.afterAll`. | NOTE-16 (report header "null"), NOTE-29 (Contact Tracing "null") |
 | **J** | Audit Trail Coverage | Edit reference range, delete result, grant admin role → Audit Trail shows each | Confirms audit entries are written for sensitive actions. | Untested |
 | **K** | Cross-installation FHIR Round-trip | UI write → FHIR read → External FHIR POST → UI read | The integration use case OpenELIS markets. | Untested |
 | **L** | Lab Number Uniqueness | Concurrent Add Order, Batch Order Entry, EQA Sample, Generic Sample → No duplicate lab numbers | Confirms accession generation across paths. | Untested |
@@ -1305,6 +1305,12 @@ The assertion failure mode catches counter-drift bugs that would otherwise be in
 ---
 
 ## Change log
+
+### v6.8 (2026-05-12) — Chain I Site Branding → Report (Phase B4)
+- Fifth §11 chain implemented. `tests/chains/chain-i-site-branding-to-report.spec.ts` (6 steps). First chain that can plausibly PASS on the current testing instance (admin write path already proven in Phase 36 Chain C; only the admin→report propagation remained unverified).
+- Step 3 explicitly probes the NOTE-16 root cause — labName empty/null in SiteInformation. If found unset, the chain reports clearly that PDFs will show "null" because the upstream config is empty (different bug class than "pipeline is broken").
+- Step 6 is the strongest test in the chain: modify labName → regenerate PDF → assert the new value appears → `test.afterAll` restores the original. Catches stale-cache and pipeline-lossy issues that Step 5 (read existing config) can't.
+- Uses defensive endpoint probing per §6.5 — tries SiteInformation, siteInformation, SiteInformationMenu in priority order; bails with a clear error if none responds.
 
 ### v6.7 (2026-05-12) — Chains C + D Reflex/Calc engines (Phase B3)
 - Chain C (`tests/chains/chain-c-reflex-trigger.spec.ts`, 6 steps) and Chain D (`tests/chains/chain-d-calculated-value.spec.ts`, 7 steps) implemented together. Both API-substituted per §11.5 because BUG-31 blocks the UI result-entry step.
