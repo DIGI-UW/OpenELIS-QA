@@ -157,6 +157,70 @@ export default defineConfig({
       },
     },
 
+    // --- Chain L: Lab Number Uniqueness (Phase B5) ---
+    // 4 steps. Burst-creates 10 orders in parallel; asserts distinct accessions.
+    {
+      name: 'chain-l',
+      testMatch: 'tests/chains/chain-l-lab-number-uniqueness.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+
+    // --- Chain E: Sample Validation Lifecycle (Phase B6) ---
+    // 6 steps. Result enter → retest reject → re-enter → validate → confirm on report.
+    {
+      name: 'chain-e',
+      testMatch: 'tests/chains/chain-e-sample-validation-lifecycle.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+
+    // --- Chain F: EQA Distribution (Phase B7) ---
+    // 6 steps. Step 1 BAILs clean if eqaEnabled config is false — solves the
+    // OGC-518–524 cluster pattern. Step 5 catches BUG-39.
+    {
+      name: 'chain-f',
+      testMatch: 'tests/chains/chain-f-eqa-distribution.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+
+    // --- Chain G: Cold-Chain Excursion (Phase B8) ---
+    // 5 steps. BAILs clean if no Cold Storage device configured.
+    {
+      name: 'chain-g',
+      testMatch: 'tests/chains/chain-g-cold-chain-excursion.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+
+    // --- Chain H: Permission Enforcement (Phase B9) ---
+    // 4 steps + afterAll cleanup. Multi-context login for restricted user.
+    {
+      name: 'chain-h',
+      testMatch: 'tests/chains/chain-h-permission-enforcement.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+
+    // --- Chain J: Audit Trail Coverage (Phase B10) ---
+    // 5 steps. Sensitive actions → audit entry → required fields populated.
+    {
+      name: 'chain-j',
+      testMatch: 'tests/chains/chain-j-audit-trail-coverage.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+
+    // --- Chain K: FHIR Round-trip (Phase B11) ---
+    // 6 steps. Forward (UI→FHIR), write, reverse (FHIR→UI). BLOCKED if read-only.
+    {
+      name: 'chain-k',
+      testMatch: 'tests/chains/chain-k-fhir-round-trip.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+
     // --- Core QA: all test suites using cached auth + test data ---
     {
       name: 'qa-dashboard',
