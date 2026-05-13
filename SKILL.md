@@ -4,7 +4,7 @@ description: >
   Automated QA testing skill for OpenELIS Global covering 167+ test suites and ~488 test cases. Tests: Orders, Validation, Results, Patient Management, Dashboard, Admin (28+ pages), Reports (all 11), Referrals, Workplan, FHIR, i18n, Accessibility, Pathology, Analyzers, EQA, Alerts, Storage, Batch Entry, Barcode, and more. Includes DEEP interaction suites: search/filter, form interaction, error handling, performance, cross-module data integrity, security (CSRF/XSS/SQLi), WCAG accessibility, E2E order tracing, report PDF generation, and Madagascar e-SIL UAT coverage (LO-xx/DU-xx). Drives a real browser session via Claude in Chrome and produces a pass/fail report with Jira tickets.
 ---
 
-# OpenELIS Global QA Skill — v6.2 (2026-05-12 lab-readiness rewrite + blocking-bug etiquette + calibration sweep)
+# OpenELIS Global QA Skill — v6.3 (2026-05-12 lab-readiness rewrite + blocking-bug etiquette + calibration sweep + bug-revalidation cross-link)
 
 **v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 11.5 Blocking-Bug Etiquette, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. See full Change Log at end of file.
 
@@ -58,6 +58,8 @@ This makes cleanup easy and avoids collisions with real data.
 ---
 
 ## Step 0.5 — Calibration (Mandatory before any new test phase)
+
+> **Companion skill:** `openelis-bug-revalidation` v1.1 is the downstream protocol that handles each new FAIL after calibration. This step (re-verifying known bugs' current state) and the revalidation protocol (confirming whether a new FAIL is reproducible) are designed to work together. Do not duplicate or fork either's rules.
 
 Before adding new findings, re-verify the current state of the **top 5 critical open bugs** plus any bug touched in the previous session:
 
@@ -1281,6 +1283,9 @@ The assertion failure mode catches counter-drift bugs that would otherwise be in
 ---
 
 ## Change log
+
+### v6.3 (2026-05-12) — Bug-revalidation cross-link
+- Step 0.5 Calibration now explicitly references the `openelis-bug-revalidation` companion SKILL v1.1, which handles each new FAIL after calibration. The two protocols are designed to work together: this SKILL governs pre-phase calibration of known bugs; the companion SKILL governs reproducibility confirmation of new FAILs. Destructive bugs (BUG-31, BUG-38) use indirect evidence in both protocols.
 
 ### v6.2 (2026-05-12) — Bug-list calibration sweep
 - Section 8 bug table re-calibrated against 2026-04-20/21 QA reports. 9 bugs marked Resolved, 6 marked False Positive (wrong endpoint pattern), 2 Retracted, 1 Downgraded (BUG-1 → merge with BUG-12). Strikethrough severity + bold action highlight tickets ready for Jira closure.
