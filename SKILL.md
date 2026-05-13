@@ -4,7 +4,7 @@ description: >
   Automated QA testing skill for OpenELIS Global covering 167+ test suites and ~488 test cases. Tests: Orders, Validation, Results, Patient Management, Dashboard, Admin (28+ pages), Reports (all 11), Referrals, Workplan, FHIR, i18n, Accessibility, Pathology, Analyzers, EQA, Alerts, Storage, Batch Entry, Barcode, and more. Includes DEEP interaction suites: search/filter, form interaction, error handling, performance, cross-module data integrity, security (CSRF/XSS/SQLi), WCAG accessibility, E2E order tracing, report PDF generation, and Madagascar e-SIL UAT coverage (LO-xx/DU-xx). Drives a real browser session via Claude in Chrome and produces a pass/fail report with Jira tickets.
 ---
 
-# OpenELIS Global QA Skill — v6.3 (2026-05-12 lab-readiness rewrite + blocking-bug etiquette + calibration sweep + bug-revalidation cross-link)
+# OpenELIS Global QA Skill — v6.4 (2026-05-12 lab-readiness rewrite + blocking-bug etiquette + calibration sweep + bug-revalidation cross-link + bulk seed script)
 
 **v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 11.5 Blocking-Bug Etiquette, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. See full Change Log at end of file.
 
@@ -82,7 +82,29 @@ Before running any chain or persona that depends on existing data, run a one-cal
 - Dashboard KPIs JSON (`GET /rest/home-dashboard/metrics`) — record `ordersInProgress`, `ordersReadyForValidation`, `unPritendResults`.
 - Recent accessions list (admin lab number page or a known query) — record range.
 
-**If patient count = 0 AND logbook count = 0 AND Dashboard shows zeros:** the test instance has been reset. Halt all E2E and persona work and either (a) re-seed with the `QA_AUTO_*` prefix dataset, or (b) note in the report header that the instance is empty and limit testing to render-only checks.
+**If patient count = 0 AND logbook count = 0 AND Dashboard shows zeros:** the test instance has been reset. Halt all E2E and persona work and either (a) re-seed with the bulk seed script (preferred), or (b) note in the report header that the instance is empty and limit testing to render-only checks.
+
+### 0.6a — Bulk seed script (re-seeding from zero)
+
+Run the bulk seed script when census returns zero:
+
+```bash
+# Via Playwright (recommended):
+npx playwright test --project=seed-data
+
+# Standalone CLI for ad-hoc seeding:
+SEED_DRY_RUN=1 npx playwright test --project=seed-data    # census-only preview
+SEED_TARGET_PATIENTS=50 SEED_TARGET_ORDERS=100 npx playwright test --project=seed-data
+```
+
+The script (`seed-data.setup.ts` plus `helpers/seed-factory.ts` and `helpers/seed-config.ts`):
+
+- Censuses existing `QA_AUTO_` prefixed records, then creates only the delta to reach targets (50 patients, 100 orders across 5 lab sections by default).
+- Round-trip verifies every write per §7.5 — patients via `/rest/patient-search-results`, orders via `/rest/SampleEdit` (which is the Modify Order backing endpoint).
+- Detects and counts BUG-37 instances (order saved but patient linkage broken). Reports the count in the summary table and `.auth/seed-state.json`.
+- Does NOT attempt to force orders into IN_PROGRESS / READY_FOR_VALIDATION / REJECTED states — blocked by BUG-31. Those states reflect whatever is naturally present (analyzer imports, prior tests). See §11.5 Blocking-Bug Etiquette.
+
+After seeding succeeds, re-run the Step 0.6 census to confirm targets are met, then proceed to E2E/persona suites.
 
 This prevents the Phase 14 NOTE-14 pattern: silently running an E2E suite on an empty database and reporting PASS for nothing.
 
@@ -1283,6 +1305,10 @@ The assertion failure mode catches counter-drift bugs that would otherwise be in
 ---
 
 ## Change log
+
+### v6.4 (2026-05-12) — Bulk seed script (Phase E1)
+- Step 0.6 Data Census now has an 0.6a "Bulk seed script" sub-section with invocation commands. The seed script (`seed-data.setup.ts` + `helpers/seed-factory.ts` + `helpers/seed-config.ts` in the repo) is idempotent, round-trip-verifies every write per §7.5, detects and counts BUG-37 instances as it runs, and writes a machine-readable summary to `.auth/seed-state.json`.
+- Targets 50 patients and 100 orders spread across 5 lab sections; status-transition seeding (IN_PROGRESS / READY_FOR_VALIDATION / REJECTED) intentionally not attempted while BUG-31 blocks the result-entry UI. Documented as an open item for workplan Phase B Chain C/D.
 
 ### v6.3 (2026-05-12) — Bug-revalidation cross-link
 - Step 0.5 Calibration now explicitly references the `openelis-bug-revalidation` companion SKILL v1.1, which handles each new FAIL after calibration. The two protocols are designed to work together: this SKILL governs pre-phase calibration of known bugs; the companion SKILL governs reproducibility confirmation of new FAILs. Destructive bugs (BUG-31, BUG-38) use indirect evidence in both protocols.

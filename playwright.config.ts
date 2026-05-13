@@ -63,6 +63,21 @@ export default defineConfig({
         storageState: '.auth/user.json',
       },
     },
+    // --- Optional bulk seed (Phase E1) — opt-in via --project=seed-data ---
+    // Runs after auth, NOT a default dependency of qa-* projects.
+    // Invoke when SKILL §0.6 Data Census returns zero, or to populate a
+    // fresh instance with QA_AUTO_-prefixed patients and orders.
+    // Reads SEED_DRY_RUN, SEED_VERIFY_ONLY, SEED_TARGET_PATIENTS,
+    // SEED_TARGET_ORDERS environment variables. See SKILL §0.6a.
+    {
+      name: 'seed-data',
+      testMatch: 'seed-data.setup.ts',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/user.json',
+      },
+    },
 
     // --- Core QA: all test suites using cached auth + test data ---
     {
