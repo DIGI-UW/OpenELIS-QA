@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenELIS Global — Feature Maturity Dashboard</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "IBM Plex Sans","Segoe UI",system-ui,sans-serif; background:#f4f4f4; color:#161616; font-size:14px; }
+code { font-family:"IBM Plex Mono","Fira Code",monospace; font-size:12px; background:#e8e8e8; padding:1px 5px; border-radius:2px; }
+
+/* ─── HEADER ─── */
+.header { background:#161616; color:#fff; padding:0 32px; }
+.header-inner { display:flex; justify-content:space-between; align-items:flex-start; padding:18px 0 0; flex-wrap:wrap; gap:10px; }
+.header-brand { font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:#8d8d8d; margin-bottom:4px; }
+.header-title { font-size:22px; font-weight:600; }
+.header-sub { font-size:12px; color:#a8a8a8; margin-top:3px; max-width:680px; line-height:1.5; }
+.header-stats { text-align:right; font-size:12px; color:#a8a8a8; line-height:1.7; }
+.header-stats strong { color:#fff; font-size:13px; }
+.nav-tabs { display:flex; gap:0; margin-top:18px; }
+.nav-tab { background:transparent; color:#a8a8a8; border:none; padding:10px 22px; cursor:pointer; font-size:13px; font-family:inherit; border-bottom:3px solid transparent; transition:all 0.15s; letter-spacing:0.2px; }
+.nav-tab:hover { color:#f4f4f4; background:rgba(255,255,255,0.06); }
+.nav-tab.active { color:#fff; border-bottom-color:#0f62fe; font-weight:600; }
+
+/* ─── LAYOUT ─── */
+.content { padding:28px 32px; max-width:1480px; margin:0 auto; }
+.panel { display:none; }
+.panel.active { display:block; }
+h2 { font-size:18px; font-weight:600; margin-bottom:14px; }
+h3 { font-size:15px; font-weight:600; margin: 26px 0 10px; color:#161616; }
+
+/* ─── KPI GRID ─── */
+.kpi-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:22px; }
+.kpi { background:#fff; border-radius:4px; padding:16px 18px; box-shadow:0 1px 3px rgba(0,0,0,0.08); border-top:4px solid #e0e0e0; cursor:pointer; transition:transform 0.1s; }
+.kpi:hover { transform:translateY(-1px); }
+.kpi.m0 { border-top-color:#da1e28; }
+.kpi.m1 { border-top-color:#ff832b; }
+.kpi.m2 { border-top-color:#f1c21b; }
+.kpi.m3 { border-top-color:#42be65; }
+.kpi.m4 { border-top-color:#24a148; }
+.kpi.m5 { border-top-color:#0f62fe; }
+.kpi-value { font-size:32px; font-weight:700; line-height:1; }
+.kpi-label { font-size:11px; font-weight:600; color:#525252; margin-top:6px; text-transform:uppercase; letter-spacing:0.5px; }
+.kpi-sub   { font-size:11px; color:#8d8d8d; margin-top:3px; }
+
+/* ─── LEGEND ─── */
+.legend { background:#fff; padding:14px 18px; border-radius:4px; margin-bottom:22px; box-shadow:0 1px 3px rgba(0,0,0,0.06); display:flex; gap:18px; flex-wrap:wrap; align-items:center; }
+.legend-title { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:#525252; }
+.legend-item { display:flex; align-items:center; gap:6px; font-size:12px; }
+.legend-swatch { width:14px; height:14px; border-radius:2px; }
+
+/* ─── FILTERS ─── */
+.filters { background:#fff; padding:12px 18px; border-radius:4px; margin-bottom:18px; box-shadow:0 1px 3px rgba(0,0,0,0.06); display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
+.filter-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:#525252; margin-right:4px; }
+.filter-btn { background:#f4f4f4; border:1px solid #e0e0e0; color:#161616; padding:5px 11px; border-radius:14px; font-size:12px; cursor:pointer; font-family:inherit; transition:all 0.1s; }
+.filter-btn:hover { background:#e8e8e8; }
+.filter-btn.active { background:#0f62fe; color:#fff; border-color:#0f62fe; }
+.filter-btn.m0.active { background:#da1e28; border-color:#da1e28; }
+.filter-btn.m1.active { background:#ff832b; border-color:#ff832b; }
+.filter-btn.m2.active { background:#f1c21b; border-color:#f1c21b; color:#161616; }
+.filter-btn.m3.active { background:#42be65; border-color:#42be65; }
+
+/* ─── CATEGORY SECTIONS ─── */
+.category { background:#fff; border-radius:4px; padding:16px 18px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.06); margin-bottom:18px; }
+.category-head { display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #f4f4f4; padding-bottom:8px; margin-bottom:14px; }
+.category-title { font-size:14px; font-weight:600; }
+.category-count { font-size:11px; color:#8d8d8d; }
+
+/* ─── FEATURE GRID ─── */
+.feature-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:10px; }
+.feature { background:#f8f8f8; border-radius:4px; padding:10px 12px; border-left:4px solid #e0e0e0; cursor:pointer; transition:all 0.1s; position:relative; }
+.feature:hover { background:#f0f0f0; box-shadow:0 1px 3px rgba(0,0,0,0.08); }
+.feature.m0 { border-left-color:#da1e28; }
+.feature.m1 { border-left-color:#ff832b; }
+.feature.m2 { border-left-color:#f1c21b; }
+.feature.m3 { border-left-color:#42be65; }
+.feature.m4 { border-left-color:#24a148; }
+.feature.m5 { border-left-color:#0f62fe; }
+.feature.hidden { display:none; }
+.feature-name { font-size:13px; font-weight:600; margin-bottom:4px; line-height:1.3; }
+.feature-meta { display:flex; gap:8px; font-size:11px; color:#525252; align-items:center; }
+.feature-rating { display:inline-block; font-weight:700; padding:1px 6px; border-radius:2px; color:#fff; font-size:10px; letter-spacing:0.3px; }
+.feature-rating.m0 { background:#da1e28; }
+.feature-rating.m1 { background:#ff832b; }
+.feature-rating.m2 { background:#f1c21b; color:#161616; }
+.feature-rating.m3 { background:#42be65; }
+.feature-rating.m4 { background:#24a148; }
+.feature-rating.m5 { background:#0f62fe; }
+.feature-notes { font-size:11px; color:#525252; margin-top:6px; line-height:1.4; }
+.feature-bugs { font-size:11px; color:#da1e28; margin-top:4px; font-family:"IBM Plex Mono",monospace; }
+
+/* ─── MODAL ─── */
+.modal-bg { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(22,22,22,0.6); z-index:100; align-items:center; justify-content:center; padding:24px; }
+.modal-bg.show { display:flex; }
+.modal { background:#fff; border-radius:4px; max-width:680px; width:100%; max-height:84vh; overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,0.25); }
+.modal-head { padding:18px 22px 14px; border-bottom:1px solid #f4f4f4; display:flex; justify-content:space-between; align-items:flex-start; gap:14px; }
+.modal-title { font-size:17px; font-weight:600; line-height:1.3; }
+.modal-close { background:none; border:none; font-size:22px; cursor:pointer; color:#525252; line-height:1; padding:0 4px; }
+.modal-body { padding:18px 22px 22px; }
+.modal-body h4 { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:#525252; margin: 12px 0 6px; }
+.modal-body p, .modal-body li { font-size:13px; line-height:1.5; color:#161616; }
+.modal-body ul { margin-left:18px; }
+.modal-body .meta-row { display:flex; gap:10px; margin-top:6px; align-items:center; flex-wrap:wrap; }
+
+/* ─── IMPACT TAB ─── */
+.impact-row { display:flex; background:#fff; padding:12px 16px; border-left:4px solid #e0e0e0; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.06); margin-bottom:8px; gap:14px; align-items:center; }
+.impact-row.m0 { border-left-color:#da1e28; }
+.impact-row.m1 { border-left-color:#ff832b; }
+.impact-row.m2 { border-left-color:#f1c21b; }
+.impact-rank { font-size:18px; font-weight:700; color:#525252; min-width:28px; }
+.impact-detail { flex:1; }
+.impact-name { font-size:14px; font-weight:600; }
+.impact-text { font-size:12px; color:#525252; margin-top:3px; line-height:1.4; }
+
+footer { text-align:center; padding:18px 0; font-size:11px; color:#8d8d8d; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div>
+      <div class="header-brand">OpenELIS GLOBAL · QA</div>
+      <div class="header-title">Feature Maturity Dashboard</div>
+      <div class="header-sub">Each module rated M0&ndash;M5 using the rubric in <code>SKILL.md §5.5</code>. A module rates at the floor of its sub-features. The lower the rating, the more cautious a lab should be when adopting that module. Hover over a feature for evidence.</div>
+    </div>
+    <div class="header-stats">
+      <div><strong>v6.1 baseline</strong></div>
+      <div>Snapshot: 2026-05-12</div>
+      <div>Source: SKILL v6.1 + QA runs Mar&ndash;May 2026</div>
+    </div>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-tab="overview">Overview</button>
+    <button class="nav-tab" data-tab="modules">All Modules</button>
+    <button class="nav-tab" data-tab="impact">Lab Impact Rank</button>
+    <button class="nav-tab" data-tab="about">About</button>
+  </div>
+</div>
+
+<div class="content">
+
+<!-- ─────── OVERVIEW PANEL ─────── -->
+<div class="panel active" id="panel-overview">
+
+  <div class="kpi-grid">
+    <div class="kpi m0" onclick="filterAndJump('m0')">
+      <div class="kpi-value" id="count-m0">0</div>
+      <div class="kpi-label">M0 · Stub</div>
+      <div class="kpi-sub">Renders but empty</div>
+    </div>
+    <div class="kpi m1" onclick="filterAndJump('m1')">
+      <div class="kpi-value" id="count-m1">0</div>
+      <div class="kpi-label">M1 · Form-only</div>
+      <div class="kpi-sub">UI; write fails or unread-able</div>
+    </div>
+    <div class="kpi m2" onclick="filterAndJump('m2')">
+      <div class="kpi-value" id="count-m2">0</div>
+      <div class="kpi-label">M2 · Saves</div>
+      <div class="kpi-sub">Same-endpoint round-trip</div>
+    </div>
+    <div class="kpi m3" onclick="filterAndJump('m3')">
+      <div class="kpi-value" id="count-m3">0</div>
+      <div class="kpi-label">M3 · Round-trips</div>
+      <div class="kpi-sub">Cross-endpoint read-back</div>
+    </div>
+    <div class="kpi m4" onclick="filterAndJump('m4')">
+      <div class="kpi-value" id="count-m4">0</div>
+      <div class="kpi-label">M4 · Cross-links</div>
+      <div class="kpi-sub">Affects another module</div>
+    </div>
+    <div class="kpi m5" onclick="filterAndJump('m5')">
+      <div class="kpi-value" id="count-m5">0</div>
+      <div class="kpi-label">M5 · Reportable</div>
+      <div class="kpi-sub">Regulatory-grade output</div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span class="legend-title">Quick read</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#da1e28;"></span> Red &mdash; lab should NOT depend on this</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#ff832b;"></span> Orange &mdash; UI present, workflow unverified</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#f1c21b;"></span> Yellow &mdash; saves, but round-trip not proven</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#42be65;"></span> Light green &mdash; round-trip verified</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#24a148;"></span> Green &mdash; cross-module verified</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#0f62fe;"></span> Blue &mdash; regulatory-grade</span>
+  </div>
+
+  <h2>The Inventory storage seed case</h2>
+  <p style="font-size:13px; line-height:1.55; max-width:880px; color:#525252; margin-bottom:14px;">
+    The Inventory module is the canonical example that motivated this dashboard. The list view renders, items CRUD works, the receive-lot modal opens.
+    But <code>POST /rest/inventory-storage-locations</code> returns 500 (BUG-40), so storage locations can&rsquo;t be created.
+    The <code>?isActive=true</code> filter is silently ignored (BUG-41), so &ldquo;active items&rdquo; shows deactivated ones.
+    <code>POST /rest/inventory/reports/generate</code> 404s (BUG-45), so the six report types are vapor.
+    A lab inventory manager would call this M1 in 30 seconds; the prior render-PASS criterion called it &ldquo;working with workaround.&rdquo;
+  </p>
+
+</div>
+
+<!-- ─────── MODULES PANEL ─────── -->
+<div class="panel" id="panel-modules">
+
+  <div class="filters">
+    <span class="filter-label">Maturity</span>
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn m0" data-filter="m0">M0</button>
+    <button class="filter-btn m1" data-filter="m1">M1</button>
+    <button class="filter-btn m2" data-filter="m2">M2</button>
+    <button class="filter-btn m3" data-filter="m3">M3</button>
+    <button class="filter-btn" data-filter="m4">M4</button>
+    <button class="filter-btn" data-filter="m5">M5</button>
+  </div>
+
+  <div id="categories-container"></div>
+
+</div>
+
+<!-- ─────── IMPACT PANEL ─────── -->
+<div class="panel" id="panel-impact">
+
+  <h2>Lab Impact Rank — M0/M1/M2 features by severity</h2>
+  <p style="font-size:12px; color:#525252; margin-bottom:18px; max-width:880px;">
+    For each module rated M2 or below, one sentence on what a lab cannot do because of the gap. Sorted by severity: patient-safety and regulatory issues first, workflow blockers next, cosmetic last. Use this as the prioritization backlog for the next test phase and for upstream PRs.
+  </p>
+  <div id="impact-list"></div>
+
+</div>
+
+<!-- ─────── ABOUT PANEL ─────── -->
+<div class="panel" id="panel-about">
+  <h2>About this dashboard</h2>
+  <p style="font-size:13px; line-height:1.6; max-width:880px; color:#161616; margin-bottom:14px;">
+    This is the v6.1 baseline maturity dashboard for OpenELIS Global, hand-encoded from the QA history in <code>SKILL.md</code>, the bug table (Section 8), the partial-feature audit seed list (Section 8.5), and the QA reports from March&ndash;May 2026 against <code>testing.openelis-global.org</code> and <code>mgtest.openelis-global.org</code>.
+  </p>
+
+  <h3>How to read it</h3>
+  <p style="font-size:13px; line-height:1.6; max-width:880px;">
+    Modules are grouped by functional area. Each module&rsquo;s rating is the lowest M-level any of its sub-features hits. A module with a perfect form-render but a broken POST is M1, not M2. A module with a working CRUD but no cross-module link verification is M2, not M3. Click any feature card for the evidence.
+  </p>
+
+  <h3>How to update it</h3>
+  <p style="font-size:13px; line-height:1.6; max-width:880px;">
+    The <code>FEATURES</code> array in the script block at the bottom of this file is the data source. Add new modules, change ratings, append bug numbers there. For programmatic generation from QA reports, see <code>skill-sharpening-workplan-2026-05-12.md</code> Phase A2.
+  </p>
+
+  <h3>What it&rsquo;s not</h3>
+  <p style="font-size:13px; line-height:1.6; max-width:880px;">
+    Not live data. Not a replacement for <code>qa-dashboard.html</code> (which tracks test pass-rate over time). Not exhaustive &mdash; the 87 features here cover the major surfaces, but there are configuration screens and minor admin pages omitted for legibility.
+  </p>
+
+  <h3>Linked docs</h3>
+  <ul style="font-size:13px; line-height:1.6; margin-left:18px;">
+    <li><a href="SKILL-v6.md"><code>SKILL-v6.md</code></a> &mdash; the methodology that defines M0&ndash;M5</li>
+    <li><a href="skill-critique-2026-05-12.md"><code>skill-critique-2026-05-12.md</code></a> &mdash; why the old render-PASS criterion missed these</li>
+    <li><a href="skill-sharpening-workplan-2026-05-12.md"><code>skill-sharpening-workplan-2026-05-12.md</code></a> &mdash; phased roadmap</li>
+    <li><a href="qa-dashboard.html"><code>qa-dashboard.html</code></a> &mdash; the existing test-pass-rate dashboard</li>
+  </ul>
+</div>
+
+</div>
+
+<!-- ─── MODAL ─── -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="modal-title">&nbsp;</div>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="modal-body">&nbsp;</div>
+  </div>
+</div>
+
+<footer>OpenELIS QA &middot; Maturity Dashboard v1.0 &middot; Generated 2026-05-12</footer>
+
+<script>
+// ─── DATA: 87 features hand-rated from QA history ───
+// Each feature: { name, category, m: 0-5, evidence, bugs (array), labImpact (optional) }
+const FEATURES = [
+  // ── Order Workflow ──
+  { name: "Add Order — Wizard (Patient → Program → Sample → Order)", category: "Order Workflow", m: 1.5, evidence: "4-step wizard renders. POST returns 200. BUT patient-order linkage fails: order saves without sample_human row populated. Modify Order shows 'No Patient Information Available'.", bugs: ["BUG-37"], labImpact: "CRITICAL: orders are saved without patient linkage. Cannot be reported, billed, or fulfilled. Green checkmark on save is misleading." },
+  { name: "Edit Order — Modify wizard", category: "Order Workflow", m: 2, evidence: "Search by accession works. Wizard loads. Changes save and read back on same endpoint." },
+  { name: "Batch Order Entry", category: "Order Workflow", m: 1, evidence: "Setup form renders with conditional sections (Routine/EID/Viral Load). Submit untested end-to-end." },
+  { name: "Print Bar Code Labels", category: "Order Workflow", m: 1, evidence: "Pre-print and per-order forms render. Pre-Print Labels button has never been confirmed to produce a PDF or scannable barcode.", labImpact: "If labels don't print or aren't scannable, lab falls back to handwriting accession numbers." },
+  { name: "Aliquot management", category: "Order Workflow", m: 1, evidence: "Accession search renders. Show Aliquoting + button exists. Aliquot creation, volume math, and parent-child linkage untested." },
+  { name: "Electronic / Incoming Orders", category: "Order Workflow", m: 2, evidence: "Dual search form (by value, by date/status) renders. Status dropdown enumerated. Order reception untested." },
+  { name: "Generic Sample (Order/Edit/Import/Results)", category: "Order Workflow", m: 1.5, evidence: "Order, Edit, Import pages render. Results page has raw i18n key 'sample.label.generic' in breadcrumb (BUG-43).", bugs: ["BUG-43"] },
+  { name: "Sample Management", category: "Order Workflow", m: 2, evidence: "Search + Add Tests form renders. Empty state on test instance — workflow untested." },
+
+  // ── Results Workflow ──
+  { name: "Results — By Unit (LogbookResults)", category: "Results Workflow", m: 3, evidence: "14 test unit dropdown loads. testSectionId filter works (BUG-60 retracted in v3.2.1.6 — was wrong param name in old tests). Section filter ineffective on mgtest v3.2.1.5 (BUG-60).", bugs: ["BUG-60"] },
+  { name: "Results — By Patient", category: "Results Workflow", m: 2, evidence: "Patient search renders. Results load on patient selection." },
+  { name: "Results — By Order (AccessionResults)", category: "Results Workflow", m: 2, evidence: "Accession search renders. Single-accession lookup works." },
+  { name: "Results — Referred Out Tests", category: "Results Workflow", m: 1, evidence: "Page renders with 3 search methods. Referral data flow untested.", bugs: ["BUG-53"] },
+  { name: "Results — By Range", category: "Results Workflow", m: 2, evidence: "From/To accession range search works. 'Accesion' typo in field labels.", bugs: ["BUG-17"] },
+  { name: "Results — By Test/Date/Status", category: "Results Workflow", m: 2, evidence: "5-field search renders (Collection Date, Received Date, Test, Analysis Status, Sample Status). 'Recieved' typo (NOTE-31)." },
+  { name: "Order Programs / generic Program list", category: "Results Workflow", m: 2, evidence: "146 entries paginated, 8-column table. Read-only view." },
+  { name: "Result entry (Accept/Reject/Notes)", category: "Results Workflow", m: 1, evidence: "Editable table renders. BUG-31: Carbon Accept checkbox click() hangs the tab for ~60s, blocking entire results entry workflow. DOM workaround partially functional.", bugs: ["BUG-31", "BUG-2 EXTENDED"], labImpact: "CRITICAL: bench techs cannot complete result entry without hanging the browser. This blocks all downstream chains (reflex, calc, validation)." },
+
+  // ── Validation Workflow ──
+  { name: "Validation — Routine", category: "Validation Workflow", m: 2, evidence: "14-unit dropdown, results table with Save/Retest/Notes. Bulk actions (Save All Normal / Save All / Retest All) render but never confirmed to actually save bulk." },
+  { name: "Validation — By Order (AccessionValidation)", category: "Validation Workflow", m: 2, evidence: "Accession search works. Returns result data for known accessions." },
+  { name: "Validation — By Range", category: "Validation Workflow", m: 2, evidence: "Single 'Load Next 99 Records' input + page nav." },
+  { name: "Validation — By Date", category: "Validation Workflow", m: 2, evidence: "Date picker + Search. Returns result data." },
+
+  // ── Workplan ──
+  { name: "Workplan — By Test Type", category: "Workplan", m: 2, evidence: "200-300 test types dropdown. Selecting auto-loads. Duplicate test entries (NOTE-40).", bugs: ["NOTE-40"] },
+  { name: "Workplan — By Panel", category: "Workplan", m: 2, evidence: "~40 panel types. Auto-load." },
+  { name: "Workplan — By Unit (TestSection)", category: "Workplan", m: 2, evidence: "14 lab units (BUG-55 React Router fix on v3.2.1.5 + restored).", bugs: ["BUG-55"] },
+  { name: "Workplan — By Priority", category: "Workplan", m: 2, evidence: "5 priorities (Routine/ASAP/STAT/Timed/Future STAT)." },
+
+  // ── Reports ──
+  { name: "Patient Status Report (PDF)", category: "Reports", m: 3, evidence: "PDF generated successfully. NULL appears for empty Contact Tracing fields (NOTE-27).", bugs: ["NOTE-27"] },
+  { name: "Statistics Report (PDF)", category: "Reports", m: 2, evidence: "PDF generated. Title renders 'StatisticsReport' (no space)." },
+  { name: "Summary of All Tests Report (PDF)", category: "Reports", m: 2, evidence: "PDF 3 pages. Header shows raw i18n key 'report.labName.two'.", bugs: ["NOTE-28"] },
+  { name: "Test Report Summary", category: "Reports", m: 3, evidence: "Date-range form. PDF generation works." },
+  { name: "Rejection Report (PDF)", category: "Reports", m: 1, evidence: "Form renders. PDF returns HTTP 503 'Check server logs'. Rejected samples not flowing into the report (BUG-29).", bugs: ["BUG-29"], labImpact: "CRITICAL: lab cannot audit sample rejections. Pre-analytic error rate is a regulatory metric." },
+  { name: "Activity Reports (Test/Panel/Section)", category: "Reports", m: 3, evidence: "3 reports, consistent pattern (date range + type-specific dropdown)." },
+  { name: "External Referrals Report", category: "Reports", m: 2, evidence: "Date range + referral center. 'labratory' typo in heading.", bugs: ["NOTE-17"] },
+  { name: "Non-Conformity Reports (By Date / By Unit & Reason)", category: "Reports", m: 2, evidence: "Date range pages. NC By Date title missing space ('ConformityReport')." },
+  { name: "Delayed Validation Report", category: "Reports", m: 3, evidence: "Parameterless PDF with backlog totals for 15 lab sections." },
+  { name: "Audit Trail Report", category: "Reports", m: 2, evidence: "Lab number search + 7-column change log. 21-event history visible. Untested: does deleting a result or editing a reference range produce audit entries?", labImpact: "Required for regulated labs. If sensitive actions are not audited, a silent data corruption is invisible." },
+  { name: "WHONET / CSV Export", category: "Reports", m: 2, evidence: "Parameter form renders (date, study type, date type). 'Generate Printable Version' label misleading on a CSV export." },
+  { name: "Inventory Reports", category: "Reports", m: 1, evidence: "6 report types listed in UI. Export Format dropdown empty. POST /rest/inventory/reports/generate returns 404.", bugs: ["BUG-45"], labImpact: "Lab cannot generate inventory reports — regulatory + budgeting requirement." },
+
+  // ── Non-Conforming Events ──
+  { name: "Report NCE — search form", category: "Non-Conforming Events", m: 3, evidence: "4-option Search By dropdown + Text Value + Search. Specimen selection table populates." },
+  { name: "Report NCE — submit", category: "Non-Conforming Events", m: 0, evidence: "POST /rest/reportnonconformingevent hangs indefinitely. Causes Chrome 6-connection pool exhaustion. No NCE has ever been submitted via the form.", bugs: ["BUG-38"], labImpact: "CRITICAL: even when techs try to file an NCE, they can't. Multiple submissions create connection-pool problems for the whole session." },
+  { name: "View New NCE", category: "Non-Conforming Events", m: 2, evidence: "Search renders. Returns existing NCE records but rejected samples never appear (BUG-29 silo)." },
+  { name: "NCE Corrective Actions", category: "Non-Conforming Events", m: 2, evidence: "Search form renders. Action linkage to NCEs untested." },
+
+  // ── Patient Management ──
+  { name: "Patient — Add/Edit (PatientManagement)", category: "Patient Management", m: 3, evidence: "Search and New Patient tabs. CRUD works. Patient search uses /rest/patient-search-results.", bugs: ["BUG-52 false positive"] },
+  { name: "Patient History", category: "Patient Management", m: 2, evidence: "Search form renders. Returns history for known patients." },
+  { name: "Patient Merge", category: "Patient Management", m: 1, evidence: "3-step wizard renders (Select Patients → Select Primary → Confirm). End-to-end merge untested.", labImpact: "Merging the wrong patients is a hard-to-reverse data integrity event. Should not be relied on without round-trip testing." },
+
+  // ── Pathology ──
+  { name: "Pathology Dashboard", category: "Pathology", m: 2, evidence: "4 stat cards, 10-stage workflow status, table with assignee dropdown. No test has advanced a case through stages.", labImpact: "Histology labs cannot rely on this without workflow-progression testing." },
+  { name: "Immunohistochemistry Dashboard", category: "Pathology", m: 2, evidence: "3 stat cards, 4-stage workflow. Same pattern as Pathology. Stage progression untested." },
+  { name: "Cytology Dashboard", category: "Pathology", m: 2, evidence: "3 stat cards, 5 cytology-specific stages. Stage progression untested." },
+
+  // ── Analyzers ──
+  { name: "Analyzer List", category: "Analyzers", m: 3, evidence: "4 KPI cards, 7-column table with status. CRUD via overflow menu works." },
+  { name: "Analyzer Error Dashboard", category: "Analyzers", m: 3, evidence: "4 KPI cards, 3 filter dropdowns, table." },
+  { name: "Analyzer Types", category: "Analyzers", m: 3, evidence: "9-column table. Create New Analyzer Type works." },
+  { name: "Analyzer Field Mappings", category: "Analyzers", m: 2, evidence: "Per-analyzer mapping page renders. Mapping import/export untested." },
+  { name: "Analyzer QC (NEW v3.2.1.6)", category: "Analyzers", m: 1, evidence: "Load tests only (Phase 23 Suite FI). No CRUD or write tests yet.", labImpact: "Westgard rule / QC workflow unverified. Lab cannot trust QC without round-trip tests." },
+
+  // ── Storage ──
+  { name: "Storage — Sample Items", category: "Storage", m: 3, evidence: "8-col sortable table with 214 items. Search, filter, expandable rows." },
+  { name: "Storage — Rooms / Devices / Shelves / Racks", category: "Storage", m: 3, evidence: "Each tab has CRUD with cascading filters. Add dialogs render correctly." },
+  { name: "Storage — Boxes (grid assignment)", category: "Storage", m: 2, evidence: "Unique grid coordinate UI. Coordinate assignment persistence, double-assignment safety, move-audit all untested.", labImpact: "Sample mis-location is a real-world QA event. If grid assignment can be double-occupied, samples will be lost." },
+  { name: "Cold Storage Monitoring", category: "Storage", m: 2, evidence: "5-tab dashboard. Compliance footer claims CAP/CLIA/FDA/WHO/HIPAA. No alert has actually fired in tests. No excursion has reached the audit trail.", labImpact: "CAP/CLIA regulatory feature. A lab activating this on the strength of UI tests may discover excursions weren't logged only during an audit." },
+
+  // ── EQA ──
+  { name: "EQA Management dashboard", category: "EQA", m: 1, evidence: "Page renders but /rest/eqa/samples/dashboard returns 404 (BUG-39). KPI cards show fallback zeros.", bugs: ["BUG-39"] },
+  { name: "EQA Distribution", category: "EQA", m: 1, evidence: "Page renders. Create New Shipment wizard renders. Shipment-distribute-receive end-to-end untested." },
+  { name: "EQA Participants", category: "EQA", m: 1, evidence: "Page renders but /rest/eqa/participants 404s. UI is M1 stub." },
+  { name: "EQA Results", category: "EQA", m: 1, evidence: "Page renders but /rest/eqa/results 404s. UI is M1 stub." },
+  { name: "EQA Program admin (CRUD)", category: "EQA", m: 3, evidence: "POST /rest/eqa/programs (200 non-standard, should be 201). PUT works with verified field update." },
+  { name: "EQA enablement gate", category: "EQA", m: 0, evidence: "Whole module depends on eqaEnabled=true in Order Entry Configuration. Without it, sidebar items are silent dead-ends. Phase 27 cancelled 7 Jira tickets (OGC-518–524) due to this.", labImpact: "Lab Administrator persona discovers hidden requirement only after the EQA module appears broken." },
+
+  // ── Inventory ──
+  { name: "Inventory — Items list", category: "Inventory", m: 3, evidence: "5 item types. GET /items/all + POST /items (201) + PUT /items/{id} (200) + deactivate. Round-trip confirmed." },
+  { name: "Inventory — Lots", category: "Inventory", m: 2, evidence: "POST /receive (201) creates lot. GET /lots returns lots. Storage location must be null because of BUG-40." },
+  { name: "Inventory — Storage Locations", category: "Inventory", m: 1, evidence: "POST /rest/inventory-storage-locations returns HTTP 500. GET returns empty array. Modal has 2 unresolved i18n keys (BUG-47).", bugs: ["BUG-40", "BUG-47"], labImpact: "Lab cannot track physical reagent location — the canonical inventory use case." },
+  { name: "Inventory — Active filter", category: "Inventory", m: 1, evidence: "?isActive=true silently returns deactivated items. Catalog view shows expired/recalled reagents as active.", bugs: ["BUG-41"], labImpact: "Lab tech could pick an expired reagent thinking it's active." },
+  { name: "Inventory — Catalog table", category: "Inventory", m: 2, evidence: "Renders. 'label.button.action' i18n key in column header.", bugs: ["BUG-44"] },
+
+  // ── Reflex / Calc Engines ──
+  { name: "Reflex Rules — Admin", category: "Clinical Decision Support", m: 2, evidence: "/MasterListsPage/reflex shows 7-12 rules. POST /rest/reflexrule creates rules. Active toggle works." },
+  { name: "Reflex Rules — Firing", category: "Clinical Decision Support", m: 1, evidence: "Never observed to fire. BUG-31 blocks the result-entry step that would trigger a rule.", bugs: ["BUG-31"], labImpact: "A flagship LIMS feature. HIV positive → confirmatory, abnormal CBC → diff — none verified to auto-trigger." },
+  { name: "Calculated Values — Admin", category: "Clinical Decision Support", m: 3, evidence: "POST /rest/test-calculation (200) creates. PUT updates. GET /math-functions returns 14 operators." },
+  { name: "Calculated Values — Computing", category: "Clinical Decision Support", m: 1, evidence: "Never observed to compute. De Ritis Ratio defined; no test has entered both GPT and GOT to confirm the ratio appears.", labImpact: "eGFR, A/G ratio, FENa, anion gap — all marquee clinical-decision values, all unverified." },
+
+  // ── Admin pages ──
+  { name: "User Management", category: "Admin", m: 3, evidence: "24 users, 8-col table. Add/Modify works. BUG-20 (Login Name invalid flag) likely fixed in v3.2.1.4.", bugs: ["BUG-3", "BUG-20"] },
+  { name: "Organization Management", category: "Admin", m: 3, evidence: "4,726 orgs render. CRUD works on testing.openelis-global.org." },
+  { name: "Provider Management", category: "Admin", m: 2, evidence: "40 providers on v3.2.1.4. Add modal works. v3.2.1.5 regression: GET /rest/provider 404 leaves UNKNOWN_ row only (BUG-50).", bugs: ["BUG-50"] },
+  { name: "Dictionary Menu", category: "Admin", m: 3, evidence: "1,273 entries with LOINC column on testing. v3.2.1.5: blank page (BUG-51 + BUG-59).", bugs: ["BUG-51", "BUG-59"] },
+  { name: "Test Management (Add/Modify/Rename)", category: "Admin", m: 1, evidence: "POST /rest/TestAdd HTTP 500 (BUG-1, fixed in v3.2.1.4 per Phase 24 retest). POST /rest/TestModifyEntry silently drops data — patient safety bug (BUG-8).", bugs: ["BUG-1", "BUG-8", "BUG-12", "BUG-13"], labImpact: "PATIENT SAFETY: silent corruption when editing reference ranges. Test catalog cannot be safely managed." },
+  { name: "Panel Management", category: "Admin", m: 1, evidence: "Panel CRUD has POST /rest/PanelCreate silent failure (BUG-7a)." },
+  { name: "Site Information", category: "Admin", m: 3, evidence: "20 settings. Modify works for boolean/text/image. bannerHeading Modify hangs (BUG-30).", bugs: ["BUG-30"] },
+  { name: "Site Branding (logo + colors)", category: "Admin", m: 3, evidence: "PUT /rest/site-branding works for colors. Round-trip confirmed via PDF: site name 'null' if not set (NOTE-29).", bugs: ["NOTE-29"] },
+  { name: "Barcode Configuration", category: "Admin", m: 3, evidence: "4 sections. Save works." },
+  { name: "Lab Number Management", category: "Admin", m: 3, evidence: "Format admin works. Cross-path uniqueness across Add Order / Batch / EQA / Generic Sample untested.", labImpact: "Counter rollover or collision across paths would be a sample-identification disaster." },
+  { name: "Application Properties", category: "Admin", m: 3, evidence: "34 key-value pairs. Save works." },
+  { name: "Logging Configuration", category: "Admin", m: 2, evidence: "Form renders. Apply button untested for actual logger change." },
+  { name: "Search Index Management", category: "Admin", m: 1, evidence: "'Start Reindexing' button. Never clicked in a confirmed test. No log emitted." },
+  { name: "Plugin Management", category: "Admin", m: 0, evidence: "'No plugins found' empty state. Plugin loading never exercised. Analyzer integrations depend on this." },
+  { name: "Test Notification Configuration", category: "Admin", m: 2, evidence: "Per-test × 4-channel matrix renders. No notification observed to fire from a configured row." },
+  { name: "Translation Management", category: "Admin", m: 3, evidence: "2,180 entries. EN 100%, FR 51.4%. Edit modal works. <html lang> never updates to fr (NOTE-13).", bugs: ["NOTE-13", "BUG-16"] },
+  { name: "General Config — WorkPlan / Result / Patient / etc.", category: "Admin", m: 2, evidence: "10 sub-pages. 3 blank pages on v3.2.1.5 (BUG-48 + BUG-59).", bugs: ["BUG-48", "BUG-59"] },
+  { name: "Menu Configuration (Global/Billing/NC/Patient/Study)", category: "Admin", m: 2, evidence: "7 actual sub-routes work. Parent route /menuConfiguration is blank (BUG-49).", bugs: ["BUG-49"] },
+  { name: "Reflex Tests Management", category: "Admin", m: 2, evidence: "Rule list + Toggle/Active controls. CRUD path works for rule definition." },
+  { name: "Calculated Value Tests Management", category: "Admin", m: 2, evidence: "Rule list with formula display. Admin page makes 2 spurious 404 calls per load (BUG-46).", bugs: ["BUG-46"] },
+  { name: "Program Entry / FHIR Questionnaire", category: "Admin", m: 2, evidence: "16 programs. JSON editor for FHIR Questionnaire. Form renders. Questionnaire-on-order-entry flow untested." },
+  { name: "Legacy Admin (JSP)", category: "Admin", m: 3, evidence: "Opens in new tab. 20+ JSP admin links. Functional but separate auth session." },
+
+  // ── Permissions / Security ──
+  { name: "User permissions — definition", category: "Permissions & Security", m: 3, evidence: "6 global roles, 15 lab units, 5 per-unit permissions defined. UI works." },
+  { name: "User permissions — enforcement", category: "Permissions & Security", m: 1, evidence: "Never tested that a Receptionist-role user actually cannot access Validation. Lab-unit restriction never verified to filter UI.", labImpact: "Regulatory finding. Access control without enforcement testing means the system can be CLAIMED to enforce roles when it doesn't." },
+  { name: "Rate limiting (login + API)", category: "Permissions & Security", m: 0, evidence: "No rate limiting (BUG-22). 30 wrong-password attempts → no 429, no lockout. 50 rapid API calls → no 429.", bugs: ["BUG-22"], labImpact: "Brute-force-able. CAP and ISO 15189 increasingly require this." },
+  { name: "CSRF token enforcement", category: "Permissions & Security", m: 2, evidence: "New in v3.2.1.6. Token in localStorage['CSRF']. POST without token → 403. Some prior bugs (BUG-1, BUG-3, BUG-7a) may have been CSRF-masked — needs distinguishing." },
+
+  // ── FHIR ──
+  { name: "FHIR — Capability Statement", category: "FHIR", m: 3, evidence: "/api/OpenELIS-Global/fhir/metadata returns HAPI FHIR 7.0.2 R4 CapabilityStatement. 5 declared resources." },
+  { name: "FHIR — Patient", category: "FHIR", m: 2, evidence: "GET /Patient/{id} returns 200. Round-trip (POST → GET → diff) untested." },
+  { name: "FHIR — Observation", category: "FHIR", m: 2, evidence: "GET /Observation works. Round-trip untested." },
+  { name: "FHIR — ServiceRequest", category: "FHIR", m: 1, evidence: "Returns 404 — not implemented. The integration use case OpenELIS markets relies on this.", labImpact: "EMR integration (OpenSRP/OpenMRS) depends on ServiceRequest. Missing = no order placement via FHIR." },
+  { name: "FHIR — DiagnosticReport", category: "FHIR", m: 1, evidence: "Returns 404 — not implemented." },
+  { name: "FHIR — Practitioner / Organization", category: "FHIR", m: 2, evidence: "Declared resources. Round-trip untested." },
+
+  // ── Notifications & Alerts ──
+  { name: "Notification panel (bell icon)", category: "Notifications & Alerts", m: 1, evidence: "Panel renders. /rest/notifications always returns empty. Subscribe button never observed to subscribe. /rest/notification/pnconfig 404s on every page load (NOTE-28).", bugs: ["NOTE-28"] },
+  { name: "Alerts Dashboard", category: "Notifications & Alerts", m: 1, evidence: "Page renders with 4 stat cards. /rest/alerts always empty. Critical alerts (STAT overdue, temp excursion) never fire." },
+  { name: "Email / SMS notification", category: "Notifications & Alerts", m: 1, evidence: "Configured in Cold Storage Settings and Test Notification Config. Email/SMS toggles render. Never confirmed to send." },
+
+  // ── Other ──
+  { name: "Dashboard KPIs", category: "Dashboard", m: 2, evidence: "10 KPI cards with drill-down. JSON matches API. Counter vs underlying-list reconciliation FAILs for ordersRejectedToday (BUG-29 silo). Field-name typos in API (NOTE-3).", bugs: ["NOTE-3", "BUG-29"] },
+  { name: "Audit Trail (UI viewer)", category: "Audit & History", m: 2, evidence: "Lab number search + 21-event history works for known accessions. Untested whether ALL sensitive actions are logged." },
+  { name: "Help — User Manual PDF", category: "Help & Support", m: 3, evidence: "196-page PDF opens correctly." },
+  { name: "Help — Video Tutorials", category: "Help & Support", m: 0, evidence: "Button in header Help panel has no href and no onclick. Stub.", bugs: ["NOTE-21"] },
+  { name: "Help — Release Notes", category: "Help & Support", m: 0, evidence: "Button in header Help panel has no href and no onclick. Stub.", bugs: ["NOTE-21"] },
+  { name: "NoteBook Dashboard", category: "Other modules", m: 2, evidence: "v3.2.1.4: blank white page (BUG-11). v3.2.1.5: implemented with KPI cards and Projects/All Entries tabs. CRUD untested.", bugs: ["BUG-11"] },
+  { name: "Billing", category: "Other modules", m: 0, evidence: "Sidebar link has NO href attribute. Dead link. Only dead link in entire sidebar.", bugs: ["NOTE-32"] },
+  { name: "Global Search (header bar)", category: "Other modules", m: 1, evidence: "Search box renders. Typing + Search button — non-functional, produces no results.", bugs: ["NOTE-36"] },
+];
+
+const CATEGORY_ORDER = [
+  "Order Workflow", "Results Workflow", "Validation Workflow", "Workplan",
+  "Reports", "Non-Conforming Events", "Patient Management",
+  "Pathology", "Analyzers", "Storage", "EQA", "Inventory",
+  "Clinical Decision Support", "Admin", "Permissions & Security", "FHIR",
+  "Notifications & Alerts", "Dashboard", "Audit & History", "Help & Support", "Other modules"
+];
+
+// ─── INIT ───
+function bucketize(m) { return Math.floor(m); }
+
+// Counts
+const counts = { m0:0, m1:0, m2:0, m3:0, m4:0, m5:0 };
+FEATURES.forEach(f => { counts['m'+bucketize(f.m)]++; });
+for (const k in counts) { document.getElementById('count-'+k).textContent = counts[k]; }
+
+// Build category sections
+const container = document.getElementById('categories-container');
+CATEGORY_ORDER.forEach(cat => {
+  const inCat = FEATURES.filter(f => f.category === cat);
+  if (inCat.length === 0) return;
+  const sec = document.createElement('div');
+  sec.className = 'category';
+  sec.innerHTML = `
+    <div class="category-head">
+      <div class="category-title">${cat}</div>
+      <div class="category-count">${inCat.length} feature${inCat.length>1?'s':''}</div>
+    </div>
+    <div class="feature-grid"></div>
+  `;
+  const grid = sec.querySelector('.feature-grid');
+  inCat.sort((a,b) => a.m - b.m).forEach((f, idx) => {
+    const m = bucketize(f.m);
+    const card = document.createElement('div');
+    card.className = `feature m${m}`;
+    card.dataset.bucket = 'm'+m;
+    card.innerHTML = `
+      <div class="feature-name">${f.name}</div>
+      <div class="feature-meta">
+        <span class="feature-rating m${m}">M${m}${f.m % 1 !== 0 ? '.5' : ''}</span>
+        ${f.bugs && f.bugs.length ? `<span class="feature-bugs">${f.bugs.join(', ')}</span>` : ''}
+      </div>
+      ${f.labImpact ? `<div class="feature-notes"><strong>Lab impact:</strong> ${f.labImpact.length>120 ? f.labImpact.substring(0,118)+'…' : f.labImpact}</div>` : ''}
+    `;
+    card.addEventListener('click', () => showModal(f));
+    grid.appendChild(card);
+  });
+  container.appendChild(sec);
+});
+
+// Build Lab Impact list (M0-M2 with labImpact)
+const impactList = document.getElementById('impact-list');
+const impactItems = FEATURES.filter(f => bucketize(f.m) <= 2 && f.labImpact)
+  .sort((a,b) => a.m - b.m || (b.labImpact.startsWith('CRITICAL') ? 1 : -1));
+impactItems.forEach((f, idx) => {
+  const m = bucketize(f.m);
+  const row = document.createElement('div');
+  row.className = `impact-row m${m}`;
+  row.innerHTML = `
+    <div class="impact-rank">${idx+1}</div>
+    <div class="impact-detail">
+      <div class="impact-name">${f.name} <span class="feature-rating m${m}" style="margin-left:6px;">M${m}</span></div>
+      <div class="impact-text">${f.labImpact}</div>
+    </div>
+  `;
+  row.addEventListener('click', () => showModal(f));
+  impactList.appendChild(row);
+});
+
+// ─── TABS ───
+document.querySelectorAll('.nav-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ─── FILTERS ───
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const f = btn.dataset.filter;
+    document.querySelectorAll('.feature').forEach(card => {
+      if (f === 'all' || card.dataset.bucket === f) card.classList.remove('hidden');
+      else card.classList.add('hidden');
+    });
+  });
+});
+
+function filterAndJump(bucket) {
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('.nav-tab[data-tab="modules"]').classList.add('active');
+  document.getElementById('panel-modules').classList.add('active');
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  const target = document.querySelector(`.filter-btn[data-filter="${bucket}"]`);
+  if (target) target.click();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// ─── MODAL ───
+function showModal(f) {
+  const m = bucketize(f.m);
+  document.getElementById('modal-title').innerHTML = `${f.name} <span class="feature-rating m${m}" style="margin-left:8px;">M${m}${f.m%1!==0?'.5':''}</span>`;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="meta-row">
+      <span style="font-size:11px; color:#525252;"><strong>CATEGORY:</strong> ${f.category}</span>
+    </div>
+    <h4>Evidence</h4>
+    <p>${f.evidence}</p>
+    ${f.bugs && f.bugs.length ? `<h4>Related bugs</h4><p><code>${f.bugs.join('</code> &middot; <code>')}</code></p>` : ''}
+    ${f.labImpact ? `<h4>Lab impact</h4><p>${f.labImpact}</p>` : ''}
+    <h4>What it would take to move up a level</h4>
+    <p>${nextLevelGuidance(m)}</p>
+  `;
+  document.getElementById('modal-bg').classList.add('show');
+}
+function closeModal() {
+  document.getElementById('modal-bg').classList.remove('show');
+}
+document.getElementById('modal-bg').addEventListener('click', (e) => {
+  if (e.target.id === 'modal-bg') closeModal();
+});
+
+function nextLevelGuidance(m) {
+  switch(m) {
+    case 0: return 'Implement basic UI: render the form fields, sidebar link with a real href, or component that mounts. Until then, lab users should treat this as not present.';
+    case 1: return 'Get the POST/PUT to return 2xx and the data to read back via the same endpoint. For M1.5 (Order Lifecycle BUG-37), fix the patient-link write path so Modify Order shows the patient.';
+    case 2: return 'Add a different-endpoint read-back (Chain pattern from SKILL §11). Saved data should appear on a different screen or via a different API path.';
+    case 3: return 'Verify a cross-module effect. The data written here should produce an outcome in another module — rejection appears in NCE; reflex rule fires; calculated value shows on results.';
+    case 4: return 'Produce a regulatory-grade output: PDF with correct branding, FHIR resource that validates, audit entry, or cold-chain excursion with linked corrective action.';
+    case 5: return 'Already at M5 — maintain coverage and reverify on each major version.';
+  }
+}
+
+// ESC closes modal
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+</script>
+</body>
+</html>
