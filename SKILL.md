@@ -4,7 +4,7 @@ description: >
   Automated QA testing skill for OpenELIS Global covering 167+ test suites and ~488 test cases. Tests: Orders, Validation, Results, Patient Management, Dashboard, Admin (28+ pages), Reports (all 11), Referrals, Workplan, FHIR, i18n, Accessibility, Pathology, Analyzers, EQA, Alerts, Storage, Batch Entry, Barcode, and more. Includes DEEP interaction suites: search/filter, form interaction, error handling, performance, cross-module data integrity, security (CSRF/XSS/SQLi), WCAG accessibility, E2E order tracing, report PDF generation, and Madagascar e-SIL UAT coverage (LO-xx/DU-xx). Drives a real browser session via Claude in Chrome and produces a pass/fail report with Jira tickets.
 ---
 
-# OpenELIS Global QA Skill — v6.17 (2026-05-14 + Chain A truly end-to-end: Lab number uniqueness + Report PDF rendered with validated result)
+# OpenELIS Global QA Skill — v6.18 (2026-05-14 + Revalidation pass: 1 false positive retracted, 1 reclassified, 2 new bugs surfaced, 4 confirmed)
 
 **v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture) + 6.5a (harness-enforced via `helpers/networkCapture.ts`), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 11.5 Blocking-Bug Etiquette, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. **v6.13:** v6.12's pilot-grounded shape corrections applied in-place across all 12 chains + 6 personas + _common.ts; Chain I rewritten with the wrong labName premise dropped; `helpers/_common-v612-patch.ts` sidecar deleted. See full Change Log at end of file.
 
@@ -1363,6 +1363,54 @@ The assertion failure mode catches counter-drift bugs that would otherwise be in
 ---
 
 ## Change log
+
+### v6.18 (2026-05-14) — Revalidation pass corrects v6.16/v6.17 bug claims; one false positive, one reclassified, two new bugs surfaced
+
+After Casey questioned the bug confidence levels, ran the formal `openelis-bug-revalidation` skill protocol (Methods A/B/C from the skill) against all 6 queued bugs from v6.16+v6.17. **The protocol caught one false positive and one misclassification before any Jira tickets were filed.** This is exactly what the revalidation skill exists for.
+
+**Revalidation outcomes (and corrections to prior change-log claims):**
+
+| Original claim | Revalidation outcome | Disposition |
+|---|---|---|
+| FHIR-1 `/fhir/metadata` 500 (double-slash proxy URL) | Method C 3/3: identical persistent error including HAPI-1814 detail | **CONFIRMED — file** |
+| FHIR-2 `/fhir/Patient/27` 404 ("patients not synced") | **FALSE POSITIVE.** `Patient/{guid}` → 200 with full data. `Patient?identifier={nationalId}` → 200 Bundle. `Patient?_id=27` → 200 Bundle. FHIR uses the patient guid, not the LIMS patientPK. The 404 on `/Patient/27` is correct REST behavior. | **RETRACT** |
+| FHIR-3 `/fhir/Observation` 151KB internal HAPI dump | Confirmed by repeat probes — multiple separate Bundle IDs, same broken structure (`formatCommentsPre`, recursive `idElement.idElement...`) | **CONFIRMED — file** |
+| FHIR-4 `application/fhir+json` 406 | Confirmed — same endpoint returns 200 vs 406 by Accept header alone | **CONFIRMED — file** |
+| Validation error shape is generic | **REFINED.** Bean Validation annotations DO populate `fieldErrors` ("must not be blank", "Invalid accession number format"). Service-layer business validations (uniqueness, missing FK) DO NOT — they fall through to generic. Bug scope narrows to service-layer-only inconsistency. | **REFINED — file** |
+| Results-Accept-overwrite footgun | **RECLASSIFY.** Not a data-corruption bug — the modal text explicitly documents the checkbox as "Accept Unconditionally" with 3 valid scenarios (test redone same result, no-result-don't-cancel, value-change-with-note). Casey's "don't click it for normal results" rule was correct domain knowledge, not a bug observation. The real concern is **UX**: the checkbox sits inline in result-entry rows with no visual distinction from normal controls. The modal warning appears only AFTER the click. | **RECLASSIFY** as UX-improvement suggestion |
+| `ORDERS_PATIALLY_COMPLETED_TODAY` enum typo | Cosmetic but real (Method A — text doesn't transient) | **CONFIRMED — file (cosmetic)** |
+
+**Two new bugs surfaced during revalidation:**
+- **NEW: empty-body 500 with info leak.** `POST /rest/SamplePatientEntry` with `body: '{}'` returns HTTP 500 with response body `"Check server logs"`. The server should return 400 for malformed input, not 500 — and the "Check server logs" response leaks internal info to the client.
+- The `Patient/{guid}` 200 case revealed the correct FHIR lookup pattern (use guid, not patientPK; or use `?identifier=` search). This is methodology gold for Chain K rewrite.
+
+**v6.18 apiShapes.ts additions:**
+- `FHIR_LOOKUP` constant — `patientResourcePath(guid)` and `patientSearchByIdentifier(identifier)` helpers documenting the CORRECT FHIR lookup path.
+- `SamplePatientEntryAnnotationError` and `SamplePatientEntryServiceLayerError` interfaces — the two distinct error shapes from `POST /rest/SamplePatientEntry`.
+
+**New methodology rule added — §10.5 Always revalidate before queuing for file.** v6.16 and v6.17 both queued bugs as "ready to file" without running the revalidation skill first. The revalidation pass caught 2 errors out of 6 (33% false-positive/misclassification rate). The bug-filing etiquette rule now mandates:
+
+1. Run `openelis-bug-revalidation` skill protocol Method C (API 3× repeat) on EVERY API-level bug claim before adding to the SKILL bug table.
+2. Run Method A (fresh tab) on UI bugs.
+3. For business-rule claims, test the inverse (e.g., for "generic error" claims, test whether other validation paths give specific errors).
+4. Reading the modal/error text BEFORE filing a bug is required — what looks like a bug may be documented behavior.
+
+**Module maturity rating updates from revalidation evidence:**
+- FHIR **M0-M1 → M1.5** — patient lookup works correctly via guid; CapabilityStatement is broken (FHIR-1); Observation serialization is broken (FHIR-3); content negotiation is broken (FHIR-4). So FHIR is partially functional, not fully broken. v6.16's M0-M1 was an overcorrection.
+- All other v6.17 maturity ratings hold.
+
+**Bugs ready to file (post-revalidation, total 6):**
+1. FHIR-1: `/fhir/metadata` 500 due to double-slash proxy URL — severe
+2. FHIR-3: `/fhir/Observation` returns 151KB internal HAPI domain dump — severe
+3. FHIR-4: `application/fhir+json` Accept header rejected with 406 — medium
+4. `ORDERS_PATIALLY_COMPLETED_TODAY` enum spelling — cosmetic
+5. Validation error generic for service-layer (uniqueness, missing FK) — medium
+6. POST `/rest/SamplePatientEntry` with empty body returns 500 "Check server logs" — medium (info leak)
+7. Results > By Order Accept-Unconditionally UX (inline checkbox, modal-only warning) — UX/A11Y
+
+**Side-effect tracking (§11.5):**
+- DEV01260000000000010 — still in validated state, used as the chain seed (carry-over from v6.16).
+- DEV01260000000000015 — created for the Accept-revalidation, ended up in pristine state (result not entered/saved). Available as seed for future Chain A Step 3+ runs.
 
 ### v6.17 (2026-05-14) — Chain A truly end-to-end + Chain L PASS + Report PDF rendered
 

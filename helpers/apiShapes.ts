@@ -1052,3 +1052,84 @@ export interface SamplePatientEntryValidationError {
   error: string;                                              // observed "Validation failed"
 }
 
+
+// =============================================================================
+// FHIR — v6.18 CORRECTIONS to v6.16 (Revalidation, 2026-05-14)
+// =============================================================================
+// v6.16 documented "FHIR-2: /fhir/Patient/N 404 — patients not synced." That
+// claim is RETRACTED. Revalidation showed:
+//
+//   GET /fhir/Patient/{guid}           → 200, full Patient resource
+//   GET /fhir/Patient?identifier={N}   → 200, Bundle wrapping the Patient
+//   GET /fhir/Patient?_id={N}          → 200, Bundle
+//   GET /fhir/Patient/{N}              → 404 (because the FHIR Resource ID is
+//                                          the guid, NOT the LIMS patientPK)
+//
+// The 404 on /Patient/{N} is correct REST behavior — the resource doesn't
+// exist at that path. The bug was my misunderstanding of the FHIR ID space.
+//
+// CORRECT WAY to look up a LIMS patient via FHIR:
+//   1. Read the LIMS patient to get its `guid` (from patient-search-results
+//      response or PatientPropertiesPayload.guid).
+//   2. Fetch /fhir/Patient/{guid} for direct resource access.
+//   3. Or fetch /fhir/Patient?identifier={nationalId} for search by identifier.
+//
+// FHIR-1 (metadata 500), FHIR-3 (Observation 151KB internal dump), and
+// FHIR-4 (application/fhir+json 406) all remain real bugs — confirmed by
+// repeat probes during revalidation.
+
+export interface FHIRLookup {
+  /** Patient resource ID is the LIMS patient's guid, not its patientPK. */
+  patientResourcePath: (guid: string) => string;
+  /** Search by national ID returns a Bundle wrapping the patient(s). */
+  patientSearchByIdentifier: (identifier: string) => string;
+}
+
+export const FHIR_LOOKUP: FHIRLookup = {
+  patientResourcePath: (guid) => `/api/OpenELIS-Global/rest/fhir/Patient/${guid}`,
+  patientSearchByIdentifier: (identifier) => `/api/OpenELIS-Global/rest/fhir/Patient?identifier=${encodeURIComponent(identifier)}`,
+};
+
+// =============================================================================
+// Validation error shape — v6.18 REFINED (Revalidation, 2026-05-14)
+// =============================================================================
+// v6.16/v6.17 claimed "validation error shape is too generic — empty fieldErrors".
+// Revalidation refined this:
+//
+//   Bean Validation annotations (@NotBlank, @Pattern, etc.) DO populate
+//   fieldErrors with field name + defaultMessage:
+//     POST { sampleOrderItems.labNo: '' }
+//       → 400 { fieldErrors: [{ field: 'sampleOrderItems.labNo',
+//                              defaultMessage: 'must not be blank' }],
+//               error: 'sampleOrderItems.labNo: must not be blank' }
+//
+//     POST { sampleOrderItems.labNo: 'BAD_FORMAT' }
+//       → 400 { fieldErrors: [{ field: 'sampleOrderItems.labNo',
+//                              defaultMessage: 'Invalid accession number format' }],
+//               error: 'sampleOrderItems.labNo: Invalid accession number format' }
+//
+//   Service-layer business validations (uniqueness, missing FK, etc.) DO NOT
+//   populate fieldErrors — they fall through to the generic shape:
+//     POST { sampleOrderItems.labNo: <duplicate> }
+//       → 400 { fieldErrors: [], error: 'Validation failed' }
+//
+//     POST { sampleOrderItems.referringSiteId: '' }
+//       → 400 { fieldErrors: [], error: 'Validation failed' }
+//
+//   Empty body causes a different bug entirely:
+//     POST {}  (totally empty body)
+//       → 500 "Check server logs"  ← info-leak bug, separate Jira
+
+export interface SamplePatientEntryAnnotationError {
+  fieldErrors: Array<{ field: string; defaultMessage: string }>;
+  /** Concatenated "field: message" string. */
+  error: string;
+}
+
+export interface SamplePatientEntryServiceLayerError {
+  /** Empty array — service-layer validations don't populate this. */
+  fieldErrors: [];
+  /** Always the literal string "Validation failed". */
+  error: 'Validation failed';
+}
+
