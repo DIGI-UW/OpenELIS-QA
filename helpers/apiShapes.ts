@@ -323,3 +323,59 @@ export function firstPatient(
   if (!isPatientSearchResponse(body)) return null;
   return body.patientSearchResults.find(predicate) ?? null;
 }
+
+// =============================================================================
+// Dashboard tile drill-down — captured live in A1-bis session 2026-05-13 mgdev v3.2.1.8
+// =============================================================================
+
+/**
+ * The Dashboard tile click-to-expand fires a request to:
+ *   GET /api/OpenELIS-Global/rest/home-dashboard/{TYPE}
+ *
+ * This is the canonical queue endpoint for §13 Y-RECON KPI-vs-list reconciliation.
+ * The NEW-1 "Y-RECON mismatch" claim in the A1 pilot was retracted because the
+ * original probe (LogbookResults) was the wrong endpoint. This is the right one.
+ *
+ * Verified: ORDERS_READY_FOR_VALIDATION returned 4 displayItems matching the
+ * Dashboard KPI of 4 exactly. KPI = displayItems.length on a healthy instance.
+ */
+export interface DashboardDrillDownResponse {
+  paging: {
+    totalPages: string;
+    currentPage: string;
+    searchTermToPage: Array<{ id: string; value: string }>;
+  };
+  displayItems: DashboardDrillDownItem[];
+}
+
+export interface DashboardDrillDownItem {
+  priority: 'ROUTINE' | 'ASAP' | 'STAT' | 'TIMED' | 'FUTURE_STAT' | string;
+  /** dd/MM/yyyy */
+  orderDate: string;
+  /** Patient identifier (note: lowercase `Id`, matching the response — not patientID). */
+  patientId: string;
+  /** The accession number, e.g. "DEV01260000000000004". */
+  labNumber: string;
+  testName: string;
+  countOfOrdersEntered: number;
+  id: string;
+  /** Lab section ID, e.g. "136" (Molecular Biology). Matches TestAdd.labUnitList. */
+  testSection: string;
+}
+
+/**
+ * Enum names captured live for the Dashboard tile drill-down URL. Most match
+ * the Dashboard metric field names; a few don't (server-side enum differs).
+ */
+export const DASHBOARD_TILE_TYPES = {
+  inProgress: 'ORDERS_IN_PROGRESS',
+  readyForValidation: 'ORDERS_READY_FOR_VALIDATION',  // canonical — verified 4/4 match
+  rejectedToday: 'ORDERS_REJECTED_TODAY',
+  completedToday: 'ORDERS_COMPLETED_TODAY',
+  enteredByUserToday: 'ORDERS_ENTERED_BY_USER_TODAY',
+  unPrintedResults: 'UN_PRINTED_RESULTS',
+  // 2026-05-13: these two return 400 — the server-side enum names are slightly different.
+  // Capture from a real UI click before using:
+  // partiallyCompletedToday: 'ORDERS_PARTIALLY_COMPLETED_TODAY' (NOT THIS — needs capture)
+  // electronicOrders: 'ELECTRONIC_ORDERS' (NOT THIS — needs capture)
+} as const;
