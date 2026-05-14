@@ -379,3 +379,318 @@ export const DASHBOARD_TILE_TYPES = {
   // partiallyCompletedToday: 'ORDERS_PARTIALLY_COMPLETED_TODAY' (NOT THIS — needs capture)
   // electronicOrders: 'ELECTRONIC_ORDERS' (NOT THIS — needs capture)
 } as const;
+
+// =============================================================================
+// Dashboard tile types — v6.15 additions (A1-bis Session 2, 2026-05-13)
+// =============================================================================
+// Captured live via UI click + read_network_requests on mgdev v3.2.1.8.
+// Three new enum values + one entirely-different shape for the metrics tile.
+
+/**
+ * NEW in v6.15. The original DASHBOARD_TILE_TYPES had `partiallyCompletedToday`
+ * and `electronicOrders` as TODOs because the server-side enum names were
+ * unknown. A1-bis Session 2 captured them and discovered surprises:
+ *
+ *   - "Partially Completed Today" tile → enum `ORDERS_PATIALLY_COMPLETED_TODAY`
+ *     (sic — "PATIALLY" missing the R; server-side enum typo, not ours).
+ *   - "Electronic Orders" tile → enum `INCOMING_ORDERS` (label-vs-enum mismatch).
+ *   - "Average Turn Around time" tile → DIFFERENT URL pattern: kebab-case
+ *     `turn-around-time-metrics`, and DIFFERENT response shape (see below).
+ *   - "Delayed Turn Around" tile → standard envelope, enum `DELAYED_TURN_AROUND`.
+ *
+ * Spread the new entries onto the existing constant via a separate export
+ * rather than mutating the original, so callers that already destructure the
+ * original constant keep working. Use DASHBOARD_TILE_TYPES_V615 for new code.
+ */
+export const DASHBOARD_TILE_TYPES_V615 = {
+  ...DASHBOARD_TILE_TYPES,
+  /** Note: server enum is misspelled `PATIALLY`. Do not "fix" — that breaks the request. */
+  partiallyCompletedToday: 'ORDERS_PATIALLY_COMPLETED_TODAY' as const,
+  /** UI label says "Electronic Orders"; server enum says INCOMING_ORDERS. */
+  electronicOrders: 'INCOMING_ORDERS' as const,
+  /** Standard {paging, displayItems} envelope. */
+  delayedTurnAround: 'DELAYED_TURN_AROUND' as const,
+  /** SPECIAL — different URL shape AND different response shape. See TurnAroundTimeMetricsResponse. */
+  turnAroundTimeMetrics: 'turn-around-time-metrics' as const,
+} as const;
+
+/**
+ * `/rest/home-dashboard/turn-around-time-metrics` does NOT return the standard
+ * `{paging, displayItems}` envelope. It returns three TAT numbers in minutes.
+ *
+ * §13 Y-RECON treatment: this endpoint is NOT comparable to its Dashboard KPI
+ * via "list-length == count". The Dashboard's Average TAT value is the
+ * `receptionToValidation` figure from this response. Compare scalar to scalar.
+ */
+export interface TurnAroundTimeMetricsResponse {
+  receptionToValidation: number;
+  receptionToResult: number;
+  resultToValidation: number;
+}
+
+// =============================================================================
+// SamplePatientEntry — v6.15 NEW (A1-bis Session 2, 2026-05-13)
+// =============================================================================
+// Captured live via fetch+XHR monkey-patch interceptor during a successful
+// end-to-end 4-step Add Order wizard submission on mgdev v3.2.1.8.
+//
+// Outcome of the source capture: HTTP 200, order DEV01260000000000010 persisted.
+// Patient: Mana Pi (patientPK 27). Test: Hemoglobin (id 15). Sample: Serum (id 2).
+// Site: Test (id 142). Provider: Test Test (providerId 3 / personId 49).
+//
+// IMPORTANT: the body is HYBRID — top-level JSON wrapping a LITERAL XML STRING
+// in `sampleXML` that carries the actual tests + sample fields. See
+// buildSampleXML() below.
+//
+// Evidence: a1bis-sample-patient-entry-post-2026-05-13.json
+
+export interface SamplePatientEntrySubmitPayload {
+  rememberSiteAndRequester: boolean;
+  currentDate: string | null;
+  projects: unknown | null;
+  customNotificationLogic: boolean;
+  patientEmailNotificationTestIds: string[];
+  patientSMSNotificationTestIds: string[];
+  providerEmailNotificationTestIds: string[];
+  providerSMSNotificationTestIds: string[];
+  /** "NO_ACTION" for existing patient pass-through, "UPDATE" for edit, "CREATE" for new. */
+  patientUpdateStatus: 'NO_ACTION' | 'UPDATE' | 'CREATE';
+  referralItems: unknown[];
+  referralOrganizations: unknown | null;
+  referralReasons: unknown | null;
+  sampleTypes: unknown | null;
+  /** LITERAL XML STRING — see buildSampleXML(). Carries the actual tests, sample type, GPS, storage, etc. */
+  sampleXML: string;
+  patientProperties: PatientPropertiesPayload;
+  patientSearch: unknown | null;
+  patientEnhancedSearch: unknown | null;
+  patientClinicalProperties: unknown | null;
+  sampleOrderItems: SampleOrderItemsPayload;
+  initialSampleConditionList: unknown[];
+  sampleNatureList: unknown | null;
+  testSectionList: unknown[];
+  warning: boolean;
+  useReferral: boolean;
+  rejectReasonList: unknown | null;
+}
+
+export interface PatientPropertiesPayload {
+  patientLastUpdated: string;  // "YYYY-MM-DD HH:MM:SS.mmm"
+  personLastUpdated: string;
+  patientPK: string;
+  subjectNumber: string;
+  nationalId: string;
+  guid: string;
+  lastName: string;
+  firstName: string;
+  aka: string;
+  mothersName: string;
+  mothersInitial: string;
+  streetAddress: string;
+  city: string;
+  commune: string;
+  addressDepartment: string;
+  gender: 'M' | 'F' | '';
+  /** dd/MM/yyyy */
+  birthDateForDisplay: string;
+  insuranceNumber: string;
+  occupation: string;
+  customNotes: string;
+  targetDiseaseProgramme: string;
+  primaryPhone: string;
+  email: string;
+  healthRegion: string;
+  education: string;
+  maritialStatus: string;          // sic — server spelling
+  nationality: string;
+  healthDistrict: string;
+  otherNationality: string;
+  patientContact: {
+    lastupdated: number;
+    id: string;
+    patientId: string;
+    person: { lastupdated: number; id: string; lastName: string; firstName: string; primaryPhone: string; email: string };
+  };
+  addressHierarchy: Record<string, unknown>;
+  stnumber: string;
+  patientUpdateStatus: 'NO_ACTION' | 'UPDATE' | 'CREATE';
+}
+
+export interface SampleOrderItemsPayload {
+  newRequesterName: string;
+  orderTypes: unknown[];
+  orderType: string;
+  externalOrderNumber: string;
+  /** The accession, e.g. "DEV01260000000000010". Generated via /rest/SampleEntryGenerateScanProvider. */
+  labNo: string;
+  /** dd/MM/yyyy */
+  requestDate: string;
+  receivedDateForDisplay: string;
+  /** hh:mm */
+  receivedTime: string;
+  nextVisitDate: string;
+  requesterSampleID: string;
+  referringPatientNumber: string;
+  referringSiteId: string;
+  referringSiteDepartmentId: string;
+  referringSiteCode: string;
+  referringSiteName: string;
+  referringSiteDepartmentName: string;
+  referringSiteList: unknown[];
+  referringSiteDepartmentList: unknown[];
+  providersList: unknown[];
+  providerId: string;
+  providerPersonId: string;
+  providerFirstName: string;
+  providerLastName: string;
+  providerWorkPhone: string;
+  providerFax: string;
+  providerEmail: string;
+  facilityAddressStreet: string;
+  facilityAddressCommune: string;
+  facilityPhone: string;
+  facilityFax: string;
+  paymentOptionSelection: string;
+  paymentOptions: unknown[];
+  modified: boolean;
+  sampleId: string;
+  readOnly: boolean;
+  billingReferenceNumber: string;
+  testLocationCode: string;
+  otherLocationCode: string;
+  testLocationCodeList: unknown[];
+  program: string;
+  programList: unknown[];
+  contactTracingIndexName: string;
+  contactTracingIndexRecordNumber: string;
+  priorityList: unknown[];
+  priority: 'ROUTINE' | 'ASAP' | 'STAT' | 'TIMED' | 'FUTURE_STAT' | string;
+  programId: string;
+  additionalQuestions: unknown | null;
+  isEQASample: boolean;
+  eqaProgramId: string;
+  eqaProviderSampleId: string;
+  eqaDeadline: string;
+  eqaPriority: 'STANDARD' | 'PRIORITY' | string;
+  consentGiven: boolean;
+  consentFormReference: string;
+  consentRecordedAt: string;
+  consentRecordedBy: string;
+}
+
+export interface SampleXMLBuilderInput {
+  /** Sample type id, e.g. "2" for Serum. */
+  sampleTypeId: string;
+  /** Collection date dd/MM/yyyy. */
+  collectionDate: string;
+  collectionTime?: string;
+  collector?: string;
+  quantity?: string;
+  uom?: string;
+  /** Comma-separated test ids, e.g. "15" for Hemoglobin alone, "15,16,17" for multiple. */
+  tests: string;
+  testSectionMap?: string;
+  testSampleTypeMap?: string;
+  panels?: string;
+  rejected?: boolean;
+  rejectReasonId?: string;
+  initialConditionIds?: string;
+  storageLocationId?: string;
+  storageLocationType?: string;
+  storagePositionCoordinate?: string;
+  gpsLatitude?: string;
+  gpsLongitude?: string;
+  gpsAccuracy?: string;
+  gpsCaptureMethod?: string;
+  collectionMethod?: string;
+  sampleTemperature?: string;
+  specimenOrigin?: string;
+  numOrderLabels?: number;
+  numSpecimenLabels?: number;
+}
+
+/**
+ * Build the `sampleXML` string for the SamplePatientEntry POST. Captured live
+ * format; do NOT change attribute names or order without re-verifying via a
+ * fresh UI capture.
+ */
+export function buildSampleXML(input: SampleXMLBuilderInput): string {
+  const a = {
+    sampleID: input.sampleTypeId,
+    date: input.collectionDate,
+    time: input.collectionTime ?? '',
+    collector: input.collector ?? '',
+    quantity: input.quantity ?? '',
+    uom: input.uom ?? '',
+    tests: input.tests,
+    testSectionMap: input.testSectionMap ?? '',
+    testSampleTypeMap: input.testSampleTypeMap ?? '',
+    panels: input.panels ?? '',
+    rejected: String(input.rejected ?? false),
+    rejectReasonId: input.rejectReasonId ?? '',
+    initialConditionIds: input.initialConditionIds ?? '',
+    storageLocationId: input.storageLocationId ?? '',
+    storageLocationType: input.storageLocationType ?? '',
+    storagePositionCoordinate: input.storagePositionCoordinate ?? '',
+    gpsLatitude: input.gpsLatitude ?? '',
+    gpsLongitude: input.gpsLongitude ?? '',
+    gpsAccuracy: input.gpsAccuracy ?? '',
+    gpsCaptureMethod: input.gpsCaptureMethod ?? '',
+    collectionMethod: input.collectionMethod ?? '',
+    sampleTemperature: input.sampleTemperature ?? '',
+    specimenOrigin: input.specimenOrigin ?? '',
+    numOrderLabels: String(input.numOrderLabels ?? 1),
+    numSpecimenLabels: String(input.numSpecimenLabels ?? 1),
+  };
+  const attrs = Object.entries(a).map(([k, v]) => `${k}='${v}'`).join(' ');
+  return `<?xml version="1.0" encoding="utf-8"?><samples><sample ${attrs}/></samples>`;
+}
+
+// =============================================================================
+// Configuration properties — v6.15 NEW (A1-bis Session 2, 2026-05-13)
+// =============================================================================
+// On v3.2.1.8 the JSP page `/api/OpenELIS-Global/SampleEntryConfigurationMenu`
+// is GONE (404). The toggles moved to REST.
+//
+//   GET  /api/OpenELIS-Global/rest/configuration-properties  → 200 (read)
+//   PUT  /api/OpenELIS-Global/rest/configuration-properties  → 403 for non-admin
+//   POST/PUT variants on /configuration-property              → 403 for non-admin
+//
+// Write requires SYSTEM_ADMIN (or equivalent). The 403 (not 404) confirms
+// the route exists. Capture the canonical write shape from a SYSTEM_ADMIN
+// session in a future A1-bis pass.
+
+export interface ConfigurationPropertiesResponse {
+  // Keys captured live on mgdev v3.2.1.8. There are 36 total; common ones below.
+  // Values are STRINGS even for booleans (e.g. "true", "false").
+  EQA_ENABLED: string;
+  GPS_ENABLED: string;
+  ACCEPT_EXTERNAL_ORDERS: string;
+  REQUIRE_LAB_UNIT_AT_LOGIN: string;
+  ENABLE_CLIENT_REGISTRY: string;
+  ALERT_FOR_INVALID_RESULTS: string;
+  AUTOFILL_COLLECTION_DATE: string;
+  NEXT_VISIT_DATE_ON_WORKPLAN: string;
+  USE_NEW_ADDRESS_HIERARCHY: string;
+  USE_ALPHANUM_ACCESSION_PREFIX: string;
+  ACCESSION_NUMBER_VALIDATE: string;
+  useOauth: string;
+  useSaml: string;
+  useFormLogin: string;
+  AccessionFormat: string;
+  BANNER_TEXT: string;
+  DEFAULT_PAGE_SIZE: string;
+  DEFAULT_NATIONALITY: string;
+  PHONE_FORMAT: string;
+  LAST_NAME_REGEX: string;
+  FIRST_NAME_REGEX: string;
+  GPS_TIMEOUT_SECONDS: string;
+  GPS_ACCURACY_METERS: string;
+  currentDateAsText: string;
+  currentTimeAsText: string;
+  configurationName: string;
+  studyManagementTab: string;
+  // ... permit additional unknown keys for forward-compat
+  [key: string]: string;
+}
+

@@ -1,0 +1,48 @@
+{
+  "_meta": {
+    "captured_at": "2026-05-13T~21:25Z",
+    "instance": "mgdev.openelis-global.org v3.2.1.8",
+    "task": "A1-bis #2 — eqaEnabled JSP form capture",
+    "outcome": "JSP REMOVED in v3.2.1.8; toggle now in REST /configuration-properties; write 403-gated"
+  },
+  "jsp_paths_probed": {
+    "/api/OpenELIS-Global/SampleEntryConfigurationMenu": "404 NoHandlerFoundException",
+    "/api/OpenELIS-Global/SampleEntryConfigurationMenu.do": 404,
+    "/api/OpenELIS-Global/AdminMenu": 404,
+    "/MasterListsPage (React)": "200 but blank page — React route not registered"
+  },
+  "rest_discovery": {
+    "GET /api/OpenELIS-Global/rest/configuration-properties": {
+      "status": 200,
+      "totalKeys": 36,
+      "EQA_ENABLED_value": "true",
+      "all_keys_relevant_to_methodology": [
+        "EQA_ENABLED", "GPS_ENABLED", "ACCEPT_EXTERNAL_ORDERS",
+        "REQUIRE_LAB_UNIT_AT_LOGIN", "ENABLE_CLIENT_REGISTRY",
+        "ALERT_FOR_INVALID_RESULTS", "AUTOFILL_COLLECTION_DATE",
+        "NEXT_VISIT_DATE_ON_WORKPLAN", "USE_NEW_ADDRESS_HIERARCHY",
+        "USE_ALPHANUM_ACCESSION_PREFIX", "ACCESSION_NUMBER_VALIDATE",
+        "useOauth", "useSaml", "useFormLogin", "AccessionFormat",
+        "BANNER_TEXT", "DEFAULT_PAGE_SIZE", "DEFAULT_NATIONALITY"
+      ]
+    },
+    "write_attempts": [
+      { "method": "PUT", "url": "/rest/configuration-properties", "body_shape": "{ EQA_ENABLED: 'true' }", "status": 403 },
+      { "method": "PUT", "url": "/rest/configuration-properties", "body_shape": "full 36-key configuration object echoed back", "status": 403 },
+      { "method": "POST", "url": "/rest/configuration-properties", "body_shape": "{ EQA_ENABLED: 'true' }", "status": 403 },
+      { "method": "POST", "url": "/rest/configuration-properties", "body_shape": "FormData with configurationName + EQA_ENABLED=true", "status": 403 },
+      { "method": "PUT", "url": "/rest/configuration-property", "body_shape": "{ name, value }", "status": 403 },
+      { "method": "POST", "url": "/rest/configuration-property", "body_shape": "{ name, value }", "status": 403 },
+      { "method": "PUT", "url": "/rest/admin/configuration", "body_shape": "full config object", "status": 403 }
+    ],
+    "interpretation": "403 (not 404) means the routes EXIST but the current user lacks the EDIT_CONFIGURATION / SYSTEM_ADMIN permission. CSRF token IS present (cookie XSRF-TOKEN). To capture the canonical write path, the test needs to run as a user with SYSTEM_ADMIN role."
+  },
+  "methodology_implications": {
+    "skill_changes_needed": [
+      "Persona PF Step 4: drop the JSP form premise; read EQA_ENABLED via GET /rest/configuration-properties",
+      "Chain F Step 1: same as above",
+      "Add new chain: configuration-property write requires admin role — useful permission-enforcement test (Chain H surface)",
+      "apiShapes.ts: add ConfigurationPropertiesResponse interface with all 36 keys"
+    ]
+  }
+}

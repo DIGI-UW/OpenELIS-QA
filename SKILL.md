@@ -4,7 +4,7 @@ description: >
   Automated QA testing skill for OpenELIS Global covering 167+ test suites and ~488 test cases. Tests: Orders, Validation, Results, Patient Management, Dashboard, Admin (28+ pages), Reports (all 11), Referrals, Workplan, FHIR, i18n, Accessibility, Pathology, Analyzers, EQA, Alerts, Storage, Batch Entry, Barcode, and more. Includes DEEP interaction suites: search/filter, form interaction, error handling, performance, cross-module data integrity, security (CSRF/XSS/SQLi), WCAG accessibility, E2E order tracing, report PDF generation, and Madagascar e-SIL UAT coverage (LO-xx/DU-xx). Drives a real browser session via Claude in Chrome and produces a pass/fail report with Jira tickets.
 ---
 
-# OpenELIS Global QA Skill — v6.14 (2026-05-13 + A1-bis Dashboard drill-down capture + first chain end-to-end PASS)
+# OpenELIS Global QA Skill — v6.15 (2026-05-14 + A1-bis Session 2: SamplePatientEntry POST captured live + eqaEnabled JSP retired in favor of REST)
 
 **v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture) + 6.5a (harness-enforced via `helpers/networkCapture.ts`), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 11.5 Blocking-Bug Etiquette, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. **v6.13:** v6.12's pilot-grounded shape corrections applied in-place across all 12 chains + 6 personas + _common.ts; Chain I rewritten with the wrong labName premise dropped; `helpers/_common-v612-patch.ts` sidecar deleted. See full Change Log at end of file.
 
@@ -1363,6 +1363,38 @@ The assertion failure mode catches counter-drift bugs that would otherwise be in
 ---
 
 ## Change log
+
+### v6.15 (2026-05-14) — A1-bis Session 2 (three-capture sprint): SamplePatientEntry POST captured live, eqaEnabled JSP retired in favor of REST, Dashboard tile enums completed
+
+25 minutes of live testing against mgdev.openelis-global.org v3.2.1.8 immediately after merging v6.14. All three remaining A1-bis items captured cleanly. The largest result is that the methodology now anticipates that the right place to look may have moved between releases — v6.15 encodes this as a rule.
+
+**Methodology under test verdict: PASS.** The §6.5b authoring-time-capture rule continued to pay dividends:
+- Captured the full SamplePatientEntry POST payload (3336 bytes, JSON wrapping a legacy XML string) via a fetch+XHR monkey-patch interceptor during a successful end-to-end Add Order wizard submission. The order persisted: `DEV01260000000000010` is live in mgdev's Ready For Validation queue.
+- Captured 4 Dashboard tile enums via UI clicks + network panel, including a backend typo (`ORDERS_PATIALLY_COMPLETED_TODAY` — missing R) and a label/enum mismatch ("Electronic Orders" → `INCOMING_ORDERS`) and an entirely-different shape for the Average TAT tile (`turn-around-time-metrics` returns `{receptionToValidation, receptionToResult, resultToValidation}` rather than the standard `{paging, displayItems}` envelope).
+- Discovered that the eqaEnabled JSP form (`/api/OpenELIS-Global/SampleEntryConfigurationMenu`) is **gone** in v3.2.1.8. The toggle moved to `GET /rest/configuration-properties` (returns 36 keys including `EQA_ENABLED: "true"`). Write endpoints exist (403, not 404) but require SYSTEM_ADMIN — a future capture pass under elevated credentials will land the canonical write shape.
+
+Concrete captures (all in `helpers/apiShapes.ts`):
+- `SamplePatientEntrySubmitPayload`, `PatientPropertiesPayload`, `SampleOrderItemsPayload`, `SampleXMLBuilderInput`, `buildSampleXML()` — the full POST shape.
+- `DASHBOARD_TILE_TYPES_V615`: spread of the existing constant plus `partiallyCompletedToday`, `electronicOrders`, `delayedTurnAround`, `turnAroundTimeMetrics`. **Do NOT correct the misspelling — that breaks the request.**
+- `TurnAroundTimeMetricsResponse` — different envelope; §13 Y-RECON treats this as scalar-to-scalar, not list-length-to-count.
+- `ConfigurationPropertiesResponse` — 36 keys, all values are strings (e.g. `"true"` not `true`).
+
+Evidence: `a1bis-sample-patient-entry-post-2026-05-13.json`, `a1bis-eqa-config-discovery-2026-05-13.json`, `a1bis-session-2-report-2026-05-13.md`.
+
+**Methodology rule added:** *Between releases, REST endpoints may replace JSP endpoints (and vice versa). A 404 on a previously-working path is a SIGNAL to look for the new home, not a failure to file as a bug. When the new home is found, retire the old path in the skill and update the rule for that surface.*
+
+**Module maturity rating updates from live evidence:**
+- Order Workflow (Add Order wizard) **M1 → M5** — first time the full 4-step wizard drove a real persisted POST through real UI on mgdev.
+- EQA / configuration toggle **M0 (hidden requirement) → M3 read / M0 write** — read works via REST; write 403-gated. To upgrade write, capture under SYSTEM_ADMIN.
+- Dashboard **M3 confirmed** + bonus enum captures + metrics-endpoint distinct shape.
+
+**Side-effect tracking (§11.5):** test order `DEV01260000000000010` was created on mgdev as a side effect of the POST capture. Not destructive (it's a normal dev-instance order with patient Mana Pi / patientPK 27 / Hemoglobin / Serum). Left in place; safe to use as a seed for future Chain A Step 3+ runs that need a live order in the Ready For Validation queue.
+
+**Candidate bug for filing:** server enum spelling `ORDERS_PATIALLY_COMPLETED_TODAY` is misspelled (missing R). Cosmetic but visible to every downstream client.
+
+**Remaining A1-bis open items:**
+- Capture the canonical configuration-properties write payload from a SYSTEM_ADMIN session (Chain F / Persona PF / Chain H all depend).
+- The chain spec rewrites that USE the new `SamplePatientEntrySubmitPayload` shape are queued — apiShapes.ts has the types; the chain specs still reference the inferred shape and will be migrated in v6.16.
 
 ### v6.14 (2026-05-13 evening) — A1-bis mgdev session: Dashboard drill-down captured + first chain to PASS end-to-end
 
