@@ -4,7 +4,7 @@ description: >
   Automated QA testing skill for OpenELIS Global covering 167+ test suites and ~488 test cases. Tests: Orders, Validation, Results, Patient Management, Dashboard, Admin (28+ pages), Reports (all 11), Referrals, Workplan, FHIR, i18n, Accessibility, Pathology, Analyzers, EQA, Alerts, Storage, Batch Entry, Barcode, and more. Includes DEEP interaction suites: search/filter, form interaction, error handling, performance, cross-module data integrity, security (CSRF/XSS/SQLi), WCAG accessibility, E2E order tracing, report PDF generation, and Madagascar e-SIL UAT coverage (LO-xx/DU-xx). Drives a real browser session via Claude in Chrome and produces a pass/fail report with Jira tickets.
 ---
 
-# OpenELIS Global QA Skill — v6.16 (2026-05-14 + B-session: Chain A end-to-end live on mgdev + CSRF cracked + 4 FHIR bugs surfaced)
+# OpenELIS Global QA Skill — v6.17 (2026-05-14 + Chain A truly end-to-end: Lab number uniqueness + Report PDF rendered with validated result)
 
 **v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture) + 6.5a (harness-enforced via `helpers/networkCapture.ts`), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 11.5 Blocking-Bug Etiquette, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. **v6.13:** v6.12's pilot-grounded shape corrections applied in-place across all 12 chains + 6 personas + _common.ts; Chain I rewritten with the wrong labName premise dropped; `helpers/_common-v612-patch.ts` sidecar deleted. See full Change Log at end of file.
 
@@ -1363,6 +1363,48 @@ The assertion failure mode catches counter-drift bugs that would otherwise be in
 ---
 
 ## Change log
+
+### v6.17 (2026-05-14) — Chain A truly end-to-end + Chain L PASS + Report PDF rendered
+
+Immediate follow-up to v6.16 on the same SYSTEM_ADMIN session against mgdev. Two more chain steps land, completing Chain A end-to-end for the first time and closing out Chain L.
+
+**Chain L (Lab Number Uniqueness) — PASS.** POST `/rest/SamplePatientEntry` with `labNo=DEV01260000000000010` (already used) returns HTTP 400 with body `{"fieldErrors":[],"error":"Validation failed"}`. Uniqueness is enforced.
+- Minor usability bug noted: the error shape is generic. `fieldErrors` is an empty array even though the rejection IS field-specific (duplicate lab number). Clients cannot distinguish duplicate-lab-number from missing-required-field or invalid-date. Worth a Jira ticket for better error messages.
+
+**Chain A Step 5 (Report PDF Generation) — PASS.** Drove the Reports > Routine > Patient Status Report flow:
+1. Navigate to `/Report?type=patient&report=patientCILNSP_vreduit`
+2. Expand "Report By Lab Number" section; enter `DEV01260000000000010` in From field
+3. Click "Generate Printable Version" → opens new tab with rendered PDF
+4. PDF shows: Patient code 324239090, National ID 3249899100, Age 27 Y, DOB 12/03/1999, Sex F, Last Name "Mana, Pi", Referring site "Test", Prescriber "Test, Test", Lab Number "DEV01260000000000010", Program "Routine Testing", Date of order "14/05/2026 00:00", Date and time of receipt "14/05/2026 03:18", specimen line "Serum DEV01260000000000010-1 13/05/2026 00:00", Hematology section with Hemoglobin = 13.50 g/dL (normal range 12.00-16.00).
+
+**Methodology rule added — Report module URLs are NOT under /rest/.** All my v6.17 probes against `/rest/ReportPrint` and `/rest/PatientReport` etc. returned 404 or 405. The canonical URL is `/api/OpenELIS-Global/ReportPrint` (no `/rest/` segment) — a Struts-style JSP-mapped servlet, not a REST controller. The Reports module pre-dates the REST migration. v6.17 SKILL adds this rule and the `buildReportPrintURL()` helper to apiShapes.ts.
+
+**Concrete captures added to apiShapes.ts:**
+- `ReportPrintQuery` interface with all 12 observed query params (report, type, accessionDirect, highAccessionDirect, selPatient, referringSiteId, onlyResults, dateType, lowerDateRange/upperDateRange, etc.)
+- `buildReportPrintURL()` helper to construct the canonical URL
+- `REPORT_TEMPLATES` constant — mgdev default is `patientCILNSP_vreduit` (CILNSP variant — Madagascar national lab program format)
+- `SamplePatientEntryValidationError` interface for Chain L's 400 response shape
+
+**Module maturity rating updates from live evidence:**
+- Order Workflow **M5 confirmed** — Chain A Steps 1-5 now ALL pass end-to-end.
+- Reports **M3 confirmed** — Patient Status Report PDF renders correctly with full data.
+- Lab Number uniqueness **M3 confirmed** — Chain L PASS.
+
+**Methodology rules added (cumulative summary for v6.17):**
+
+7. **Non-/rest/ endpoints exist.** Some legacy modules (Reports, possibly Print, Barcode) use Struts/JSP-mapped servlets at `/api/OpenELIS-Global/{X}` directly (no `/rest/` segment). When probing fails on `/rest/X`, ALSO probe `/api/OpenELIS-Global/X` before declaring an endpoint missing. Add to the §6.5 probe sequence.
+
+**Side-effect tracking (§11.5):** Chain L's collision attempt was rejected (intended). No new orders created. Seeded order DEV01260000000000010 remains in its validated state.
+
+**Bugs ready to file (Jira), updated:**
+- Carry-overs from v6.16: 4 FHIR bugs, Results-Accept-overwrite, `PATIALLY` enum typo
+- New from v6.17: SamplePatientEntry validation error shape is too generic (empty `fieldErrors`)
+
+**Remaining queued for v6.18:**
+- Capture the 3 pending POST bodies (LogbookResults, AccessionValidation, configuration-properties) via Playwright `addInitScript`
+- Persona PB/PC rewrites — separate result entry from validation per the Casey-reported footgun rule
+- Enumerate remaining report templates beyond patientCILNSP_vreduit
+- Capture the report endpoint shape for the other 14+ reports in the Reports sub-menu
 
 ### v6.16 (2026-05-14) — B-session: Chain A end-to-end live on mgdev + CSRF mechanism cracked + 4 FHIR bugs surfaced
 
