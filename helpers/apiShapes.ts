@@ -694,3 +694,273 @@ export interface ConfigurationPropertiesResponse {
   [key: string]: string;
 }
 
+
+// =============================================================================
+// CSRF helper — v6.16 (B-session, 2026-05-14)
+// =============================================================================
+// CRITICAL: in v6.15 we documented configuration-properties writes as 403 due
+// to permission. B-session corrected the diagnosis: the 403 is actually CSRF.
+// The OpenELIS app uses `X-CSRF-TOKEN` header sourced from `localStorage['CSRF']`,
+// NOT the XSRF-TOKEN cookie.
+//
+// Response body `{"status":403,"message":"CSRF token missing or invalid"}` is
+// the unique CSRF-failure signature. With the correct header, the request crosses
+// the gate and either succeeds (200) or fails for the correct reason (405, 404,
+// or business-logic 4xx).
+
+/**
+ * Browser-side: read the CSRF token. In Playwright, use the saved storage state
+ * to read localStorage; in JS-injection contexts, use this directly.
+ */
+export function getCSRFTokenFromLocalStorage(): string {
+  if (typeof localStorage === 'undefined') return '';
+  return localStorage.getItem('CSRF') || '';
+}
+
+/**
+ * Wrap fetch with the required CSRF header. Always use this for non-GET in
+ * tests/chains/_common.ts and any custom probe code.
+ */
+export async function csrfFetch(input: RequestInfo, init: RequestInit = {}): Promise<Response> {
+  const csrf = getCSRFTokenFromLocalStorage();
+  const method = (init.method || 'GET').toUpperCase();
+  const headers = new Headers(init.headers || {});
+  if (method !== 'GET' && !headers.has('X-CSRF-TOKEN')) {
+    headers.set('X-CSRF-TOKEN', csrf);
+  }
+  if (method !== 'GET' && !headers.has('Content-Type') && init.body && typeof init.body === 'string') {
+    headers.set('Content-Type', 'application/json');
+  }
+  return fetch(input, { ...init, headers, credentials: 'include' });
+}
+
+// =============================================================================
+// LogbookResults — v6.16 (B-session, 2026-05-14)
+// =============================================================================
+// Captured GET shape live on mgdev v3.2.1.8. The same URL serves BOTH:
+//   GET  /api/OpenELIS-Global/rest/LogbookResults?<filters>  → result-entry queue
+//   POST /api/OpenELIS-Global/rest/LogbookResults             → save entered results
+//
+// Filter params (all observed live):
+//   labNumber, upperRangeAccessionNumber, patientPK, testSectionId,
+//   collectionDate, recievedDate (sic — server typo), selectedTest,
+//   selectedSampleStatus, selectedAnalysisStatus, doRange, finished
+
+export interface LogbookResultsResponse {
+  formName: string;          // 'AccessionMenuForm' etc.
+  formMethod: string;        // 'POST'
+  cancelAction: string;
+  submitOnCancel: boolean;
+  cancelMethod: string;
+  paging: { totalPages: string; currentPage: string; searchTermToPage?: Array<{ id: string; value: string }> };
+  accessionNumber: string;
+  singlePatient: boolean;
+  currentDate: string;
+  displayTestMethod: boolean;
+  displayTestKit: boolean;
+  testResult: LogbookTestResult[];
+  hivKits: unknown[];
+  syphilisKits: unknown[];
+  type: string;
+  displayMethods: boolean;
+  testSectionId: string;
+  displayTestSections: boolean;
+  searchByRange: boolean;
+  searchFinished: boolean;
+}
+
+export interface LogbookTestResult {
+  /** Internal analysis ID for this row. */
+  analysisId: string;
+  /** "MANUAL" | "ANALYZER_NAME" — the result-entry method. */
+  analysisMethod: string;
+  /** Status enum: "15" = Ready For Validation, "6" = Validated (other values TBD). */
+  analysisStatusId: string;
+  childReflex: boolean;
+  dictionaryResults: unknown[];
+  displayResultAsLog: boolean;
+  eqaSample: boolean;
+  failedValidation: boolean;
+  hasQualifiedResult: boolean;
+  /** Critical high cutoff. */
+  higherCritical: number | 'Infinity';
+  isGroupSeparator: boolean;
+  isModified: boolean;
+  /** Critical low cutoff. */
+  lowerCritical: number | 'Infinity';
+  /** Normal range low. */
+  lowerNormalRange: number;
+  /** Normal range high. */
+  upperNormalRange: number;
+  /** Abnormal range low/high — when result is outside, but not critical. */
+  lowerAbnormalRange: number;
+  upperAbnormalRange: number;
+  methods: unknown[];
+  multiSelectResultValues: string;       // JSON-as-string, e.g. "{}"
+  nationalId: string;
+  nonconforming: boolean;
+  normal: boolean;
+  /** Display format "12.00 - 16.00". */
+  normalRange: string;
+  notIncludedInWorkplan: boolean;
+  patientId: string;                     // LIMS patientPK
+  /** Display string "12345, F, 12/03/1999". */
+  patientInfo: string;
+  patientName: string;                   // "Lastname, Firstname"
+  qualifiedResultValue: string;
+  readOnly: boolean;
+  receivedDate: string;                  // dd/MM/yyyy
+  refer: boolean;
+  referralCanceled: boolean;
+  referredOut: boolean;
+  reflexGroup: boolean;
+  reflexParentGroup: number;
+  rejected: boolean;
+  remove: string;                        // "no" | "yes"
+  reportable: string;                    // "Y" | "N"
+  /** Embedded result reference info (only when a result exists). */
+  result: { id: string; fhirUuidAsString: string; grouping: number; isActive: string; significantDigits: number };
+  resultDisplayType: 'TEXT' | 'NUMERIC' | 'DICTIONARY' | string;
+  resultFile: Record<string, unknown>;
+  resultId: string;
+  resultLimitId: string;
+  resultType: 'N' | 'T' | 'D' | string;
+  /** The entered result value as a string. */
+  resultValue: string;
+  resultValueLog: string;
+  sampleGroupingNumber: number;
+  /** External accession suffix, e.g. "DEV01260000000000010-1". */
+  sampleItemExternalId: string;
+  sampleItemId: string;
+  sampleType: string;                    // "Serum", "Whole Blood", etc.
+  sequenceNumber: string;
+  servingAsTestGroupIdentifier: boolean;
+  shadowReferredOut: boolean;
+  shadowRejected: boolean;
+  shadowResultValue: string;
+  showSampleDetails: boolean;
+  significantDigits: number;
+  technician: string;
+  technicianSignatureId: string;
+  /** "dd/MM/yyyy HH:mm" */
+  testDate: string;
+  testId: string;
+  testKitInactive: boolean;
+  testMethod: string;
+  /** Display name, e.g. "Hemoglobin(Whole Blood)". */
+  testName: string;
+  testSortOrder: string;
+  unitsOfMeasure: string;
+  userChoiceReflex: boolean;
+  valid: boolean;
+  positive?: boolean;                    // present on some result types
+  // accessionNumber may appear here too but is also on top-level
+}
+
+/** Known analysis status enum mappings observed live. Extend as more states discovered. */
+export const ANALYSIS_STATUS_IDS = {
+  // 14 = Result Entered (Awaiting Validation)? — TBD; needs explicit capture
+  // 15 = Ready For Validation (after Save on Results)
+  READY_FOR_VALIDATION: '15' as const,
+  // 6 = Validated (after Save on Validation)
+  VALIDATED: '6' as const,
+  // Other values exist; capture per state transition.
+} as const;
+
+// =============================================================================
+// AccessionValidation — v6.16 (B-session, 2026-05-14)
+// =============================================================================
+// Captured live on mgdev v3.2.1.8. The validation queue endpoint, used by
+// Validation > Routine (after picking a Test Unit), Validation > By Order, etc.
+//
+//   GET  /api/OpenELIS-Global/rest/AccessionValidation?accessionNumber=&unitType=N&date=&doRange=true
+//   POST /api/OpenELIS-Global/rest/AccessionValidation
+//
+// Filter params: accessionNumber, unitType (integer lab unit ID — see LAB_UNIT_IDS),
+// date (dd/MM/yyyy), doRange (true|false).
+
+export interface AccessionValidationResponse {
+  formName: string;
+  formMethod: string;
+  cancelAction: string;
+  submitOnCancel: boolean;
+  cancelMethod: string;
+  searchFinished: boolean;
+  paging: { totalPages: string; currentPage: string; searchTermToPage?: Array<{ id: string; value: string }> };
+  currentDate: string;
+  resultList: ValidationResultRow[];
+  testSection: string;
+  accessionNumber: string;
+  testDate: string;
+  testName: string;
+  testSections: string[];                // ordered list of section IDs
+  testSectionsByName: Record<string, unknown>;
+  testSectionId: string;
+  displayTestSections: boolean;
+}
+
+export interface ValidationResultRow {
+  units: string;                         // "g/dl ( 12.00-16.00 )" — value WITH range
+  testName: string;
+  accessionNumber: string;
+  patientName: string;
+  patientInfo: string;
+  /** The result value as a string. */
+  result: string;
+  /** Whether this row has been validated (Save checked + saved). */
+  isAccepted: boolean;
+  /** Whether this row has been marked for retest. */
+  isRejected: boolean;
+  sampleIsAccepted: boolean;
+  sampleIsRejected: boolean;
+  analysisId: string;
+  testId: string;
+  resultId: string;
+  lowerCritical: number | 'Infinity';
+  higherCritical: number;
+  normalRange: string;
+  resultType: 'N' | 'T' | 'D' | string;
+  isHighlighted: boolean;
+  testSortNumber: string;
+  displayResultAsLog: boolean;
+  showAcceptReject: boolean;
+  dictionaryResults: unknown[];
+  readOnly: boolean;
+  nonconforming: boolean;
+  hasQualifiedResult: boolean;
+  significantDigits: number;
+  valid: boolean;
+  normal: boolean;
+  manual: boolean;
+  reflexGroup: boolean;
+  childReflex: boolean;
+  positive: boolean;
+}
+
+// =============================================================================
+// FHIR — v6.16 (B-session, 2026-05-14) — KNOWN BROKEN ON mgdev v3.2.1.8
+// =============================================================================
+// The B-session discovered 4 FHIR bugs:
+//   1. /fhir/metadata returns 500 (upstream proxy URL has double-slash)
+//   2. /fhir/Patient/{id} returns 404 (patients not synced to upstream FHIR)
+//   3. /fhir/Observation returns 200 but with 151KB of internal HAPI Java
+//      domain model (formatCommentsPre, idElement.idElement.idElement...
+//      recursive) — Jackson dumping the internal DOM instead of invoking
+//      the FHIR JSON parser.
+//   4. application/fhir+json Accept header rejected with 406 — only
+//      application/json works (FHIR R4 spec compliance failure).
+//
+// Chain K is BLOCKED end-to-end on mgdev until these are fixed upstream.
+// The FHIR module maturity is M0-M1 (corrected from a previously-wrong M3
+// rating that was based only on a CapabilityStatement check).
+
+/**
+ * To call FHIR endpoints on mgdev v3.2.1.8, use this helper. It works around
+ * FHIR-4 by sending application/json instead of application/fhir+json. The
+ * response will be FHIR-3-broken HAPI internals JSON, NOT valid FHIR JSON.
+ */
+export async function brokenFhirFetch(path: string): Promise<unknown> {
+  const r = await fetch(path, { credentials: 'include', headers: { 'Accept': 'application/json' } });
+  return r.json();
+}
+
