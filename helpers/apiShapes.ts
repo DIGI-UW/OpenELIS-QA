@@ -964,3 +964,91 @@ export async function brokenFhirFetch(path: string): Promise<unknown> {
   return r.json();
 }
 
+
+// =============================================================================
+// Reports / ReportPrint — v6.17 (B-session follow-up, 2026-05-14)
+// =============================================================================
+// IMPORTANT METHODOLOGY NOTE: the Report module endpoints are NOT under /rest/.
+// All probes against /rest/ReportPrint etc. return 404 or 405. The canonical
+// URL is /api/OpenELIS-Global/ReportPrint (no /rest/ segment) — a Struts-style
+// JSP-mapped servlet, not a REST controller.
+//
+// Verified live on mgdev v3.2.1.8: Generate Printable Version on Patient Status
+// Report opens a new tab to this URL and returns a fully-rendered PDF with
+// patient demographics, lab number, validated result, normal range, etc.
+//
+// Query params observed (all in URL, not body — GET, not POST):
+//   report               — the report template name, e.g. "patientCILNSP_vreduit"
+//   type                 — "patient" | "site" | (others TBD)
+//   accessionDirect      — the lab number (single-order mode)
+//   highAccessionDirect  — upper-bound lab number for range mode (empty for single)
+//   dateOfBirthSearchValue — optional DOB filter
+//   selPatient           — optional patient PK
+//   referringSiteId      — optional site filter
+//   referringSiteDepartmentId — optional dept filter
+//   onlyResults          — "true" | "false"
+//   _onlyResults         — "on" (Spring form-checkbox convention)
+//   dateType             — "RESULT_DATE" | "ORDER_DATE" | (others TBD)
+//   lowerDateRange       — dd/MM/yyyy or empty
+//   upperDateRange       — dd/MM/yyyy or empty
+
+export interface ReportPrintQuery {
+  report: string;                        // template name
+  type: 'patient' | 'site' | string;
+  accessionDirect?: string;
+  highAccessionDirect?: string;
+  dateOfBirthSearchValue?: string;
+  selPatient?: string;
+  referringSiteId?: string;
+  referringSiteDepartmentId?: string;
+  onlyResults?: boolean;
+  dateType?: 'RESULT_DATE' | 'ORDER_DATE' | string;
+  lowerDateRange?: string;               // dd/MM/yyyy
+  upperDateRange?: string;
+}
+
+/**
+ * Build the URL for the Patient Status Report PDF endpoint. The endpoint is
+ * GET-only, opens a PDF directly in the browser, and is NOT under /rest/.
+ */
+export function buildReportPrintURL(q: ReportPrintQuery): string {
+  const params = new URLSearchParams();
+  params.set('report', q.report);
+  params.set('type', q.type);
+  if (q.accessionDirect) params.set('accessionDirect', q.accessionDirect);
+  params.set('highAccessionDirect', q.highAccessionDirect ?? '');
+  params.set('dateOfBirthSearchValue', q.dateOfBirthSearchValue ?? '');
+  params.set('selPatient', q.selPatient ?? '');
+  params.set('referringSiteId', q.referringSiteId ?? '');
+  params.set('referringSiteDepartmentId', q.referringSiteDepartmentId ?? '');
+  params.set('onlyResults', String(q.onlyResults ?? false));
+  params.set('_onlyResults', 'on');
+  params.set('dateType', q.dateType ?? 'RESULT_DATE');
+  params.set('lowerDateRange', q.lowerDateRange ?? '');
+  params.set('upperDateRange', q.upperDateRange ?? '');
+  return `/api/OpenELIS-Global/ReportPrint?${params.toString()}`;
+}
+
+/** Known report template names captured live. Extend as more reports are tested. */
+export const REPORT_TEMPLATES = {
+  /** mgdev default patient status report (Madagascar CILNSP variant). */
+  patientStatusReport_mgdev: 'patientCILNSP_vreduit' as const,
+  // Add more as captured: hivTestSummary, statisticsReport, rejectionReport, etc.
+} as const;
+
+// =============================================================================
+// Lab Number uniqueness — v6.17 (Chain L)
+// =============================================================================
+// POSTing a SamplePatientEntry with a labNo that already exists returns HTTP 400
+// with body { fieldErrors: [], error: "Validation failed" }.
+//
+// Methodology caveat: the error shape is GENERIC — fieldErrors is empty even
+// though the rejection IS field-specific. Clients cannot distinguish a
+// duplicate-lab-number violation from any other validation failure. Filed as
+// a usability bug candidate.
+
+export interface SamplePatientEntryValidationError {
+  fieldErrors: Array<{ field?: string; message?: string }>;  // observed empty
+  error: string;                                              // observed "Validation failed"
+}
+
