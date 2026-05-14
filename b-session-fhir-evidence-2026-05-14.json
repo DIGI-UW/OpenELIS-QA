@@ -1,0 +1,52 @@
+{
+  "_meta": {
+    "captured_at": "2026-05-14T~01:45Z",
+    "instance": "mgdev.openelis-global.org v3.2.1.8",
+    "session": "B-session — Chain A end-to-end + missing-info capture",
+    "user_role": "SYSTEM_ADMIN"
+  },
+  "fhir_bugs": [
+    {
+      "id": "FHIR-1",
+      "severity": "severe",
+      "endpoint": "GET /api/OpenELIS-Global/rest/fhir/metadata",
+      "status": 500,
+      "response_body": "{\"error\":\"Failed to query FHIR resources: HAPI-1359: Failed to parse response from server when performing GET to URL https://fhir.openelis.org:8443/fhir//metadata? - ca.uhn.fhir.parser.DataFormatExcep[tion]...\"}",
+      "diagnosis": "Upstream proxy URL has DOUBLE SLASH (/fhir//metadata) which causes HAPI-1359 parse failure. This is a configuration bug in the OpenELIS proxy layer: the upstream FHIR server is https://fhir.openelis.org:8443/fhir/ (with trailing slash) and the proxy appends /metadata, producing /fhir//metadata."
+    },
+    {
+      "id": "FHIR-2",
+      "severity": "severe",
+      "endpoint": "GET /api/OpenELIS-Global/rest/fhir/Patient/27",
+      "status": 404,
+      "response_body": "{\"error\":\"Failed to get FHIR resource: HTTP 404 : HAPI-1996: Resource Patient/27 is not known\"}",
+      "diagnosis": "Patient internal ID 27 (Mana Pi, exists in LIMS with valid lab orders) returns 404 from FHIR. Either patients are not synced from LIMS to upstream FHIR server, OR the FHIR ID is different from LIMS patientPK and we need a mapping."
+    },
+    {
+      "id": "FHIR-3",
+      "severity": "severe",
+      "endpoint": "GET /api/OpenELIS-Global/rest/fhir/Observation",
+      "status": 200,
+      "bytes": 151149,
+      "first_200_chars": "{\"formatCommentsPre\":[],\"formatCommentsPost\":[],\"id\":\"Bundle/63c4167f-14a7-46eb-9270-9c3f9db7f478\",\"meta\":{\"formatCommentsPre\":[],\"formatCommentsPost\":[],\"extension\":[],\"disallowExtensions\":false,\"las",
+      "last_200_chars": "}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}",
+      "diagnosis": "Response is 151KB of internal HAPI FHIR Java domain model JSON: formatCommentsPre, formatCommentsPost, extension, disallowExtensions, lastUpdatedElement.idElement.idElement.idElement... (recursive), valueAsCalendar (Calendar object), nanos, secondsMilli, timeZoneZulu, etc. The Jackson serializer is dumping the internal HAPI Bundle DOM rather than calling the proper FHIR parser. Output ends with ~200 closing braces, suggesting circular reference handling failed. Unusable for any FHIR client."
+    },
+    {
+      "id": "FHIR-4",
+      "severity": "medium",
+      "endpoint": "GET /api/OpenELIS-Global/rest/fhir/Observation",
+      "headers_attempted": ["application/fhir+json", "application/fhir+xml", "application/xml"],
+      "status_returned": 406,
+      "response_body": "{\"type\":\"problemDetail.type.org.springframework.web.HttpMediaTypeNotAcceptableException\",\"title\":\"problemDetail.title.org.springframework.web.HttpMediaTypeNotAcceptableException\",\"status\":406,\"detail\":...}",
+      "working_accept_headers": ["application/json", "*/*", "(no Accept header)"],
+      "diagnosis": "The official FHIR R4 spec Accept header `application/fhir+json` is REJECTED with 406. Only `application/json` works. This is a FHIR spec compliance violation. FHIR clients (which always send `application/fhir+json` by spec) will see all OpenELIS FHIR endpoints as unsupported."
+    }
+  ],
+  "module_maturity_correction": {
+    "module": "FHIR",
+    "previous_rating": "M3 (mgdev) — based on CapabilityStatement check in A1-bis #3",
+    "corrected_rating": "M0-M1 — endpoints return broken responses across all 4 test paths. CapabilityStatement check in A1-bis #3 was insufficient evidence; needed Observation/Patient round-trip testing.",
+    "methodology_lesson": "A passing read on CapabilityStatement does NOT prove FHIR works. Full M3 rating requires Observation + Patient + Bundle round-trip with proper FHIR Accept header."
+  }
+}

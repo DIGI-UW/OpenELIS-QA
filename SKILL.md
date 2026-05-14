@@ -4,7 +4,7 @@ description: >
   Automated QA testing skill for OpenELIS Global covering 167+ test suites and ~488 test cases. Tests: Orders, Validation, Results, Patient Management, Dashboard, Admin (28+ pages), Reports (all 11), Referrals, Workplan, FHIR, i18n, Accessibility, Pathology, Analyzers, EQA, Alerts, Storage, Batch Entry, Barcode, and more. Includes DEEP interaction suites: search/filter, form interaction, error handling, performance, cross-module data integrity, security (CSRF/XSS/SQLi), WCAG accessibility, E2E order tracing, report PDF generation, and Madagascar e-SIL UAT coverage (LO-xx/DU-xx). Drives a real browser session via Claude in Chrome and produces a pass/fail report with Jira tickets.
 ---
 
-# OpenELIS Global QA Skill — v6.15 (2026-05-14 + A1-bis Session 2: SamplePatientEntry POST captured live + eqaEnabled JSP retired in favor of REST)
+# OpenELIS Global QA Skill — v6.16 (2026-05-14 + B-session: Chain A end-to-end live on mgdev + CSRF cracked + 4 FHIR bugs surfaced)
 
 **v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture) + 6.5a (harness-enforced via `helpers/networkCapture.ts`), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 11.5 Blocking-Bug Etiquette, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. **v6.13:** v6.12's pilot-grounded shape corrections applied in-place across all 12 chains + 6 personas + _common.ts; Chain I rewritten with the wrong labName premise dropped; `helpers/_common-v612-patch.ts` sidecar deleted. See full Change Log at end of file.
 
@@ -1363,6 +1363,62 @@ The assertion failure mode catches counter-drift bugs that would otherwise be in
 ---
 
 ## Change log
+
+### v6.16 (2026-05-14) — B-session: Chain A end-to-end live on mgdev + CSRF mechanism cracked + 4 FHIR bugs surfaced
+
+60-minute live session against mgdev.openelis-global.org v3.2.1.8 under SYSTEM_ADMIN credentials. Used the v6.15-seeded order DEV01260000000000010 (Mana Pi / Hemoglobin / Serum) to drive Chain A Steps 3-4 end-to-end for the first time live. Surfaced 4 FHIR bugs and corrected one v6.15-misdiagnosis (the 403 on config-properties writes was CSRF, not permission).
+
+**Methodology under test verdict: PASS with major corrections.** The methodology drove a real result entry → validation transition (`analysisStatusId: 15 → 6`) end-to-end through real UI. Multiple new rules added.
+
+Concrete captures:
+- **CSRF rule (corrects v6.15):** writes use `X-CSRF-TOKEN: localStorage["CSRF"]`, NOT the XSRF-TOKEN cookie. 403 with body `"CSRF token missing or invalid"` is the unique CSRF-failure signature. v6.15 wrongly labeled this a permission issue.
+- **LogbookResults endpoint pattern:** GET `/rest/LogbookResults?<filters>` returns result-entry queue (20 keys, ~50 fields per row). POST on the same URL submits entered results. Same-URL GET/POST convention also applies to AccessionValidation. Full TypeScript shape in `apiShapes.ts`.
+- **AccessionValidation endpoint pattern:** GET `/rest/AccessionValidation?accessionNumber=&unitType=N&date=&doRange=true` returns validation queue (17 keys, 35+ fields per row with `isAccepted`, `isRejected`, `valid`, `normal`, `manual`). POST on the same URL submits validation acceptance.
+- **Status transition observed:** `analysisStatusId 15` (Ready For Validation) → `6` (Validated). Other enum values still TBD.
+- **Four FHIR bugs (Chain K BLOCKED on mgdev):**
+  - FHIR-1: `/fhir/metadata` returns 500 — upstream proxy URL has double-slash (`https://fhir.openelis.org:8443/fhir//metadata`)
+  - FHIR-2: `/fhir/Patient/27` returns 404 (HAPI-1996) — patients not synced from LIMS to FHIR
+  - FHIR-3: `/fhir/Observation` returns 200 with 151KB of internal HAPI Java domain model (`formatCommentsPre`, `idElement.idElement.idElement...` recursive) instead of valid FHIR Bundle
+  - FHIR-4: `application/fhir+json` Accept header rejected with 406 — FHIR R4 spec compliance failure
+- **Casey-reported footgun (feedback memory saved):** the inline "Accept" checkbox on the Results > By Order page overwrites state and must NEVER be clicked during normal result entry. Validation acceptance happens ONLY via the dedicated Validation module (Routine, By Order, By Range, By Date). Chain A spec and Persona PB (Tech) / PC (Validator) must reflect this separation.
+
+**Methodology rules added in v6.16:**
+
+1. **CSRF rule:** always send `X-CSRF-TOKEN: localStorage["CSRF"]` for non-GET requests. Helper `csrfFetch()` in `apiShapes.ts`. Interpret 403 with the `"CSRF token missing or invalid"` body as a CSRF gate, not permission.
+
+2. **Interceptor placement rule:** to capture POST bodies in the OpenELIS React SPA, install the interceptor BEFORE the SPA's Axios module initializes. Monkey-patching `window.fetch` after page load misses captures because Axios binds its fetch reference at module init. Use Playwright `addInitScript()` or a service worker. v6.15's three-capture sprint got the SamplePatientEntry POST body only because that page was a fresh navigation; subsequent in-app saves miss.
+
+3. **Same-URL GET/POST convention:** LogbookResults and AccessionValidation both serve GET (list) and POST (submit) on the same URL with method differentiation. Chain specs should document this pattern as a class.
+
+4. **Results vs Validation separation:** never use the Results > By Order page Accept checkbox. Result entry happens on Results module (Save only, NOT Accept). Validation acceptance happens on the dedicated Validation module (Save checkbox on rows).
+
+5. **FHIR rating criteria correction:** never rate FHIR M3 from CapabilityStatement alone. Require Observation + Patient + Bundle round-trip with proper `application/fhir+json` content negotiation. The v6.14 "FHIR M3 mgdev" rating was based on insufficient evidence and is corrected to M0-M1.
+
+**Module maturity rating updates from live evidence:**
+- Order Workflow **M5 confirmed** — Chain A Steps 1-4 end-to-end live for the first time on mgdev.
+- Result entry & Validation modules **M3 confirmed** — both have working save+round-trip paths.
+- FHIR **M3 → M0-M1** (corrected) — 4 distinct bugs across metadata, Patient, Observation, content-negotiation.
+- Configuration toggle (EQA_ENABLED) **M3 read / M0 write** — write is CSRF-gated, not permission-gated; canonical write payload still pending.
+
+**Side-effect tracking (§11.5):** the seeded order `DEV01260000000000010` (Mana Pi, Hemoglobin, Serum) is now result-entered (`13.50` g/dL) and validated (`analysisStatusId: 6`). Out of all Dashboard queues except potentially "Orders Completed Today" for 2026-05-14. Available as seed data for any future Chain that needs a completed order.
+
+**Bugs ready to file (Jira):**
+- FHIR-1: `/fhir/metadata` 500 (double-slash proxy URL) — severe, breaks FHIR client discovery
+- FHIR-2: `/fhir/Patient/N` 404 even for valid LIMS patientPK — severe, patients not synced
+- FHIR-3: `/fhir/Observation` 151KB internal HAPI domain dump — severe, FHIR clients can't parse
+- FHIR-4: `application/fhir+json` 406 — medium, FHIR R4 spec compliance
+- Results "Accept" checkbox overwrites state — severe UX/data-integrity bug (Casey-reported)
+- (Carry-over from v6.15) `ORDERS_PATIALLY_COMPLETED_TODAY` server enum typo — cosmetic
+
+**Remaining queued for v6.17:**
+- Capture canonical configuration-properties WRITE payload (with pre-load interceptor)
+- Capture canonical LogbookResults POST body (same caveat)
+- Capture canonical AccessionValidation POST body (same caveat)
+- Chain L — Lab Number Uniqueness
+- Chain A Step 5 — Report PDF generation
+- Persona PB/PC rewrites — separate result entry from validation per the new methodology rule
+
+Session report: `b-session-2026-05-14.md`. FHIR evidence: `b-session-fhir-evidence-2026-05-14.json`.
 
 ### v6.15 (2026-05-14) — A1-bis Session 2 (three-capture sprint): SamplePatientEntry POST captured live, eqaEnabled JSP retired in favor of REST, Dashboard tile enums completed
 
