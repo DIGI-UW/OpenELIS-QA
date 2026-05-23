@@ -4,7 +4,7 @@ description: >
   Automated QA testing skill for OpenELIS Global covering 167+ test suites and ~488 test cases. Tests: Orders, Validation, Results, Patient Management, Dashboard, Admin (28+ pages), Reports (all 11), Referrals, Workplan, FHIR, i18n, Accessibility, Pathology, Analyzers, EQA, Alerts, Storage, Batch Entry, Barcode, and more. Includes DEEP interaction suites: search/filter, form interaction, error handling, performance, cross-module data integrity, security (CSRF/XSS/SQLi), WCAG accessibility, E2E order tracing, report PDF generation, and Madagascar e-SIL UAT coverage (LO-xx/DU-xx). Drives a real browser session via Claude in Chrome and produces a pass/fail report with Jira tickets.
 ---
 
-# OpenELIS Global QA Skill — v6.18 (2026-05-14 + Revalidation pass: 1 false positive retracted, 1 reclassified, 2 new bugs surfaced, 4 confirmed)
+# OpenELIS Global QA Skill — v6.19 (2026-05-18 + nginx SPA-fallback revalidation rules + OGC-674 closed + OGC-673/675/677 carried)
 
 **v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture) + 6.5a (harness-enforced via `helpers/networkCapture.ts`), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 11.5 Blocking-Bug Etiquette, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. **v6.13:** v6.12's pilot-grounded shape corrections applied in-place across all 12 chains + 6 personas + _common.ts; Chain I rewritten with the wrong labName premise dropped; `helpers/_common-v612-patch.ts` sidecar deleted. See full Change Log at end of file.
 
@@ -1363,6 +1363,34 @@ The assertion failure mode catches counter-drift bugs that would otherwise be in
 ---
 
 ## Change log
+
+### v6.19 (2026-05-18) — nginx SPA-fallback revalidation rules + active-bug regression sweep
+
+Ran the openelis-bug-revalidation skill against all 5 active OGC tickets on mgdev v3.2.1.8. Outcome: **1 bug closed (OGC-674), 3 bugs updated with current evidence, 1 deferred** (OGC-676 — destructive POST would be needed).
+
+**Methodology rules added:**
+
+§10.6 — **For SPA route bugs, fetch-200 is not the same as render-200.** When revalidating a previously-broken React route (e.g. a `/NceDashboard`-style deep-link that returned 404 via nginx fallback failure), a plain `fetch(route)` returning 200 only confirms that *nginx serves an HTML shell*. It does NOT confirm that the React Router resolves the route, mounts the component, or renders content. **Method A (fresh-tab direct navigation + screenshot)** is mandatory for these closures. Method C alone (fetch 3×) returning 200 is necessary but not sufficient.
+
+§10.7 — **Cross-revalidate sibling routes after an nginx/infrastructure fix.** When one nginx-layer or SPA-routing fix lands, it can resolve a whole *class* of bugs simultaneously. If the bug-revalidation protocol surfaces a fix on one deep-link route, probe the other previously-broken deep-link routes in the same class before assuming they're still broken. Today's OGC-674 closure was based on 4 sibling routes (`/NceDashboard`, `/EQAOrders`, `/PatientHistory`, `/AccessionResults`) all returning 200 — and direct navigation to `/NceDashboard` rendering the full page confirms the nginx fallback works for all of them.
+
+§10.8 — **500 → 404 endpoint regressions need a separate disposition track.** Three of the active OGC bugs (673, 675, 677) followed the same pattern: an endpoint that returned 500 on the original report has since become 404. The endpoint hasn't been fixed — it's been removed or renamed. The right Jira treatment is a status comment confirming "still gone on v3.2.1.x as of YYYY-MM-DD," NOT a closure, because the underlying feature (Test Notifications, Activity Reports, Statistics Report) is still expected by users. These bugs stay open until the endpoints are restored OR replacements are documented and the user-facing UI is updated to point at them.
+
+**Concrete revalidation results (2026-05-18, mgdev v3.2.1.8):**
+
+| Ticket | Endpoint / route | Method | Result | Disposition |
+|---|---|---|---|---|
+| OGC-673 | `GET /rest/testNotificationConfig` | C (3× repeat) | 3/3 = 404 | Status comment added; **still open** |
+| OGC-674 | `/NceDashboard`, `/EQAOrders`, `/PatientHistory`, `/AccessionResults` (SPA deep-links) | A (fresh tab) + C | All 4 fetch = 200; `/NceDashboard` renders full page with sidebar/filters/table | **CLOSED as Done** |
+| OGC-675 | `GET /rest/reportByTest\|Panel\|Unit` | C (9× across 3 variants) | 9/9 = 404 | Status comment added; **still open** |
+| OGC-676 | `POST /rest/aliquot` (returns 200 + NPE) | None — destructive | `/Aliquot` UI route renders; POST behavior untested | Deferred — would need destructive POST |
+| OGC-677 | `GET /rest/statisticsReport` | C (3× repeat) | 3/3 = 404 | Status comment added; **still open** |
+
+**Module maturity rating notes:**
+- **SPA routing module: M5** — nginx fallback now serves React shell for all tested deep-link routes; React Router resolves them; deep-link onboarding works.
+- The 3 still-open bug clusters (Test Notifications, Activity Reports, Statistics Report) represent ~3 missing feature paths on mgdev v3.2.1.8 that need either restoration or migration documentation.
+
+**Process win:** running the formal revalidation protocol against existing tickets caught one fix (OGC-674) that would otherwise have stayed open indefinitely. **Bug-table hygiene is a recurring revalidation discipline**, not a one-shot at filing time. Recommend running the regression sweep on every active OGC ticket against the current target release at the start of each multi-day QA campaign.
 
 ### v6.18 (2026-05-14) — Revalidation pass corrects v6.16/v6.17 bug claims; one false positive, one reclassified, two new bugs surfaced
 
