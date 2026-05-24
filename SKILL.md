@@ -4,7 +4,7 @@ description: >
   Automated QA testing skill for OpenELIS Global covering 167+ test suites and ~488 test cases. Tests: Orders, Validation, Results, Patient Management, Dashboard, Admin (28+ pages), Reports (all 11), Referrals, Workplan, FHIR, i18n, Accessibility, Pathology, Analyzers, EQA, Alerts, Storage, Batch Entry, Barcode, and more. Includes DEEP interaction suites: search/filter, form interaction, error handling, performance, cross-module data integrity, security (CSRF/XSS/SQLi), WCAG accessibility, E2E order tracing, report PDF generation, and Madagascar e-SIL UAT coverage (LO-xx/DU-xx). Drives a real browser session via Claude in Chrome and produces a pass/fail report with Jira tickets.
 ---
 
-# OpenELIS Global QA Skill — v6.20 (2026-05-23 + FHIR-trio closed: OGC-739/740/741 + recurring-revalidation discipline pays off again)
+# OpenELIS Global QA Skill — v6.21 (2026-05-23 + Y-RECON PASS across all 10 tiles + Chain B NCE form discovery)
 
 **v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture) + 6.5a (harness-enforced via `helpers/networkCapture.ts`), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 11.5 Blocking-Bug Etiquette, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. **v6.13:** v6.12's pilot-grounded shape corrections applied in-place across all 12 chains + 6 personas + _common.ts; Chain I rewritten with the wrong labName premise dropped; `helpers/_common-v612-patch.ts` sidecar deleted. See full Change Log at end of file.
 
@@ -1363,6 +1363,59 @@ The assertion failure mode catches counter-drift bugs that would otherwise be in
 ---
 
 ## Change log
+
+### v6.21 (2026-05-23) — Y-RECON PASS across all 10 tiles + Chain B NCE form discovery
+
+Resumed unattended work after Casey logged back in. Completed Phase 3 (Y-RECON) and partial Phase 2 (Chain B NCE form discovery). Phase 4 (POST body captures) and full Chain B submission deferred.
+
+**Y-RECON PASS — Dashboard counter vs drill-down list integrity confirmed across all 10 tiles on mgdev v3.2.1.8:**
+
+| Tile | Dashboard KPI | Drill-down count | Match |
+|---|---|---|---|
+| In Progress | 3 | 3 | ✓ |
+| Ready For Validation | 4 | 4 | ✓ |
+| Orders Completed Today | 0 | 0 | ✓ |
+| Partially Completed Today | 0 | 0 | ✓ |
+| Orders Entered By Users Today | 0 | 0 | ✓ |
+| Orders Rejected Today | 0 | 0 | ✓ |
+| Unprinted Results Today | 0 | 0 | ✓ |
+| Electronic Orders (INCOMING_ORDERS) | 0 | 0 | ✓ |
+| Delayed Turn Around | 0 | 0 | ✓ |
+| Average Turn Around time | 0 | turn-around-time-metrics.receptionToValidation = 0 | ✓ |
+
+The v6.14 Y-RECON math holds. The non-trivial cases (In Progress=3 with 3 items, Ready For Validation=4 with 4 items) match, validating the methodology against the actual seeded test data. No data-integrity divergence found.
+
+**Chain B (Rejection / NCE) — endpoint discovery + form structure mapped.** Navigated to /ReportNonConformingEvent React page (sidebar Non-Conform > Report Non-Conforming Event). Three new endpoints discovered:
+
+- `GET /rest/nce/categories` — returns 5 top-level categories with nested types. First category: `{id: "1", name: "General", types: [{id: "1", name: "Documentation error"}, {id: "2", name: "Employee concern"}, {id: "3", name: "Technology/Computer issue"}, {id: "4", name: "Other, please describe"}]}`.
+- `GET /rest/nce/generate-number` — returns `{nceNumber: "NCE-YYYY-NNNNN"}`. Auto-format: `NCE-{year}-{5-digit-zero-padded sequence}`. First NCE on mgdev would be `NCE-2026-00001`.
+- `GET /rest/displayList/TEST_SECTION_ACTIVE` — populates the Reporting Unit dropdown with active test sections.
+
+Form structure (3 visible sections, more below the fold):
+1. **Reporter & Event Context** — NCE Number (auto), Reporter Name (default "Open ELIS"), Date of Event (default today), Reporting Unit.
+2. **Classification** — Category dropdown, Subcategory dropdown (depends on category), 3-tile Severity picker (Critical = patient safety risk; Major = significant quality/operational impact; Minor = limited impact, easily corrected).
+3. **Details** — visible below the fold; not yet scrolled to (page has a stuck scroll container).
+
+`apiShapes.ts` adds: `NceCategory`, `NceType`, `NceGenerateNumberResponse`, `NceFormState`.
+
+**Deferred (next session):**
+- The POST submit body shape — would create a real NCE on mgdev. Casey decision needed before pulling the trigger.
+- The "Affected Samples" section structure — below the fold; need page scroll fix.
+- The NCE Dashboard listing endpoint — likely `/rest/nce` but not yet probed.
+- Phase 4 from unattended plan: LogbookResults, AccessionValidation, configuration-properties WRITE POST body captures via Playwright `addInitScript` pre-load interceptor.
+
+**Sample-rejection vs manual-NCE-filing distinction** (important methodology nuance to add to chain specs):
+- **Sample-rejection at order entry** (Chain B "happy path"): set `sampleXML rejected='true' rejectReasonId='X'` in the POST `/rest/SamplePatientEntry` payload. Auto-creates an NCE.
+- **Manual NCE filing** (Chain B "retroactive path"): use the Report Non-Conforming Event form. Independent of order workflow; can link to existing samples via the Affected Samples section.
+
+Chain B spec needs BOTH paths covered. Today only the manual-filing endpoints were captured; the auto-NCE-from-rejection path was captured in v6.15's SamplePatientEntry POST body (rejected field shape).
+
+**Today's running totals (2026-05-23, single-day session):**
+- 4 PRs merged (#15, #16, #17 pending, #14 from yesterday-evening)
+- 4 OGC bugs closed (OGC-674 + OGC-739/740/741)
+- 4 new methodology rules codified (§10.6/7/8/9)
+- Y-RECON math validated across full Dashboard
+- NCE form structure documented
 
 ### v6.20 (2026-05-23) — FHIR trio closed (OGC-739/740/741) + recurring revalidation pays off
 

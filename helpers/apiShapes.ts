@@ -1133,3 +1133,76 @@ export interface SamplePatientEntryServiceLayerError {
   error: 'Validation failed';
 }
 
+
+// =============================================================================
+// NCE (Non-Conforming Event) — v6.21 (Chain B Discovery, 2026-05-23)
+// =============================================================================
+// Manual NCE filing (separate from sample-rejection-at-order-entry, which
+// uses sampleXML rejected='true').
+//
+// Endpoints discovered live on mgdev v3.2.1.8 by navigating to the Report
+// Non-Conforming Event React page (/ReportNonConformingEvent):
+//
+//   GET /api/OpenELIS-Global/rest/nce/categories         → 200, returns NceCategory[]
+//   GET /api/OpenELIS-Global/rest/nce/generate-number    → 200, returns {nceNumber}
+//   POST /api/OpenELIS-Global/rest/nce (TBD — submit form not yet captured)
+//   GET /api/OpenELIS-Global/rest/displayList/TEST_SECTION_ACTIVE → 200 (for Reporting Unit dropdown)
+//
+// NOT MAPPED yet (defer to next session):
+//   - The POST body shape on form submit
+//   - Whether the form auto-links to a sample (Affected Samples section is below the fold)
+//   - The NCE Dashboard listing endpoint (presumably /rest/nce or similar)
+//
+// The form has 3+ sections: Reporter & Event Context, Classification, Details.
+// Severity is a 3-tile picker (Critical/Major/Minor) with descriptive labels.
+// Reporter Name defaults to "Open ELIS"; Date of Event defaults to today.
+
+export interface NceCategory {
+  id: string;                                // numeric string e.g. "1"
+  name: string;                              // e.g. "General"
+  types: NceType[];                          // subcategories
+}
+
+export interface NceType {
+  id: string;                                // numeric string
+  name: string;                              // e.g. "Documentation error", "Employee concern"
+}
+
+export interface NceGenerateNumberResponse {
+  /** Auto-generated NCE identifier in format "NCE-YYYY-NNNNN" (year, 5-digit sequence). */
+  nceNumber: string;
+}
+
+export interface NceFormState {
+  // Section 01 — Reporter & Event Context
+  nceNumber: string;                         // auto from generate-number
+  reporterName: string;                      // defaults to "Open ELIS"
+  dateOfEvent: string;                       // ISO date, defaults to today
+  reportingUnit: string;                     // TEST_SECTION_ACTIVE id
+  // Section 02 — Classification
+  category: string;                          // NceCategory.id
+  subcategory: string;                       // NceType.id (nested under selected category)
+  severity: 'Critical' | 'Major' | 'Minor';
+  // Section 03 — Details (full structure TBD; needs scroll capture)
+  description?: string;
+  affectedSamples?: string[];                // Lab numbers like "DEV01260000000000015"
+}
+
+// =============================================================================
+// Dashboard Y-RECON validation — v6.21 (2026-05-23)
+// =============================================================================
+// Y-RECON math from v6.14 confirmed on mgdev v3.2.1.8: for every queue-type
+// Dashboard tile, the KPI counter shown on the Dashboard exactly matches the
+// length of the displayItems array returned by the drill-down endpoint.
+//
+// Verified 10/10 tiles (2026-05-23):
+//   In Progress (3=3), Ready For Validation (4=4), Orders Completed Today (0=0),
+//   Partially Completed Today (0=0), Orders Entered By Users Today (0=0),
+//   Orders Rejected Today (0=0), Unprinted Results Today (0=0),
+//   Electronic Orders/INCOMING_ORDERS (0=0), Delayed Turn Around (0=0).
+//   Plus the metrics tile: Average Turn Around time → turn-around-time-metrics
+//   {receptionToValidation: 0} matches the displayed "0".
+//
+// The Y-RECON test should always pass on a healthy instance; a failure
+// indicates either data divergence or a tile-to-endpoint mapping bug.
+
