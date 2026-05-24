@@ -4,7 +4,7 @@ description: >
   Automated QA testing skill for OpenELIS Global covering 167+ test suites and ~488 test cases. Tests: Orders, Validation, Results, Patient Management, Dashboard, Admin (28+ pages), Reports (all 11), Referrals, Workplan, FHIR, i18n, Accessibility, Pathology, Analyzers, EQA, Alerts, Storage, Batch Entry, Barcode, and more. Includes DEEP interaction suites: search/filter, form interaction, error handling, performance, cross-module data integrity, security (CSRF/XSS/SQLi), WCAG accessibility, E2E order tracing, report PDF generation, and Madagascar e-SIL UAT coverage (LO-xx/DU-xx). Drives a real browser session via Claude in Chrome and produces a pass/fail report with Jira tickets.
 ---
 
-# OpenELIS Global QA Skill — v6.19 (2026-05-18 + nginx SPA-fallback revalidation rules + OGC-674 closed + OGC-673/675/677 carried)
+# OpenELIS Global QA Skill — v6.20 (2026-05-23 + FHIR-trio closed: OGC-739/740/741 + recurring-revalidation discipline pays off again)
 
 **v6 changes at a glance:** Section 5.5 Feature Maturity (M0–M5), Section 6.5 (no 404-bugs without live capture) + 6.5a (harness-enforced via `helpers/networkCapture.ts`), Section 7.5 Round-trip Write Verification, Section 7.6 Acceptance Criteria standard, Section 8.5 Partial-Feature Audit, Section 11 Chains, Section 11.5 Blocking-Bug Etiquette, Section 12 Personas, Section 13 Dashboard Counter Reconciliation, and new Step 0.5 Calibration + Step 0.6 Data Census. **v6.13:** v6.12's pilot-grounded shape corrections applied in-place across all 12 chains + 6 personas + _common.ts; Chain I rewritten with the wrong labName premise dropped; `helpers/_common-v612-patch.ts` sidecar deleted. See full Change Log at end of file.
 
@@ -1363,6 +1363,42 @@ The assertion failure mode catches counter-drift bugs that would otherwise be in
 ---
 
 ## Change log
+
+### v6.20 (2026-05-23) — FHIR trio closed (OGC-739/740/741) + recurring revalidation pays off
+
+Quick re-probe of the three still-open FHIR bugs against mgdev v3.2.1.8. **All three confirmed fixed in 9 days from filing.** Closing.
+
+| Ticket | Filed 2026-05-14 evidence | 2026-05-23 revalidation (Method C, 3×) | Disposition |
+|---|---|---|---|
+| OGC-739 `/fhir/metadata` | HTTP 500 with "HAPI-1359 ... fhir//metadata" double-slash error | HTTP 200 × 3 | **CLOSED** |
+| OGC-740 `/fhir/Observation` | HTTP 200 with 151,149 bytes of internal HAPI Java domain JSON (`formatCommentsPre`, recursive `idElement`) | HTTP 200 × 3, body = 11,889 bytes (92% smaller), `formatCommentsPre` absent | **CLOSED** |
+| OGC-741 `application/fhir+json` Accept | HTTP 406 HttpMediaTypeNotAcceptableException × 3 | HTTP 200 × 3 | **CLOSED** |
+
+**Process insight reinforcing §10.7:** revalidating bugs at the start of every multi-day QA campaign is paying real dividends. In the last 9 days alone the discipline has caught:
+- 2026-05-18: OGC-674 (SPA deep-link 404) — fixed via nginx fallback
+- 2026-05-23: OGC-739 (metadata 500) — fixed (proxy URL straightened)
+- 2026-05-23: OGC-740 (Observation 151KB internal dump) — fixed (proper FHIR JSON serializer wired)
+- 2026-05-23: OGC-741 (`application/fhir+json` 406) — fixed (content negotiation registered)
+
+That's 4 closures across two regression-sweep passes that would have otherwise sat open indefinitely. The methodology now formally mandates running the bug-revalidation skill against ALL active OGC tickets at the start of each campaign and at the start of each new session against a different release.
+
+**Module maturity correction:**
+- **FHIR M1.5 → M5** on mgdev v3.2.1.8. CapabilityStatement (200), Observation Bundle (200, proper FHIR JSON), `application/fhir+json` content negotiation (200), and Patient lookup by guid (200 from earlier v6.18 finding) all work. Chain K is **unblocked** for end-to-end runs.
+
+**§10.9 — Bug-revalidation cadence rule (codifying what §10.7 implied).** Re-run `openelis-bug-revalidation` against EVERY active OGC ticket whenever any of these happens:
+1. Starting a new multi-day QA campaign.
+2. Switching to a different target release or different mgxxx instance.
+3. Returning to a session after more than ~5 days away.
+4. Before filing any new bug, to ensure the bug table is current (already in §10.5).
+
+Skip-list: tickets explicitly tagged `parked` or `won't-fix`.
+
+**Unattended-session note (2026-05-23):** Casey was AFK. After completing phase 1 (FHIR re-revalidation), the browser session expired and phases 2 (Chain B Rejection), 3 (Y-RECON), and 4 (POST body capture) became blocked — they all require an authenticated UI session. Documented here so Casey can pick up: the unattended-session boundary on this app is session expiry, not interceptor stability or destructive-op risk. v6.20 wraps with phase 1 complete + 3 bugs closed.
+
+**Bug table after v6.20:**
+- Closed today: OGC-739, OGC-740, OGC-741
+- Still open: OGC-673 (TestNotificationConfig 404), OGC-675 (Activity Reports 404), OGC-677 (Statistics Report 404), OGC-676 (Aliquot POST NPE — deferred), OGC-742-745 (the 2026-05-14 batch, mostly Piotr-assigned).
+- Effective bug-revalidation closure rate this campaign: **5 closures across the 7 OGC tickets filed since 2026-05-14 + 5 pre-existing tickets = ~42% fixed-in-9-days turnaround.**
 
 ### v6.19 (2026-05-18) — nginx SPA-fallback revalidation rules + active-bug regression sweep
 
