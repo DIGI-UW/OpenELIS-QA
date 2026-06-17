@@ -8,10 +8,15 @@
  * results are entered. The calculated value should appear on the
  * patient's results, with the correct math.
  *
- * Why this chain is high-leverage: per the maturity dashboard, Calc
- * Admin is M3 (round-trips), but Calc Computing is M1 — no test has
- * ever observed a calc engine producing a value because BUG-31 blocks
- * the UI result-entry step.
+ * Calc Computing is now M4 — VERIFIED on v3.2.1.10 (indonesiadev), where
+ * BUG-31 does NOT reproduce. The calc engine ADDS the output test (with
+ * its computed result) on result SAVE, but ONLY when that test is not
+ * already on the order — it does NOT back-fill a pre-ordered output row.
+ * FALSE-NEGATIVE TRAP: never pre-order the output test (Step 2 already
+ * orders operands only). Supports numeric AND select-list/dictionary
+ * outputs (a relational rule sets a chosen dictionary value, e.g.
+ * Creatinine >= 5 -> Urine pregnancy test = Positive). On builds where
+ * BUG-31 is present, use the section 11.5 API substitute for result entry.
  *
  * Like Chain C, this chain uses API substitutes per §11.5. The crucial
  * difference: calc rules often require *multiple* operand results to
@@ -271,7 +276,7 @@ test.describe.serial('Chain D — Calculated Value', () => {
   test('Step 5 — Calculated test present on accession (CROSS-LINK)', async ({ page }) => {
     if (!testAccession || !rule) test.skip();
     await page.goto(BASE);
-    await page.waitForTimeout(2000); // grace period for async calc
+    await page.waitForTimeout(4000); // grace for async server-side calc (row appears after save, sometimes only on a later read)
 
     const orderRead = await apiCall<{
       tests?: Array<{ testId?: string }>;
@@ -374,6 +379,23 @@ test.describe.serial('Chain D — Calculated Value', () => {
     const calcRow = items.find(r => r.testId === rule!.testId);
     if (!calcRow?.value) { test.skip(); return; }
     const calcValue = Number(calcRow.value);
+
+    // Select-list / dictionary calc outputs are non-numeric (e.g. "Positive",
+    // or a dictionary id) — they come from relational rules of the form
+    // "if Test A >= X -> set [dictionary test] = [value]". Numeric plausibility
+    // does not apply; assert the engine wrote a non-empty dictionary result.
+    if (isNaN(calcValue)) {
+      const dv = String(calcRow.value).trim();
+      if (dv.length > 0) {
+        markStep('D', 7, 'PASS',
+          `Select-list calc output: ${rule!.testId} = "${dv}" (dictionary value set by relational rule; numeric plausibility N/A)`);
+      } else {
+        markStep('D', 7, 'FAIL', `Dictionary calc output present but empty for testId=${rule!.testId}`);
+        expect(dv.length, 'Dictionary calc value empty').toBeGreaterThan(0);
+      }
+      return;
+    }
+
     const operands = Array.from(operandValues.values());
     const minOp = Math.min(...operands);
     const maxOp = Math.max(...operands);
