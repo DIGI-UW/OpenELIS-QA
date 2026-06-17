@@ -10,9 +10,10 @@
  * Logbook.
  *
  * Why this chain is high-leverage: per the maturity dashboard, Reflex
- * Rule *Admin* is M2 (saves correctly), but Reflex Rule *Firing* is M1
- * — no test has ever observed a rule actually firing because BUG-31
- * blocks the UI result-entry step that would trigger one.
+ * Rule *Admin* is M2 (saves correctly). Reflex Rule *Firing* is now M4 —
+ * VERIFIED firing on v3.2.1.10 (indonesiadev), where BUG-31 does NOT
+ * reproduce: GPT/ALAT >= 40 auto-added GOT/ASAT on result save. On builds
+ * where BUG-31 is present, this chain keeps the API substitute (Step 3).
  *
  * Per SKILL §11.5 Blocking-Bug Etiquette, this chain uses an API
  * substitute for result entry (Step 3) so we can finally answer the
