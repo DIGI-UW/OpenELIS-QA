@@ -1,5 +1,14 @@
 # openelis-test-catalog-qa — Changelog
 
+## v7.2 (2026-06-18) — QA Tracker artifact (attention board)
+
+- references/qa-tracker.md (NEW) + Step 7: each run creates-if-missing or updates the
+  `openelis-qa-tracker` Cowork artifact.
+- Tracker rebuilt with a top "Needs your attention" board: LIVE open automated-qa Jira bugs
+  (broadened from 6 hardcoded keys to the open queue, highest-priority first) + an open-questions
+  / NEEDS-GUIDANCE panel refreshed from open-questions.md; targets now labelled by type
+  (release/distro/rapid). Snapshot + matrix are skill-maintained; the bug panel is live.
+
 ## v7.1 (2026-06-18) — Targets, instances, self-eval, trend summary, open-questions ledger
 
 - references/test-targets.md (NEW): target taxonomy — main global release / project distro /
