@@ -28,6 +28,8 @@ Every case declares:
 
 A case whose acceptance criterion is only RENDER is a smoke check, and caps the module at M1. Catalog growth should be biased toward PERSIST/ROUND-TRIP/CROSS-LINK cases.
 
+**Tag each case's depth** (deep = PERSIST/ROUND-TRIP/CROSS-LINK/REPORTABLE; shallow = RENDER/loads-only). The QA Tracker's Coverage & Depth section rolls these up — a known failure mode is a whole write-feature module sitting at shallow/RENDER while reading "ALL PASS." When you find shallow coverage over a write feature, add it to the "deepen these" list and write the missing round-trip case.
+
 ## 2. Deep, chained cases — follow the action all the way through
 A shallow case checks one screen. A **deep case walks a workflow and proves each handoff
 lands**: the output of step N is the *input you verify* at step N+1, end to end.

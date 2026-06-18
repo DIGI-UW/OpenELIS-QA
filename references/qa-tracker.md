@@ -20,9 +20,18 @@
      each run from `references/open-questions.md` (the `## Open` rows). These are *not* guessed
      PASS/FAILs — they're decisions only Casey can make (see `test-case-authoring.md`).
    - **Gaps / dead branches** — count of UNCOVERED + known dead branches worth a decision.
-2. **Targets tested** — instances with their **target type** (release / distro / rapid) per `test-targets.md`.
-3. **Latest run snapshot** — pass/bug/observation/maturity counts from the run's machine-readable JSON summary (`report-template.md` §7). Update this each run.
-4. **Longitudinal bug matrix** — fixed/bug/new/na per version (skill-maintained snapshot; keep history, add the new target's column).
+2. **Coverage & depth** — the "how much is real?" section. Shows: total TCs + suites; the
+   **deep vs shallow vs mixed** split (deep = PERSIST/ROUND-TRIP/CROSS-LINK/REPORTABLE;
+   shallow = RENDER/loads-only); **needs-update** count; a **"deepen these"** list (shallow
+   suites over write features), a **"needs update / scrub"** list, and a **"hidden / notable"**
+   list (things that look "ALL PASS" but aren't — e.g. CSRF masking write-bug status,
+   phase-buried suites invisible to the index, suite-code collisions). This dataset comes from a
+   **catalog scan** of `master-test-cases.md` (classify each TC by its acceptance tier) +
+   `coverage-gap-analysis.md`; refresh it when the catalog changes and during the Partial-Feature
+   Audit (and the monthly task). It's the answer to "what's covered, how deeply, and what's hidden."
+3. **Targets tested** — instances with their **target type** (release / distro / rapid) per `test-targets.md`.
+4. **Latest run snapshot** — pass/bug/observation/maturity counts + **executed-vs-total** for the run, from the machine-readable JSON summary (`report-template.md` §7). Runs are tiered, so executed < total — show both. Update each run.
+5. **Longitudinal bug matrix** — fixed/bug/new/na per version (skill-maintained snapshot; keep history, add the new target's column).
 
 ## Data sources (live vs. snapshot)
 - **Live (in-artifact connector):** the open-QA-bugs Jira panel — refreshes on the view's Reload.
