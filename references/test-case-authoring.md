@@ -59,9 +59,14 @@ gets better over time and how Casey steers it:
 - **UNCOVERED (new work, no case exists).** Any screen/menu item/endpoint/workflow with no TC. Derive candidates from: the live hamburger + Admin menu map (vs `coverage-gap-analysis.md`), new routes that appeared since last run, and any FRS/feature shipped in `openelis-design`'s `spec-registry.md`/`current-state-gotchas.md`. For each, write one line: *"No coverage: <area> — <why it matters>."* Propose the suite it belongs in.
 - **UNCERTAIN (workflow unknown — ask Casey).** Any place where the *intended* workflow isn't clear enough to write a correct expected result — e.g. "what should happen when a reflex fires on an already-validated sample?", "is a rejected EQA sample supposed to appear on the Rejection Report?". Phrase each as a **direct question for Casey**, with what you observed and the candidate interpretations. Do **not** invent an expected result and silently assert PASS/FAIL on a workflow you don't understand — that produces false findings. Mark the case `NEEDS-GUIDANCE` and move on.
 
-Put both lists in the report (and append durable ones to `coverage-gap-analysis.md`). The
-UNCERTAIN list is the high-value output: it's where Casey's domain knowledge turns a guess into
-a real test.
+Put both lists in the report. Durable coverage gaps go in `coverage-gap-analysis.md`; UNCERTAIN
+workflow questions go in **`references/open-questions.md`** (the standing ledger) so they survive
+between runs — Casey answers in batches, and each answer becomes a real case. The UNCERTAIN list
+is the high-value output: it's where Casey's domain knowledge turns a guess into a real test.
+
+**Workflows can differ by target.** The "expected" behavior may depend on whether you're testing
+the main global release, a project distro, a branch, or a rapid version (see `test-targets.md`) —
+note the target on each open question, since a distro may intentionally behave differently.
 
 ## 4. Maintenance workflow (keeping the catalog current)
 - **On a new feature/FRS:** read the feature (often in `openelis-design`), author deep cases that walk its primary workflow end-to-end, add them to `master-test-cases.md`, index in `suite-catalog.md`.

@@ -37,6 +37,12 @@ the Blocking-Bug Etiquette in `workflows.md` (e.g. don't `.click()` the Carbon A
 don't retry the NCE POST). Keep those as guardrails regardless of the bug's Jira status — but
 verify current status via Step 0.5 Calibration before assuming the hazard still applies.
 
+## "Done" ≠ shipped
+A Jira ticket marked **Done** is not proof the fix is live — **this skill is the in-app proof.**
+When calibrating (Step 0.5) or testing a "fixed" area, verify the behavior in the running app.
+If a Done/closed bug still reproduces (passing the 2-of-3 gate), **reopen/comment with the new
+evidence and note the regression** — don't file a fresh ticket, and don't trust the status field.
+
 ## Don't re-embed a status table
 If you need a point-in-time snapshot for a report, generate it from a Jira query at report time
 and put it in the report — not back into the skill. The skill stays evergreen.

@@ -43,7 +43,9 @@ State which substrate a given result came from.
 ---
 
 ## Step 0 — Setup
-**Ask the user:** (1) which OpenELIS URL to test (`BASE_URL`); (2) which suites/tier; (3) Jira project key (optional).
+**Ask the user:** (1) which OpenELIS URL to test (`BASE_URL`); (2) **what target is this** — main global release, a project distro, a branch/PR build, or a rapid version (+ which project/deployment); (3) which suites/tier; (4) Jira project key (optional).
+
+**Capture the target identity** (see `references/test-targets.md`) and record it in the report header: target type + project, app version/build (UI footer or `/actuator/info`), Default vs custom/distro catalog, and any feature flags that gate suites. The target decides which suites apply and what "expected" means — a distro has its own catalog and deployment-only suites; a rapid version drifts between builds (re-verify routes, don't trust last run).
 
 - **Credentials:** `admin` / `adminADMIN!` (widely-published default; override if the user gives others).
 - **Test-data prefix:** `QA_AUTO_<MMDD>` for anything you create — eases cleanup, avoids collisions.
@@ -151,6 +153,12 @@ positives are stopped — never file a single transient FAIL.
 | `references/bug-triage.md` | Step 0.5 / Step 6 — Jira-as-source-of-truth + the revalidation gate |
 | `references/playwright-harness.md` | When using the Playwright harness or Carbon component workarounds; operational hazards. The harness lives in **this repo (OpenELIS-QA)**: `playwright.config.ts`, `*.setup.ts`, `helpers/`, `pages/`, `tests/`, `gap-suites-*.spec.ts` |
 | `references/test-case-authoring.md` | When writing or extending the catalog — deep chained cases + surfacing uncovered/uncertain workflows |
+| `references/test-targets.md` | Step 0 — target taxonomy (release/distro/branch/rapid), known instances, operational quirks |
+| `references/open-questions.md` | The standing NEEDS-GUIDANCE ledger — append workflow questions for Casey; promote answered ones to cases |
 | `references/validation-history.md` | Historical run log (append after each run) |
 | `master-test-cases.md` (repo root) | Detailed master catalog (all suites) |
+| `evals/evals.json` | Skill self-tests — run/extend after editing the skill to catch regressions in the skill itself |
 | `CHANGELOG.md` | Skill version history |
+
+## Maintaining this skill
+After editing the skill, sanity-check it against `evals/evals.json` (the skill's own eval set) so a change doesn't regress its behavior; add an eval when you add a capability. The monthly maintenance task also refreshes state (validation-history, route re-verification, the coverage-gap/open-questions pass).
