@@ -284,6 +284,42 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
     },
 
+    // --- Chains O-S: deep-coverage build-out (v6.16) ---
+    // Round-trip rewrites of previously render-only flat suites, driving real
+    // captured endpoints with a landing check at every handoff.
+    // O Referral · P Patient merge (non-destructive) · Q Batch order entry
+    // R Sample shipment · S Aliquot lineage.
+    {
+      name: 'chain-o',
+      testMatch: 'tests/chains/chain-o-referral-roundtrip.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+    {
+      name: 'chain-p',
+      testMatch: 'tests/chains/chain-p-patient-merge.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+    {
+      name: 'chain-q',
+      testMatch: 'tests/chains/chain-q-batch-order-entry.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+    {
+      name: 'chain-r',
+      testMatch: 'tests/chains/chain-r-sample-shipment.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+    {
+      name: 'chain-s',
+      testMatch: 'tests/chains/chain-s-aliquot-lineage.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+
     // --- Core QA: all test suites using cached auth + test data ---
     {
       name: 'qa-dashboard',

@@ -396,3 +396,78 @@ export async function findVectorLot(
 ): Promise<VectorWorklistRow | undefined> {
   return (await getVectorWorklist(page)).find(r => r.accessionNumber === accession);
 }
+
+// =============================================================================
+// v6.16 — Deep-coverage build-out endpoints (Chains O–S)
+// Captured 2026-06-18: endpoints confirmed live on indonesiadev v3.2.1.10 and
+// cross-checked against the OpenELIS-Global-2 frontend source. These graduate
+// the previously render-only flat suites (referral, patient-merge, batch order
+// entry, sample shipment, aliquot) into deep round-trips with landing checks.
+// =============================================================================
+
+const API = '/api/OpenELIS-Global/rest';
+
+// --- Chain O — Referral (Referred-Out Tests) -------------------------------
+/** GET — Struts form model; after a search it carries `referralDisplayItems[]`.
+ *  Filter sources embedded: `testUnitSelectionList`, `testSelectionList`. */
+export const REFERRED_OUT_TESTS = `${API}/ReferredOutTests`;
+/** Build the search query the UI issues (dateType SENT|RESULT). */
+export function buildReferredOutQuery(opts: { dateType?: string; startDate?: string; endDate?: string; labNumber?: string } = {}): string {
+  const p = new URLSearchParams({
+    searchType: '', dateType: opts.dateType || 'SENT',
+    startDate: opts.startDate || '', endDate: opts.endDate || '',
+    testUnitIds: '', _testUnitIds: '1', testIds: '', _testIds: '1',
+    labNumber: opts.labNumber || '', dateOfBirthSearchValue: '', selPatient: '', _analysisIds: 'on',
+  });
+  return `${REFERRED_OUT_TESTS}?${p.toString()}`;
+}
+export const TEST_LIST = `${API}/test-list`;                       // referral/aliquot filter source
+export const USER_TEST_SECTIONS = (role: string) => `${API}/user-test-sections/${role}`;
+
+// --- Chain P — Patient merge (NON-destructive validate path) ---------------
+export const PATIENT_SEARCH_RESULTS = `${API}/patient-search-results`;
+export const PATIENT_MERGE_DETAILS = (patientId: string | number) => `${API}/patient/merge/details/${patientId}`;
+export const PATIENT_MERGE_VALIDATE = `${API}/patient/merge/validate`;   // POST {patient1Id,patient2Id,primaryPatientId,reason,confirmed:false}
+export const PATIENT_MERGE_EXECUTE = `${API}/patient/merge/execute`;      // POST confirmed:true — DESTRUCTIVE, Global Admin; do NOT run in CI
+
+// --- Chain Q — Batch order entry -------------------------------------------
+export const SAMPLE_PATIENT_ENTRY = `${API}/SamplePatientEntry`;          // GET preform (sampleOrderItems.referringSiteList)
+/** NB upstream param is misspelled `refferingSiteId` (two f's) — match it. */
+export const DEPARTMENTS_FOR_SITE = (siteId = '') => `${API}/departments-for-site?refferingSiteId=${encodeURIComponent(siteId)}`;
+export const SAMPLE_BATCH_ENTRY = `${API}/SampleBatchEntry`;             // POST full batch order form
+
+// --- Chain R — Sample shipment ---------------------------------------------
+export const SHIPPING_BOX = `${API}/shipping-box`;                       // GET list (read-back) / POST create
+export const SHIPPING_BOX_GEN_NUMBER = `${API}/shipping-box/generate-box-number`;
+export const SHIPPING_BOX_LABEL_PREFIX = `${API}/shipping-box/box-label-prefix`;
+export const SHIPPING_BOX_BY_ID = (boxId: string | number) => `${API}/shipping-box/by-box-id/${boxId}`;
+export const BOX_SAMPLE_ITEMS = `${API}/box-sample/items`;               // POST add items
+export const BOX_SAMPLE_BY_BOX = (boxId: string | number) => `${API}/box-sample/items/by-box/${boxId}`;
+export const UNASSIGNED_SAMPLE_SEARCH = `${API}/unassigned-sample/items/search`;
+export const REFERRAL_ORGANIZATIONS = `${API}/displayList/REFERRAL_ORGANIZATIONS`;
+export const REFERRAL_REASONS = `${API}/displayList/REFERRAL_REASONS`;
+
+// --- Chain S — Aliquot lineage ---------------------------------------------
+/** GET `?accessionNumber=` → {accessionNumber, sampleItems:[{externalId,typeOfSample,collector,quantity,analysis:[{id,test,testSection,statusId}]}]}. */
+export const SAMPLE_ITEM = `${API}/SampleItem`;
+/** POST {accessionNumber, sampleItems:[{externalId, aliquots:[{externalId,quantity,analyses:[analysisId]}]}]} → 200. */
+export const ALIQUOT_SAVE = `${API}/Aliquot`;
+
+export interface SampleItemRow {
+  externalId?: string;
+  typeOfSample?: string;
+  collector?: string;
+  quantity?: number;
+  analysis?: Array<{ id?: string; statusId?: string; test?: unknown; testSection?: unknown }>;
+  aliquots?: unknown[];
+}
+export interface SampleItemResponse {
+  accessionNumber?: string;
+  sampleItems?: SampleItemRow[];
+}
+
+/** Read a sample's items (Chain S read-back). Returns [] on failure. */
+export async function getSampleItems(page: import('@playwright/test').Page, accession: string): Promise<SampleItemRow[]> {
+  const r = await apiCall<SampleItemResponse>(page, `${SAMPLE_ITEM}?accessionNumber=${encodeURIComponent(accession)}`);
+  return r.ok && r.body && typeof r.body === 'object' ? ((r.body as SampleItemResponse).sampleItems || []) : [];
+}
