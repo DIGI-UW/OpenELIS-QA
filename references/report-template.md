@@ -7,7 +7,8 @@
 ---
 
 ## 1. Header
-- **Instance / URL**, app version (from the footer or `/actuator/info` if available)
+- **Instance / URL**, app **version/build** (footer or `/actuator/info`)
+- **Target identity** (see `test-targets.md`): main global release / project distro / branch-or-PR / rapid version — plus project/deployment name, and **catalog** (Default global vs custom/distro). This frames what "expected" means.
 - **Date/time**, tester (agent), skill version
 - **Run tier:** smoke / standard / full (see SKILL.md)
 - **Suites run** (letters/ranges) and **Data Census result** (from Step 0.6 — or "instance empty, render-only" if reset)
@@ -37,10 +38,26 @@ For each **new** FAIL (one that passed bug-triage — see `bug-triage.md`):
 - The 2-of-3 bug-revalidation evidence (fresh tab / re-login / 3× API) confirming it's not transient.
 - Jira key if filed, or formatted bug report if Jira unavailable.
 
-## 6. Gaps & partial features
-- GAP = feature absent/unreachable. Partial = renders but incomplete (cite maturity + the failing signal from the Partial-Feature Audit).
+## 6. Gaps, uncovered & uncertain
+- **GAP** = feature absent/unreachable. **Partial** = renders but incomplete (cite maturity + the failing signal).
+- **UNCOVERED** = surface with no test case (propose the suite it belongs in).
+- **UNCERTAIN / NEEDS-GUIDANCE** = workflow whose intended behavior you couldn't confirm. List as questions for Casey **and append them to `references/open-questions.md`** so they aren't lost. Do not invent an expected result.
 
-## 7. Appendix — full action log
+## 7. Machine-readable summary (for trend tracking)
+Emit a compact JSON block so maturity can be trended run-over-run:
+```json
+{
+  "target": {"type": "release|distro|branch|rapid", "project": "...", "version": "...", "url": "..."},
+  "tier": "smoke|standard|full",
+  "date": "YYYY-MM-DDTHH:MMZ",
+  "modules": [{"name": "Orders", "maturity": "M3", "pass": 0, "fail": 0, "blocked": 0, "gap": 0}],
+  "chains": [{"id": "A", "result": "PASS|PARTIAL|FAIL|BLOCKED"}],
+  "yrecon": [{"kpi": "Orders In Progress", "match": true}],
+  "new_failures": 0, "uncovered": 0, "needs_guidance": 0
+}
+```
+
+## 8. Appendix — full action log
 - Timestamped action log with screenshots; the raw census/calibration captures.
 
 ---

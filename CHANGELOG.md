@@ -1,5 +1,19 @@
 # openelis-test-catalog-qa — Changelog
 
+## v7.1 (2026-06-18) — Targets, instances, self-eval, trend summary, open-questions ledger
+
+- references/test-targets.md (NEW): target taxonomy — main global release / project distro /
+  branch-or-PR / rapid version — captured at Step 0 (drives applicable suites + what "expected"
+  means); plus known instances (testing/demo/mgtest, public creds + casey backup, the Monday
+  demo password-reset that explains the ChangePassword redirect) and operational quirks.
+- references/open-questions.md (NEW): standing NEEDS-GUIDANCE ledger so UNCERTAIN workflow
+  questions persist between runs and get promoted to cases when Casey answers.
+- bug-triage.md: added "Done != shipped" — QA is the in-app proof; reopen a reproducing closed bug.
+- report-template.md: header now records target identity; added a machine-readable per-run JSON
+  summary (module->maturity + chains + Y-RECON) for trend tracking; UNCOVERED/UNCERTAIN section.
+- SKILL.md: Step 0 captures target identity; added evals/evals.json self-test pointer + a
+  "Maintaining this skill" note.
+
 ## v7.0 (2026-06-18) — Structural: evergreen skill vs. time-varying state; deep-TC authoring
 
 - Slimmed SKILL.md (~1785 → ~160 lines); grading language kept inline; state moved out.
