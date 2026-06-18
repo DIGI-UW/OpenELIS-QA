@@ -330,3 +330,69 @@ export function eqaEnabledRequiresJspNotRest(): never {
     'Drive the JSP form via Playwright UI navigation, not JSON POST.'
   );
 }
+
+// =============================================================================
+// v6.15 — Vector & Environmental captured endpoints (indonesiadev v3.2.1.10)
+// Captured live 2026-06-18 via in-page fetch interceptor + direct probes.
+// See qa run note `vector-env-api-captures.md`. These graduate Chains M/N
+// from render-only placeholders to deep round-trip workflows with landing
+// checks at every handoff (§7.6 ROUND-TRIP / CROSS-LINK tiers).
+// =============================================================================
+
+/** Order create — SHARED by clinical, vector AND environmental orders. */
+export const VE_CREATE = '/api/OpenELIS-Global/rest/SamplePatientEntry';
+
+/** Vector Identification worklist — the read-back surface every vector
+ *  action lands in. 200 → array of lot rows (shape: VectorWorklistRow). */
+export const VE_VECTOR_WORKLIST = '/api/OpenELIS-Global/rest/vector/identification/worklist';
+
+/** Species-ID save. {sampleId} is the worklist row's `sampleId`. */
+export const VE_VECTOR_IDENTIFY = (sampleId: number | string) =>
+  `/api/OpenELIS-Global/rest/vector/identification/specimens/${sampleId}/identify`;
+
+/** Pool deconvolution / Split initiate. */
+export const VE_VECTOR_DECON = '/api/OpenELIS-Global/rest/vector/deconvolution/initiate';
+
+/** Vector dictionary family. lifecycle-stages confirmed (arr[5], the OGC-1049
+ *  UNFILTERED list). species/trap slugs differ — pin from the ID page when
+ *  authoring filtered-dictionary assertions. */
+export const VE_VECTOR_DICT_LIFECYCLE = '/api/OpenELIS-Global/rest/vector/dictionary/lifecycle-stages';
+
+/** Environmental order-entry list endpoints (all 200 on load). */
+export const VE_ENV_SAMPLING_SITES = '/api/OpenELIS-Global/rest/admin/vector/sampling-sites/active';
+export const VE_ENV_COLLECTION_METHODS = '/api/OpenELIS-Global/rest/vector/dictionary/env-collection-methods';
+export const VE_ENV_WEATHER = '/api/OpenELIS-Global/rest/vector/dictionary/env-weather';
+export const VE_ENV_CONTAINERS = '/api/OpenELIS-Global/rest/vector/dictionary/sample-containers';
+export const VE_ENV_SAMPLE_TYPES = '/api/OpenELIS-Global/rest/environmental-sample-types';
+export const VE_ENV_COMPLIANCE = '/api/OpenELIS-Global/rest/compliance/standards/active';
+
+export interface VectorWorklistRow {
+  sampleId: number;
+  vectorPoolId: number;
+  lotExternalId: string;          // e.g. "DEV01260000000000001-P01"
+  accessionNumber: string;
+  samplingSiteName: string;
+  collectionDate: number;         // epoch ms
+  organismGroup: string;
+  organismGroups: string[];
+  totalSpecimens: number;
+  identifiedSpecimens: number;
+  identificationStatus: string;   // e.g. IDENTIFICATION_IN_PROGRESS
+  deconvolutionStatus: string;    // PENDING → DECON_IN_PROGRESS after Split
+  positiveTestName: string | null;
+  pendingSubPoolCount: number;
+}
+
+/** Fetch the vector worklist as a typed array (empty array on any failure). */
+export async function getVectorWorklist(page: import('@playwright/test').Page): Promise<VectorWorklistRow[]> {
+  const r = await apiCall<VectorWorklistRow[]>(page, VE_VECTOR_WORKLIST);
+  return r.ok && Array.isArray(r.body) ? (r.body as VectorWorklistRow[]) : [];
+}
+
+/** Find one worklist lot by accession (for create→read-back landing checks). */
+export async function findVectorLot(
+  page: import('@playwright/test').Page,
+  accession: string
+): Promise<VectorWorklistRow | undefined> {
+  return (await getVectorWorklist(page)).find(r => r.accessionNumber === accession);
+}
