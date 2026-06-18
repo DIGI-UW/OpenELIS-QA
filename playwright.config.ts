@@ -340,6 +340,12 @@ export default defineConfig({
       dependencies: ['setup'],
       use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
     },
+    {
+      name: 'chain-x',
+      testMatch: 'tests/chains/chain-x-electronic-orders.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
 
     // --- Core QA: all test suites using cached auth + test data ---
     {

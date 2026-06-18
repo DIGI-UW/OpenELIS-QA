@@ -500,3 +500,10 @@ export const PATHOLOGY_DASHBOARD_COUNT = `${API}/pathology/dashboard/count`;
 export const PATHOLOGY_STATUS_LIST = `${API}/displayList/PATHOLOGY_STATUS`;
 export const PATHOLOGY_CASE_VIEW = (sampleId: string | number) => `${API}/pathology/caseView/${sampleId}`;
 export const USERS_PATHOLOGIST = `${API}/users/Pathologist`;
+
+// --- Chain X — Electronic orders (eOrder ingest → accept) ------------------
+/** GET → Struts form; after a search carries the inbound eOrder list. */
+export const ELECTRONIC_ORDERS = `${API}/ElectronicOrders`;
+export const ELECTRONIC_ORDER_STATUSES = `${API}/displayList/ELECTRONIC_ORDER_STATUSES`;
+/** Accepting an eOrder mints a real accession via this generator (obj{status,body}). */
+export const SAMPLE_ENTRY_GENERATE_ACCESSION = `${API}/SampleEntryGenerateScanProvider`;
