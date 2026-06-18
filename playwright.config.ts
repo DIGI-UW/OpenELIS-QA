@@ -265,6 +265,25 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
     },
 
+    // --- Chain M: Vector Surveillance (NEW domain v3.2.1.10) ---
+    // 7 steps. Route-render + dictionary + known-bug (OGC-1048/1049) watches.
+    // GAP/BLOCKED on order-creation & Split payloads pending §6.5a capture.
+    {
+      name: 'chain-m',
+      testMatch: 'tests/chains/chain-m-vector-surveillance.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+
+    // --- Chain N: Environmental Sampling (NEW domain v3.2.1.10) ---
+    // 5 steps. Manifest/compliance render + OGC-1048 collection-date watch.
+    {
+      name: 'chain-n',
+      testMatch: 'tests/chains/chain-n-environmental-sampling.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+
     // --- Core QA: all test suites using cached auth + test data ---
     {
       name: 'qa-dashboard',
