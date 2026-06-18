@@ -320,6 +320,27 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
     },
 
+    // --- Chains T-W: deep-coverage build-out batch 2 (v6.17) ---
+    // T Workplan worklist · U Print barcode/label maker · W Pathology case lifecycle.
+    {
+      name: 'chain-t',
+      testMatch: 'tests/chains/chain-t-workplan-worklist.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+    {
+      name: 'chain-u',
+      testMatch: 'tests/chains/chain-u-print-barcode.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+    {
+      name: 'chain-w',
+      testMatch: 'tests/chains/chain-w-pathology-case.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+
     // --- Core QA: all test suites using cached auth + test data ---
     {
       name: 'qa-dashboard',

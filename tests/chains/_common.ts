@@ -471,3 +471,32 @@ export async function getSampleItems(page: import('@playwright/test').Page, acce
   const r = await apiCall<SampleItemResponse>(page, `${SAMPLE_ITEM}?accessionNumber=${encodeURIComponent(accession)}`);
   return r.ok && r.body && typeof r.body === 'object' ? ((r.body as SampleItemResponse).sampleItems || []) : [];
 }
+
+// =============================================================================
+// v6.17 — Deep-coverage build-out batch 2 (Chains T, U, W)
+// Confirmed live on indonesiadev v3.2.1.10 + OpenELIS-Global-2 source.
+// =============================================================================
+
+// --- Chain T — Workplan (by test / panel / unit / priority) ----------------
+export const WORKPLAN_BY_TEST = (testId: string | number) => `${API}/WorkPlanByTest?test_id=${testId}`;
+export const WORKPLAN_BY_PANEL = (panelId: string | number) => `${API}/WorkPlanByPanel?panel_id=${panelId}`;
+export const WORKPLAN_BY_TESTSECTION = (sectionId: string | number) => `${API}/WorkPlanByTestSection?test_section_id=${sectionId}`;
+export const WORKPLAN_BY_PRIORITY = (priority: string) => `${API}/WorkPlanByPriority?priority=${encodeURIComponent(priority)}`;
+export const DISPLAYLIST_ALL_TESTS = `${API}/displayList/ALL_TESTS`;
+export const DISPLAYLIST_PANELS = `${API}/displayList/PANELS`;
+export const DISPLAYLIST_ORDER_PRIORITY = `${API}/displayList/ORDER_PRIORITY`;
+
+// --- Chain U — Print barcode / label maker ---------------------------------
+/** Existing-order lookup: patient + existingTests (specimen rows w/ accessionNumber + sampleType). */
+export const SAMPLE_EDIT_BY_ACCESSION = (acc: string) => `${API}/SampleEdit?accessionNumber=${encodeURIComponent(acc)}`;
+export const PATIENT_SEARCH_BY_LABNO = (acc: string) => `${API}/patient-search-results?labNumber=${encodeURIComponent(acc)}`;
+/** Label generation is a servlet (NOT under /rest). type = default|order|specimen. */
+export const LABEL_MAKER = (labNo: string, type: 'default' | 'order' | 'specimen', quantity: number | '') =>
+  `/api/OpenELIS-Global/LabelMakerServlet?labNo=${encodeURIComponent(labNo)}&type=${type}&quantity=${quantity}`;
+
+// --- Chain W — Pathology case lifecycle ------------------------------------
+/** GET → {inProgress, awaitingReview, additionalRequests, complete}. */
+export const PATHOLOGY_DASHBOARD_COUNT = `${API}/pathology/dashboard/count`;
+export const PATHOLOGY_STATUS_LIST = `${API}/displayList/PATHOLOGY_STATUS`;
+export const PATHOLOGY_CASE_VIEW = (sampleId: string | number) => `${API}/pathology/caseView/${sampleId}`;
+export const USERS_PATHOLOGIST = `${API}/users/Pathologist`;
