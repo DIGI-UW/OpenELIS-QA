@@ -1,98 +1,55 @@
-# QA Report Template — OpenELIS Test Catalog
+# QA Report Template
 
-Use this template exactly when generating the final report. Replace all `{{placeholders}}`.
-
----
-
-# OpenELIS Test Catalog QA Report
-
-**Environment:** {{BASE_URL}}
-**Run Date:** {{YYYY-MM-DD HH:MM}} UTC
-**Run By:** Claude (automated via openelis-test-catalog-qa skill)
-**OpenELIS Version:** {{version if visible in UI, otherwise "Unknown"}}
+> Step 5 produces a report in this structure. Save as `qa-report-[instance]-[YYYYMMDD-HHMM].md`.
+> The report is **maturity- and acceptance-criterion driven**, not just a pass count — that's
+> what makes it honest about how complete a module is.
 
 ---
 
-## Summary
+## 1. Header
+- **Instance / URL**, app version (from the footer or `/actuator/info` if available)
+- **Date/time**, tester (agent), skill version
+- **Run tier:** smoke / standard / full (see SKILL.md)
+- **Suites run** (letters/ranges) and **Data Census result** (from Step 0.6 — or "instance empty, render-only" if reset)
+- **Calibration result** (Step 0.5 — which known issues were re-verified and their current state)
 
-| Metric | Value |
-|--------|-------|
-| Total Test Cases | 13 (11 cases + 3 result sub-tests in TC-11) |
-| Passed | {{N}} |
-| Failed | {{N}} |
-| Skipped | {{N}} |
-| Pass Rate | {{N%}} |
+## 2. Summary table
+| Module | Suites | Pass | Fail | Blocked | Gap | **Maturity (M0–M5)** | Top issue |
+|---|---|---|---|---|---|---|---|
 
-**Overall Result:** {{PASS / FAIL / PARTIAL}}
+- **Maturity is mandatory per module** (Section 5.5 rubric). A module is rated at the lowest
+  M-level any sub-feature hits.
+- A module whose phase reported only **RENDER** acceptance criteria is capped at **M1**,
+  regardless of pass count (Section 7.6).
 
-> PASS = all 11 test cases (including TC-11 sub-tests) passed
-> PARTIAL = some passed, some failed
-> FAIL = majority of test cases failed or a critical blocker was hit
+## 3. Per-suite results
+For each TC: `TC-ID | scenario | result (PASS/FAIL/BLOCKED/GAP) | acceptance criterion (RENDER/FUNCTION/PERSIST/ROUND-TRIP/CROSS-LINK/REPORTABLE) | note`.
+- Any result above RENDER must include its **evidence** (read-back diff, cross-module check, PDF excerpt). A higher-tier claim without evidence is downgraded to RENDER.
 
----
+## 4. Chains, Personas, Reconciliation
+- **Chains** (Section 11 / workflows.md): each as PASS/PARTIAL/FAIL with module-level floor rating; note API-substituted legs and BLOCKED steps with the bug id.
+- **Personas** (Section 12): PASS only if completed via documented UI paths with no workarounds; record where a hidden prerequisite forced a FAIL.
+- **Y-RECON** (Section 13): each Dashboard KPI vs its backing list — `counter == len(list)` PASS/FAIL.
 
-## Test Results
+## 5. Failures requiring attention
+For each **new** FAIL (one that passed bug-triage — see `bug-triage.md`):
+- Environment, TC ID, exact step, expected vs actual, severity, screenshot/capture ref.
+- The 2-of-3 bug-revalidation evidence (fresh tab / re-login / 3× API) confirming it's not transient.
+- Jira key if filed, or formatted bug report if Jira unavailable.
 
-| TC # | Scenario | Result | Notes |
-|------|----------|--------|-------|
-| TC-01 | Create a new test | {{PASS/FAIL/SKIP}} | {{brief note}} |
-| TC-02 | Search / filter tests | {{PASS/FAIL/SKIP}} | {{brief note}} |
-| TC-03 | Edit an existing test | {{PASS/FAIL/SKIP}} | {{brief note}} |
-| TC-04 | Deactivate a test | {{PASS/FAIL/SKIP}} | {{brief note}} |
-| TC-05 | Add a test panel | {{PASS/FAIL/SKIP}} | {{brief note}} |
-| TC-06 | Configure result type / normal ranges | {{PASS/FAIL/SKIP}} | {{brief note}} |
-| TC-07 | Add / verify sample type | {{PASS/FAIL/SKIP}} | {{brief note}} |
-| TC-08 | Reactivate test (order prerequisite) | {{PASS/FAIL/SKIP}} | {{brief note}} |
-| TC-09 | Add sample, select tests, place order | {{PASS/FAIL/SKIP}} | {{brief note}} |
-| TC-10 | Order appears in worklist / sample queue | {{PASS/FAIL/SKIP}} | {{brief note}} |
-| TC-11A | Enter normal result (42) — no flag | {{PASS/FAIL/SKIP}} | {{brief note}} |
-| TC-11B | Enter high result (120) — H flag | {{PASS/FAIL/SKIP}} | {{brief note}} |
-| TC-11C | Enter low result (2) — L/Critical flag | {{PASS/FAIL/SKIP}} | {{brief note}} |
+## 6. Gaps & partial features
+- GAP = feature absent/unreachable. Partial = renders but incomplete (cite maturity + the failing signal from the Partial-Feature Audit).
 
----
-
-## Failures Requiring Attention
-
-{{If no failures, write: "No failures — all test cases passed."}}
-
-{{For each failure, add a section like this:}}
-
-### TC-XX — {{Scenario Name}} — FAILED
-
-**Step that failed:** Step {{N}} — {{description of step}}
-**Expected:** {{what should have happened}}
-**Actual:** {{what actually happened}}
-**Severity:** {{High / Medium / Low}}
-**Screenshot:** {{description of screenshot taken}}
-**Jira Ticket:** {{ticket URL or "Not created — Jira unavailable"}}
+## 7. Appendix — full action log
+- Timestamped action log with screenshots; the raw census/calibration captures.
 
 ---
 
-## Cleanup
+## Acceptance Criteria tiers (reference — Section 7.6)
+RENDER < FUNCTION < PERSIST < ROUND-TRIP < CROSS-LINK < REPORTABLE. Each TC declares one;
+the tier gates the maturity a module can claim. Only-RENDER ⇒ M1 cap.
 
-| Item | Status |
-|------|--------|
-| QA order (TC-09) cancelled/voided | {{Yes / No / N/A}} |
-| QA_AUTO_Create Test deactivated | {{Yes / No / N/A}} |
-| QA_AUTO_Panel removed | {{Yes / No / N/A}} |
-
----
-
-## Appendix — Full Step Log
-
-```
-{{Paste the full chronological log here, in the format:
-[HH:MM:SS] ACTION: <what you did>
-[HH:MM:SS] RESULT: PASS/FAIL — <what you observed>
-[HH:MM:SS] SCREENSHOT: <description>
-}}
-```
-
----
-
-## Appendix — Environment Details
-
-- **Browser:** Chrome (via Claude in Chrome)
-- **Test Data Prefix:** QA_AUTO_
-- **Credentials Used:** admin / adminADMIN!
-- **Skill Version:** openelis-test-catalog-qa v1.0
+## Maturity rubric (reference — Section 5.5)
+M0 Stub · M1 Form-only · M2 Saves (same-endpoint read-back) · M3 Round-trips (different
+endpoint/screen) · M4 Cross-links (module A affects module B) · M5 Reportable (compliant
+output: branded PDF, validated FHIR, audit trail). Module = lowest sub-feature level.
