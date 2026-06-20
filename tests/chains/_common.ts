@@ -595,3 +595,13 @@ export const COMPLIANCE_REPORT_STATUSES = `${API}/complianceReport/compliance-st
 export const COMPLIANCE_REPORT = `${API}/complianceReport`;
 /** Per-sample "Laporan Hasil" certificate PDF. */
 export const COMPLIANCE_REPORT_EXPORT_PDF = (sampleId: string | number) => `${API}/complianceReport/exportPdf?sampleId=${sampleId}`;
+
+// =============================================================================
+// v6.20 — Compliance Standards admin CRUD (Chain Z, FRS S-01), demo-silnas.
+// =============================================================================
+export const COMPLIANCE_STANDARD_BY_ID = (id: string | number) => `${API}/compliance/standards/${id}`;
+export const COMPLIANCE_STANDARD_ARCHIVE = (id: string | number) => `${API}/compliance/standards/${id}/archive`;
+export const COMPLIANCE_STANDARD_COPY = (id: string | number) => `${API}/compliance/standards/${id}/copy`;
+export const COMPLIANCE_STANDARD_PARAM_GROUPS = (id: string | number) => `${API}/compliance/standards/${id}/parameter-groups`;
+export const COMPLIANCE_STANDARD_LINKED_TESTS = (id: string | number) => `${API}/compliance/standards/${id}/linked-tests`;
+export const COMPLIANCE_COUNTRY_REGIONS = `${API}/compliance/standards/country-regions`;

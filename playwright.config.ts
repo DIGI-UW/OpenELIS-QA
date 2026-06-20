@@ -353,6 +353,12 @@ export default defineConfig({
       dependencies: ['setup'],
       use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
     },
+    {
+      name: 'chain-z',
+      testMatch: 'tests/chains/chain-z-compliance-standards-admin.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
 
     // --- Core QA: all test suites using cached auth + test data ---
     {
