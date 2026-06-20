@@ -37,7 +37,8 @@ interface Box { id?: string | number; boxId?: string; boxNumber?: string }
 test.describe.serial('Chain R — Sample shipment', () => {
   let boxesBefore = 0;
   let listOk = true;
-  let knownBoxId: string | number | undefined;
+  let knownBoxId: string | number | undefined;       // numeric PK (box-sample/items/by-box)
+  let knownBoxNumber: string | undefined;             // box-number string (shipping-box/by-box-id)
 
   test.beforeAll(() => { /* eslint-disable-next-line no-console */ console.log(`[Chain R] BASE=${BASE}`); });
 
@@ -55,6 +56,7 @@ test.describe.serial('Chain R — Sample shipment', () => {
     const boxes = Array.isArray(list.body) ? (list.body as Box[]) : [];
     boxesBefore = boxes.length;
     if (boxes[0]?.id !== undefined) knownBoxId = boxes[0].id;
+    if (boxes[0]?.boxId) knownBoxNumber = boxes[0].boxId;
     const num = await apiCall<string>(page, SHIPPING_BOX_GEN_NUMBER);
     const prefix = await apiCall<string>(page, SHIPPING_BOX_LABEL_PREFIX);
     if (num.ok && prefix.ok) {
@@ -124,6 +126,7 @@ test.describe.serial('Chain R — Sample shipment', () => {
     const boxes = Array.isArray(after.body) ? (after.body as Box[]) : [];
     const landed = boxes.length > boxesBefore || boxes.some(b => b.boxId === boxId || b.id === newId);
     if (newId !== undefined) knownBoxId = newId;
+    knownBoxNumber = boxId; // by-box-id keys on the box-number string, NOT the PK
     if (landed) {
       markStep('R', 3, 'PASS', `Box ${boxId} created (id=${newId}) and landed in list (${boxesBefore} → ${boxes.length})`);
       expect(landed).toBeTruthy();
@@ -136,19 +139,22 @@ test.describe.serial('Chain R — Sample shipment', () => {
   // Step 4 — Reception read-back for a known box (CROSS-LINK)
   test('Step 4 — Reception read-back (by-box-id + box-sample items) (CROSS-LINK)', async ({ page }) => {
     if (!listOk) { markStep('R', 4, 'GAP', 'Skipped — shipment domain unavailable (Step 1)'); return; }
-    if (knownBoxId === undefined) {
-      markStep('R', 4, 'GAP', 'No box id available to read back (no boxes created/existing)');
-      test.info().annotations.push({ type: 'gap', description: 'no box id for reception' });
+    if (knownBoxNumber === undefined) {
+      markStep('R', 4, 'GAP', 'No box number available to read back (no boxes created/existing)');
+      test.info().annotations.push({ type: 'gap', description: 'no box number for reception' });
       return;
     }
     await page.goto(BASE);
-    const box = await apiCall(page, SHIPPING_BOX_BY_ID(knownBoxId));
-    const items = await apiCall(page, BOX_SAMPLE_BY_BOX(knownBoxId));
+    // by-box-id keys on the box-NUMBER string (e.g. BOX-2026-0001); the numeric
+    // PK 404s here. box-sample/items/by-box keys on the numeric PK. Verified live.
+    const box = await apiCall<{ state?: string }>(page, SHIPPING_BOX_BY_ID(knownBoxNumber));
+    const items = knownBoxId !== undefined ? await apiCall(page, BOX_SAMPLE_BY_BOX(knownBoxId)) : { status: 0 };
     if (box.ok) {
-      markStep('R', 4, 'PASS', `Reception read-back OK for box ${knownBoxId} (by-box-id 200; items HTTP ${items.status})`);
+      const state = (box.body && typeof box.body === 'object') ? (box.body as { state?: string }).state : undefined;
+      markStep('R', 4, 'PASS', `Reception read-back OK for box ${knownBoxNumber} (by-box-id 200${state ? `, state=${state}` : ''}; items HTTP ${items.status})`);
       expect(box.ok).toBeTruthy();
     } else {
-      markStep('R', 4, 'GAP', `Reception read-back HTTP ${box.status} for box ${knownBoxId}`);
+      markStep('R', 4, 'GAP', `Reception read-back HTTP ${box.status} for box ${knownBoxNumber}`);
       test.info().annotations.push({ type: 'gap', description: 'reception read-back failed' });
     }
   });

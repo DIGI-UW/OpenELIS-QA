@@ -440,7 +440,8 @@ export const SAMPLE_BATCH_ENTRY = `${API}/SampleBatchEntry`;             // POST
 export const SHIPPING_BOX = `${API}/shipping-box`;                       // GET list (read-back) / POST create
 export const SHIPPING_BOX_GEN_NUMBER = `${API}/shipping-box/generate-box-number`;
 export const SHIPPING_BOX_LABEL_PREFIX = `${API}/shipping-box/box-label-prefix`;
-export const SHIPPING_BOX_BY_ID = (boxId: string | number) => `${API}/shipping-box/by-box-id/${boxId}`;
+/** Reception read-back — keys on the box-NUMBER string (e.g. 'BOX-2026-0001'), NOT the PK (numeric 404s). Verified live 2026-06-20. */
+export const SHIPPING_BOX_BY_ID = (boxNumber: string | number) => `${API}/shipping-box/by-box-id/${boxNumber}`;
 export const BOX_SAMPLE_ITEMS = `${API}/box-sample/items`;               // POST add items
 export const BOX_SAMPLE_BY_BOX = (boxId: string | number) => `${API}/box-sample/items/by-box/${boxId}`;
 export const UNASSIGNED_SAMPLE_SEARCH = `${API}/unassigned-sample/items/search`;
