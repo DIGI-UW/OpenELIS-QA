@@ -24,7 +24,7 @@
 import { test, expect } from '@playwright/test';
 import {
   BASE, apiCall, markStep, acquireAnyAccession,
-  SAMPLE_ITEM, ALIQUOT_SAVE, getSampleItems, type SampleItemRow,
+  SAMPLE_ITEM, ALIQUOT_SAVE, getSampleItems, buildAliquotBody, type SampleItemRow,
 } from './_common';
 
 test.describe.serial('Chain S — Aliquot lineage', () => {
@@ -74,13 +74,18 @@ test.describe.serial('Chain S — Aliquot lineage', () => {
     await page.goto(BASE);
     const analyses = (parent.analysis || []).map(a => a.id).filter(Boolean) as string[];
     const aliquotExtId = `${parent.externalId || accession}.1`;
-    const body = {
-      accessionNumber: accession,
-      sampleItems: [{
-        externalId: parent.externalId,
-        aliquots: [{ externalId: aliquotExtId, quantity: parent.quantity || 0, analyses }],
-      }],
-    };
+    // Balance rule (verified from AliquotForm.jsx + backend): Σ(aliquot.quantity)
+    // must equal the parent quantity AND every parent analysis must be assigned.
+    // One aliquot taking the FULL parent quantity + ALL analyses is the minimal
+    // balanced split. If the parent has no quantity to balance against, GAP.
+    const qty = Number(parent.quantity) || 0;
+    if (qty <= 0) {
+      markStep('S', 3, 'GAP', `Parent sample item has no quantity (${parent.quantity}) — cannot build a balanced aliquot`,
+        'Aliquot balance requires Σ(aliquot.quantity) == parent.quantity; seed a sample with a quantity.');
+      test.info().annotations.push({ type: 'gap', description: 'parent has no quantity' });
+      return;
+    }
+    const body = buildAliquotBody(accession, parent.externalId, qty, analyses);
     const res = await apiCall(page, ALIQUOT_SAVE, { method: 'POST', body });
     if (!res.ok) {
       markStep('S', 3, 'GAP', `Aliquot save HTTP ${res.status} — body shape/quantity balance may need pinning`,

@@ -507,3 +507,71 @@ export const ELECTRONIC_ORDERS = `${API}/ElectronicOrders`;
 export const ELECTRONIC_ORDER_STATUSES = `${API}/displayList/ELECTRONIC_ORDER_STATUSES`;
 /** Accepting an eOrder mints a real accession via this generator (obj{status,body}). */
 export const SAMPLE_ENTRY_GENERATE_ACCESSION = `${API}/SampleEntryGenerateScanProvider`;
+
+// =============================================================================
+// v6.18 — Pinned request bodies (Chains Q/R/S), verified on indonesiademo
+// v3.2.1.10 (2026-06-18) + OpenELIS-Global-2 controller source.
+// =============================================================================
+
+export const DISPLAYLIST_SAMPLE_TYPE = `${API}/displayList/SAMPLE_TYPE`;
+
+/**
+ * Chain Q — SampleBatchEntry is a VALIDATE-AND-ECHO step (HTTP 200 + form on
+ * both success and field errors; persistence is the separate
+ * /rest/SamplePatientEntryBatch). Its @RequestBody is SampleBatchEntryForm; the
+ * controller parses `sampleXML` and calls typeOfSampleService.get(sampleID) +
+ * testService.get(testId), so BOTH ids must be real. Verified live: a body with
+ * sampleID from displayList/SAMPLE_TYPE + tests from test-list returns 200, 0 errors.
+ */
+export function buildBatchSampleXML(sampleTypeId: string | number, testId: string | number, date = ''): string {
+  return `<?xml version="1.0" encoding="utf-8"?><samples>` +
+    `<sample sampleID='${sampleTypeId}' tests='${testId}' testSectionMap='' date='${date}' time='00:00' ` +
+    `testSampleTypeMap='' panels='' numOrderLabels='1' numSpecimenLabels='1' initialConditionIds=''/></samples>`;
+}
+export function buildBatchBody(opts: { sampleTypeId: string | number; testId: string | number; date: string }): Record<string, unknown> {
+  return {
+    currentDate: opts.date, currentTime: '00:00',
+    sampleOrderItems: { receivedDateForDisplay: opts.date, receivedTime: '00:00', referringSiteId: '', referringSiteDepartmentId: '' },
+    sampleXML: buildBatchSampleXML(opts.sampleTypeId, opts.testId, opts.date),
+    method: 'On Demand', facilityID: '', facilityIDCheck: false, patientInfoCheck: false, testSectionList: [],
+  };
+}
+
+/**
+ * Chain R — shipping-box create body (ShippingBoxForm). destinationFacilityId
+ * is @NotNull Integer and must be a REFERRAL_ORGANIZATIONS id; with none
+ * configured the POST returns 400 NotNull.shippingBoxForm.destinationFacilityId
+ * (body deserializes — a DATA precondition, not a shape problem). temperatureRequirement
+ * ∈ AMBIENT|REFRIGERATED|FROZEN|DEEP_FROZEN|DRY_ICE. Response carries `.id`.
+ */
+export function buildShippingBoxBody(opts: { boxId: string; destinationFacilityId: number | null; capacity?: number; notes?: string }): Record<string, unknown> {
+  return {
+    boxId: opts.boxId,
+    destinationFacilityId: opts.destinationFacilityId,
+    temperatureRequirement: 'AMBIENT',
+    capacity: opts.capacity ?? 25,
+    actualSampleCount: 0,
+    notes: opts.notes ?? 'QA automated',
+    state: 'DRAFT',
+  };
+}
+/** Add a sample item to a box. */
+export const buildBoxSampleItemBody = (shippingBoxId: number | string, sampleItemId: number | string) => ({ shippingBoxId, sampleItemId });
+/** Advance a box's lifecycle state. */
+export const SHIPPING_BOX_STATE = (boxId: number | string, newState: string) => `${API}/shipping-box/${boxId}/state?newState=${encodeURIComponent(newState)}`;
+
+/**
+ * Chain S — Aliquot body (verified shape). Balance rule (frontend + backend):
+ * Σ(aliquot.quantity) must equal the parent sampleItem.quantity and every
+ * parent analysis must be assigned to an aliquot. The simplest balanced split
+ * is ONE aliquot taking the full parent quantity + all parent analysis ids.
+ */
+export function buildAliquotBody(accession: string, parentExternalId: string | undefined, parentQuantity: number, analysisIds: string[]): Record<string, unknown> {
+  return {
+    accessionNumber: accession,
+    sampleItems: [{
+      externalId: parentExternalId,
+      aliquots: [{ externalId: `${parentExternalId || accession}.1`, quantity: parentQuantity, analyses: analysisIds }],
+    }],
+  };
+}

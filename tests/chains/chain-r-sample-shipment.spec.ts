@@ -29,9 +29,10 @@ import {
   BASE, apiCall, markStep,
   SHIPPING_BOX, SHIPPING_BOX_GEN_NUMBER, SHIPPING_BOX_LABEL_PREFIX,
   REFERRAL_ORGANIZATIONS, REFERRAL_REASONS, BOX_SAMPLE_BY_BOX, SHIPPING_BOX_BY_ID,
+  buildShippingBoxBody,
 } from './_common';
 
-interface Box { id?: string | number; boxNumber?: string }
+interface Box { id?: string | number; boxId?: string; boxNumber?: string }
 
 test.describe.serial('Chain R — Sample shipment', () => {
   let boxesBefore = 0;
@@ -82,30 +83,49 @@ test.describe.serial('Chain R — Sample shipment', () => {
     }
   });
 
-  // Step 3 — Create a box, verify it lands in the list (ROUND-TRIP)
+  // Step 3 — Create a box with the PINNED body, verify it lands (ROUND-TRIP)
+  // Body (ShippingBoxForm): {boxId, destinationFacilityId(@NotNull, a
+  // REFERRAL_ORGANIZATIONS id), temperatureRequirement, capacity,
+  // actualSampleCount, notes, state:'DRAFT'} → response.id. Verified on
+  // indonesiademo v3.2.1.10: with destinationFacilityId=null the POST returns
+  // 400 NotNull.shippingBoxForm.destinationFacilityId (body deserializes — the
+  // only blocker is a configured destination, a DATA precondition).
   test('Step 3 — Box create lands in the shipping-box list (ROUND-TRIP)', async ({ page }) => {
     if (!listOk) { markStep('R', 3, 'GAP', 'Skipped — shipment domain unavailable (Step 1)'); return; }
     await page.goto(BASE);
-    const num = await apiCall<string>(page, SHIPPING_BOX_GEN_NUMBER);
-    const boxNumber = typeof num.body === 'string' ? num.body : `QA-${Date.now()}`;
-    const create = await apiCall<Box>(page, SHIPPING_BOX, {
-      method: 'POST',
-      body: { boxNumber, status: 'OPEN', referralReasonId: '', referralOrganizationId: '' },
-    });
-    if (!create.ok) {
-      markStep('R', 3, 'GAP', `shipping-box create HTTP ${create.status} — body shape needs pinning`,
-        `Endpoint confirmed: POST ${SHIPPING_BOX}. Capture the exact body from BoxCreation "Create" (boxNumber + referral org/reason + sample items).`);
-      test.info().annotations.push({ type: 'gap', description: `box create body shape (HTTP ${create.status})` });
+    const orgs = await apiCall<Array<{ id?: string | number }>>(page, REFERRAL_ORGANIZATIONS);
+    const destId = Array.isArray(orgs.body) && orgs.body[0]?.id !== undefined ? Number(orgs.body[0].id) : null;
+    if (destId === null) {
+      // Confirm the body shape still deserializes (400 NotNull on destination) so
+      // this is provably a data precondition, not a body-shape defect.
+      const num0 = await apiCall<string>(page, SHIPPING_BOX_GEN_NUMBER);
+      const probe = await apiCall<Array<{ codes?: string[] }>>(page, SHIPPING_BOX, {
+        method: 'POST', body: buildShippingBoxBody({ boxId: typeof num0.body === 'string' ? num0.body : `QA-${Date.now()}`, destinationFacilityId: null }),
+      });
+      const shapeOk = probe.status === 400 && Array.isArray(probe.body) && JSON.stringify(probe.body).includes('destinationFacilityId');
+      markStep('R', 3, 'GAP',
+        shapeOk
+          ? 'No REFERRAL_ORGANIZATIONS configured — box create body shape VERIFIED (400 NotNull.destinationFacilityId); full create blocked on a data precondition (configure a referral org).'
+          : `No referral org configured; create probe HTTP ${probe.status}`,
+        `POST ${SHIPPING_BOX}`);
+      test.info().annotations.push({ type: 'gap', description: 'no referral org (data precondition)' });
       return;
     }
-    // Landing check: re-read the list; count should grow (or the new boxNumber appear).
+    const num = await apiCall<string>(page, SHIPPING_BOX_GEN_NUMBER);
+    const boxId = typeof num.body === 'string' ? num.body : `QA-${Date.now()}`;
+    const create = await apiCall<Box>(page, SHIPPING_BOX, { method: 'POST', body: buildShippingBoxBody({ boxId, destinationFacilityId: destId }) });
+    if (!create.ok) {
+      markStep('R', 3, 'FAIL', `shipping-box create HTTP ${create.status} with the pinned body (destId=${destId})`, `POST ${SHIPPING_BOX}`);
+      expect(create.ok, 'box create accepted pinned body').toBeTruthy();
+      return;
+    }
+    const newId = (create.body && typeof create.body === 'object') ? (create.body as Box).id : undefined;
     const after = await apiCall<Box[]>(page, SHIPPING_BOX);
     const boxes = Array.isArray(after.body) ? (after.body as Box[]) : [];
-    const landed = boxes.length > boxesBefore || boxes.some(b => b.boxNumber === boxNumber);
+    const landed = boxes.length > boxesBefore || boxes.some(b => b.boxId === boxId || b.id === newId);
+    if (newId !== undefined) knownBoxId = newId;
     if (landed) {
-      const created = boxes.find(b => b.boxNumber === boxNumber);
-      if (created?.id !== undefined) knownBoxId = created.id;
-      markStep('R', 3, 'PASS', `Box ${boxNumber} created and landed in list (${boxesBefore} → ${boxes.length})`);
+      markStep('R', 3, 'PASS', `Box ${boxId} created (id=${newId}) and landed in list (${boxesBefore} → ${boxes.length})`);
       expect(landed).toBeTruthy();
     } else {
       markStep('R', 3, 'FAIL', `Box create 2xx but list unchanged (${boxes.length})`);

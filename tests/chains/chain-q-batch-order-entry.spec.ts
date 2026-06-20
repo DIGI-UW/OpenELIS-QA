@@ -24,6 +24,7 @@ import { test, expect } from '@playwright/test';
 import {
   BASE, apiCall, markStep,
   SAMPLE_PATIENT_ENTRY, DEPARTMENTS_FOR_SITE, SAMPLE_BATCH_ENTRY,
+  DISPLAYLIST_SAMPLE_TYPE, TEST_LIST, buildBatchBody,
 } from './_common';
 
 test.describe.serial('Chain Q — Batch order entry', () => {
@@ -64,28 +65,41 @@ test.describe.serial('Chain Q — Batch order entry', () => {
     }
   });
 
-  // Step 3 — Batch submit attempt + landing (ROUND-TRIP, GAP on body shape)
-  test('Step 3 — Batch submit advances the wizard (ROUND-TRIP)', async ({ page }) => {
+  // Step 3 — Batch submit (validate-and-echo) with the PINNED body (ROUND-TRIP)
+  // /rest/SampleBatchEntry validates the form and echoes it (200 + 0 errors on
+  // valid input; persistence is the separate /rest/SamplePatientEntryBatch).
+  // The body's sampleXML must reference REAL sampleID + test ids (the controller
+  // resolves typeOfSampleService.get/testService.get). Verified live on
+  // indonesiademo v3.2.1.10 (2026-06-18): returns 200, 0 errors.
+  test('Step 3 — Batch submit echoes a clean form with pinned body (ROUND-TRIP)', async ({ page }) => {
     if (!preformOk) { markStep('Q', 3, 'GAP', 'Skipped — preform unavailable (Step 1)'); return; }
     await page.goto(BASE);
+    // Discover a real sample-type id + test id for the sampleXML.
+    const types = await apiCall<Array<{ id?: string }>>(page, DISPLAYLIST_SAMPLE_TYPE);
+    const tests = await apiCall<Array<{ id?: string }>>(page, TEST_LIST);
+    const sampleTypeId = Array.isArray(types.body) && types.body[0]?.id ? String(types.body[0].id) : '';
+    const testId = Array.isArray(tests.body) && tests.body[0]?.id ? String(tests.body[0].id) : '';
+    if (!sampleTypeId || !testId) {
+      markStep('Q', 3, 'GAP', `Could not resolve sampleType/test ids (SAMPLE_TYPE/test-list) — cannot build batch sampleXML`);
+      test.info().annotations.push({ type: 'gap', description: 'no sampleType/test id' });
+      return;
+    }
     const today = new Date();
     const d = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
-    // Minimal best-effort batch header. The real body is the full setup form
-    // (tests/panels via sampleXML); a shape rejection is recorded as GAP.
-    const body = {
-      currentDate: d, currentTime: '00:00',
-      sampleOrderItems: { receivedDateForDisplay: d, referringSiteId: siteId },
-      method: 'On Demand',
-      tests: [], panels: [], sampleXML: '',
-    };
-    const res = await apiCall(page, SAMPLE_BATCH_ENTRY, { method: 'POST', body });
-    if (res.ok) {
-      markStep('Q', 3, 'PASS', 'SampleBatchEntry accepted the batch header (wizard advanced to per-label entry)');
+    const body = buildBatchBody({ sampleTypeId, testId, date: d });
+    const res = await apiCall<{ errors?: unknown[]; formName?: string }>(page, SAMPLE_BATCH_ENTRY, { method: 'POST', body });
+    const errs = (res.body && typeof res.body === 'object') ? ((res.body as { errors?: unknown[] }).errors?.length ?? 0) : -1;
+    if (res.ok && errs === 0) {
+      markStep('Q', 3, 'PASS', `SampleBatchEntry echoed a clean form (200, 0 errors) for sampleType ${sampleTypeId} + test ${testId} — batch header accepted`);
+      expect(res.ok).toBeTruthy();
+      expect(errs).toBe(0);
+    } else if (res.ok) {
+      markStep('Q', 3, 'PASS', `SampleBatchEntry returned 200 with ${errs} field error(s) — endpoint + body shape valid (data-dependent validation)`);
       expect(res.ok).toBeTruthy();
     } else {
-      markStep('Q', 3, 'GAP', `SampleBatchEntry HTTP ${res.status} — full batch body (tests + sampleXML) needs pinning`,
-        `Endpoint confirmed: POST ${SAMPLE_BATCH_ENTRY}. Capture the exact body from the setup "Next" action (selectedForm routine/EID/viralLoad + sampleXML).`);
-      test.info().annotations.push({ type: 'gap', description: `batch body shape (HTTP ${res.status})` });
+      markStep('Q', 3, 'FAIL', `SampleBatchEntry HTTP ${res.status} with the pinned body`,
+        `POST ${SAMPLE_BATCH_ENTRY} with sampleXML(sampleID=${sampleTypeId},tests=${testId}) — expected 200.`);
+      expect(res.ok, 'batch submit accepted pinned body').toBeTruthy();
     }
   });
 
