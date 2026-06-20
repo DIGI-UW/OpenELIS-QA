@@ -396,3 +396,212 @@ export async function findVectorLot(
 ): Promise<VectorWorklistRow | undefined> {
   return (await getVectorWorklist(page)).find(r => r.accessionNumber === accession);
 }
+
+// =============================================================================
+// v6.16 — Deep-coverage build-out endpoints (Chains O–S)
+// Captured 2026-06-18: endpoints confirmed live on indonesiadev v3.2.1.10 and
+// cross-checked against the OpenELIS-Global-2 frontend source. These graduate
+// the previously render-only flat suites (referral, patient-merge, batch order
+// entry, sample shipment, aliquot) into deep round-trips with landing checks.
+// =============================================================================
+
+const API = '/api/OpenELIS-Global/rest';
+
+// --- Chain O — Referral (Referred-Out Tests) -------------------------------
+/** GET — Struts form model; after a search it carries `referralDisplayItems[]`.
+ *  Filter sources embedded: `testUnitSelectionList`, `testSelectionList`. */
+export const REFERRED_OUT_TESTS = `${API}/ReferredOutTests`;
+/** Build the search query the UI issues (dateType SENT|RESULT). */
+export function buildReferredOutQuery(opts: { dateType?: string; startDate?: string; endDate?: string; labNumber?: string } = {}): string {
+  const p = new URLSearchParams({
+    searchType: '', dateType: opts.dateType || 'SENT',
+    startDate: opts.startDate || '', endDate: opts.endDate || '',
+    testUnitIds: '', _testUnitIds: '1', testIds: '', _testIds: '1',
+    labNumber: opts.labNumber || '', dateOfBirthSearchValue: '', selPatient: '', _analysisIds: 'on',
+  });
+  return `${REFERRED_OUT_TESTS}?${p.toString()}`;
+}
+export const TEST_LIST = `${API}/test-list`;                       // referral/aliquot filter source
+export const USER_TEST_SECTIONS = (role: string) => `${API}/user-test-sections/${role}`;
+
+// --- Chain P — Patient merge (NON-destructive validate path) ---------------
+export const PATIENT_SEARCH_RESULTS = `${API}/patient-search-results`;
+export const PATIENT_MERGE_DETAILS = (patientId: string | number) => `${API}/patient/merge/details/${patientId}`;
+export const PATIENT_MERGE_VALIDATE = `${API}/patient/merge/validate`;   // POST {patient1Id,patient2Id,primaryPatientId,reason,confirmed:false}
+export const PATIENT_MERGE_EXECUTE = `${API}/patient/merge/execute`;      // POST confirmed:true — DESTRUCTIVE, Global Admin; do NOT run in CI
+
+// --- Chain Q — Batch order entry -------------------------------------------
+export const SAMPLE_PATIENT_ENTRY = `${API}/SamplePatientEntry`;          // GET preform (sampleOrderItems.referringSiteList)
+/** NB upstream param is misspelled `refferingSiteId` (two f's) — match it. */
+export const DEPARTMENTS_FOR_SITE = (siteId = '') => `${API}/departments-for-site?refferingSiteId=${encodeURIComponent(siteId)}`;
+export const SAMPLE_BATCH_ENTRY = `${API}/SampleBatchEntry`;             // POST full batch order form
+
+// --- Chain R — Sample shipment ---------------------------------------------
+export const SHIPPING_BOX = `${API}/shipping-box`;                       // GET list (read-back) / POST create
+export const SHIPPING_BOX_GEN_NUMBER = `${API}/shipping-box/generate-box-number`;
+export const SHIPPING_BOX_LABEL_PREFIX = `${API}/shipping-box/box-label-prefix`;
+export const SHIPPING_BOX_BY_ID = (boxId: string | number) => `${API}/shipping-box/by-box-id/${boxId}`;
+export const BOX_SAMPLE_ITEMS = `${API}/box-sample/items`;               // POST add items
+export const BOX_SAMPLE_BY_BOX = (boxId: string | number) => `${API}/box-sample/items/by-box/${boxId}`;
+export const UNASSIGNED_SAMPLE_SEARCH = `${API}/unassigned-sample/items/search`;
+export const REFERRAL_ORGANIZATIONS = `${API}/displayList/REFERRAL_ORGANIZATIONS`;
+export const REFERRAL_REASONS = `${API}/displayList/REFERRAL_REASONS`;
+
+// --- Chain S — Aliquot lineage ---------------------------------------------
+/** GET `?accessionNumber=` → {accessionNumber, sampleItems:[{externalId,typeOfSample,collector,quantity,analysis:[{id,test,testSection,statusId}]}]}. */
+export const SAMPLE_ITEM = `${API}/SampleItem`;
+/** POST {accessionNumber, sampleItems:[{externalId, aliquots:[{externalId,quantity,analyses:[analysisId]}]}]} → 200. */
+export const ALIQUOT_SAVE = `${API}/Aliquot`;
+
+export interface SampleItemRow {
+  externalId?: string;
+  typeOfSample?: string;
+  collector?: string;
+  quantity?: number;
+  analysis?: Array<{ id?: string; statusId?: string; test?: unknown; testSection?: unknown }>;
+  aliquots?: unknown[];
+}
+export interface SampleItemResponse {
+  accessionNumber?: string;
+  sampleItems?: SampleItemRow[];
+}
+
+/** Read a sample's items (Chain S read-back). Returns [] on failure. */
+export async function getSampleItems(page: import('@playwright/test').Page, accession: string): Promise<SampleItemRow[]> {
+  const r = await apiCall<SampleItemResponse>(page, `${SAMPLE_ITEM}?accessionNumber=${encodeURIComponent(accession)}`);
+  return r.ok && r.body && typeof r.body === 'object' ? ((r.body as SampleItemResponse).sampleItems || []) : [];
+}
+
+// =============================================================================
+// v6.17 — Deep-coverage build-out batch 2 (Chains T, U, W)
+// Confirmed live on indonesiadev v3.2.1.10 + OpenELIS-Global-2 source.
+// =============================================================================
+
+// --- Chain T — Workplan (by test / panel / unit / priority) ----------------
+export const WORKPLAN_BY_TEST = (testId: string | number) => `${API}/WorkPlanByTest?test_id=${testId}`;
+export const WORKPLAN_BY_PANEL = (panelId: string | number) => `${API}/WorkPlanByPanel?panel_id=${panelId}`;
+export const WORKPLAN_BY_TESTSECTION = (sectionId: string | number) => `${API}/WorkPlanByTestSection?test_section_id=${sectionId}`;
+export const WORKPLAN_BY_PRIORITY = (priority: string) => `${API}/WorkPlanByPriority?priority=${encodeURIComponent(priority)}`;
+export const DISPLAYLIST_ALL_TESTS = `${API}/displayList/ALL_TESTS`;
+export const DISPLAYLIST_PANELS = `${API}/displayList/PANELS`;
+export const DISPLAYLIST_ORDER_PRIORITY = `${API}/displayList/ORDER_PRIORITY`;
+
+// --- Chain U — Print barcode / label maker ---------------------------------
+/** Existing-order lookup: patient + existingTests (specimen rows w/ accessionNumber + sampleType). */
+export const SAMPLE_EDIT_BY_ACCESSION = (acc: string) => `${API}/SampleEdit?accessionNumber=${encodeURIComponent(acc)}`;
+export const PATIENT_SEARCH_BY_LABNO = (acc: string) => `${API}/patient-search-results?labNumber=${encodeURIComponent(acc)}`;
+/** Label generation is a servlet (NOT under /rest). type = default|order|specimen. */
+export const LABEL_MAKER = (labNo: string, type: 'default' | 'order' | 'specimen', quantity: number | '') =>
+  `/api/OpenELIS-Global/LabelMakerServlet?labNo=${encodeURIComponent(labNo)}&type=${type}&quantity=${quantity}`;
+
+// --- Chain W — Pathology case lifecycle ------------------------------------
+/** GET → {inProgress, awaitingReview, additionalRequests, complete}. */
+export const PATHOLOGY_DASHBOARD_COUNT = `${API}/pathology/dashboard/count`;
+export const PATHOLOGY_STATUS_LIST = `${API}/displayList/PATHOLOGY_STATUS`;
+export const PATHOLOGY_CASE_VIEW = (sampleId: string | number) => `${API}/pathology/caseView/${sampleId}`;
+export const USERS_PATHOLOGIST = `${API}/users/Pathologist`;
+
+// --- Chain X — Electronic orders (eOrder ingest → accept) ------------------
+/** GET → Struts form; after a search carries the inbound eOrder list. */
+export const ELECTRONIC_ORDERS = `${API}/ElectronicOrders`;
+export const ELECTRONIC_ORDER_STATUSES = `${API}/displayList/ELECTRONIC_ORDER_STATUSES`;
+/** Accepting an eOrder mints a real accession via this generator (obj{status,body}). */
+export const SAMPLE_ENTRY_GENERATE_ACCESSION = `${API}/SampleEntryGenerateScanProvider`;
+
+// =============================================================================
+// v6.18 — Pinned request bodies (Chains Q/R/S), verified on indonesiademo
+// v3.2.1.10 (2026-06-18) + OpenELIS-Global-2 controller source.
+// =============================================================================
+
+export const DISPLAYLIST_SAMPLE_TYPE = `${API}/displayList/SAMPLE_TYPE`;
+
+/**
+ * Chain Q — SampleBatchEntry is a VALIDATE-AND-ECHO step (HTTP 200 + form on
+ * both success and field errors; persistence is the separate
+ * /rest/SamplePatientEntryBatch). Its @RequestBody is SampleBatchEntryForm; the
+ * controller parses `sampleXML` and calls typeOfSampleService.get(sampleID) +
+ * testService.get(testId), so BOTH ids must be real. Verified live: a body with
+ * sampleID from displayList/SAMPLE_TYPE + tests from test-list returns 200, 0 errors.
+ */
+export function buildBatchSampleXML(sampleTypeId: string | number, testId: string | number, date = ''): string {
+  return `<?xml version="1.0" encoding="utf-8"?><samples>` +
+    `<sample sampleID='${sampleTypeId}' tests='${testId}' testSectionMap='' date='${date}' time='00:00' ` +
+    `testSampleTypeMap='' panels='' numOrderLabels='1' numSpecimenLabels='1' initialConditionIds=''/></samples>`;
+}
+export function buildBatchBody(opts: { sampleTypeId: string | number; testId: string | number; date: string }): Record<string, unknown> {
+  return {
+    currentDate: opts.date, currentTime: '00:00',
+    sampleOrderItems: { receivedDateForDisplay: opts.date, receivedTime: '00:00', referringSiteId: '', referringSiteDepartmentId: '' },
+    sampleXML: buildBatchSampleXML(opts.sampleTypeId, opts.testId, opts.date),
+    method: 'On Demand', facilityID: '', facilityIDCheck: false, patientInfoCheck: false, testSectionList: [],
+  };
+}
+
+/**
+ * Chain R — shipping-box create body (ShippingBoxForm). destinationFacilityId
+ * is @NotNull Integer and must be a REFERRAL_ORGANIZATIONS id; with none
+ * configured the POST returns 400 NotNull.shippingBoxForm.destinationFacilityId
+ * (body deserializes — a DATA precondition, not a shape problem). temperatureRequirement
+ * ∈ AMBIENT|REFRIGERATED|FROZEN|DEEP_FROZEN|DRY_ICE. Response carries `.id`.
+ */
+export function buildShippingBoxBody(opts: { boxId: string; destinationFacilityId: number | null; capacity?: number; notes?: string }): Record<string, unknown> {
+  return {
+    boxId: opts.boxId,
+    destinationFacilityId: opts.destinationFacilityId,
+    temperatureRequirement: 'AMBIENT',
+    capacity: opts.capacity ?? 25,
+    actualSampleCount: 0,
+    notes: opts.notes ?? 'QA automated',
+    state: 'DRAFT',
+  };
+}
+/** Add a sample item to a box. */
+export const buildBoxSampleItemBody = (shippingBoxId: number | string, sampleItemId: number | string) => ({ shippingBoxId, sampleItemId });
+/** Advance a box's lifecycle state. */
+export const SHIPPING_BOX_STATE = (boxId: number | string, newState: string) => `${API}/shipping-box/${boxId}/state?newState=${encodeURIComponent(newState)}`;
+
+/**
+ * Chain S — Aliquot body (verified shape). Balance rule (frontend + backend):
+ * Σ(aliquot.quantity) must equal the parent sampleItem.quantity and every
+ * parent analysis must be assigned to an aliquot. The simplest balanced split
+ * is ONE aliquot taking the full parent quantity + all parent analysis ids.
+ */
+export function buildAliquotBody(accession: string, parentExternalId: string | undefined, parentQuantity: number, analysisIds: string[]): Record<string, unknown> {
+  return {
+    accessionNumber: accession,
+    sampleItems: [{
+      externalId: parentExternalId,
+      aliquots: [{ externalId: `${parentExternalId || accession}.1`, quantity: parentQuantity, analyses: analysisIds }],
+    }],
+  };
+}
+
+// =============================================================================
+// v6.19 — SILNAS compliance reporting (Chain Y), demo-silnas branch.
+// Confirmed live on indonesiademo v3.2.1.10 (2026-06-20). Merged via
+// OpenELIS-Global-2 PRs #3707 (OGC-602) + #3723 (OGC-553).
+// =============================================================================
+
+/** Dashboard summary → {totalOrders, complianceRate, totalExceedances, sitesMonitored, trend}. */
+export const COMPLIANCE_DASHBOARD_SUMMARY = `${API}/compliance/dashboard/summary`;
+export const COMPLIANCE_DASHBOARD_TREND = `${API}/compliance/dashboard/trend`;
+export const COMPLIANCE_DASHBOARD_EXCEEDANCES = `${API}/compliance/dashboard/exceedances`;
+export const COMPLIANCE_DASHBOARD_SITES_COMPARISON = `${API}/compliance/dashboard/sites/comparison`;
+export const COMPLIANCE_STANDARDS = `${API}/compliance/standards`;
+export const COMPLIANCE_STANDARDS_ACTIVE = `${API}/compliance/standards/active`;
+export const COMPLIANCE_THRESHOLDS = (groupId: string | number) => `${API}/compliance/thresholds?groupId=${groupId}`;
+export const COMPLIANCE_REPORT_STATUSES = `${API}/complianceReport/compliance-statuses`;
+/** KNOWN BUG OGC-1059: bare/parametrized GET → HTTP 500 on demo-silnas (2026-06-20). */
+export const COMPLIANCE_REPORT = `${API}/complianceReport`;
+/** Per-sample "Laporan Hasil" certificate PDF. */
+export const COMPLIANCE_REPORT_EXPORT_PDF = (sampleId: string | number) => `${API}/complianceReport/exportPdf?sampleId=${sampleId}`;
+
+// =============================================================================
+// v6.20 — Compliance Standards admin CRUD (Chain Z, FRS S-01), demo-silnas.
+// =============================================================================
+export const COMPLIANCE_STANDARD_BY_ID = (id: string | number) => `${API}/compliance/standards/${id}`;
+export const COMPLIANCE_STANDARD_ARCHIVE = (id: string | number) => `${API}/compliance/standards/${id}/archive`;
+export const COMPLIANCE_STANDARD_COPY = (id: string | number) => `${API}/compliance/standards/${id}/copy`;
+export const COMPLIANCE_STANDARD_PARAM_GROUPS = (id: string | number) => `${API}/compliance/standards/${id}/parameter-groups`;
+export const COMPLIANCE_STANDARD_LINKED_TESTS = (id: string | number) => `${API}/compliance/standards/${id}/linked-tests`;
+export const COMPLIANCE_COUNTRY_REGIONS = `${API}/compliance/standards/country-regions`;

@@ -284,6 +284,82 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
     },
 
+    // --- Chains O-S: deep-coverage build-out (v6.16) ---
+    // Round-trip rewrites of previously render-only flat suites, driving real
+    // captured endpoints with a landing check at every handoff.
+    // O Referral · P Patient merge (non-destructive) · Q Batch order entry
+    // R Sample shipment · S Aliquot lineage.
+    {
+      name: 'chain-o',
+      testMatch: 'tests/chains/chain-o-referral-roundtrip.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+    {
+      name: 'chain-p',
+      testMatch: 'tests/chains/chain-p-patient-merge.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+    {
+      name: 'chain-q',
+      testMatch: 'tests/chains/chain-q-batch-order-entry.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+    {
+      name: 'chain-r',
+      testMatch: 'tests/chains/chain-r-sample-shipment.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+    {
+      name: 'chain-s',
+      testMatch: 'tests/chains/chain-s-aliquot-lineage.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+
+    // --- Chains T-W: deep-coverage build-out batch 2 (v6.17) ---
+    // T Workplan worklist · U Print barcode/label maker · W Pathology case lifecycle.
+    {
+      name: 'chain-t',
+      testMatch: 'tests/chains/chain-t-workplan-worklist.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+    {
+      name: 'chain-u',
+      testMatch: 'tests/chains/chain-u-print-barcode.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+    {
+      name: 'chain-w',
+      testMatch: 'tests/chains/chain-w-pathology-case.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+    {
+      name: 'chain-x',
+      testMatch: 'tests/chains/chain-x-electronic-orders.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+    // --- Chain Y: SILNAS compliance reporting (demo-silnas build) ---
+    {
+      name: 'chain-y',
+      testMatch: 'tests/chains/chain-y-compliance-reporting.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+    {
+      name: 'chain-z',
+      testMatch: 'tests/chains/chain-z-compliance-standards-admin.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+
     // --- Core QA: all test suites using cached auth + test data ---
     {
       name: 'qa-dashboard',
