@@ -575,3 +575,23 @@ export function buildAliquotBody(accession: string, parentExternalId: string | u
     }],
   };
 }
+
+// =============================================================================
+// v6.19 — SILNAS compliance reporting (Chain Y), demo-silnas branch.
+// Confirmed live on indonesiademo v3.2.1.10 (2026-06-20). Merged via
+// OpenELIS-Global-2 PRs #3707 (OGC-602) + #3723 (OGC-553).
+// =============================================================================
+
+/** Dashboard summary → {totalOrders, complianceRate, totalExceedances, sitesMonitored, trend}. */
+export const COMPLIANCE_DASHBOARD_SUMMARY = `${API}/compliance/dashboard/summary`;
+export const COMPLIANCE_DASHBOARD_TREND = `${API}/compliance/dashboard/trend`;
+export const COMPLIANCE_DASHBOARD_EXCEEDANCES = `${API}/compliance/dashboard/exceedances`;
+export const COMPLIANCE_DASHBOARD_SITES_COMPARISON = `${API}/compliance/dashboard/sites/comparison`;
+export const COMPLIANCE_STANDARDS = `${API}/compliance/standards`;
+export const COMPLIANCE_STANDARDS_ACTIVE = `${API}/compliance/standards/active`;
+export const COMPLIANCE_THRESHOLDS = (groupId: string | number) => `${API}/compliance/thresholds?groupId=${groupId}`;
+export const COMPLIANCE_REPORT_STATUSES = `${API}/complianceReport/compliance-statuses`;
+/** KNOWN BUG OGC-1059: bare/parametrized GET → HTTP 500 on demo-silnas (2026-06-20). */
+export const COMPLIANCE_REPORT = `${API}/complianceReport`;
+/** Per-sample "Laporan Hasil" certificate PDF. */
+export const COMPLIANCE_REPORT_EXPORT_PDF = (sampleId: string | number) => `${API}/complianceReport/exportPdf?sampleId=${sampleId}`;

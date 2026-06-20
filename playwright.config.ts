@@ -346,6 +346,13 @@ export default defineConfig({
       dependencies: ['setup'],
       use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
     },
+    // --- Chain Y: SILNAS compliance reporting (demo-silnas build) ---
+    {
+      name: 'chain-y',
+      testMatch: 'tests/chains/chain-y-compliance-reporting.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
 
     // --- Core QA: all test suites using cached auth + test data ---
     {
