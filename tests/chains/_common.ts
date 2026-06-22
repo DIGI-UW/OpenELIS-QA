@@ -605,3 +605,44 @@ export const COMPLIANCE_STANDARD_COPY = (id: string | number) => `${API}/complia
 export const COMPLIANCE_STANDARD_PARAM_GROUPS = (id: string | number) => `${API}/compliance/standards/${id}/parameter-groups`;
 export const COMPLIANCE_STANDARD_LINKED_TESTS = (id: string | number) => `${API}/compliance/standards/${id}/linked-tests`;
 export const COMPLIANCE_COUNTRY_REGIONS = `${API}/compliance/standards/country-regions`;
+
+// =============================================================================
+// v6.21 — Verified clinical-order seed body (Chain S / any order-seed need).
+// Captured from a real Add Order UI submit on indonesiademo (demo-silnas,
+// v3.2.1.10, 2026-06-20). Decisive fix vs the documented shape:
+// patientUpdateStatus MUST be "ADD" for a new patient — "CREATE" is not a valid
+// enum member and yields HttpMessageNotReadableException (generic 400).
+// =============================================================================
+
+/**
+ * Minimal server-accepted POST /rest/SamplePatientEntry body (new patient + one
+ * sample + one test). Verified live (200, "saved successfully"). Pass real ids:
+ * labNo (SampleEntryGenerateScanProvider), sampleTypeId (displayList/SAMPLE_TYPE),
+ * testId (test-list), referringSiteId (a type-5 "referring clinic" org). dates dd/MM/yyyy.
+ */
+export function buildClinicalOrderSeedBody(opts: {
+  labNo: string; sampleTypeId: string | number; testId: string | number;
+  referringSiteId?: string | number; date: string; nationalId?: string;
+}): Record<string, unknown> {
+  const xml = `<?xml version="1.0" encoding="utf-8"?><samples><sample sampleID='${opts.sampleTypeId}' ` +
+    `date='${opts.date}' time='' collector='QA' quantity='' uom='' tests='${opts.testId}' testSectionMap='' ` +
+    `testSampleTypeMap='' panels='' rejected='false' rejectReasonId='' initialConditionIds='' ` +
+    `numOrderLabels='1' numSpecimenLabels='1'/></samples>`;
+  return {
+    rememberSiteAndRequester: false, currentDate: opts.date, customNotificationLogic: false,
+    patientEmailNotificationTestIds: [], patientSMSNotificationTestIds: [],
+    providerEmailNotificationTestIds: [], providerSMSNotificationTestIds: [],
+    patientUpdateStatus: 'ADD', referralItems: [], sampleXML: xml,
+    patientProperties: {
+      patientUpdateStatus: 'ADD', lastName: 'QAALIQUOT', firstName: 'Seed', gender: 'M',
+      birthDateForDisplay: '01/01/1990', nationalId: opts.nationalId || `QA${Date.now()}`,
+    },
+    sampleOrderItems: {
+      labNo: opts.labNo, requestDate: opts.date, receivedDateForDisplay: opts.date, receivedTime: '00:00',
+      priority: 'ROUTINE', newRequesterName: 'QA Seed Clinic',
+      referringSiteId: opts.referringSiteId != null ? String(opts.referringSiteId) : '',
+      providerFirstName: 'QA', providerLastName: 'Seeder',
+    },
+    initialSampleConditionList: [], testSectionList: [], warning: false, useReferral: false,
+  };
+}
