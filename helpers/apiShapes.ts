@@ -453,8 +453,11 @@ export interface SamplePatientEntrySubmitPayload {
   patientSMSNotificationTestIds: string[];
   providerEmailNotificationTestIds: string[];
   providerSMSNotificationTestIds: string[];
-  /** "NO_ACTION" for existing patient pass-through, "UPDATE" for edit, "CREATE" for new. */
-  patientUpdateStatus: 'NO_ACTION' | 'UPDATE' | 'CREATE';
+  /** Java enum PatientUpdateStatus. "ADD" = NEW patient (verified live on indonesiademo
+   * demo-silnas v3.2.1.10, 2026-06-20, from a real Add Order submit); "UPDATE" = edit;
+   * "NO_ACTION" = existing pass-through. NOTE: "CREATE" is NOT a valid enum member — sending it
+   * throws HttpMessageNotReadableException (generic 400) since Jackson cannot deserialize it. */
+  patientUpdateStatus: 'ADD' | 'NO_ACTION' | 'UPDATE';
   referralItems: unknown[];
   referralOrganizations: unknown | null;
   referralReasons: unknown | null;
@@ -513,7 +516,7 @@ export interface PatientPropertiesPayload {
   };
   addressHierarchy: Record<string, unknown>;
   stnumber: string;
-  patientUpdateStatus: 'NO_ACTION' | 'UPDATE' | 'CREATE';
+  patientUpdateStatus: 'ADD' | 'NO_ACTION' | 'UPDATE';
 }
 
 export interface SampleOrderItemsPayload {
