@@ -71,3 +71,28 @@ Modify tests → Configuration → QC Acceptance Thresholds (pH=1440). Expired s
 "Holding Time Exceeded" + red box → on save, Internal note "Result entered after SOP max holding
 time was exceeded." **OGC-1064**: Laporan Hasil (`/LaporanHasil`) lists no validated+standard-linked
 order (DEV…012, PASS) → no Sertifikat Hasil Uji can be generated; contradicts OGC-552 AC.
+
+---
+
+# UPDATE — same-day live verification (later on 2026-06-24)
+
+Several flows that were "documented, pin later" above are now **verified end-to-end via the UI**. Use these to harden Chains M/N and to add a compliance-eval assertion.
+
+## Vector E2E — VERIFIED (Chain M can graduate from GAP)
+Order **DEV…021** driven all the way through:
+- **Create**: Add Vector Order → Generate Lab Number → Site MULAGO → Animal/Organism 1: Sample Type *Adult Mosquito*, **Quantity in Pool = 25**, test *Wolbachia sp.-Sekuensing* → Save & Next. **Saves fine** (OGC-1060 was operator error — a TEST must be selected; same as Env). Label & Store: a pool of 25 becomes **per-specimen barcodes LABNO.2 – LABNO.26**; "Skip storage" → Save & Next. QA Review: tick 4 checks → Save & Next → **Complete** ("Order Complete — Processing", 25 organisms).
+- **Worklist** `/vector/identification`: lot **DEV…021-P01**, Group *Nyamuk dewasa*, 0/25, Not Started.
+- **Identify** (`VE_VECTOR_IDENTIFY(sampleId)`): inline form fields = **Species** (type-ahead from configured species list, e.g. *Aedes aegypti*), **Method** select `method-NN` (Morphological | Molecular | Morphological + Molecular), **Confidence** select `confidence-NN` (Confirmed | Presumptive), **Lifecycle Stage** select `lifecycleStage-NN` (Adult/Larva/Pupa/Egg), Notes → **Save Identification** → toast "Identification saved", progress 1/25, lot → In Progress. (Method/Confidence are native `<select>` — set via the native-setter pattern §6.1, ids `method-<row>` / `confidence-<row>`.)
+- **Deconvolution / Split** (`VE_VECTOR_DECON`): pool-row "↗ Split" → modal "Split into Sub-pools": pool count (default ~5, or "Split to individuals"); assignment = Assign randomly / Auto sub-pool by species / Assign manually; per-test checkboxes; "Preview Grouping →" shows proposed sub-pools; **Save Pools** → creates **DEV…021-P01-S1 … -S5** (each independently Split-able), Decon column → "Decon in progress".
+- ⚠ **New minor bug** to file/watch: the Split success toast reads **"25 sub-pools created (null–null)"** — it actually created 5 sub-pools and the ID range shows `null–null`. Labelling only (sub-pools are correct). Add an assertion that the toast count == requested pool count and the ID range is non-null.
+
+## Compliance evaluation — VERIFIED both ways (add to Chain N / a results spec)
+At Results › By Order, after **save + server-eval** (NOT live-on-type), the **"Status — Per Regulation"** column shows:
+- pH **7** on a PP 22/2021-linked order (DEV…012) → green **"PASS — PP 22/2021"**.
+- pH **99** (DEV…024) → red **"FAIL — PP 22/2021"** + row flagged nonconforming (⚑).
+- Alphanumeric/qualitative results are **not** flagged (numeric-only — by design).
+The column only renders after the result is saved and re-loaded. A standard created via Compliance Standards Admin (e.g. "UAT-001 — UAT Test Standard") appears in the order-entry "Applicable Compliance Standards" multiselect (round-trip confirmed).
+
+## Add Species / Add Sample Type — VERIFIED (two different admin areas)
+- **Species**: `/MasterListsPage/vectorSurveillanceSetup/species` → "+ Add species" → Genus*, Species*, Subspecies, Sample type*, Pathogen category, Lifecycle category → Save species.
+- **Sample Type**: `/MasterListsPage/SampleTypeManagement` → "Create New Sample Type" → English* + French* → Next; new type is **Inactive until tests are assigned** (Test Assignment). Generic registry shared with clinical (vector organism types live here too).
