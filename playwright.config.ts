@@ -360,6 +360,18 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
     },
 
+    // --- Chain AB: Env Holding-Time + Sertifikat Hasil Uji (UI-verified 2026-06-24) ---
+    // Holding-time enforcement at Results Entry (notification + boxed result +
+    // Internal "expired" note) and the OGC-1064 catch (Laporan Hasil lists no
+    // validated+standard-linked order). Data-dependent steps are parameterized
+    // by HT_ACCESSION / CERT_ACCESSION env vars; they GAP (never fail) when unset.
+    {
+      name: 'chain-ab',
+      testMatch: 'tests/chains/chain-ab-env-holding-time.spec.ts',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+
     // --- Core QA: all test suites using cached auth + test data ---
     {
       name: 'qa-dashboard',
