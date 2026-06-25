@@ -8,6 +8,16 @@ import { generateLabNumber, selectSite, setSelectByOption, checkByLabel, complet
 test('User manual — Vector order full flow (harness validation)', async ({ page }, info) => {
   test.setTimeout(150000);
   info.annotations.push({ type: 'capability', description: 'vector-order-flow' });
+  const saves: any[] = [];
+  page.on('response', async (r) => {
+    const m = r.request().method();
+    if (m !== 'GET' && /SamplePatientEntry/.test(r.url())) {
+      let b = ''; try { b = (await r.text()).slice(0, 300); } catch {}
+      const rq = r.request().postData() || '';
+      const dm = rq.match(/<sample [^>]*\bdate='([^']*)'/); const qm = rq.match(/quantity='([^']*)'/);
+      saves.push({ status: r.status(), sampleDate: dm ? dm[1] : '?', quantity: qm ? qm[1] : '?', err: /sampleXML/.test(b) ? b.slice(0, 150) : '' });
+    }
+  });
   await go(page, '/order/vector/enter');
 
   const lab = await generateLabNumber(page);
@@ -38,6 +48,7 @@ test('User manual — Vector order full flow (harness validation)', async ({ pag
   await shot(page, info, 'Complete', { fullPage: false });
   await saveWalkthrough(page, info);
 
+  console.log('VEC_SAVES=' + JSON.stringify(saves));
   // record the lab number used for reference
   await page.evaluate((l) => console.log('FLOW_LAB=' + l), lab);
 });
