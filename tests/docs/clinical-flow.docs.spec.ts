@@ -51,17 +51,12 @@ test('User manual — Clinical order full flow', async ({ page }, info) => {
   await page.evaluate(() => window.scrollTo(0, 0)); await page.waitForTimeout(600);
   await shot(page, info, 'Collect', { fullPage: false });
 
-  // --- Collect: fill collector, quantity, unit, consent, then advance ---
-  try { const c = page.getByPlaceholder(/COL-0000/i).first(); if (await c.isVisible({ timeout: 1500 })) await c.fill('COL-0001'); } catch {}
-  // Quantity + Unit may gate the Collect save.
-  await page.evaluate(() => {
-    const q = [...document.querySelectorAll('input')].find(i => /quantity|amount/i.test((i.previousElementSibling?.textContent || '') + (i.closest('div')?.textContent || ''))) as HTMLInputElement | undefined;
-    if (q && !q.value) { const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!; setter.call(q, '1'); q.dispatchEvent(new Event('input', { bubbles: true })); }
-  });
-  await setSelectByOption(page, /^\s*mL\s*$/i).catch(() => {});
+  // --- Collect: the collection date/time are PRE-FILLED; leave them alone.
+  // (Do NOT inject Quantity/Unit — that corrupts the collection record and makes the
+  // save fail. Verified live: a clean Collect step saves with only the pre-filled values.)
   await checkByLabel(page, /patient has provided signed consent/i).catch(() => {});
-  await page.waitForTimeout(400);
-  await clickButton(page, /save & next|save and next/i, 3500);
+  await page.waitForTimeout(600);
+  await clickButton(page, /save & next|save and next/i, 4000);
   await page.evaluate(() => window.scrollTo(0, 0)); await page.waitForTimeout(600);
   await shot(page, info, 'Label & Store', { fullPage: false });
 
