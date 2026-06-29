@@ -82,6 +82,28 @@ async function fullText(req: APIRequestContext): Promise<string> {
   const r = await req.get(`${API}/${testId}`);
   return r.ok() ? r.text() : `HTTP_${r.status()}`;
 }
+// Section data lives under the `/test/<id>/...` namespace (NOT `/test-catalog/tests/<id>`, which
+// only carries top-level fields). Verified live: methods read back at /rest/test/<id>/methods.
+const TEST_API = `${BASE}/api/OpenELIS-Global/rest/test`;
+async function linkedMethods(req: APIRequestContext): Promise<any[]> {
+  const r = await req.get(`${TEST_API}/${testId}/methods`);
+  return r.ok() ? r.json() : [];
+}
+async function availMethods(req: APIRequestContext): Promise<any[]> {
+  const r = await req.get(`${BASE}/api/OpenELIS-Global/rest/displayList/METHODS`);
+  return r.ok() ? r.json() : [];
+}
+// Verified read-back surfaces (live network capture): panels/terminology/storage are sub-resources
+// of the editor's `/test-catalog/tests/<id>/…` namespace (NOT the bare /tests/<id>).
+async function sectionJson(req: APIRequestContext, sub: string): Promise<any> {
+  const r = await req.get(`${API}/${testId}/${sub}`);
+  return r.ok() ? r.json() : null;
+}
+async function availPanels(req: APIRequestContext): Promise<any[]> {
+  const r = await req.get(`${BASE}/api/OpenELIS-Global/rest/test-catalog/panels`);
+  return r.ok() ? r.json() : [];
+}
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // force:true skips Playwright actionability waits (an invisible Carbon modal-shell overlays the
 // page and makes a normal .click() hang) while still dispatching a REAL event React registers —
 // a plain DOM .click() is fast but doesn't drive Carbon's controlled state, so writes don't save.
@@ -129,84 +151,140 @@ test('TC-DEEP-DOMAIN: change domain (confirm dialog) reads back via REST [ROUND-
   }
 });
 
-// ── TC-DEEP-METHOD-LINK — link a method via the modal, read back after reload (PERSIST)
-test('TC-DEEP-METHOD-LINK: link a method persists on reload [PERSIST]', async ({ page }) => {
-  // Verified recipe (live): open modal → click ComboBox → click an option (registers) → Effective Date
-  // is REQUIRED: fill + press Enter to commit the Carbon date field → confirm "+ Link Method" → Save.
-  // (Earlier force-clicks didn't register the option and omitted the required date.)
-  test.setTimeout(240000); // heavy: two full editor reloads + modal on a slow instance
-  // WORKFLOW VERIFIED LIVE (2026-06-29): by hand in a real browser this exact recipe links a method —
-  // open modal → pick a method in the ComboBox → fill the REQUIRED Effective Date + Enter → confirm
-  // "+ Link Method" → Save → row "PCR — 2026-06-29" appears and persists on reload. Headless automation
-  // is blocked by (a) very slow editor reloads on testing right now and (b) the Carbon ComboBox listbox
-  // not opening reliably headless — so the run exceeds even a 240s budget. Product works; this is a
-  // harness-engineering follow-up (trim to one reload + REST read-back; drive the ComboBox listbox headless).
-  test.fixme(true, 'Method-link workflow VERIFIED LIVE; headless automation blocked by slow reloads + Carbon ComboBox headless behaviour — runtime follow-up');
+// ── TC-DEEP-METHOD-LINK — link a method via the modal, read back via REST [ROUND-TRIP]
+test('TC-DEEP-METHOD-LINK: link a method reads back via REST [ROUND-TRIP]', async ({ page }) => {
+  // Verified recipe (live, 2026-06-29): open modal → pick a method in the ComboBox → fill the REQUIRED
+  // Effective Date + Enter (commits the Carbon date field) → confirm "+ Link Method" → Save. Read-back is
+  // via REST GET /rest/test/<id>/methods (a different surface, fast) so we avoid a slow 2nd editor reload.
+  test.setTimeout(150000);
+  // Pick a method that ISN'T already linked, so the assertion is specific (count +1 AND the name present).
+  const before = await linkedMethods(page.request);
+  const linkedIds = new Set(before.map((m: any) => String(m.methodId)));
+  const avail = await availMethods(page.request);
+  const pick = avail.find((m: any) => !linkedIds.has(String(m.id)));
+  test.skip(!pick, 'all methods already linked to the target test — nothing left to link');
+  const name: string = pick.value;
+
   await openSection(page, 'methods', /methods/i);
-  const linkedBefore = await page.getByText(/no methods linked/i).count(); // 1 = empty state
-  await mclick(page, page.getByRole('button', { name: /\+\s*Link Method/i }).first());
-  const dialog = page.getByRole('dialog');
-  await mclick(page, dialog.getByRole('combobox').first());     // open the listbox
-  await mclick(page, page.getByRole('option').first());         // select a method (trusted click registers it)
-  const date = dialog.getByRole('textbox').first();             // Effective Date (placeholder YYYY-MM-DD), required
-  await date.fill('2026-06-29');
-  await date.press('Enter');                                    // commit the Carbon date field
-  await mclick(page, dialog.getByRole('button', { name: /\+\s*Link Method/i }));  // confirm
-  await page.waitForTimeout(800);
-  await saveBottom(page);
-  // PERSIST: reload the section (re-fetches) — empty state gone / a method row present
-  await openSection(page, 'methods', /methods/i);
-  if (linkedBefore > 0) await expect(page.getByText(/no methods linked/i)).toHaveCount(0);
-  await expect(page.locator('table tbody tr, [role="row"]').filter({ hasText: /\S/ }).first()).toBeVisible();
-});
-
-// ── TC-DEEP-PANEL-ASSIGN — assign the test to a panel via the typeahead, read back on reload (PERSIST)
-test('TC-DEEP-PANEL-ASSIGN: assign test to a panel persists on reload [PERSIST]', async ({ page }) => {
-  // Add-to-panel typeahead discovered; selecting an option via the Carbon ComboBox isn't yet proven to
-  // add a panel in automation (same ComboBox issue as Link Method). The lenient row-count check can pass
-  // without a real add, so fixme'd until the ComboBox interaction is nailed + a specific-panel assert added.
-  test.fixme(true, 'Add-to-panel ComboBox option-select not yet proven in automation — needs ComboBox interaction discovery');
-  await openSection(page, 'panels', /panels/i);
-  const rowsBefore = await page.locator('table tbody tr, [role="row"]').filter({ hasText: /\S/ }).count();
-  const combo = page.getByRole('combobox', { name: /add to panel/i }).first();
-  await combo.click({ force: true });
-  await page.getByRole('option').first().click({ force: true }).catch(()=>{});
-  await page.waitForTimeout(400);
-  await saveBottom(page);
-  await openSection(page, 'panels', /panels/i);
-  const rowsAfter = await page.locator('table tbody tr, [role="row"]').filter({ hasText: /\S/ }).count();
-  expect(rowsAfter, 'panel assignment persists (>= prior row count)').toBeGreaterThanOrEqual(rowsBefore);
-});
-
-// ── TC-DEEP-TERMINOLOGY — add a LOINC mapping, read back via REST (ROUND-TRIP), delete
-test('TC-DEEP-TERMINOLOGY: add a terminology mapping reads back via REST [ROUND-TRIP]', async ({ page }) => {
-  test.fixme(true, 'Terminology mapping add does not round-trip via REST after Save — NEEDS-GUIDANCE (same save question as Basic Info)');
-  await openSection(page, 'terminology', /terminology/i);
-  const code = `${STAMP}${Date.now().toString().slice(-5)}`;
-  await page.locator('main select').first().selectOption({ label: 'LOINC' }).catch(()=>{});
-  await page.locator('main input[type="text"]').first().fill(code).catch(()=>{});
-  await clickBtn(page, /add mapping/i);
-  await page.waitForTimeout(500);
-  await save(page);
-  expect(await fullText(page.request)).toContain(code);
-  await page.locator(`tr:has-text("${code}") button, li:has-text("${code}") button`).last().click().catch(()=>{});
-  await page.waitForTimeout(400);
-  await save(page).catch(()=>{});
-});
-
-// ── TC-DEEP-STORAGE — set a storage condition, read back via REST (ROUND-TRIP), revert
-test('TC-DEEP-STORAGE: set storage condition reads back via REST [ROUND-TRIP]', async ({ page }) => {
-  test.fixme(true, 'Sample Storage set does not round-trip via REST after Save — NEEDS-GUIDANCE (same save question as Basic Info)');
-  await openSection(page, 'storage', /sample storage/i);
-  const sel = page.locator('main select').first();
-  const orig = await sel.inputValue().catch(()=> '');
   try {
-    await sel.selectOption({ label: 'Refrigerated (2–8°C)' }).catch(async ()=>{ await sel.selectOption({ index: 1 }); });
-    await save(page);
-    expect(await fullText(page.request)).toMatch(/refriger|2.?8/i);
+    await mclick(page, page.getByRole('button', { name: /\+\s*Link Method/i }).first());
+    const dialog = page.getByRole('dialog');
+    // Open + filter the Carbon ComboBox by typing the method name, then click the matching option.
+    const combo = dialog.getByRole('combobox').first();
+    await mclick(page, combo);
+    await combo.fill(name);                                       // filters the listbox
+    await page.waitForTimeout(500);
+    const opt = dialog.getByRole('option', { name: new RegExp(`^\\s*${name}\\s*$`, 'i') }).first();
+    await mclick(page, (await opt.count()) ? opt : dialog.getByRole('option').first());
+    // Effective Date is REQUIRED (omitting it silently no-ops the confirm). Target the date input by placeholder.
+    const date = dialog.locator('input[placeholder*="YYYY" i], input[placeholder*="-MM-" i], input[placeholder*="mm/dd" i]').first();
+    await date.fill('2026-06-29');
+    await date.press('Enter');                                    // commit the Carbon date field
+    await mclick(page, dialog.getByRole('button', { name: /\+\s*Link Method/i }));  // confirm the link
+    await page.waitForTimeout(800);
+    await saveBottom(page);
+
+    // ROUND-TRIP: the new method is present on the REST surface (count grew by 1, the picked name appears).
+    await expect.poll(async () => (await linkedMethods(page.request)).map((m: any) => m.methodName),
+      { timeout: 15000, message: 'linked method reads back via /rest/test/<id>/methods' }
+    ).toContain(name);
+    expect((await linkedMethods(page.request)).length).toBe(before.length + 1);
   } finally {
-    await page.locator('main select').first().selectOption(orig).catch(()=>{});
-    await save(page).catch(()=>{});
+    // Idempotent cleanup: unlink the method we added (row trash icon + Save — there is no row-level
+    // DELETE endpoint; the unlink persists through the editor Save) so re-runs don't accumulate links.
+    const row = page.getByRole('row', { name: new RegExp(name, 'i') }).first();
+    if (await row.count().catch(() => 0)) {
+      await row.locator('button').last().click({ force: true, timeout: 8000 }).catch(() => {});
+      await saveBottom(page).catch(() => {});
+    }
+  }
+});
+
+// ── TC-DEEP-PANEL-ASSIGN — assign the test to a panel, read back via REST [ROUND-TRIP]
+test('TC-DEEP-PANEL-ASSIGN: assign test to a panel reads back via REST [ROUND-TRIP]', async ({ page }) => {
+  // Verified recipe (live, 2026-06-29): open the "Add to panel" dropdown → click a panel → a membership
+  // row (Panel / Position / trash) is added immediately (no confirm) → Save. Read-back via REST
+  // GET /rest/test-catalog/tests/<id>/panels → {testId, memberships:[{panelId,panelName,position}]}.
+  test.setTimeout(150000);
+  const before = (await sectionJson(page.request, 'panels'))?.memberships || [];
+  const assignedIds = new Set(before.map((m: any) => String(m.panelId)));
+  const avail = await availPanels(page.request);
+  const pick = avail.find((p: any) => !assignedIds.has(String(p.id)));
+  test.skip(!pick, 'test already belongs to every panel — nothing left to assign');
+  const name: string = pick.name;
+
+  await openSection(page, 'panels', /panels/i);
+  try {
+    // #panels-add is a filterable Carbon ComboBox — type the panel name to open + filter the listbox
+    // (clicking alone doesn't reliably open it headless), then click the matching option.
+    const combo = page.locator('#panels-add');
+    await mclick(page, combo);
+    await combo.fill(name);
+    await page.waitForTimeout(500);
+    const opt = page.getByRole('option', { name: new RegExp(`^\\s*${escapeRe(name)}\\s*$`, 'i') }).first();
+    await opt.waitFor({ state: 'visible', timeout: 10000 });
+    await mclick(page, opt);
+    await page.waitForTimeout(400);
+    await saveBottom(page);
+    // ROUND-TRIP: the membership reads back via REST (count +1, the picked panel name present).
+    await expect.poll(async () => ((await sectionJson(page.request, 'panels'))?.memberships || []).map((m: any) => m.panelName),
+      { timeout: 15000, message: 'panel membership reads back via /rest/test-catalog/tests/<id>/panels' }
+    ).toContain(name);
+    expect(((await sectionJson(page.request, 'panels'))?.memberships || []).length).toBe(before.length + 1);
+  } finally {
+    // Idempotent cleanup: remove the membership we added (row trash + Save) so re-runs don't accumulate.
+    // The row's remove button has NO accessible name ("Remove from panel" is only a tooltip), so target
+    // it positionally (last button in the row); a short timeout keeps a missed row from hanging the test.
+    const row = page.getByRole('row', { name: new RegExp(escapeRe(name), 'i') }).first();
+    if (await row.count().catch(() => 0)) {
+      const del = row.locator('button').last();
+      await del.click({ force: true, timeout: 8000 }).catch(() => {});
+      await saveBottom(page).catch(() => {});
+    }
+  }
+});
+
+// ── TC-DEEP-TERMINOLOGY — add a LOINC mapping, read back via REST [ROUND-TRIP], clean up
+test('TC-DEEP-TERMINOLOGY: add a terminology mapping reads back via REST [ROUND-TRIP]', async ({ page }) => {
+  // Verified live (2026-06-29): the form uses NATIVE selects — #terminology-source (LOINC/SNOMED/CIEL/OCL),
+  // #terminology-code (text), optional #terminology-relationship — then "Add mapping" adds a row, then Save.
+  // Read-back: GET /rest/test-catalog/tests/<id>/terminology → {mappings:[{source,code}]}.
+  test.setTimeout(150000);
+  await openSection(page, 'terminology', /terminology/i);
+  const code = `TC-AUTO-${Date.now().toString().slice(-6)}`;
+  try {
+    await page.locator('#terminology-source').selectOption({ label: 'LOINC' });
+    await page.locator('#terminology-code').fill(code);
+    await clickBtn(page, /add mapping/i);
+    await page.waitForTimeout(400);
+    await saveBottom(page);
+    await expect.poll(async () => ((await sectionJson(page.request, 'terminology'))?.mappings || []).map((m: any) => m.code),
+      { timeout: 15000, message: 'mapping reads back via /rest/test-catalog/tests/<id>/terminology' }
+    ).toContain(code);
+  } finally {
+    // Best-effort cleanup (no row-level DELETE endpoint; unlink persists via the editor Save). Codes are
+    // free-form/unique, so a missed cleanup never breaks a re-run — it only leaves harmless clutter.
+    const row = page.getByRole('row', { name: new RegExp(escapeRe(code)) }).first();
+    if (await row.count()) { await mclick(page, row.getByRole('button').last()); await saveBottom(page); }
+  }
+});
+
+// ── TC-DEEP-STORAGE — set a storage condition, read back via REST [ROUND-TRIP], revert
+test('TC-DEEP-STORAGE: set storage condition reads back via REST [ROUND-TRIP]', async ({ page }) => {
+  // Verified live (2026-06-29): #storage-condition is a NATIVE select (value REFRIGERATED / FROZEN / …);
+  // Save persists. Read-back: GET /rest/test-catalog/tests/<id>/storage → {storageCondition, protectFromLight,…}.
+  test.setTimeout(150000);
+  await openSection(page, 'storage', /storage/i);
+  const orig = (await sectionJson(page.request, 'storage'))?.storageCondition || '';
+  try {
+    await page.locator('#storage-condition').selectOption('REFRIGERATED');
+    await saveBottom(page);
+    await expect.poll(async () => (await sectionJson(page.request, 'storage'))?.storageCondition,
+      { timeout: 15000, message: 'storageCondition reads back via /rest/test-catalog/tests/<id>/storage' }
+    ).toBe('REFRIGERATED');
+  } finally {
+    await page.locator('#storage-condition').selectOption(orig).catch(()=>{});
+    await saveBottom(page).catch(()=>{});
   }
 });
 
