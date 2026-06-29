@@ -12,23 +12,22 @@ QA authoring standard. Read-back uses the editor's own data endpoints (fast + ge
 |---|---|---|---|
 | TC-DEEP-FILTER | List Domain filter narrows rows | FUNCTION | **PASS** |
 | TC-DEEP-DUP | "Save as new test…" opens a Duplicate modal | FUNCTION | **expected-fail** (test.fail) — Δ-DUP, see below |
-| TC-DEEP-BASICINFO | Domain/Orderable/AMR write → REST read-back | ROUND-TRIP | **fixme / NEEDS-GUIDANCE** |
-| TC-DEEP-TERMINOLOGY | Add LOINC mapping → REST read-back | ROUND-TRIP | **fixme / NEEDS-GUIDANCE** |
-| TC-DEEP-STORAGE | Set storage condition → REST read-back | ROUND-TRIP | **fixme / NEEDS-GUIDANCE** |
+| TC-DEEP-DOMAIN | Change Domain → REST read-back | ROUND-TRIP | **fixme** — product OK (manually confirmed); Carbon-control automation follow-up |
+| TC-DEEP-TERMINOLOGY | Add LOINC mapping → REST read-back | ROUND-TRIP | **fixme** — same Carbon-write automation follow-up |
+| TC-DEEP-STORAGE | Set storage condition → REST read-back | ROUND-TRIP | **fixme** — same Carbon-write automation follow-up |
 
 ## Findings
 
-### F-1 — Editor edits do not round-trip via REST after Save (NEEDS-GUIDANCE)
-On testing 3.2.1.10, changing **Domain** (and toggling **Orderable**/**AMR**) updates the control in the UI,
-but after clicking **Save** (tried *both* the header and the bottom Save — there are two), the
-`/basic-info` endpoint still returns the **original** values and **no success toast** appears. Terminology
-and Storage writes likewise don't read back. Two candidate explanations — confirm before filing:
-1. **Save isn't wired at this milestone.** Consistent with the Basic Info note "Editing name, code and
-   description is part of a later milestone" — the editor may currently be a render/read surface.
-2. **Automation isn't driving Carbon's controlled-input state**, so the form never goes dirty and Save
-   submits nothing (force-click flips the radio's `checked` attribute but maybe not React's form state).
-**Decision needed:** does saving an edit in the Test Catalog editor persist today for a normal user? That
-answer routes this to either a revalidated bug (file via the bug gate) or a harness fix (native-setter).
+### F-1 — RESOLVED: Save persists (product OK); automating the write is a harness limitation
+Initial deep runs showed Domain/Terminology/Storage edits not reading back after Save. **Casey confirmed
+manually** that the product works: Albumin → Domain = Environmental → bottom **Save** → reload → the test
+lists as Environmental. So **Save persists correctly** — *not* a bug.
+
+The automation failure is a **Carbon RadioButtonGroup driving problem**: `.click({force})`, the native-setter
+(`checked` + dispatched click/change), and a `label[for]` click all fail to drive the group's `onChange`, so
+Save submits the unchanged value (no success toast). The three write round-trips are therefore `test.fixme()`
+(not failing) with this note. **No Jira bug** — the feature works for users. Follow-up: a component-level test
+or capturing the real onChange handler path to drive the control faithfully.
 
 ### F-2 — "Save as new test…" opens no Duplicate modal (Δ-DUP)
 Clicking the editor-header **Save as new test…** opens no modal/dialog (probed via DOM + force-click).
