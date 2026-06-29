@@ -18,6 +18,14 @@ QA authoring standard. Read-back uses the editor's own data endpoints (fast + ge
 | TC-DEEP-METHOD-LINK | Link a method (modal) → reload read-back | PERSIST | **fixme** — Carbon ComboBox option-select not yet persisting in automation |
 | TC-DEEP-PANEL-ASSIGN | Assign to a panel (typeahead) → reload read-back | PERSIST | **fixme** — same Carbon ComboBox interaction follow-up |
 
+### F-6 — Method link: workflow VERIFIED LIVE; the Effective Date is required (the real gotcha)
+Linking a method has a required step that's easy to miss: open **+ Link Method** → pick a method in the
+ComboBox → **fill the required Effective Date + press Enter** (commits the Carbon date field) → confirm
+**+ Link Method** → Save. Verified by hand on 2026-06-29 — the row **"PCR — 2026-06-29"** appears and
+persists on reload. (Omitting the Effective Date silently no-ops the confirm — the modal just stays open.)
+Headless automation of it is blocked by very slow editor reloads + the Carbon ComboBox listbox not opening
+reliably headless; encoded but `test.fixme` pending a runtime trim (one reload + REST read-back) — not a bug.
+
 ### F-5 — Carbon ComboBox option-select is the remaining automation gap
 The new catalog write concepts that go through a **Carbon ComboBox / FilterableMultiSelect** — Link Method
 (modal), Add-to-panel typeahead, (and likely Sample&Results unit / Terminology source) — aren't yet driven
