@@ -120,6 +120,47 @@ test('TC-DEEP-DOMAIN: change domain (confirm dialog) reads back via REST [ROUND-
   }
 });
 
+// ── TC-DEEP-METHOD-LINK — link a method via the modal, read back after reload (PERSIST)
+test('TC-DEEP-METHOD-LINK: link a method persists on reload [PERSIST]', async ({ page }) => {
+  // Modal flow discovered (+ Link Method → Select-a-method ComboBox + Effective Date + Set default →
+  // confirm + Link Method → Save). The Carbon ComboBox option-select isn't yet driving persistence in
+  // automation (same controlled-input issue the domain radio had before the confirm-dialog fix). Needs
+  // live interaction discovery for the ComboBox. Product works for a real user.
+  test.fixme(true, 'Link Method ComboBox option-select not yet persisting in automation — needs ComboBox interaction discovery');
+  await openSection(page, 'methods', /methods/i);
+  const linkedBefore = await page.getByText(/no methods linked/i).count(); // 1 = empty state
+  // open the Link Method modal (section button), pick a method, confirm
+  await page.getByRole('button', { name: /\+\s*Link Method/i }).first().click({ force: true });
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('combobox').first().click({ force: true });
+  await page.getByRole('option').first().click({ force: true }).catch(()=>{});
+  await dialog.getByRole('button', { name: /\+\s*Link Method/i }).click({ force: true });
+  await page.waitForTimeout(800);
+  await saveBottom(page);
+  // PERSIST: reload the section (re-fetches) — the empty state should be gone / a row present
+  await openSection(page, 'methods', /methods/i);
+  if (linkedBefore > 0) await expect(page.getByText(/no methods linked/i)).toHaveCount(0);
+  await expect(page.locator('table tbody tr, [role="row"]').filter({ hasText: /\S/ }).first()).toBeVisible();
+});
+
+// ── TC-DEEP-PANEL-ASSIGN — assign the test to a panel via the typeahead, read back on reload (PERSIST)
+test('TC-DEEP-PANEL-ASSIGN: assign test to a panel persists on reload [PERSIST]', async ({ page }) => {
+  // Add-to-panel typeahead discovered; selecting an option via the Carbon ComboBox isn't yet proven to
+  // add a panel in automation (same ComboBox issue as Link Method). The lenient row-count check can pass
+  // without a real add, so fixme'd until the ComboBox interaction is nailed + a specific-panel assert added.
+  test.fixme(true, 'Add-to-panel ComboBox option-select not yet proven in automation — needs ComboBox interaction discovery');
+  await openSection(page, 'panels', /panels/i);
+  const rowsBefore = await page.locator('table tbody tr, [role="row"]').filter({ hasText: /\S/ }).count();
+  const combo = page.getByRole('combobox', { name: /add to panel/i }).first();
+  await combo.click({ force: true });
+  await page.getByRole('option').first().click({ force: true }).catch(()=>{});
+  await page.waitForTimeout(400);
+  await saveBottom(page);
+  await openSection(page, 'panels', /panels/i);
+  const rowsAfter = await page.locator('table tbody tr, [role="row"]').filter({ hasText: /\S/ }).count();
+  expect(rowsAfter, 'panel assignment persists (>= prior row count)').toBeGreaterThanOrEqual(rowsBefore);
+});
+
 // ── TC-DEEP-TERMINOLOGY — add a LOINC mapping, read back via REST (ROUND-TRIP), delete
 test('TC-DEEP-TERMINOLOGY: add a terminology mapping reads back via REST [ROUND-TRIP]', async ({ page }) => {
   test.fixme(true, 'Terminology mapping add does not round-trip via REST after Save — NEEDS-GUIDANCE (same save question as Basic Info)');

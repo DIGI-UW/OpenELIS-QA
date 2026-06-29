@@ -15,6 +15,21 @@ QA authoring standard. Read-back uses the editor's own data endpoints (fast + ge
 | TC-DEEP-DOMAIN | Change Domain (confirm dialog) → REST read-back | ROUND-TRIP | **PASS** (40.9s) — fixed via the Change-test-domain confirm step |
 | TC-DEEP-TERMINOLOGY | Add LOINC mapping → REST read-back | ROUND-TRIP | **fixme** — retry with the real-interaction pattern; verify the read-back endpoint (mapping may persist to a sub-resource, not /tests/<id>) |
 | TC-DEEP-STORAGE | Set storage condition → REST read-back | ROUND-TRIP | **fixme** — retry with the real-interaction pattern; verify read-back endpoint |
+| TC-DEEP-METHOD-LINK | Link a method (modal) → reload read-back | PERSIST | **fixme** — Carbon ComboBox option-select not yet persisting in automation |
+| TC-DEEP-PANEL-ASSIGN | Assign to a panel (typeahead) → reload read-back | PERSIST | **fixme** — same Carbon ComboBox interaction follow-up |
+
+### F-5 — Carbon ComboBox option-select is the remaining automation gap
+The new catalog write concepts that go through a **Carbon ComboBox / FilterableMultiSelect** — Link Method
+(modal), Add-to-panel typeahead, (and likely Sample&Results unit / Terminology source) — aren't yet driven
+to persistence in automation. This is the *same class* as the domain radio (a real interaction is needed that
+updates React's state), now isolated to the ComboBox. The flows + selectors are discovered (see
+`test-catalog-chain-plan.md`); the follow-up is to nail the ComboBox option-select (open → type/highlight →
+commit) the way the domain confirm-dialog was nailed. Product works for real users.
+
+### Results entry + validation — verified via existing coverage (not rebuilt)
+Per Casey, the result-entry and validation legs are the same workflow already covered by prior specs
+(`results-entry.docs`, `result-validation.docs`, the env/vector chains, the OGC-1060 revalidation, the
+DEV…011 validation→release run). The chain reuses that tail rather than re-automating it.
 
 ## Findings
 
