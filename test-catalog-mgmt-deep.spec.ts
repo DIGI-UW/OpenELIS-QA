@@ -115,7 +115,11 @@ test('TC-DEEP-DOMAIN: change domain reads back via REST [ROUND-TRIP]', async ({ 
   // RadioButtonGroup write resists automation — force-click & native-setter flip the visual state but
   // don't drive the group's onChange (so Save submits the unchanged value), and there's no clean
   // label[for] target. Follow-up: component-level test, or capture the real onChange handler path.
-  test.fixme(true, 'Carbon RadioButtonGroup write not reliably automatable; product Save persists (manually confirmed)');
+  // Tried: force-click, native-setter (checked+dispatch), real label-text click, page.mouse.click on Save —
+  // all flip the radio visually but the edit does NOT persist after Save in automation. Product works
+  // (manual: Albumin→Environmental→Save→reload persists). Likely a React form dirty-tracking nuance;
+  // needs a component-level test or capturing the form's onChange/submit path. Follow-up.
+  test.fixme(true, 'Carbon editor write not reliably automatable; product Save persists (manually confirmed)');
   await openSection(page, 'basic-info', /basic info/i);
   const before = await basicInfo(page.request);
   const orig = before.domain || (await checkedDomain(page));
