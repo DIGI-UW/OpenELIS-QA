@@ -12,22 +12,25 @@ QA authoring standard. Read-back uses the editor's own data endpoints (fast + ge
 |---|---|---|---|
 | TC-DEEP-FILTER | List Domain filter narrows rows | FUNCTION | **PASS** |
 | TC-DEEP-DUP | "Save as new test…" opens a Duplicate modal | FUNCTION | **expected-fail** (test.fail) — Δ-DUP, see below |
-| TC-DEEP-DOMAIN | Change Domain → REST read-back | ROUND-TRIP | **fixme** — product OK (manually confirmed); Carbon-control automation follow-up |
-| TC-DEEP-TERMINOLOGY | Add LOINC mapping → REST read-back | ROUND-TRIP | **fixme** — same Carbon-write automation follow-up |
-| TC-DEEP-STORAGE | Set storage condition → REST read-back | ROUND-TRIP | **fixme** — same Carbon-write automation follow-up |
+| TC-DEEP-DOMAIN | Change Domain (confirm dialog) → REST read-back | ROUND-TRIP | **PASS** (40.9s) — fixed via the Change-test-domain confirm step |
+| TC-DEEP-TERMINOLOGY | Add LOINC mapping → REST read-back | ROUND-TRIP | **fixme** — retry with the real-interaction pattern; verify the read-back endpoint (mapping may persist to a sub-resource, not /tests/<id>) |
+| TC-DEEP-STORAGE | Set storage condition → REST read-back | ROUND-TRIP | **fixme** — retry with the real-interaction pattern; verify read-back endpoint |
 
 ## Findings
 
-### F-1 — RESOLVED: Save persists (product OK); automating the write is a harness limitation
-Initial deep runs showed Domain/Terminology/Storage edits not reading back after Save. **Casey confirmed
-manually** that the product works: Albumin → Domain = Environmental → bottom **Save** → reload → the test
-lists as Environmental. So **Save persists correctly** — *not* a bug.
+### F-1 — RESOLVED: the missing step was the "Change test domain?" confirm dialog
+Initial deep runs showed Domain edits not reading back after Save. Casey spotted the cause live: selecting a
+Domain radio opens a **"Change test domain?"** confirmation dialog (Close / Cancel / **Confirm**; FRS §2.1),
+and you **must click Confirm** for the change to commit — only then does Save persist it. Every earlier
+automation attempt flipped the radio but never confirmed the dialog, so Save had nothing committed (which also
+explains why force-click Save "didn't persist").
 
-The automation failure is a **Carbon RadioButtonGroup driving problem**: `.click({force})`, the native-setter
-(`checked` + dispatched click/change), and a `label[for]` click all fail to drive the group's `onChange`, so
-Save submits the unchanged value (no success toast). The three write round-trips are therefore `test.fixme()`
-(not failing) with this note. **No Jira bug** — the feature works for users. Follow-up: a component-level test
-or capturing the real onChange handler path to drive the control faithfully.
+**Fixed + verified:** the `changeDomain()` helper now does *real label-text click → confirm the dialog →
+Save*, and **TC-DEEP-DOMAIN PASSES** (domain round-trips via REST, 40.9s). No bug — product + automation both work.
+
+**Process note (worth keeping):** the editor renders fast; the earlier "slowness" was Playwright `.click()`
+waiting on actionability. For Carbon controls use a real click on the visible target (label-text / `force`),
+and **always look for and confirm modal dialogs that gate a change** before asserting persistence.
 
 ### F-2 — "Save as new test…" opens no Duplicate modal (Δ-DUP)
 Clicking the editor-header **Save as new test…** opens no modal/dialog (probed via DOM + force-click).

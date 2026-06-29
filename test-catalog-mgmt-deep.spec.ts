@@ -44,19 +44,14 @@ async function domClick(page: Page, selector: string) {
 // React-controlled radio: a plain/force click flips the DOM `checked` but NOT React's form state,
 // so Save submits the unchanged value (verified: manual click persists, force-click does not).
 // Drive it through the native setter + dispatched events React's tracker recognises.
-async function setRadioReact(page: Page, selector: string) {
-  // Neutralise any always-present (hidden) Carbon modal-shell that intercepts pointer events and
-  // makes a normal .click() hang, then do a REAL (trusted) click on the radio's LABEL — that's what
-  // a user does and it drives Carbon's RadioButtonGroup onChange (synthetic/native-setter do not).
-  await page.evaluate(() => {
-    document.querySelectorAll('.cds--modal:not(.is-visible), .bx--modal:not(.is-visible), [role="dialog"]')
-      .forEach((e) => { (e as HTMLElement).style.pointerEvents = 'none'; });
-  });
-  const id = selector.replace('#', '');
-  const label = page.locator(`label[for="${id}"]`);
-  if (await label.count()) await label.first().click({ timeout: 8000 });
-  else await page.locator(selector).click({ timeout: 8000 });
-  await page.waitForTimeout(400);
+// Change the Domain: a real click on the radio LABEL opens a "Change test domain?" confirmation
+// dialog (FRS §2.1) — you MUST click its Confirm for the change to commit; only then does Save
+// persist it. (This confirmation step is what every earlier automation attempt was missing.)
+async function changeDomain(page: Page, value: string) {
+  await page.locator(`label[for="domain-${value}"] .cds--radio-button__label-text`).click({ timeout: 8000 });
+  const dialog = page.getByRole('dialog', { name: /change test domain/i });
+  await dialog.getByRole('button', { name: /^confirm$/i }).click({ timeout: 8000 });
+  await page.waitForTimeout(500);
 }
 async function saveBottom(page: Page) {
   await page.getByRole('button', { name: /^save$/i }).last().click({ force: true });
@@ -108,29 +103,19 @@ test.beforeAll(async ({ browser }) => {
 
 test.beforeEach(async ({ page }) => { await login(page); });
 
-// ── TC-DEEP-BASICINFO — change Domain + Orderable + AMR in one save, read all back via REST, revert
-test('TC-DEEP-DOMAIN: change domain reads back via REST [ROUND-TRIP]', async ({ page }) => {
-  // PRODUCT WORKS — Save persists for a real user (Casey confirmed manually: Albumin → Environmental
-  // → bottom Save → reload shows Environmental). This is a HARNESS limitation, not a bug: the Carbon
-  // RadioButtonGroup write resists automation — force-click & native-setter flip the visual state but
-  // don't drive the group's onChange (so Save submits the unchanged value), and there's no clean
-  // label[for] target. Follow-up: component-level test, or capture the real onChange handler path.
-  // Tried: force-click, native-setter (checked+dispatch), real label-text click, page.mouse.click on Save —
-  // all flip the radio visually but the edit does NOT persist after Save in automation. Product works
-  // (manual: Albumin→Environmental→Save→reload persists). Likely a React form dirty-tracking nuance;
-  // needs a component-level test or capturing the form's onChange/submit path. Follow-up.
-  test.fixme(true, 'Carbon editor write not reliably automatable; product Save persists (manually confirmed)');
+// ── TC-DEEP-DOMAIN — change Domain via the confirm dialog, read back via REST, revert
+test('TC-DEEP-DOMAIN: change domain (confirm dialog) reads back via REST [ROUND-TRIP]', async ({ page }) => {
   await openSection(page, 'basic-info', /basic info/i);
   const before = await basicInfo(page.request);
   const orig = before.domain || (await checkedDomain(page));
   const target = orig === 'ENVIRONMENTAL' ? 'CLINICAL' : 'ENVIRONMENTAL';
   try {
-    await setRadioReact(page, `#domain-${target}`);
+    await changeDomain(page, target);   // select radio + confirm "Change test domain?" dialog
     await saveBottom(page);
     const after = await basicInfo(page.request);
     expect(after.domain, 'domain round-trips via REST').toBe(target);
   } finally {
-    await setRadioReact(page, `#domain-${orig}`);
+    await changeDomain(page, orig);
     await saveBottom(page);
   }
 });
