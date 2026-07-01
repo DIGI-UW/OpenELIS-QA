@@ -8,6 +8,11 @@
   cycle** (carry last-confirmed v3.2.1.x status); no 404s/changes asserted.
 - references/open-questions.md: added 2 NEEDS-GUIDANCE rows (vector pool deconvolution result
   entry; referral in-transit `ReferralStatus` set on the reference-lab view).
+- references/open-questions.md: **both questions resolved** (Casey + code review). Q1 (vector
+  split): OpenELIS models aliquoting only (no pooling/deconvolution in code); split = child
+  SampleItem, tests re-ordered manually, results independent (not inherited); numbering `PARENT.N`
+  not `LABNO.X-Y`. Q2 (referral): Sent/in-transit → Received (on box receipt) → Resulted (after
+  result validated+released). Both have TODO deep-chain cases queued for master-test-cases.md.
 - coverage-gap-analysis.md: appended a new-feature coverage delta vs openelis-design spec-registry
   (candidates to confirm; not asserted gaps).
 - bug-triage.md unchanged (Jira remains source of truth; no embedded status table). SKILL.md
