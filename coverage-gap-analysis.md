@@ -277,3 +277,38 @@ Our existing 26 suites (A–Z) provide solid coverage of the core lab workflow: 
 **Before writing more suites**, we should **validate the existing 26 suites** against the live instance to confirm they actually pass. Known bugs (BUG-1 through BUG-8) already indicate several expected failures. Live validation will give us confidence in what we have before expanding coverage.
 
 **Suggested next phase (Suites AA–AJ)** would add ~50 test cases covering Priority 1 and Priority 2 gaps — the clinical workflow and reporting screens that matter most for patient safety and regulatory compliance.
+
+
+---
+
+## 2026-07-01 — Monthly consolidation: new-feature coverage delta
+
+Light pass reconciling the QA catalog against `openelis-design`'s `spec-registry.md` /
+`current-state-gotchas.md`. The 26-suite baseline above (2026-03-24) is largely closed by the
+DEEP-suite phases in `references/suite-catalog.md`; the items below are the **candidate deltas**
+since then. Confidence is limited (no live-app pass this cycle) — each is a candidate to confirm
+against `master-test-cases.md`, not an asserted gap.
+
+**Confirmed already covered (spot-checked in master-test-cases.md):** analyzer Field Mappings
+(`/analyzers/{id}/mappings`, kebab actions incl. Configure File Import / Copy Mappings); Analyzer
+Types (`/analyzers/types`); Average TAT drill-down (TC-GX-KPI-TURNAROUND-01); Sample shipment
+boxes (`/SampleShipment` → `/boxes`).
+
+**Candidate UNCOVERED / thin (confirm before authoring):**
+- **Referral reference-lab view** — `/SampleShipment/reference-lab-results` (the referral-redesign
+  canonical in-transit view, D-016) appears covered only at the `/boxes` sub-view. Confirm whether
+  the reference-lab-results sub-view + `ReferralStatus` in-transit signalling has a case. Why it
+  matters: referral tracking / TAT. (Blocked on open-question #2 for expected status set.)
+- **Vector deconvolution chain** — pooled-specimen `LABNO.X-Y` aliquot deconvolution has no deep
+  chain case with per-aliquot landing checks. Why it matters: VECTOR result integrity. (Blocked on
+  open-question #1 for expected behavior.)
+- **Analyzer Maintenance & Service** — `/analyzers/maintenance`, `/analyzers/{id}/configuration`,
+  `EquipmentMaintenanceLog` is **specced-not-built** (spec-registry). Not yet testable; **watch**
+  for a build, then author. Do not file as a coverage gap while unbuilt.
+- **NotebookDashboard** — newly implemented in v3.2.1.5 (per validation-history); confirm coverage
+  is beyond RENDER (a PERSIST/ROUND-TRIP case for creating and reading back an entry).
+
+**Not gaps (scope-controlled):** per-test TAT targets (deferred to v8, D-014); home-dashboard
+Domain filtering (not built — see openelis-design current-state-gotchas). New admin config pages
+(Test Notification, Menu Config, Application Properties) are admin-route coverage — deferred to
+`openelis-design/admin-ia-inventory.md`, not maintained here.

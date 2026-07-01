@@ -192,3 +192,14 @@ deferred garbage collection. Performance is application-healthy; local deploymen
 
 ---
 
+
+
+---
+
+**2026-07-01 — Monthly consolidation pass (no new test execution).** State-only refresh of the
+QA skill references. Instance `testing.openelis-global.org` is **up** and the login gate renders,
+but this was an unattended run with no authenticated session, so **authenticated route/behavior
+re-verification was deferred** — non-admin route-discovery patterns carry their last-confirmed
+v3.2.1.x status (see `references/suite-catalog.md` §5). No new bugs observed; bug state remains in
+Jira (per `references/bug-triage.md`). Coverage-gap delta and new NEEDS-GUIDANCE workflow
+questions recorded in `coverage-gap-analysis.md` and `references/open-questions.md`.

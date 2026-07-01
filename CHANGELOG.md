@@ -1,5 +1,18 @@
 # openelis-test-catalog-qa — Changelog
 
+## 2026-07-01 — Monthly consolidation (state-only refresh)
+
+- references/validation-history.md: appended a dated pass note (no new execution; instance up but
+  login-gated; authenticated route re-verification deferred).
+- references/suite-catalog.md: §5 route-discovery patterns flagged as **not re-verified this
+  cycle** (carry last-confirmed v3.2.1.x status); no 404s/changes asserted.
+- references/open-questions.md: added 2 NEEDS-GUIDANCE rows (vector pool deconvolution result
+  entry; referral in-transit `ReferralStatus` set on the reference-lab view).
+- coverage-gap-analysis.md: appended a new-feature coverage delta vs openelis-design spec-registry
+  (candidates to confirm; not asserted gaps).
+- bug-triage.md unchanged (Jira remains source of truth; no embedded status table). SKILL.md
+  unchanged (evergreen methodology).
+
 ## v7.1 (2026-06-18) — Targets, instances, self-eval, trend summary, open-questions ledger
 
 - references/test-targets.md (NEW): target taxonomy — main global release / project distro /

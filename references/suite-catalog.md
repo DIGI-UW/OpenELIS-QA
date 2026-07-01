@@ -418,5 +418,12 @@ For screens not in the confirmed URL table, try these patterns in order:
 
 If a URL returns 404, try alternates before marking as GAP. Record the working URL in your log.
 
+> **Route-verification status — 2026-07-01 (monthly consolidation):** the non-admin patterns
+> above were **not** re-verified against the live app this cycle (unattended run; the instance is
+> up but gated at login and no authenticated session was available). They carry their
+> last-confirmed **v3.2.1.x** status — treat as presumed-valid, not freshly confirmed. No 404s or
+> route changes are asserted this cycle. Admin routes remain owned by
+> `openelis-design/references/admin-ia-inventory.md`.
+
 ---
 
