@@ -18,6 +18,9 @@
 |---|---|---|---|---|---|
 | _ex_ | Reflex on already-validated sample | reflex rule references a test on a sample already validated | (a) reflex should not fire; (b) fires + reopens; (c) fires into a new order | testing v3.2.1.x | determines whether a "no reflex" result is PASS or a missed trigger |
 
+| 1 | Vector pool deconvolution result entry | Env/Vector orders arrive as pooled specimens via FHIR referral and are split using aliquot numbering `LABNO.X-Y`; the deconvolution step maps a pool result back to member aliquots | (a) each member aliquot inherits the pool result until individually re-tested; (b) pool result stays on the pool and members require their own result entry; (c) a positive pool auto-flags members for reflex/individual testing | Indonesia distro (VECTOR) | Determines whether a member aliquot with no own result is a PASS (expected) or a missed-handoff FAIL in a deconvolution chain |
+| 2 | Referral in-transit status on reference-lab view | `/SampleShipment/reference-lab-results` is the canonical in-transit view; in-transit is signalled by the activated `ReferralStatus` enum (not `Sample.location`) | (a) which ReferralStatus values should appear as "in transit" vs "received" vs "resulted" on this view, and what transition a tester should expect after a shipment box is marked received | release (testing v3.2.1.x) | Without the intended status set, a referral-tracking chain can't assert the correct expected status per step |
+
 _(append new rows above this line)_
 
 ## Resolved
