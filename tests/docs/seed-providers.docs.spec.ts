@@ -1,4 +1,5 @@
 // Demo-data seed capability (part 3): 10 providers. Idempotent by name. Re-runnable.
+// NOTE: do NOT send providerType — PROVIDER.PROVIDER_TYPE is char(1) in the DB; longer values cause a 500.
 //   BASE=https://indonesiademo.openelis-global.org npx playwright test --project=docs tests/docs/seed-providers.docs.spec.ts
 import { test } from '@playwright/test';
 const P = '/api/OpenELIS-Global';
@@ -27,7 +28,7 @@ test('seed providers', async ({ page }) => {
     const res: any = await page.evaluate(async ({ P, pr, phone }: any) => {
       const csrf = localStorage.getItem('CSRF') || '';
       const uuid = (crypto as any).randomUUID ? (crypto as any).randomUUID() : ('' + Date.now() + Math.random());
-      const body = { active: true, providerType: 'physician', person: { firstName: pr.first, lastName: pr.last, primaryPhone: phone } };
+      const body = { active: true, person: { firstName: pr.first, lastName: pr.last, primaryPhone: phone } };
       const r = await fetch(`${P}/rest/Provider/FhirUuid?fhirUuid=${uuid}`, {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
