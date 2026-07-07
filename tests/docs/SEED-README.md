@@ -10,6 +10,7 @@ BASE=https://indonesiademo.openelis-global.org npx playwright test --project=doc
 BASE=https://indonesiademo.openelis-global.org npx playwright test --project=docs tests/docs/seed-providers.docs.spec.ts
 BASE=https://indonesiademo.openelis-global.org SEED_N=20 npx playwright test --project=docs tests/docs/seed-orders.docs.spec.ts
 BASE=https://indonesiademo.openelis-global.org npx playwright test --project=docs tests/docs/seed-compliance.docs.spec.ts
+BASE=https://indonesiademo.openelis-global.org npx playwright test --project=docs tests/docs/seed-compliance-tests.docs.spec.ts
 BASE=https://indonesiademo.openelis-global.org npx playwright test --project=docs tests/docs/seed-calc.docs.spec.ts
 BASE=https://indonesiademo.openelis-global.org npx playwright test --project=docs tests/docs/seed-reflex.docs.spec.ts
 ```
@@ -20,7 +21,8 @@ BASE=https://indonesiademo.openelis-global.org npx playwright test --project=doc
 - **seed-orgs** — 10 referring clinics (type 5), 10 sampling sites (type 12), 2 reference labs (type 6) via `POST /rest/Organization`. Idempotent by name.
 - **seed-providers** — 10 providers via `POST /rest/Provider/FhirUuid`. Body is the admin-UI shape `{ person:{ lastName, firstName, workPhone, fax, email }, active }` (an earlier 500 was from sending `primaryPhone` + a stray `providerType`). Idempotent by last+first name. ✓ verified (10 created).
 - **seed-orders** — orders across Clinical / Vector / Environmental through the 4-step wizard (`order-helpers`), `SEED_N` per domain. 30/30/30 clinical state mix (registered / results / results+validated) via `/rest/LogbookResults` + `/rest/AccessionValidation`.
-- **seed-compliance** — 5 environmental compliance standards via `POST /rest/compliance/standards`; new records land as DRAFT, then `PUT /rest/compliance/standards/{id}` with `status:ACTIVE` activates. `/active` is what the env order form reads. ✓ verified (5 active).
+- **seed-compliance** — 5 environmental compliance standards via `POST /rest/compliance/standards`; new records land as DRAFT, then `PUT /rest/compliance/standards/{id}` with `status:ACTIVE` activates. `/active` is what the env order form reads. ✓ verified (5 active). (Standards alone have no linked tests — run **seed-compliance-tests** next.)
+- **seed-compliance-tests** — links tests to each active standard so `linkedTestCount > 0`. Structure: standard → parameter group → threshold (one test + limits). Ensures a parameter group (`POST /rest/compliance/standards/{id}/parameter-groups`) then links water-quality tests (pH, Lead, TDS, Turbidity, Color, Mercury) via `POST /rest/compliance/thresholds` with `{ group:{id}, test:{id}, parameterCode, displayName, thresholdType, minValue, maxValue, units }` (thresholdType ∈ MAXIMUM/MINIMUM/RANGE/BORDERLINE/EXACT/DESCRIPTIVE/SELECT_MAP). Idempotent (skips already-linked tests). ✓ verified (6 tests each).
 - **seed-calc** — 2 calculated values via `POST /rest/test-calculation`. Self-grounding, idempotent by stable name.
 - **seed-reflex** — 2 reflex rules via `POST /rest/reflexrule`. Self-grounding, idempotent by stable name. Run after seed-calc.
 - **seed-cases** — 15 specialized cases (5 each Histopathology / Immunohistochemistry / Cytology). A case = an order placed under the program (`programId` 7/6/5) via `GET /rest/SampleEntryGenerateScanProvider` + `POST /rest/SamplePatientEntry` (payload from `seed-tat-data.ts`). `CASES_PER` env (default 5). Idempotent: skips a program once its dashboard count reaches the target. ✓ verified (5 each, inProgress).
