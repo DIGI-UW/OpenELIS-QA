@@ -7,6 +7,16 @@ import { generateLabNumber, selectSite, selectEnvSampleType, pickEnvTest, select
 test('User manual — Env order full flow', async ({ page }, info) => {
   test.setTimeout(180000);
   info.annotations.push({ type: 'capability', description: 'env-order-flow' });
+  const saves: any[] = [];
+  page.on('response', async (r) => {
+    const m = r.request().method();
+    if (m !== 'GET' && /SamplePatientEntry/.test(r.url())) {
+      let b = ''; try { b = (await r.text()).slice(0, 300); } catch {}
+      const rq = r.request().postData() || '';
+      const dm = rq.match(/<sample [^>]*\bdate='([^']*)'/); const qm = rq.match(/quantity='([^']*)'/);
+      saves.push({ status: r.status(), sampleDate: dm ? dm[1] : '?', quantity: qm ? qm[1] : '?', err: /sampleXML/.test(b) ? b.slice(0, 150) : '' });
+    }
+  });
   await go(page, '/order/environmental/enter');
 
   await generateLabNumber(page);
@@ -44,6 +54,7 @@ test('User manual — Env order full flow', async ({ page }, info) => {
   // Env wizard ends at QA Review: Submit releases the order (no separate Complete step).
   await clickButton(page, /submit/i, 3000);
   await shot(page, info, 'After Submit', { fullPage: false });
+  console.log('ENV_SAVES=' + JSON.stringify(saves));
   await saveWalkthrough(page, info);
 });
 

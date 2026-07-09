@@ -116,6 +116,23 @@ export async function pickEnvTest(page: Page, testRe: RegExp = /^pH$/): Promise<
   return label;
 }
 
+// --- CLINICAL-specific helper ---
+/** Create a New Patient inline on the clinical order form (self-contained demo patient). */
+export async function newPatient(page: Page, opts: { last?: string; first?: string; dob?: string; gender?: RegExp; nationalId?: string } = {}): Promise<void> {
+  const last = opts.last || 'Parker', first = opts.first || 'Peter', dob = opts.dob || '15/05/1990', gender = opts.gender || /^male$/i;
+  const natId = opts.nationalId || ('NID-' + last.toUpperCase() + '-' + (dob.split('/').pop() || '1990'));
+  await clickButton(page, /^new patient$/i, 800);
+  // National ID is a REQUIRED patient identifier on clinical orders — without it the wizard
+  // silently refuses to advance past Enter Order (no inline error). Fill it (and the optional
+  // Unique Health ID) so seeded clinical orders can progress.
+  for (const [re, val] of [[/nationality identifier/i, natId], [/unique health identifier/i, natId.replace('NID', 'UHID')], [/last name/i, last], [/first name/i, first]] as [RegExp, string][]) {
+    try { const f = page.getByPlaceholder(re).first(); if (await f.isVisible({ timeout: 1500 })) await f.fill(val, { timeout: 1500 }); } catch {}
+  }
+  try { const d = page.getByPlaceholder(/dd\/mm\/yyyy/i).first(); if (await d.isVisible({ timeout: 1500 })) await d.fill(dob, { timeout: 1500 }); } catch {}
+  // Gender radio — click its visible label.
+  await checkByLabel(page, gender).catch(() => {});
+}
+
 /** Best-effort select of an Applicable Compliance Standard (Carbon combobox). Optional on save. */
 export async function selectComplianceStandard(page: Page, optionRe: RegExp): Promise<boolean> {
   try {
