@@ -74,7 +74,7 @@ All 7 types persist their `resultType` code via the guided chooser (+ Advanced/l
 - **Result-entry controls at runtime** for non-numeric types — configured/verified in the editor. **Dictionary (D) now confirmed live end-to-end (2026-07-08):** test 382 ordered via the Bilan Biochimique panel (order DEV01260000000000003) renders a native `<select>` at Results → By Order with exactly its two configured options; result saved + validated/released. Titer/Multi-select/Cascading runtime controls still need their own placed orders.
 - **Grouped/hierarchical cascading options** — not present in the UI (renders the flat editor); revisit if a dedicated cascading structure ships.
 - **LOINC routing, no-LOINC/dup-LOINC warnings** — need a FHIR/analyzer feed.
-- **Critical-vs-abnormal indicator** (OGC-1121) and the **group editor** (FR-8–14) — not covered here.
+- **Critical-vs-abnormal indicator** (OGC-1121) — now guarded by `test-catalog-critical-indicator.spec.ts` (TCG-02): creates a numeric test with Normal 5–100 / Critical 2–150, orders it, and asserts a critical value (200) is styled identically to an abnormal one (120) — PASS while the bug is present, flips when a distinct critical marker ships. The **group editor** (FR-8–14) remains uncovered.
 
 Sibling specs: `test-catalog-result-types.spec.ts`, `test-catalog-editor-regressions.spec.ts`, `test-catalog-downstream.spec.ts`, `test-catalog-titer-runtime.spec.ts` (Titer full-flow, TCC-T).
 
