@@ -72,8 +72,11 @@ test.describe('Test Catalog — downstream cross-links', () => {
   // CRITICAL-INDICATOR GAP (OGC-1121, verified 2026-07-07): a value beyond the CRITICAL range (200 > critical-high 150)
   //  renders the SAME yellow (rgb(255,255,160), aria-invalid=null, no icon/title) as a merely-abnormal value (120).
   //  No distinct critical indicator at result entry. Downstream (validation/report/HH-LL flag) unverified — session timed out.
-  // Automatable outline (pin the abnormal-cell CSS class before enabling):
-  test.fixme('TCG-02: ranges -> Results Entry flags (patient safety) [verified manually]', async ({ page }) => {
+  // NOW IMPLEMENTED as a live guard in `test-catalog-critical-indicator.spec.ts` (OGC-1121):
+  // it drives create→ranges→order→results and asserts a critical value is styled identically to an
+  // abnormal one (PASS while the bug is present; flips when a distinct critical marker ships).
+  // The outline below is kept for reference only.
+  test.fixme('TCG-02: ranges -> Results Entry flags (patient safety) [see test-catalog-critical-indicator.spec.ts]', async ({ page }) => {
     // 1) Editor: /TestCatalogEditor/<id>/ranges -> Add/Edit range Normal 5-100 Critical 2-150, Any age -> section Save.
     // 2) /order/enter: Sample Category Clinical; select patient; page.selectOption('#sampleType-0', '2') (Serum);
     //    select panel/test; fill Qty + collection date; Save&Next -> Label&Store skip-storage -> Save.
