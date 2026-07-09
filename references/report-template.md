@@ -53,9 +53,13 @@ Emit a compact JSON block so maturity can be trended run-over-run:
   "modules": [{"name": "Orders", "maturity": "M3", "pass": 0, "fail": 0, "blocked": 0, "gap": 0}],
   "chains": [{"id": "A", "result": "PASS|PARTIAL|FAIL|BLOCKED"}],
   "yrecon": [{"kpi": "Orders In Progress", "match": true}],
-  "new_failures": 0, "uncovered": 0, "needs_guidance": 0
+  "new_failures": 0, "uncovered": 0, "needs_guidance": 0,
+  "coverage": {"total_tcs": 0, "executed": 0, "deep": 0, "shallow": 0, "mixed": 0, "needs_update": 0, "gap_areas": 0}
 }
 ```
+The `coverage` block feeds the QA Tracker's Coverage & Depth section. `total_tcs`/`deep`/
+`shallow`/`mixed`/`needs_update` come from the catalog scan (refresh when the catalog changes,
+not necessarily every run); `executed` is this run's count (tiered, so executed < total).
 
 ## 8. Appendix — full action log
 - Timestamped action log with screenshots; the raw census/calibration captures.
