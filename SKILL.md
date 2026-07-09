@@ -130,6 +130,14 @@ gates** — (1) the `openelis-bug-revalidation` 2-of-3 protocol (fresh tab / re-
 (2) a Jira search confirming no existing/closed-but-regressed ticket. This is where false
 positives are stopped — never file a single transient FAIL.
 
+## Step 7 — Update the QA Tracker
+Create-if-missing or update the **`openelis-qa-tracker`** Cowork artifact so the living status
+board reflects this run (see **`references/qa-tracker.md`**). Refresh: the run snapshot + the
+target's matrix column from the report JSON, and the **Open questions** panel from
+`references/open-questions.md`. The **open QA bugs** panel is live (Jira). The tracker's top
+section is "Needs your attention" — open bugs + the questions awaiting Casey. Mention in the
+report that the tracker was refreshed.
+
 ---
 
 ## Harmonization with sibling skills (single-source these — don't duplicate)
@@ -155,6 +163,7 @@ positives are stopped — never file a single transient FAIL.
 | `references/test-case-authoring.md` | When writing or extending the catalog — deep chained cases + surfacing uncovered/uncertain workflows |
 | `references/test-targets.md` | Step 0 — target taxonomy (release/distro/branch/rapid), known instances, operational quirks |
 | `references/open-questions.md` | The standing NEEDS-GUIDANCE ledger — append workflow questions for Casey; promote answered ones to cases |
+| `references/qa-tracker.md` | Step 7 — create/update the `openelis-qa-tracker` Cowork artifact (attention board: live open bugs + open questions) |
 | `references/validation-history.md` | Historical run log (append after each run) |
 | `master-test-cases.md` (repo root) | Detailed master catalog (all suites) |
 | `evals/evals.json` | Skill self-tests — run/extend after editing the skill to catch regressions in the skill itself |

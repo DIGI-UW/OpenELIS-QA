@@ -1,5 +1,17 @@
 # openelis-test-catalog-qa — Changelog
 
+## text-merge (2026-07-08) — QA Tracker workflow + open-questions resolved (text only)
+
+- Consolidates the text changes from `skill/qa-tracker-artifact` and `skill/consolidation-2026-07`
+  onto current main (the stale compiled `.skill` bundle is intentionally NOT merged — rebuild it
+  from main as a follow-up).
+- references/qa-tracker.md (NEW) + SKILL.md Step 7 + reference-table row: create/update the
+  `openelis-qa-tracker` Cowork artifact each run (live Jira open-bugs panel + open-questions +
+  coverage/depth rollup).
+- report-template.md: added the `coverage` JSON block; test-case-authoring.md: depth-tagging guidance.
+- references/open-questions.md: Q1 (vector split = aliquot-only, `PARENT.N`, no result inheritance)
+  and Q2 (referral Sent→Received→Resulted) moved Open → Resolved with code-review findings.
+
 ## 2026-07-01 — Monthly consolidation (state-only refresh)
 
 - references/validation-history.md: appended a dated pass note (no new execution; instance up but
