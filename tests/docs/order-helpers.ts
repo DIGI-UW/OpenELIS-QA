@@ -202,7 +202,7 @@ export function trackWrites(page: Page): WriteRec[] {
       const rec: WriteRec = { url: r.url().replace(/^https?:\/\/[^/]+/, ''), method: m, status: r.status() };
       // request payload is synchronous & reliable; grab it for save-ish endpoints to diagnose 4xx.
       const rq = r.request().postData();
-      if (rq && /(SamplePatientEntry|sample-type-requests|sample-item)/i.test(rec.url)) rec.body = rq.replace(/\s+/g, ' ').slice(0, 400);
+      if (rq && /(SamplePatientEntry|sample-type-requests|sample-item)/i.test(rec.url)) rec.body = rq.replace(/\s+/g, ' ').slice(0, 1500);
       writes.push(rec);
     }
   });
