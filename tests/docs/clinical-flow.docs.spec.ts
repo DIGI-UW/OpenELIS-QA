@@ -5,21 +5,14 @@
 //   Label&Store: Print All Labels + Skip Storage are BOTH currently required to advance (G10)
 //   QA Review:   tick all 4 checklist items, then Submit (G11)
 //   BASE=https://indonesiademo.openelis-global.org npx playwright test --project=docs tests/docs/clinical-flow.docs.spec.ts
-import { test } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { go, shot, saveWalkthrough } from './capture';
-import { generateLabNumber, newPatient, setSelectByOption, checkByLabel, completeQaChecklist, clickButton } from './order-helpers';
+import { generateLabNumber, newPatient, setSelectByOption, checkByLabel, completeQaChecklist, clickButton, trackWrites, assertOrderPersisted } from './order-helpers';
 
 test('User manual — Clinical order full flow', async ({ page }, info) => {
   test.setTimeout(180000);
   info.annotations.push({ type: 'capability', description: 'clinical-order-flow' });
-  const saves: any[] = [];
-  page.on('response', async (r) => {
-    const m = r.request().method();
-    if (m !== 'GET' && m !== 'OPTIONS' && /\/rest\//.test(r.url())) {
-      let rb = ''; try { rb = (await r.text()).slice(0, 600); } catch {}
-      saves.push({ url: r.url().replace(/^.*\/rest\//, 'rest/'), method: m, status: r.status(), req: (r.request().postData() || '').slice(0, 1200), resp: rb });
-    }
-  });
+  const writes = trackWrites(page);
   await go(page, '/order/clinical/enter');
 
   // --- Enter Order ---
@@ -63,10 +56,10 @@ test('User manual — Clinical order full flow', async ({ page }, info) => {
   console.log('CLIN_UNIT=' + unitVal);
   await checkByLabel(page, /patient has provided signed consent/i).catch(() => {});
   await page.waitForTimeout(500);
-  saves.length = 0;
+  const beforeCollect = writes.length;
   await clickButton(page, /save & next|save and next/i, 4000);
   await page.waitForTimeout(1200);
-  console.log('COLLECT_SAVES=' + JSON.stringify(saves.map(s => ({ url: s.url, status: s.status, resp: s.resp, req: s.req }))));
+  console.log('COLLECT_WRITES=' + JSON.stringify(writes.slice(beforeCollect)));
   await page.evaluate(() => window.scrollTo(0, 0)); await page.waitForTimeout(700);
   await shot(page, info, 'Label & Store', { fullPage: false });
 
@@ -87,4 +80,6 @@ test('User manual — Clinical order full flow', async ({ page }, info) => {
   await shot(page, info, 'Complete', { fullPage: false });
 
   await saveWalkthrough(page, info);
+  console.log('CLIN_WRITES=' + JSON.stringify(writes));
+  assertOrderPersisted(writes, 'clinical');
 });

@@ -82,3 +82,24 @@ note the target on each open question, since a distro may intentionally behave d
 - Inventing the expected behavior of a workflow you don't understand instead of marking it `NEEDS-GUIDANCE`.
 - Hardcoding instance-specific fixtures instead of expressing preconditions against the Data Census.
 - Authoring a 12-step chain that stops checking after step 3 — every handoff gets a landing check or the chain is shallow.
+
+## 6. Gold standard — API sets up state; driven clicks decide the verdict
+The API/DOM layer is a **read-back oracle and a fixture builder — never the verdict** for a
+user-facing behavior. A pure-API "pass" caps at M1 (it proves the endpoint, not the UI a human
+touches). Every flow's real verdict comes from **driving the actual clicks** (Playwright
+`click()`/`check()`/`selectOption()` or Claude-in-Chrome real events, which fire React `onChange`;
+native-setter/JS `.value` writes are explicitly distrusted) **and asserting the click's effect**.
+
+Concretely, for any order/save/submit flow:
+- Use the API only to (a) seed preconditions and (b) read the write back after the UI drove it.
+- The spec must **assert that the driven Save produced a persisted 2xx write** — not merely that
+  the button was clickable. A best-effort `clickButton()` that silently no-ops when a field gates
+  the button will let a broken flow "pass" while nothing saved. Guard against this with
+  `trackWrites(page)` + `assertOrderPersisted(writes, label)` (order-helpers.ts): capture every
+  non-GET `/rest/` response, then require one 2xx to a save-ish endpoint. Logging every write URL
+  also reveals which endpoint a domain-split wizard (`/order/clinical|environmental/enter`) actually
+  saves through — don't assume it's `SamplePatientEntry`.
+- If API testing surfaces a candidate finding, **re-confirm it through the clicks** before reporting.
+
+Anti-pattern: a capture/`docs` spec reported as a functional pass. Capture scripts screenshot the
+flow; they are M1 until they assert an effect. "Ran without throwing" ≠ "the order saved."

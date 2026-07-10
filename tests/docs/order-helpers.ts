@@ -50,22 +50,31 @@ export async function selectSite(page: Page, query = 'MUL'): Promise<boolean> {
  * the reliable path. Returns true when either an existing site is selected or a new one is staged.
  */
 export async function selectOrAddSite(page: Page, query = 'QA_AUTO Site'): Promise<boolean> {
+  // Sampling Site is a typeahead needing a few chars + time to resolve. Either an existing match
+  // ("Select") or an "Add new site" affordance appears; confirm the resulting "Selected"/"New"
+  // chip so a silent miss (which would gate Save & Next) is caught rather than passing quietly.
+  let outcome = 'none';
   try {
     const site = page.getByPlaceholder(/site name or code/i).first();
-    await site.click({ timeout: 2500 });
-    await site.fill(query, { timeout: 2500 });
-    await page.waitForTimeout(1300);
-    // (a) existing match -> click its Select
+    await site.click({ timeout: 3000 });
+    await site.fill('', { timeout: 2000 }).catch(() => {});
+    await site.type(query, { delay: 40 });           // per-char typing so the typeahead fires
+    await page.waitForTimeout(1800);                 // allow the async site lookup to settle
     const sel = page.getByRole('button', { name: /^select$/i }).first();
-    if (await sel.isVisible({ timeout: 1200 }).catch(() => false)) { await sel.click({ timeout: 1500 }); await page.waitForTimeout(500); }
-    else {
-      // (b) no match -> "+ Add new site \"<query>\""
-      const add = page.getByRole('button', { name: /add new site/i }).first();
-      if (await add.isVisible({ timeout: 1200 }).catch(() => false)) { await add.click({ timeout: 1500 }); await page.waitForTimeout(600); }
+    const add = page.getByRole('button', { name: /add new site/i }).first();
+    if (await sel.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await sel.click({ timeout: 2000 }); outcome = 'selected-existing';
+    } else if (await add.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await add.click({ timeout: 2000 }); outcome = 'added-new';
     }
-    // confirm a Selected or New chip appeared
-    return await page.getByText(/^(selected|new)$/i).first().isVisible({ timeout: 1500 }).catch(() => false);
-  } catch { return false; }
+    await page.waitForTimeout(800);
+    const chip = await page.getByText(/^(selected|new)$/i).first().isVisible({ timeout: 2500 }).catch(() => false);
+    console.log('SITE_RESULT=' + outcome + ' chip=' + chip);
+    return chip;
+  } catch (e) {
+    console.log('SITE_RESULT=error ' + String(e).slice(0, 80));
+    return false;
+  }
 }
 
 /** Set the required Environmental "Collection Method" (Composite 24h / Grab Sample / etc.). */
@@ -176,4 +185,30 @@ export async function selectComplianceStandard(page: Page, optionRe: RegExp): Pr
     if (await opt.isVisible({ timeout: 1500 })) { await opt.click({ timeout: 1500 }); await page.waitForTimeout(400); return true; }
   } catch {}
   return false;
+}
+
+/**
+ * Attach a response listener that records every non-GET write to the app's REST layer.
+ * Returns the live array (mutated as responses arrive). Gold-standard oracle: a driven click
+ * "worked" only if it produced a persisted write — and logging every write URL reveals which
+ * endpoint a given (possibly domain-split) wizard actually saves through.
+ */
+export type WriteRec = { url: string; method: string; status: number };
+export function trackWrites(page: Page): WriteRec[] {
+  const writes: WriteRec[] = [];
+  page.on('response', (r) => {
+    const m = r.request().method();
+    if (m !== 'GET' && m !== 'HEAD' && m !== 'OPTIONS' && /\/rest\//.test(r.url())) {
+      writes.push({ url: r.url().replace(/^https?:\/\/[^/]+/, ''), method: m, status: r.status() });
+    }
+  });
+  return writes;
+}
+
+/** Assert a driven Save actually persisted: at least one 2xx write to a save-ish endpoint. */
+export function assertOrderPersisted(writes: WriteRec[], label = 'order'): void {
+  const saveish = writes.filter(w =>
+    /(SamplePatientEntry|sample-type-requests|sample-item|sampleItem|analysis|\border\b|patient)/i.test(w.url));
+  const ok = saveish.some(w => w.status >= 200 && w.status < 300);
+  expect(ok, label + ': a driven Save must produce a 2xx REST write (gold standard = clicks with an asserted effect). Writes seen: ' + JSON.stringify(writes)).toBeTruthy();
 }

@@ -1,23 +1,14 @@
 // End-to-end validation of the improved harness helpers: drive a fresh vector order from
 // Enter Order all the way to Complete, headless, capturing each stage.
 //   BASE=https://indonesiademo.openelis-global.org npx playwright test --project=docs tests/docs/vector-flow.docs.spec.ts
-import { test } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { go, shot, saveWalkthrough } from './capture';
-import { generateLabNumber, selectOrAddSite, setSelectByOption, checkByLabel, completeQaChecklist, clickButton } from './order-helpers';
+import { generateLabNumber, selectOrAddSite, setSelectByOption, checkByLabel, completeQaChecklist, clickButton, trackWrites, assertOrderPersisted } from './order-helpers';
 
 test('User manual — Vector order full flow (harness validation)', async ({ page }, info) => {
   test.setTimeout(150000);
   info.annotations.push({ type: 'capability', description: 'vector-order-flow' });
-  const saves: any[] = [];
-  page.on('response', async (r) => {
-    const m = r.request().method();
-    if (m !== 'GET' && /SamplePatientEntry/.test(r.url())) {
-      let b = ''; try { b = (await r.text()).slice(0, 300); } catch {}
-      const rq = r.request().postData() || '';
-      const dm = rq.match(/<sample [^>]*\bdate='([^']*)'/); const qm = rq.match(/quantity='([^']*)'/);
-      saves.push({ status: r.status(), sampleDate: dm ? dm[1] : '?', quantity: qm ? qm[1] : '?', err: /sampleXML/.test(b) ? b.slice(0, 150) : '' });
-    }
-  });
+  const writes = trackWrites(page);
   await go(page, '/order/vector/enter');
 
   const lab = await generateLabNumber(page);
@@ -48,7 +39,8 @@ test('User manual — Vector order full flow (harness validation)', async ({ pag
   await shot(page, info, 'Complete', { fullPage: false });
   await saveWalkthrough(page, info);
 
-  console.log('VEC_SAVES=' + JSON.stringify(saves));
+  console.log('VEC_WRITES=' + JSON.stringify(writes));
+  assertOrderPersisted(writes, 'vector');
   // record the lab number used for reference
-  await page.evaluate((l) => console.log('FLOW_LAB=' + l), lab);
+  await page.evaluate((l) => console.log('FLOW_LAB=' + l), lab).catch(() => {});
 });
