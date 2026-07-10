@@ -216,3 +216,25 @@ export function assertOrderPersisted(writes: WriteRec[], label = 'order'): void 
   const ok = saveish.some(w => w.status >= 200 && w.status < 300);
   expect(ok, label + ': a driven Save must produce a 2xx REST write (gold standard = clicks with an asserted effect). Writes seen: ' + JSON.stringify(writes)).toBeTruthy();
 }
+
+/**
+ * Env & Vector orders REQUIRE at least one of Requesting Organization or Requestor
+ * (backend: errors.requester.org.or.requestor.required — OGC-1074). Fill a Requestor so the
+ * order can actually save; without this SamplePatientEntry 400s (and, alongside it, spurious
+ * patientProperties.gender/nationalId messages appear that clear once the requester is present).
+ */
+export async function fillRequestor(page: Page, first = 'QA', last = 'Tester'): Promise<boolean> {
+  const tryFill = async (re: RegExp, val: string) => {
+    const byRole = page.getByRole('textbox', { name: re }).first();
+    if (await byRole.isVisible({ timeout: 1500 }).catch(() => false)) { await byRole.fill(val); return true; }
+    const byLabel = page.getByLabel(re).first();
+    if (await byLabel.isVisible({ timeout: 800 }).catch(() => false)) { await byLabel.fill(val); return true; }
+    return false;
+  };
+  const f = await tryFill(/^first name$/i, first);
+  const l = await tryFill(/^last name$/i, last);
+  console.log('REQUESTOR_FILLED first=' + f + ' last=' + l);
+  await page.waitForTimeout(400);
+  return f || l;
+}
+

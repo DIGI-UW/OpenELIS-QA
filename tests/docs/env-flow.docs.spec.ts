@@ -2,7 +2,7 @@
 //   BASE=https://indonesiademo.openelis-global.org npx playwright test --project=docs tests/docs/env-flow.docs.spec.ts
 import { test, expect } from '@playwright/test';
 import { go, shot, saveWalkthrough } from './capture';
-import { generateLabNumber, selectOrAddSite, setCollectionMethod, selectEnvSampleType, pickEnvTest, selectComplianceStandard, completeQaChecklist, clickButton, trackWrites, assertOrderPersisted } from './order-helpers';
+import { generateLabNumber, selectOrAddSite, setCollectionMethod, selectEnvSampleType, pickEnvTest, selectComplianceStandard, completeQaChecklist, clickButton, trackWrites, assertOrderPersisted, fillRequestor } from './order-helpers';
 
 test('User manual — Env order full flow', async ({ page }, info) => {
   test.setTimeout(180000);
@@ -29,6 +29,7 @@ test('User manual — Env order full flow', async ({ page }, info) => {
   await page.waitForTimeout(600);
   // Pick a test (pH) from the Tests & Panels panel.
   const picked = await pickEnvTest(page, /^pH$/);
+  await fillRequestor(page);   // REQUIRED: env needs a requester or SamplePatientEntry 400s
   await page.waitForTimeout(600);
   await shot(page, info, 'Enter Order — completed', { fullPage: false });
   // Diagnostic: record the step counter.

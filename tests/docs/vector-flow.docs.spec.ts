@@ -3,7 +3,7 @@
 //   BASE=https://indonesiademo.openelis-global.org npx playwright test --project=docs tests/docs/vector-flow.docs.spec.ts
 import { test, expect } from '@playwright/test';
 import { go, shot, saveWalkthrough } from './capture';
-import { generateLabNumber, selectOrAddSite, setSelectByOption, checkByLabel, completeQaChecklist, clickButton, trackWrites, assertOrderPersisted } from './order-helpers';
+import { generateLabNumber, selectOrAddSite, setSelectByOption, checkByLabel, completeQaChecklist, clickButton, trackWrites, assertOrderPersisted, fillRequestor } from './order-helpers';
 
 test('User manual — Vector order full flow (harness validation)', async ({ page }, info) => {
   test.setTimeout(150000);
@@ -20,6 +20,7 @@ test('User manual — Vector order full flow (harness validation)', async ({ pag
   // Select the test by clicking its label (Carbon checkbox).
   await checkByLabel(page, /identifikasi spesies nyamuk/i);
   await page.waitForTimeout(500);
+  await fillRequestor(page);   // REQUIRED: vector needs a requester or SamplePatientEntry 400s
   await shot(page, info, 'Enter Order — completed', { fullPage: false });
 
   // -> Label & Store
