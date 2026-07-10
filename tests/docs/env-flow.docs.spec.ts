@@ -2,7 +2,7 @@
 //   BASE=https://indonesiademo.openelis-global.org npx playwright test --project=docs tests/docs/env-flow.docs.spec.ts
 import { test } from '@playwright/test';
 import { go, shot, saveWalkthrough } from './capture';
-import { generateLabNumber, selectSite, selectEnvSampleType, pickEnvTest, selectComplianceStandard, completeQaChecklist, clickButton } from './order-helpers';
+import { generateLabNumber, selectOrAddSite, setCollectionMethod, selectEnvSampleType, pickEnvTest, selectComplianceStandard, completeQaChecklist, clickButton } from './order-helpers';
 
 test('User manual — Env order full flow', async ({ page }, info) => {
   test.setTimeout(180000);
@@ -20,11 +20,13 @@ test('User manual — Env order full flow', async ({ page }, info) => {
   await go(page, '/order/environmental/enter');
 
   await generateLabNumber(page);
-  await selectSite(page, 'MUL');
+  await selectOrAddSite(page, 'QA_AUTO Env Site');
+  // Collection Method is now REQUIRED on env orders (gates Save & Next).
+  await setCollectionMethod(page);
   // Compliance standard (best-effort — may be optional for save).
   await selectComplianceStandard(page, /water quality|PP\s*22|PP No|groundwater|surface/i);
-  // Sample Type = Groundwater (carries English tests; avoids the no-test "Drinking Water" dup).
-  await selectEnvSampleType(page, /^\s*Groundwater\s*$/i);
+  // Sample Type = Water (carries English tests: pH, Lead, ... on this build).
+  await selectEnvSampleType(page, /^\s*Water\s*$/i);
   await page.waitForTimeout(1000);
   // Manifest row also requires Container + Collected date/time.
   await page.evaluate(() => {

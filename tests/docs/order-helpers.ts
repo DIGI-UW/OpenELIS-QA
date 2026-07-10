@@ -43,6 +43,36 @@ export async function selectSite(page: Page, query = 'MUL'): Promise<boolean> {
   } catch { return false; }
 }
 
+/**
+ * Sampling Site for Environmental/Vector orders. The field is a typeahead ("Search by site name
+ * or code"); a match shows a result to Select, and if nothing matches it offers "+ Add new site".
+ * Verified live on indonesiademo (v3.2.1.10): env/vector sites are often unseeded, so add-new is
+ * the reliable path. Returns true when either an existing site is selected or a new one is staged.
+ */
+export async function selectOrAddSite(page: Page, query = 'QA_AUTO Site'): Promise<boolean> {
+  try {
+    const site = page.getByPlaceholder(/site name or code/i).first();
+    await site.click({ timeout: 2500 });
+    await site.fill(query, { timeout: 2500 });
+    await page.waitForTimeout(1300);
+    // (a) existing match -> click its Select
+    const sel = page.getByRole('button', { name: /^select$/i }).first();
+    if (await sel.isVisible({ timeout: 1200 }).catch(() => false)) { await sel.click({ timeout: 1500 }); await page.waitForTimeout(500); }
+    else {
+      // (b) no match -> "+ Add new site \"<query>\""
+      const add = page.getByRole('button', { name: /add new site/i }).first();
+      if (await add.isVisible({ timeout: 1200 }).catch(() => false)) { await add.click({ timeout: 1500 }); await page.waitForTimeout(600); }
+    }
+    // confirm a Selected or New chip appeared
+    return await page.getByText(/^(selected|new)$/i).first().isVisible({ timeout: 1500 }).catch(() => false);
+  } catch { return false; }
+}
+
+/** Set the required Environmental "Collection Method" (Composite 24h / Grab Sample / etc.). */
+export async function setCollectionMethod(page: Page, optionRe: RegExp = /composite 24h|grab sample|composite 8h/i): Promise<string | null> {
+  return await setSelectByOption(page, optionRe);
+}
+
 /** Set a native <select> whose options include optionRe to that option (React-safe). */
 export async function setSelectByOption(page: Page, optionRe: RegExp): Promise<string | null> {
   return await page.evaluate((src) => {
@@ -92,12 +122,12 @@ export async function clickButton(page: Page, nameRe: RegExp, waitMs = 1800): Pr
 // --- ENVIRONMENTAL-specific helpers ---
 // Env order entry differs from Vector: Applicable Compliance Standards is a Carbon combobox,
 // Tests & Panels is a per-row toggle button, and Sample Type options include DUPLICATES where
-// one copy has NO tests (OGC-1063). Use a sample type known to carry tests: Groundwater or
-// Surface Water (English-named tests: pH, Lead, TDS, Dissolved Oxygen, BOD, Mercury, Total
-// Coliform, E. coli Presence). "Drinking Water" (one of two) has no tests — avoid it.
+// one copy has NO tests (OGC-1063). Verified live (indonesiademo v3.2.1.10) the env Sample Type
+// options are: Water, Hemodialysis Water, Sanitation Hygiene Water, Swimming Pool Water. "Water"
+// carries English-named tests (pH, Lead, ...). Default to it; avoid any option that shows no tests.
 
 /** Set the per-sample-manifest Sample Type to an option that actually carries tests. */
-export async function selectEnvSampleType(page: Page, optionRe: RegExp = /^\s*Groundwater\s*$/i): Promise<string | null> {
+export async function selectEnvSampleType(page: Page, optionRe: RegExp = /^\s*Water\s*$/i): Promise<string | null> {
   return await setSelectByOption(page, optionRe);
 }
 

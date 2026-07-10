@@ -3,7 +3,7 @@
 //   BASE=https://indonesiademo.openelis-global.org npx playwright test --project=docs tests/docs/vector-flow.docs.spec.ts
 import { test } from '@playwright/test';
 import { go, shot, saveWalkthrough } from './capture';
-import { generateLabNumber, selectSite, setSelectByOption, checkByLabel, completeQaChecklist, clickButton } from './order-helpers';
+import { generateLabNumber, selectOrAddSite, setSelectByOption, checkByLabel, completeQaChecklist, clickButton } from './order-helpers';
 
 test('User manual — Vector order full flow (harness validation)', async ({ page }, info) => {
   test.setTimeout(150000);
@@ -21,7 +21,7 @@ test('User manual — Vector order full flow (harness validation)', async ({ pag
   await go(page, '/order/vector/enter');
 
   const lab = await generateLabNumber(page);
-  await selectSite(page, 'MUL');
+  await selectOrAddSite(page, 'QA_AUTO Vector Site');
   await setSelectByOption(page, /^adult mosquito$/i);
   await page.waitForTimeout(1000);
   // Quantity in Pool (number input — native setter is fine for non-checkboxes).
