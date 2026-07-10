@@ -193,13 +193,17 @@ export async function selectComplianceStandard(page: Page, optionRe: RegExp): Pr
  * "worked" only if it produced a persisted write — and logging every write URL reveals which
  * endpoint a given (possibly domain-split) wizard actually saves through.
  */
-export type WriteRec = { url: string; method: string; status: number };
+export type WriteRec = { url: string; method: string; status: number; body?: string };
 export function trackWrites(page: Page): WriteRec[] {
   const writes: WriteRec[] = [];
   page.on('response', (r) => {
     const m = r.request().method();
     if (m !== 'GET' && m !== 'HEAD' && m !== 'OPTIONS' && /\/rest\//.test(r.url())) {
-      writes.push({ url: r.url().replace(/^https?:\/\/[^/]+/, ''), method: m, status: r.status() });
+      const rec: WriteRec = { url: r.url().replace(/^https?:\/\/[^/]+/, ''), method: m, status: r.status() };
+      // request payload is synchronous & reliable; grab it for save-ish endpoints to diagnose 4xx.
+      const rq = r.request().postData();
+      if (rq && /(SamplePatientEntry|sample-type-requests|sample-item)/i.test(rec.url)) rec.body = rq.replace(/\s+/g, ' ').slice(0, 400);
+      writes.push(rec);
     }
   });
   return writes;
