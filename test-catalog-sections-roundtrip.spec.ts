@@ -56,9 +56,21 @@ async function login(page: Page) {
 const getJson = (rq: APIRequestContext, url: string) =>
   rq.get(url, { headers: { Accept: 'application/json' } }).then((r) => r.json());
 
+/** SPA-safe navigation: a client-side redirect during goto can throw net::ERR_ABORTED even though
+ *  the page loads fine — tolerate it and retry, so a transient abort isn't read as a failure. */
+async function nav(page: Page, url: string) {
+  for (let i = 0; i < 3; i++) {
+    try { await page.goto(url, { waitUntil: 'domcontentloaded' }); return; }
+    catch (e) { if (!/ERR_ABORTED|interrupted|frame was detached|navigation/i.test(String(e))) throw e; await page.waitForTimeout(1200); }
+  }
+  await page.goto(url, { waitUntil: 'commit' }).catch(() => {});
+  await page.waitForTimeout(800);
+}
+
 /** Create a test through the New-test form; returns its id. New tests are created Inactive. */
 async function createTest(page: Page, name: string, code: string, sampleType = 'Serum'): Promise<string> {
-  await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/new/basic-info`, { waitUntil: 'domcontentloaded' });
+  await nav(page, `${BASE}/MasterListsPage/TestCatalogEditor/new/basic-info`);
+  await page.getByLabel('Test name', { exact: false }).first().waitFor({ timeout: 20000 });
   await page.getByLabel('Test name', { exact: false }).first().fill(name);
   await page.getByLabel('Reporting name', { exact: false }).first().fill(name);
   const codeField = page.getByLabel('Test code', { exact: false }).first();
@@ -83,21 +95,38 @@ async function createTest(page: Page, name: string, code: string, sampleType = '
 }
 async function pickCombo(page: Page, label: string, optionText: string) {
   // Carbon/downshift combobox (v3.2.1.11 editor): a role=combobox input (Lab Unit / Sample type /
-  // Add to panel) or a toggle-button (Add Label Type). Open it, filter if it accepts typing, then
-  // click the matching option; fall back to a listbox item or plain text.
+  // Add to panel) or a toggle-button (Add Label Type). The reliable pattern (verified by hand):
+  // OPEN it, then do a REAL click on the option ROW — NOT combo.fill(), which types into the box
+  // without committing a selection and leaves the required field empty (Save then silently fails to
+  // create → looked like a "hang"). Playwright auto-scrolls the option into view within the listbox.
   const combo = page.getByLabel(label, { exact: false }).first();
+  await combo.scrollIntoViewIfNeeded().catch(() => {});
   await combo.click();
-  await page.waitForTimeout(400);
-  await combo.fill(optionText).catch(() => {});          // no-op for toggle-button comboboxes
   await page.waitForTimeout(500);
-  const byOption = page.getByRole('option', { name: optionText, exact: false }).first();
-  if (await byOption.isVisible({ timeout: 2500 }).catch(() => false)) { await byOption.click(); return; }
-  const inListbox = page.locator('[role="listbox"]').getByText(optionText, { exact: false }).first();
-  if (await inListbox.isVisible({ timeout: 1500 }).catch(() => false)) { await inListbox.click(); return; }
-  await page.getByText(optionText, { exact: false }).first().click();
+
+  const clickIfVisible = async (loc: any) => {
+    const el = loc.first();
+    if (await el.isVisible({ timeout: 1500 }).catch(() => false)) { await el.click(); return true; }
+    return false;
+  };
+  let picked =
+    (await clickIfVisible(page.getByRole('option', { name: optionText, exact: true }))) ||
+    (await clickIfVisible(page.getByRole('option', { name: optionText, exact: false }))) ||
+    (await clickIfVisible(page.locator('[role="listbox"] [role="option"], [role="listbox"] li').filter({ hasText: optionText })));
+  if (!picked) {
+    // Long list: type a few chars to filter, then click the option (still a real option-row click).
+    await combo.pressSequentially(optionText.slice(0, 8), { delay: 25 }).catch(() => {});
+    await page.waitForTimeout(600);
+    picked = await clickIfVisible(page.getByRole('option', { name: optionText, exact: false }));
+  }
+  await page.waitForTimeout(400);
+
+  // Verify the selection actually committed (a combobox left empty makes Save silently no-op).
+  const committed = await combo.inputValue().then((v: string) => !!v && new RegExp(optionText.slice(0, 6), 'i').test(v)).catch(() => false);
+  if (!picked && !committed) throw new Error(`pickCombo("${label}") could not select "${optionText}"`);
 }
 async function gotoSection(page: Page, id: string, section: string) {
-  await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/${id}/${section}`, { waitUntil: 'domcontentloaded' });
+  await nav(page, `${BASE}/MasterListsPage/TestCatalogEditor/${id}/${section}`);
   await page.waitForTimeout(800);
 }
 /** Click the bottom section Save (not the top toolbar Save). */
@@ -113,7 +142,7 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
   // ---------- A. list & create ----------
   test('TCA-03: duplicate code is rejected with a field error, no create', async ({ page, request }) => {
     const before = await getJson(request, `${TC}/tests?search=&page=1&pageSize=1`).then((d) => d.total);
-    await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/new/basic-info`, { waitUntil: 'domcontentloaded' });
+    await nav(page, `${BASE}/MasterListsPage/TestCatalogEditor/new/basic-info`);
     await page.getByLabel('Test name', { exact: false }).first().fill(`${STAMP} DupCode`);
     await page.getByLabel('Reporting name', { exact: false }).first().fill(`${STAMP} DupCode`);
     const codeField = page.getByLabel('Test code', { exact: false }).first();
