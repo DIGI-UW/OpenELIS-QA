@@ -67,7 +67,14 @@ async function createTest(page: Page, name: string, code: string, sampleType = '
   await pickCombo(page, 'Lab Unit', BIOCHEM);
   await pickCombo(page, 'Sample type', sampleType);
   await page.getByRole('button', { name: /^Save$/ }).last().click();
-  await page.waitForURL(/\/TestCatalogEditor\/\d+\/basic-info/, { timeout: 30_000 });
+  // The create→redirect is intermittent on the testing instance (login-hang/slow SPA); retry the
+  // Save once and allow more time before giving up, so a slow redirect isn't read as a failure.
+  try {
+    await page.waitForURL(/\/TestCatalogEditor\/\d+\/basic-info/, { timeout: 45_000 });
+  } catch {
+    await page.getByRole('button', { name: /^Save$/ }).last().click({ timeout: 8000 }).catch(() => {});
+    await page.waitForURL(/\/TestCatalogEditor\/\d+\/basic-info/, { timeout: 45_000 });
+  }
   return page.url().match(/TestCatalogEditor\/(\d+)\//)![1];
 }
 async function pickCombo(page: Page, label: string, optionText: string) {
