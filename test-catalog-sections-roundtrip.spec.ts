@@ -40,12 +40,18 @@ const BIOCHEM = 'Biochemistry';                       // lab unit
 
 // ---------- helpers ----------
 async function login(page: Page) {
-  await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
-  await page.fill('input[name="loginName"], #loginName, input[placeholder*="ser" i]', ADMIN.user);
-  await page.fill('input[type="password"], #password', ADMIN.pass);
+  await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' }).catch(() => {});
+  // With a preloaded storageState (guards.config.ts) we're already authenticated, so /login
+  // redirects away and no username field appears — skip fast instead of hanging on fill().
+  const userField = page.locator('input[name="loginName"], #loginName, input[placeholder*="ser" i]').first();
+  if (!(await userField.isVisible({ timeout: 4000 }).catch(() => false))) return;
+  // Short timeouts + catches: the testing login page intermittently hangs ("Loginloading"); never
+  // let that stall a test for 150s — storageState already authenticates us.
+  await userField.fill(ADMIN.user, { timeout: 8000 }).catch(() => {});
+  await page.fill('input[type="password"], #password', ADMIN.pass, { timeout: 8000 }).catch(() => {});
   await page.getByRole('button', { name: /login|sign in|submit/i }).first()
-    .click().catch(() => page.keyboard.press('Enter'));
-  await page.waitForLoadState('networkidle').catch(() => {});
+    .click({ timeout: 8000 }).catch(() => page.keyboard.press('Enter').catch(() => {}));
+  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
 }
 const getJson = (rq: APIRequestContext, url: string) =>
   rq.get(url, { headers: { Accept: 'application/json' } }).then((r) => r.json());
@@ -65,10 +71,19 @@ async function createTest(page: Page, name: string, code: string, sampleType = '
   return page.url().match(/TestCatalogEditor\/(\d+)\//)![1];
 }
 async function pickCombo(page: Page, label: string, optionText: string) {
+  // Carbon/downshift combobox (v3.2.1.11 editor): a role=combobox input (Lab Unit / Sample type /
+  // Add to panel) or a toggle-button (Add Label Type). Open it, filter if it accepts typing, then
+  // click the matching option; fall back to a listbox item or plain text.
   const combo = page.getByLabel(label, { exact: false }).first();
   await combo.click();
-  await page.getByRole('option', { name: optionText, exact: false }).first().click()
-    .catch(async () => { await combo.fill(optionText); await page.getByText(optionText, { exact: true }).first().click(); });
+  await page.waitForTimeout(400);
+  await combo.fill(optionText).catch(() => {});          // no-op for toggle-button comboboxes
+  await page.waitForTimeout(500);
+  const byOption = page.getByRole('option', { name: optionText, exact: false }).first();
+  if (await byOption.isVisible({ timeout: 2500 }).catch(() => false)) { await byOption.click(); return; }
+  const inListbox = page.locator('[role="listbox"]').getByText(optionText, { exact: false }).first();
+  if (await inListbox.isVisible({ timeout: 1500 }).catch(() => false)) { await inListbox.click(); return; }
+  await page.getByText(optionText, { exact: false }).first().click();
 }
 async function gotoSection(page: Page, id: string, section: string) {
   await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/${id}/${section}`, { waitUntil: 'domcontentloaded' });
