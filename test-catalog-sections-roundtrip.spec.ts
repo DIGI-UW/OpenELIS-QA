@@ -201,6 +201,7 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
     await sectionSave(page);
 
     const comp = (await getJson(request, `${TC}/tests/${id}/sample-results`)).components[0];
+    console.log('TCCM_READBACK=' + JSON.stringify({ testId: id, resultType: comp.resultType, options: (comp.options || []).map((o: any) => o.valueName || o.value) }));
     expect(comp.resultType, 'multi-select type persists').toBe('M');
     // FIXME(OGC-1123): options do not persist for multi-select — stays empty. When fixed, this
     // becomes .toBeGreaterThan(0) and the assertion flips.
