@@ -67,15 +67,19 @@ async function createTest(page: Page, name: string, code: string, sampleType = '
   await pickCombo(page, 'Lab Unit', BIOCHEM);
   await pickCombo(page, 'Sample type', sampleType);
   await page.getByRole('button', { name: /^Save$/ }).last().click();
-  // The create→redirect is intermittent on the testing instance (login-hang/slow SPA); retry the
-  // Save once and allow more time before giving up, so a slow redirect isn't read as a failure.
-  try {
-    await page.waitForURL(/\/TestCatalogEditor\/\d+\/basic-info/, { timeout: 45_000 });
-  } catch {
-    await page.getByRole('button', { name: /^Save$/ }).last().click({ timeout: 8000 }).catch(() => {});
-    await page.waitForURL(/\/TestCatalogEditor\/\d+\/basic-info/, { timeout: 45_000 });
+  // The post-Save redirect target is inconsistent on this build — it sometimes lands on the editor
+  // (/TestCatalogEditor/{id}/basic-info) and sometimes on home (/). Don't depend on it: resolve the
+  // new test's id by looking it up by its unique name via the (authenticated) REST list. This is
+  // deterministic and avoids the redirect flakiness that was read as a "hang".
+  for (let i = 0; i < 12; i++) {
+    const m = page.url().match(/TestCatalogEditor\/(\d+)\//);
+    if (m) return m[1];
+    const d = await getJson(page.request, `${TC}/tests?search=${encodeURIComponent(name)}&page=1&pageSize=10`).catch(() => null);
+    const row = d && Array.isArray(d.rows) ? d.rows.find((r: any) => r.name === name) : null;
+    if (row) return String(row.id);
+    await page.waitForTimeout(1500);
   }
-  return page.url().match(/TestCatalogEditor\/(\d+)\//)![1];
+  throw new Error(`createTest: could not resolve id for "${name}" (created test not found by name)`);
 }
 async function pickCombo(page: Page, label: string, optionText: string) {
   // Carbon/downshift combobox (v3.2.1.11 editor): a role=combobox input (Lab Unit / Sample type /
