@@ -313,7 +313,7 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
     const id = await createTest(page, `${STAMP} Methods`, `${STAMP}_MET`);
     await gotoSection(page, id, 'methods');
     await page.getByRole('button', { name: /link method/i }).first().click();
-    await page.getByLabel('Select a method to link', { exact: false }).click();
+    await page.locator('#link-method-select').first().click();   // label matches 2 elements; target the combobox by id
     await page.getByRole('option', { name: /^EIA$/i }).first().click();
     await page.getByLabel('Effective Date', { exact: false }).fill('2026-07-08');
     await page.getByRole('button', { name: /link method/i }).last().click();
