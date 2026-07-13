@@ -80,38 +80,42 @@ async function nav(page: Page, url: string) {
   await page.waitForTimeout(800);
 }
 
-/** Create a test through the New-test form; returns its id. New tests are created Inactive. */
+/** Look up a just-created test's id by its unique name via the authenticated REST list. */
+async function findTestIdByName(page: Page, name: string): Promise<string | null> {
+  const d = await getJson(page.request, `${TC}/tests?search=${encodeURIComponent(name)}&page=1&pageSize=10`).catch(() => null);
+  const row = d && Array.isArray(d.rows) ? d.rows.find((r: any) => r.name === name) : null;
+  return row ? String(row.id) : null;
+}
+
+/** Create a test through the New-test form; returns its id. New tests are created Inactive.
+ *  The testing instance drops sessions mid-run (form bounces to /login; create Save silently doesn't
+ *  persist). So retry the WHOLE create up to 3× — re-login + reload the form + re-fill + re-Save —
+ *  and after each attempt check whether the test now exists by name. Fails loudly only if all fail. */
 async function createTest(page: Page, name: string, code: string, sampleType = 'Serum'): Promise<string> {
-  await nav(page, `${BASE}/MasterListsPage/TestCatalogEditor/new/basic-info`);
-  // The testing instance drops sessions mid-run → nav lands on /login and the form never appears
-  // (fills then time out for 150s). Recover: if the Test-name field isn't there, re-login + re-nav.
+  const url = `${BASE}/MasterListsPage/TestCatalogEditor/new/basic-info`;
   const nameField = () => page.getByLabel('Test name', { exact: false }).first();
-  if (!(await nameField().isVisible({ timeout: 8000 }).catch(() => false))) {
-    await login(page);
-    await nav(page, `${BASE}/MasterListsPage/TestCatalogEditor/new/basic-info`);
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    // Maybe a prior attempt already created it (Save fired but redirect/lookup raced).
+    const pre = await findTestIdByName(page, name); if (pre) return pre;
+    await nav(page, url);
+    if (!(await nameField().isVisible({ timeout: 8000 }).catch(() => false))) { await login(page); await nav(page, url); }
+    if (!(await nameField().isVisible({ timeout: 12000 }).catch(() => false))) continue; // form never loaded → retry
+    await nameField().fill(name).catch(() => {});
+    await page.getByLabel('Reporting name', { exact: false }).first().fill(name).catch(() => {});
+    const codeField = page.getByLabel('Test code', { exact: false }).first();
+    await codeField.click().catch(() => {}); await codeField.fill(code).catch(() => {});   // overwrite auto-fill
+    await pickCombo(page, 'Lab Unit', BIOCHEM).catch(() => {});
+    await pickCombo(page, 'Sample type', sampleType).catch(() => {});
+    await page.getByRole('button', { name: /^Save$/ }).last().click().catch(() => {});
+    // Resolve id (redirect target is inconsistent: /{id}/basic-info or /). Poll by URL then by name.
+    for (let i = 0; i < 8; i++) {
+      const m = page.url().match(/TestCatalogEditor\/(\d+)\//); if (m) return m[1];
+      const id = await findTestIdByName(page, name); if (id) return id;
+      await page.waitForTimeout(1200);
+    }
+    // not persisted this attempt → loop and retry the whole create
   }
-  await nameField().waitFor({ timeout: 20000 });
-  await nameField().fill(name);
-  await page.getByLabel('Reporting name', { exact: false }).first().fill(name);
-  const codeField = page.getByLabel('Test code', { exact: false }).first();
-  await codeField.click(); await codeField.fill(code);                 // code may auto-fill from name — overwrite
-  // Lab Unit + Sample type are Carbon comboboxes rendering a native <select> or listbox:
-  await pickCombo(page, 'Lab Unit', BIOCHEM);
-  await pickCombo(page, 'Sample type', sampleType);
-  await page.getByRole('button', { name: /^Save$/ }).last().click();
-  // The post-Save redirect target is inconsistent on this build — it sometimes lands on the editor
-  // (/TestCatalogEditor/{id}/basic-info) and sometimes on home (/). Don't depend on it: resolve the
-  // new test's id by looking it up by its unique name via the (authenticated) REST list. This is
-  // deterministic and avoids the redirect flakiness that was read as a "hang".
-  for (let i = 0; i < 12; i++) {
-    const m = page.url().match(/TestCatalogEditor\/(\d+)\//);
-    if (m) return m[1];
-    const d = await getJson(page.request, `${TC}/tests?search=${encodeURIComponent(name)}&page=1&pageSize=10`).catch(() => null);
-    const row = d && Array.isArray(d.rows) ? d.rows.find((r: any) => r.name === name) : null;
-    if (row) return String(row.id);
-    await page.waitForTimeout(1500);
-  }
-  throw new Error(`createTest: could not resolve id for "${name}" (created test not found by name)`);
+  throw new Error(`createTest: could not create "${name}" after 3 attempts (instance session instability)`);
 }
 async function pickCombo(page: Page, label: string, optionText: string) {
   // Carbon/downshift combobox (v3.2.1.11 editor): a role=combobox input (Lab Unit / Sample type /
