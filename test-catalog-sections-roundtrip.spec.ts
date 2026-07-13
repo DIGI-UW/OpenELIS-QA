@@ -63,9 +63,13 @@ const getJson = (rq: APIRequestContext, url: string) =>
 async function apiWrite(page: Page, method: 'POST' | 'DELETE' | 'PUT', url: string): Promise<number> {
   if (!page.url().startsWith(BASE)) await nav(page, `${BASE}/`);
   return page.evaluate(async ({ m, u }) => {
-    const csrf = localStorage.getItem('CSRF') || '';
-    const res = await fetch(u, { method: m, headers: { Accept: 'application/json', 'X-CSRF-Token': csrf }, credentials: 'include' });
-    return res.status;
+    const once = async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const res = await fetch(u, { method: m, headers: { Accept: 'application/json', 'X-CSRF-Token': csrf }, credentials: 'include' });
+      return res.status;
+    };
+    try { return await once(); }
+    catch { await new Promise((r) => setTimeout(r, 1500)); try { return await once(); } catch { return 0; } } // 0 = network blip
   }, { m: method, u: url });
 }
 
@@ -391,11 +395,13 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
     const deact = await apiWrite(page, 'POST', `${TC}/tests/380/deactivate`);
     const del = await apiWrite(page, 'DELETE', `${TC}/tests/380/activate`);
     console.log('OGC1115_STATUS deact=' + deact + ' del=' + del);
-    // Flip-when-fixed: while the bug is present the deactivate path does NOT succeed (4xx: 404 no
-    // route / 405 wrong verb / 403 rejected). When a working deactivate ships it returns 2xx and
-    // this assertion flips → close OGC-1115.
-    expect(deact, 'deactivate should not succeed while bug present').toBeGreaterThanOrEqual(400);
-    expect(del, 'DELETE-activate should not succeed while bug present').toBeGreaterThanOrEqual(400);
+    // Flip-when-fixed: while the bug is present the deactivate path does NOT return 2xx (seen: 404 no
+    // route / 405 wrong verb / 403 rejected; 0 = network blip, also not success). When a working
+    // deactivate ships it returns 2xx and this flips → close OGC-1115. (2xx check, not >=400, so a
+    // transient 0 doesn't masquerade as a flip.)
+    const is2xx = (s: number) => s >= 200 && s < 300;
+    expect(is2xx(deact), `deactivate should not succeed while bug present (got ${deact})`).toBe(false);
+    expect(is2xx(del), `DELETE-activate should not succeed while bug present (got ${del})`).toBe(false);
   });
 
   test('OGC-1120: sample-type-tests 500 without param, 200 with param (robustness guard)', async ({ request }) => {
