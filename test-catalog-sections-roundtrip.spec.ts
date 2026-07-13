@@ -83,8 +83,15 @@ async function nav(page: Page, url: string) {
 /** Create a test through the New-test form; returns its id. New tests are created Inactive. */
 async function createTest(page: Page, name: string, code: string, sampleType = 'Serum'): Promise<string> {
   await nav(page, `${BASE}/MasterListsPage/TestCatalogEditor/new/basic-info`);
-  await page.getByLabel('Test name', { exact: false }).first().waitFor({ timeout: 20000 });
-  await page.getByLabel('Test name', { exact: false }).first().fill(name);
+  // The testing instance drops sessions mid-run → nav lands on /login and the form never appears
+  // (fills then time out for 150s). Recover: if the Test-name field isn't there, re-login + re-nav.
+  const nameField = () => page.getByLabel('Test name', { exact: false }).first();
+  if (!(await nameField().isVisible({ timeout: 8000 }).catch(() => false))) {
+    await login(page);
+    await nav(page, `${BASE}/MasterListsPage/TestCatalogEditor/new/basic-info`);
+  }
+  await nameField().waitFor({ timeout: 20000 });
+  await nameField().fill(name);
   await page.getByLabel('Reporting name', { exact: false }).first().fill(name);
   const codeField = page.getByLabel('Test code', { exact: false }).first();
   await codeField.click(); await codeField.fill(code);                 // code may auto-fill from name — overwrite
