@@ -56,6 +56,19 @@ async function login(page: Page) {
 const getJson = (rq: APIRequestContext, url: string) =>
   rq.get(url, { headers: { Accept: 'application/json' } }).then((r) => r.json());
 
+/** Authenticated write from the PAGE context: sends the session cookie AND the X-CSRF-Token that
+ *  OpenELIS keeps in localStorage['CSRF']. The bare `request` fixture has neither the token nor
+ *  localStorage, so its POST/DELETE 403 regardless of whether the endpoint exists — masking the
+ *  real verdict (e.g. OGC-1115 deactivate). Returns the HTTP status. */
+async function apiWrite(page: Page, method: 'POST' | 'DELETE' | 'PUT', url: string): Promise<number> {
+  if (!page.url().startsWith(BASE)) await nav(page, `${BASE}/`);
+  return page.evaluate(async ({ m, u }) => {
+    const csrf = localStorage.getItem('CSRF') || '';
+    const res = await fetch(u, { method: m, headers: { Accept: 'application/json', 'X-CSRF-Token': csrf }, credentials: 'include' });
+    return res.status;
+  }, { m: method, u: url });
+}
+
 /** SPA-safe navigation: a client-side redirect during goto can throw net::ERR_ABORTED even though
  *  the page loads fine — tolerate it and retry, so a transient abort isn't read as a failure. */
 async function nav(page: Page, url: string) {
@@ -353,7 +366,8 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
   // ---------- G / bug guards (API — deterministic) ----------
   test('OGC-1116: created + activated test becomes orderable in /rest/test-list', async ({ page, request }) => {
     const id = await createTest(page, `${STAMP} Orderable`, `${STAMP}_ORD`);
-    await request.post(`${TC}/tests/${id}/activate`, { headers: { Accept: 'application/json' } });
+    const actStatus = await apiWrite(page, 'POST', `${TC}/tests/${id}/activate`);  // CSRF-authenticated
+    console.log('OGC1116_ACTIVATE_STATUS=' + actStatus);
     await page.waitForTimeout(1500); // allow index refresh (orderability was reindex-dependent)
     const list = await getJson(request, `${REST}/test-list`);
     const present = (list || []).some((t: any) => String(t.id) === id);
@@ -361,11 +375,16 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
     expect(present, 'activated test present in orderable list').toBe(true);
   });
 
-  test('OGC-1115: deactivate remains non-functional (FIXME when fixed)', async ({ request }) => {
-    const deact = await request.post(`${TC}/tests/380/deactivate`);
-    const del = await request.delete(`${TC}/tests/380/activate`);
-    expect(deact.status(), 'no /deactivate endpoint (bug present)').toBe(404);
-    expect([404, 405]).toContain(del.status());
+  test('OGC-1115: deactivate remains non-functional (FIXME when fixed)', async ({ page }) => {
+    // CSRF-authenticated writes (the bare request fixture 403s without the token → false 404/403).
+    const deact = await apiWrite(page, 'POST', `${TC}/tests/380/deactivate`);
+    const del = await apiWrite(page, 'DELETE', `${TC}/tests/380/activate`);
+    console.log('OGC1115_STATUS deact=' + deact + ' del=' + del);
+    // Flip-when-fixed: while the bug is present the deactivate path does NOT succeed (4xx: 404 no
+    // route / 405 wrong verb / 403 rejected). When a working deactivate ships it returns 2xx and
+    // this assertion flips → close OGC-1115.
+    expect(deact, 'deactivate should not succeed while bug present').toBeGreaterThanOrEqual(400);
+    expect(del, 'DELETE-activate should not succeed while bug present').toBeGreaterThanOrEqual(400);
   });
 
   test('OGC-1120: sample-type-tests 500 without param, 200 with param (robustness guard)', async ({ request }) => {
