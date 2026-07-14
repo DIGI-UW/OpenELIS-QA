@@ -56,7 +56,8 @@ test('Legacy clinical Add Order (/SamplePatientEntry) — RBC/Whole Blood persis
   await page.waitForTimeout(1200);
 
   // --- Add Order: generate lab number HERE, requester (free text) + site, submit ---
-  await page.getByRole('button', { name: /^Generate$/ }).click();
+  // "Generate" is a link (<a>) here, not a <button> — match either.
+  await page.locator('a, button').filter({ hasText: /^\s*Generate\s*$/ }).first().click();
   await page.waitForTimeout(1500);
   const lab = (await page.locator('#labNo').inputValue()).trim();  // read the EXACT accession
   expect(lab, 'a lab number was generated').toMatch(/\w{6,}/);
