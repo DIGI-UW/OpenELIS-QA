@@ -31,8 +31,10 @@ test('Legacy clinical Add Order (/SamplePatientEntry) — RBC/Whole Blood persis
   await go(page, '/SamplePatientEntry');
   await page.getByRole('button', { name: /^New Patient$/i }).click();
   await page.waitForTimeout(800);
-  await page.locator('#subjectNumber').fill('QA_AUTO_UHID_LEG');
-  await page.locator('#nationalId').fill('QA_AUTO_NID_LEG');
+  // NB: subjectNumber/nationalId are validated against ^[-a-z0-9/]*$ — NO underscores.
+  // (The usual QA_AUTO_ prefix would 400 here; use hyphens for these two ID fields.)
+  await page.locator('#subjectNumber').fill('QA-AUTO-UHID-LEG');
+  await page.locator('#nationalId').fill('QA-AUTO-NID-LEG');
   await page.locator('#lastName').fill('LegacyLast');
   await page.locator('#firstName').fill('LegacyTest');
   // NOTE: both the Patient-Search DOB and the New-Patient DOB use Carbon's default id
