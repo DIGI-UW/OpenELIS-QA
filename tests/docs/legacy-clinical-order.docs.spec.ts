@@ -56,11 +56,20 @@ test('Legacy clinical Add Order (/SamplePatientEntry) — RBC/Whole Blood persis
   await page.waitForTimeout(1200);
 
   // --- Add Order: generate lab number HERE, requester (free text) + site, submit ---
-  // "Generate" is a link (<a>) here, not a <button> — match either.
-  await page.locator('a, button').filter({ hasText: /^\s*Generate\s*$/ }).first().click();
-  await page.waitForTimeout(1500);
-  const lab = (await page.locator('#labNo').inputValue()).trim();  // read the EXACT accession
-  expect(lab, 'a lab number was generated').toMatch(/\w{6,}/);
+  // "Generate" is a link here; click it via a DOM click (matches the verified manual step),
+  // then poll #labNo until the generated accession appears.
+  await page.evaluate(() => {
+    const el = [...document.querySelectorAll('a,button')]
+      .find(e => /^\s*Generate\s*$/i.test((e.textContent || '').trim()));
+    if (el) (el as HTMLElement).click();
+  });
+  let lab = '';
+  for (let i = 0; i < 12; i++) {
+    lab = (await page.locator('#labNo').inputValue().catch(() => '')).trim();
+    if (lab) break;
+    await page.waitForTimeout(500);
+  }
+  expect(lab, 'a lab number was generated').toMatch(/\w{6,}/);  // read the EXACT accession
   console.log('LEGACY_ORDER lab=' + lab);
   await page.locator('#requesterFirstName').fill('QA');
   await page.locator('#requesterLastName').fill('Tester');
