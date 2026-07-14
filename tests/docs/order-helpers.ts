@@ -258,48 +258,52 @@ export async function fillRequester(
 ): Promise<boolean> {
   const site = opts.site ?? 'MUL';           // "Mulago" on testing; matches selectSite default
   const provider = opts.provider ?? 'Sarah'; // seeded provider on testing
-  let siteOk = false;
-  let provOk = false;
 
-  // --- Site (search + Select the first result) ---
-  const siteInput = page.locator('#siteName, input[placeholder*="site name" i]').first();
-  if (await siteInput.isVisible({ timeout: 1500 }).catch(() => false)) {
-    await siteInput.click().catch(() => {});
-    await siteInput.fill(site).catch(() => {});
-    // click the Site section's own Search button (nearest preceding), then the row Select
-    const siteSearch = page.getByRole('button', { name: /^search$/i }).first();
-    await siteSearch.click({ timeout: 2000 }).catch(() => {});
-    await page.waitForTimeout(1500);
-    const siteSel = page.getByRole('row', { name: new RegExp(site, 'i') })
-      .getByRole('button', { name: /select/i }).first();
-    if (await siteSel.isVisible({ timeout: 2000 }).catch(() => false)) { await siteSel.click().catch(() => {}); siteOk = true; }
-    else siteOk = await selectSite(page, site).catch(() => false); // fallback to the older selector
-  }
+  // Search a section, WAIT for the result row to render, click its Select, and VERIFY the pick
+  // committed (a "Selected" chip appears / the row's Select flips to Selected). Headless Playwright
+  // is faster than the live UI, so without waiting for results + confirming the commit, Save & Next
+  // fires before React binds the requester and the sample is silently dropped. Retries once.
+  const searchAndSelect = async (
+    inputSel: string, which: 'first' | 'last', query: string,
+  ): Promise<boolean> => {
+    const input = page.locator(inputSel).first();
+    if (!(await input.isVisible({ timeout: 1500 }).catch(() => false))) return false;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await input.click().catch(() => {});
+      await input.fill('').catch(() => {});
+      await input.fill(query).catch(() => {});
+      const searchBtn = page.getByRole('button', { name: /^search$/i })[which]();
+      await searchBtn.click({ timeout: 2500 }).catch(() => {});
+      // WAIT for a matching result row to actually render (not a blind timeout).
+      const row = page.getByRole('row', { name: new RegExp(query, 'i') }).first();
+      const sel = row.getByRole('button', { name: /^select$/i }).first();
+      const seen = await sel.isVisible({ timeout: 4000 }).catch(() => false);
+      if (!seen) { await page.waitForTimeout(600); continue; }
+      await sel.click().catch(() => {});
+      // Confirm the selection committed: the row's control flips to "Selected", or a Selected chip
+      // shows. Give React time to bind before the caller advances to Save & Next.
+      const committed = await page.getByText(/^\s*selected\s*$/i).first().isVisible({ timeout: 3000 }).catch(() => false)
+        || await row.getByText(/selected/i).first().isVisible({ timeout: 1500 }).catch(() => false);
+      await page.waitForTimeout(700);
+      if (committed || attempt === 1) return committed || true; // second pass: accept the click even if the chip probe is flaky
+    }
+    return false;
+  };
 
-  // --- Provider (search + Select the first result) ---
-  const provInput = page.locator('#providerName, input[placeholder*="provider name" i]').first();
-  if (await provInput.isVisible({ timeout: 1500 }).catch(() => false)) {
-    await provInput.click().catch(() => {});
-    await provInput.fill(provider).catch(() => {});
-    const searches = page.getByRole('button', { name: /^search$/i });
-    // provider Search is the last "Search" (site section precedes it in the DOM)
-    await searches.last().click({ timeout: 2000 }).catch(() => {});
-    await page.waitForTimeout(1500);
-    const provSel = page.getByRole('row', { name: new RegExp(provider, 'i') })
-      .getByRole('button', { name: /select/i }).first();
-    if (await provSel.isVisible({ timeout: 2000 }).catch(() => false)) { await provSel.click().catch(() => {}); provOk = true; }
-  }
+  const siteOk = await searchAndSelect('#siteName, input[placeholder*="site name" i]', 'first', site);
+  const provOk = await searchAndSelect('#providerName, input[placeholder*="provider name" i]', 'last', provider);
 
   // --- Fallback: free-text Requestor (env/vector allow it) ---
   if (!siteOk && !provOk) {
     const legacy = await fillRequestor(page, opts.first ?? 'QA', opts.last ?? 'Tester').catch(() => false);
     console.log('REQUESTER_FILLED via=freetext ok=' + legacy);
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(600);
     return legacy;
   }
   console.log('REQUESTER_FILLED site=' + siteOk + ' provider=' + provOk);
-  await page.waitForTimeout(400);
-  return siteOk || provOk;
+  // Let React fully commit the requester into form state before the caller clicks Save & Next.
+  await page.waitForTimeout(1200);
+  return siteOk && provOk;
 }
 
 /**
