@@ -29,7 +29,9 @@ test('Legacy clinical Add Order (/SamplePatientEntry) — RBC/Whole Blood persis
   await page.locator('#nationalId').fill('QA_AUTO_NID_LEG');
   await page.locator('#lastName').fill('LegacyLast');
   await page.locator('#firstName').fill('LegacyTest');
-  await page.locator('#date-picker-default-id').fill('10/10/1980');
+  // NOTE: both the Patient-Search DOB and the New-Patient DOB use Carbon's default id
+  // "date-picker-default-id" — scope to the New Patient form (the last one on the page).
+  await page.locator('#date-picker-default-id').last().fill('10/10/1980');
   // Gender: click the VISIBLE label (clicking the hidden Carbon radio hangs).
   await page.locator('label[for="radio-1"]').click().catch(async () => {
     await page.getByText(/^Male$/).first().click();
