@@ -20,6 +20,12 @@ import { trackWrites, assertOrderPersisted, assertSamplePersisted } from './orde
 test('Legacy clinical Add Order (/SamplePatientEntry) — RBC/Whole Blood persists a resultable analysis', async ({ page }, info) => {
   test.setTimeout(180000);
   const writes = trackWrites(page);
+  // Log the SamplePatientEntry response body on non-2xx so a 400 reason is visible.
+  page.on('response', async (r) => {
+    if (/SamplePatientEntry/.test(r.url()) && r.request().method() === 'POST' && r.status() >= 400) {
+      console.log('SPE_ERROR ' + r.status() + ' ' + (await r.text().catch(() => '')).slice(0, 400));
+    }
+  });
 
   // --- Patient Info ---
   await go(page, '/SamplePatientEntry');
@@ -73,11 +79,16 @@ test('Legacy clinical Add Order (/SamplePatientEntry) — RBC/Whole Blood persis
   console.log('LEGACY_ORDER lab=' + lab);
   await page.locator('#requesterFirstName').fill('QA');
   await page.locator('#requesterLastName').fill('Tester');
-  // Site is an autocomplete — type then click the matching option.
+  // Site is an autocomplete — type, then click the leaf suggestion via a DOM click (the exact
+  // step verified by hand; a plain getByText click hits a wrapper and doesn't bind referringSiteId).
   await page.locator('#siteName').fill('Mulago');
-  await page.waitForTimeout(1200);
-  await page.getByText(/^\s*Mulago\s*$/).first().click().catch(() => {});
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(1400);
+  await page.evaluate(() => {
+    const opt = [...document.querySelectorAll('[role=option],.autocomplete__item,li,[class*="menu"] *,[class*="suggest"] *')]
+      .find(e => (e as HTMLElement).children.length === 0 && /^\s*Mulago\s*$/i.test((e.textContent || '')));
+    if (opt) (opt as HTMLElement).click();
+  });
+  await page.waitForTimeout(700);
   await shot(page, info, 'Add Order — ready to submit', { fullPage: false });
 
   await page.getByRole('button', { name: /^Submit$/ }).click();
