@@ -12,7 +12,7 @@
 //   npx playwright test --project=docs tests/docs/multicomponent-runtime.docs.spec.ts
 import { test, expect } from '@playwright/test';
 import { go, shot, saveWalkthrough } from './capture';
-import { generateLabNumber, newPatient, setSelectByOption, checkByLabel, completeQaChecklist, clickButton, trackWrites, assertOrderPersisted } from './order-helpers';
+import { generateLabNumber, newPatient, setSelectByOption, checkByLabel, completeQaChecklist, clickButton, trackWrites, assertOrderPersisted, fillRequester, assertSamplePersisted } from './order-helpers';
 
 const BASE = process.env.BASE || 'https://testing.openelis-global.org';
 const REST = `${BASE}/api/OpenELIS-Global/rest`;
@@ -59,7 +59,11 @@ test.describe('OGC-1131 multi-component results — runtime', () => {
     await clickButton(page, /tests\s*&\s*panels|choose available|order tests/i, 900).catch(() => {});
     const picked = await checkByLabel(page, /COVID-?19 PCR|COVIDPCR/i).catch(() => false);
     console.log('MC_ORDER lab=' + lab + ' testPicked=' + picked);
-    await shot(page, info, 'Enter Order — COVIDPCR', { fullPage: false });
+
+    // MANDATORY: fill the Requester (Site + Provider). Without it the Enter-Order Save returns 200
+    // but SILENTLY DROPS the sample (order.samples: []) → 0 analyses → false "multi-component broken".
+    await fillRequester(page, { site: 'MUL', provider: 'Sarah' });
+    await shot(page, info, 'Enter Order — COVIDPCR + Requester', { fullPage: false });
 
     // Enter → Collect → (Label/Store skip) → QA → Submit, reusing the clinical flow shape.
     await clickButton(page, /save & next|save and next/i, 2500);
@@ -77,6 +81,8 @@ test.describe('OGC-1131 multi-component results — runtime', () => {
     await clickButton(page, /submit/i, 3000).catch(() => {});
     console.log('MC_WRITES=' + JSON.stringify(writes));
     assertOrderPersisted(writes, 'covid multi-component order');
+    // False-positive guard: prove the sample+tests actually persisted (not a silent empty save).
+    await assertSamplePersisted(page, lab);
 
     // Result entry — By Order: assert a component-labeled field for BOTH N2 and E.
     await go(page, `/result?type=order&doRange=false`);

@@ -238,3 +238,89 @@ export async function fillRequestor(page: Page, first = 'QA', last = 'Tester'): 
   return f || l;
 }
 
+/**
+ * MANDATORY for every order. The Requester (Site + Provider) is REQUIRED for the sample+tests to
+ * persist. On the unified clinical wizard (testing v3.2.1.11+) omitting it does NOT error — the
+ * Enter-Order Save returns 200 but SILENTLY DROPS the whole sample (order.samples: []), so the
+ * order reaches Collect showing "No tests have been ordered" and is never resultable. That silent
+ * drop caused a false-positive "multi-component is broken" bug report (see reference below); a real
+ * COVID-19 PCR order placed WITH a Requester is fully resultable. So: ALWAYS call this before
+ * Save & Next, and gate the run with assertSamplePersisted() afterwards.
+ *
+ * Flow (matches the live UI): Site Search -> type -> click the result's Select; Provider Search ->
+ * type -> click the result's Select. Falls back to the free-text Requestor (env/vector, OGC-1074)
+ * when the search UI isn't present. Site/Provider autocompletes require EXISTING records — free
+ * text alone shows "No suggestions" and does NOT satisfy the requirement.
+ */
+export async function fillRequester(
+  page: Page,
+  opts: { site?: string; provider?: string; first?: string; last?: string } = {},
+): Promise<boolean> {
+  const site = opts.site ?? 'MUL';           // "Mulago" on testing; matches selectSite default
+  const provider = opts.provider ?? 'Sarah'; // seeded provider on testing
+  let siteOk = false;
+  let provOk = false;
+
+  // --- Site (search + Select the first result) ---
+  const siteInput = page.locator('#siteName, input[placeholder*="site name" i]').first();
+  if (await siteInput.isVisible({ timeout: 1500 }).catch(() => false)) {
+    await siteInput.click().catch(() => {});
+    await siteInput.fill(site).catch(() => {});
+    // click the Site section's own Search button (nearest preceding), then the row Select
+    const siteSearch = page.getByRole('button', { name: /^search$/i }).first();
+    await siteSearch.click({ timeout: 2000 }).catch(() => {});
+    await page.waitForTimeout(1500);
+    const siteSel = page.getByRole('row', { name: new RegExp(site, 'i') })
+      .getByRole('button', { name: /select/i }).first();
+    if (await siteSel.isVisible({ timeout: 2000 }).catch(() => false)) { await siteSel.click().catch(() => {}); siteOk = true; }
+    else siteOk = await selectSite(page, site).catch(() => false); // fallback to the older selector
+  }
+
+  // --- Provider (search + Select the first result) ---
+  const provInput = page.locator('#providerName, input[placeholder*="provider name" i]').first();
+  if (await provInput.isVisible({ timeout: 1500 }).catch(() => false)) {
+    await provInput.click().catch(() => {});
+    await provInput.fill(provider).catch(() => {});
+    const searches = page.getByRole('button', { name: /^search$/i });
+    // provider Search is the last "Search" (site section precedes it in the DOM)
+    await searches.last().click({ timeout: 2000 }).catch(() => {});
+    await page.waitForTimeout(1500);
+    const provSel = page.getByRole('row', { name: new RegExp(provider, 'i') })
+      .getByRole('button', { name: /select/i }).first();
+    if (await provSel.isVisible({ timeout: 2000 }).catch(() => false)) { await provSel.click().catch(() => {}); provOk = true; }
+  }
+
+  // --- Fallback: free-text Requestor (env/vector allow it) ---
+  if (!siteOk && !provOk) {
+    const legacy = await fillRequestor(page, opts.first ?? 'QA', opts.last ?? 'Tester').catch(() => false);
+    console.log('REQUESTER_FILLED via=freetext ok=' + legacy);
+    await page.waitForTimeout(400);
+    return legacy;
+  }
+  console.log('REQUESTER_FILLED site=' + siteOk + ' provider=' + provOk);
+  await page.waitForTimeout(400);
+  return siteOk || provOk;
+}
+
+/**
+ * FALSE-POSITIVE GUARD. After placing + saving an order, confirm the SAMPLE actually persisted —
+ * i.e. the order record carries the sample and its tests. A 200 from SamplePatientEntry is NOT
+ * enough: without a Requester the save returns 200 with order.samples: [] and the order is silently
+ * empty. This is the check that distinguishes an unresultable-order PRODUCT bug from an operator
+ * error (missing Requester). Prefer this over assertOrderPersisted for order->result chains.
+ */
+export async function assertSamplePersisted(page: Page, labNumber: string, restBase?: string): Promise<void> {
+  const base = restBase || (process.env.BASE || 'https://testing.openelis-global.org') + '/api/OpenELIS-Global/rest';
+  const order = await page.request
+    .get(`${base}/order/search?labNumber=${encodeURIComponent(labNumber)}`, { headers: { Accept: 'application/json' } })
+    .then((r) => r.json()).catch(() => ({} as any));
+  const samples: any[] = order.samples || [];
+  const testCount = samples.reduce((n, s) => n + ((s.tests || []).length || 0), 0);
+  console.log('SAMPLE_PERSISTED lab=' + labNumber + ' samples=' + samples.length + ' tests=' + testCount);
+  expect(samples.length,
+    `${labNumber}: order.samples is EMPTY after save — the sample was silently dropped. ` +
+    `Almost always a MISSING REQUESTER (Site + Provider), NOT a product bug. Call fillRequester() before Save & Next. ` +
+    `Do NOT file a bug on this without first confirming the Requester was set.`).toBeGreaterThan(0);
+  expect(testCount, `${labNumber}: sample persisted but carries no tests`).toBeGreaterThan(0);
+}
+

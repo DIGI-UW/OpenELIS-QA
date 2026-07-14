@@ -7,7 +7,7 @@
 //   BASE=https://indonesiademo.openelis-global.org npx playwright test --project=docs tests/docs/clinical-flow.docs.spec.ts
 import { test, expect } from '@playwright/test';
 import { go, shot, saveWalkthrough } from './capture';
-import { generateLabNumber, newPatient, setSelectByOption, checkByLabel, completeQaChecklist, clickButton, trackWrites, assertOrderPersisted } from './order-helpers';
+import { generateLabNumber, newPatient, setSelectByOption, checkByLabel, completeQaChecklist, clickButton, trackWrites, assertOrderPersisted, fillRequester, assertSamplePersisted } from './order-helpers';
 
 test('User manual — Clinical order full flow', async ({ page }, info) => {
   test.setTimeout(180000);
@@ -16,12 +16,12 @@ test('User manual — Clinical order full flow', async ({ page }, info) => {
   await go(page, '/order/clinical/enter');
 
   // --- Enter Order ---
-  await generateLabNumber(page);
+  const lab = await generateLabNumber(page);
   await newPatient(page, { last: 'Parker', first: 'Peter', dob: '15/05/1990', gender: /^male$/i });
   await page.waitForTimeout(500);
-  // Requester: site + provider (best-effort text entry).
-  try { const s = page.getByPlaceholder(/site name/i).first(); if (await s.isVisible({ timeout: 1500 })) await s.fill('Stark Tower Clinic'); } catch {}
-  try { const p = page.getByPlaceholder(/provider name/i).first(); if (await p.isVisible({ timeout: 1500 })) await p.fill('Tony Stark'); } catch {}
+  // Requester: REQUIRED (Site + Provider). Omitting it makes SamplePatientEntry save 200 with an
+  // empty sample (order.samples: []) — the false-positive that must never happen again.
+  await fillRequester(page, { site: 'MUL', provider: 'Sarah' });
   // Sample type = Whole Blood, then add the NFS panel (falls back to first available test).
   await setSelectByOption(page, /^\s*Whole Blood\s*$/i);
   await page.waitForTimeout(900);
@@ -82,4 +82,5 @@ test('User manual — Clinical order full flow', async ({ page }, info) => {
   await saveWalkthrough(page, info);
   console.log('CLIN_WRITES=' + JSON.stringify(writes));
   assertOrderPersisted(writes, 'clinical');
+  await assertSamplePersisted(page, lab);
 });
