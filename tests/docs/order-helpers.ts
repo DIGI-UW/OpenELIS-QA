@@ -280,14 +280,15 @@ export async function fillRequester(
       const seen = await sel.isVisible({ timeout: 4000 }).catch(() => false);
       if (!seen) { await page.waitForTimeout(600); continue; }
       await sel.click().catch(() => {});
-      // Confirm the selection committed: the row's control flips to "Selected", or a Selected chip
-      // shows. Give React time to bind before the caller advances to Save & Next.
+      // Confirm the selection committed: a "Selected" chip appears. Report HONESTLY — do not
+      // pretend success if the chip never shows (a false "committed" is what let the empty-sample
+      // slip through before). The real gate is assertSamplePersisted() downstream.
       const committed = await page.getByText(/^\s*selected\s*$/i).first().isVisible({ timeout: 3000 }).catch(() => false)
         || await row.getByText(/selected/i).first().isVisible({ timeout: 1500 }).catch(() => false);
       await page.waitForTimeout(700);
-      if (committed || attempt === 1) return committed || true; // second pass: accept the click even if the chip probe is flaky
+      if (committed) return true;
     }
-    return false;
+    return false; // clicked but never confirmed — caller/assertSamplePersisted will surface the empty order
   };
 
   const siteOk = await searchAndSelect('#siteName, input[placeholder*="site name" i]', 'first', site);
