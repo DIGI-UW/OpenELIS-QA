@@ -6,7 +6,7 @@
  * /MasterListsPage/testManagementConfigMenu pages). Verified live 2026-06-26.
  *
  * Routes:
- *   List   : /admin/TestCatalogList?page=1&pageSize=25
+ *   List   : /MasterListsPage/TestCatalogList?page=1&pageSize=25
  *   Editor : /MasterListsPage/TestCatalogEditor/<testId>/<section-slug>
  *
  * Suites:
@@ -50,7 +50,7 @@ async function login(page: Page, user: string, pass: string): Promise<void> {
 
 /** Open the list, click the first test row, return its numeric testId from the editor URL. */
 async function discoverTestId(page: Page): Promise<string> {
-  await page.goto(`${BASE}/admin/TestCatalogList?page=1&pageSize=25`);
+  await page.goto(`${BASE}/MasterListsPage/TestCatalogList?page=1&pageSize=25`);
   await page.waitForLoadState('networkidle', { timeout: TIMEOUT }).catch(() => {});
   const firstRow = page.locator('table tbody tr, [role="row"]').filter({ hasText: /\S/ }).first();
   await firstRow.click();
@@ -73,14 +73,14 @@ test.describe('TC-CAT-LIST — Test Catalog list view', () => {
   test.beforeEach(async ({ page }) => { await login(page, ADMIN.user, ADMIN.pass); });
 
   test('TC-CAT-01: list view loads with rows (RENDER)', async ({ page }) => {
-    await page.goto(`${BASE}/admin/TestCatalogList?page=1&pageSize=25`);
+    await page.goto(`${BASE}/MasterListsPage/TestCatalogList?page=1&pageSize=25`);
     await expectNoErrorPage(page);
     await expect(page.getByRole('heading', { name: /test catalog/i }).first()).toBeVisible();
     await expect(page.locator('table tbody tr, [role="row"]').first()).toBeVisible();
   });
 
   test('TC-CAT-02: filter bar present — Domain / Status / AMR / Search (RENDER)', async ({ page }) => {
-    await page.goto(`${BASE}/admin/TestCatalogList?page=1&pageSize=25`);
+    await page.goto(`${BASE}/MasterListsPage/TestCatalogList?page=1&pageSize=25`);
     // Wait for the list to paint (auto-waiting locator assertions, not a body snapshot).
     await expect(page.getByRole('heading', { name: /test catalog/i }).first()).toBeVisible();
     await expect(page.getByText(/^Domain$/i).first()).toBeVisible();
@@ -90,7 +90,7 @@ test.describe('TC-CAT-LIST — Test Catalog list view', () => {
   });
 
   test('TC-CAT-03: search by name filters the table (FUNCTION)', async ({ page }) => {
-    await page.goto(`${BASE}/admin/TestCatalogList?page=1&pageSize=25`);
+    await page.goto(`${BASE}/MasterListsPage/TestCatalogList?page=1&pageSize=25`);
     const search = page.locator('input[placeholder*="search" i], input[type="search"], input[type="text"]').first();
     await search.fill('Amylase');
     await page.waitForTimeout(1200);
@@ -98,7 +98,7 @@ test.describe('TC-CAT-LIST — Test Catalog list view', () => {
   });
 
   test('TC-CAT-04: pagination present (page size + page count) (RENDER)', async ({ page }) => {
-    await page.goto(`${BASE}/admin/TestCatalogList?page=1&pageSize=25`);
+    await page.goto(`${BASE}/MasterListsPage/TestCatalogList?page=1&pageSize=25`);
     await expect(page.getByText(/items per page/i).first()).toBeVisible();
     await expect(page.getByText(/of\s+\d+\s+(pages|items)/i).first()).toBeVisible();
   });
