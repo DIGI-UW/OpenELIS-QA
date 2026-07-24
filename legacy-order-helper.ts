@@ -2,6 +2,42 @@ import { Page, expect } from '@playwright/test';
 
 const BASE = process.env.BASE || 'https://testing.openelis-global.org';
 
+export type ApiResult = { status: number; body: any };
+
+/** In-page fetch against /rest/test-catalog with the CSRF token (the bare `request` fixture lacks it). */
+export async function apiCall(page: Page, path: string, method: 'GET' | 'POST' | 'PUT', payload?: any): Promise<ApiResult> {
+  return page.evaluate(async ({ path, method, payload }) => {
+    const csrf = localStorage.getItem('CSRF') || '';
+    const init: RequestInit = { method, headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': csrf }, credentials: 'include' };
+    if (method !== 'GET') init.body = JSON.stringify(payload ?? {});
+    const r = await fetch('/api/OpenELIS-Global/rest/test-catalog' + path, init);
+    let body: any; try { body = await r.json(); } catch { body = (await r.text().catch(() => '')).slice(0, 300); }
+    return { status: r.status, body };
+  }, { path, method, payload });
+}
+
+/**
+ * DOCUMENTED add-test workflow (OGC-1142): POST /rest/test-catalog/tests → 201 {testId}. New tests
+ * land INACTIVE. Use this instead of the UI `/TestCatalogEditor/new/basic-info` form, which drifted
+ * with the OGC-1142 editor rework (getByLabel fill / waitForURL times out). Ensures CSRF is present.
+ * labUnitId 56 = Biochemistry, sampleTypeId 2 = Serum.
+ */
+export async function createTestViaRest(
+  page: Page,
+  opts: { name: string; code: string; domain?: string; labUnitId?: string; sampleTypeId?: string },
+): Promise<string> {
+  await page.goto(`${BASE}/MasterListsPage/TestCatalogList?page=1&pageSize=25`, { waitUntil: 'domcontentloaded' }).catch(() => {});
+  await page.waitForFunction(() => !!localStorage.getItem('CSRF'), null, { timeout: 15000 }).catch(() => {});
+  const res = await apiCall(page, '/tests', 'POST', {
+    name: opts.name, reportingName: opts.name, code: opts.code,
+    domain: opts.domain ?? 'CLINICAL', labUnitId: opts.labUnitId ?? '56', sampleTypeId: opts.sampleTypeId ?? '2',
+  });
+  expect(res.status, 'create test -> 201').toBe(201);
+  const id = String(res.body?.testId ?? res.body?.id ?? '');
+  expect(id, 'create returns a numeric testId').toMatch(/^\d+$/);
+  return id;
+}
+
 /**
  * Place a Serum clinical order carrying the test/panel `name` via the LEGACY /SamplePatientEntry
  * wizard, and return the generated accession (lab number).

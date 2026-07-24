@@ -26,13 +26,13 @@
  */
 
 import { test, expect, Page, APIRequestContext } from '@playwright/test';
-import { placeLegacySerumOrder } from './legacy-order-helper';
+import { placeLegacySerumOrder, createTestViaRest } from './legacy-order-helper';
 
 const BASE = process.env.BASE || 'https://testing.openelis-global.org';
 const REST = `${BASE}/api/OpenELIS-Global/rest`;
 const TC = `${REST}/test-catalog`;
 const ADMIN = { user: process.env.OE_USER || 'admin', pass: process.env.OE_PASS || 'adminADMIN!' };
-const STAMP = `QA_AUTO_${new Date().toISOString().slice(5, 10).replace('-', '')}`;
+const STAMP = `QA_AUTO_${new Date().toISOString().slice(5, 10).replace('-', '')}_${Date.now().toString().slice(-5)}`;
 const BIOCHEM = 'Biochemistry';
 const PANEL = process.env.OE_PANEL || 'Bilan Biochimique';   // existing Serum panel → rides into Add Order
 const ABNORMAL = '120';   // > normal-high 100, < critical-high 150  → abnormal, not critical
@@ -73,16 +73,10 @@ async function pickCombo(page: Page, label: string, optionText: string) {
 
 /** Create a numeric test with a single component; returns its id. */
 async function createNumericTest(page: Page, name: string, code: string): Promise<string> {
-  await nav(page, `${BASE}/MasterListsPage/TestCatalogEditor/new/basic-info`);
-  await page.getByLabel('Test name', { exact: false }).first().fill(name);
-  await page.getByLabel('Reporting name', { exact: false }).first().fill(name);
-  const codeField = page.getByLabel('Test code', { exact: false }).first();
-  await codeField.click(); await codeField.fill(code);
-  await pickCombo(page, 'Lab Unit', BIOCHEM);
-  await pickCombo(page, 'Sample type', 'Serum');
-  await page.getByRole('button', { name: /^Save$/ }).last().click();
-  await page.waitForURL(/\/TestCatalogEditor\/\d+\/basic-info/, { timeout: 30_000 });
-  const id = page.url().match(/TestCatalogEditor\/(\d+)\//)![1];
+  // DOCUMENTED add-test workflow (REST POST /tests → 201 {testId}). The UI
+  // /TestCatalogEditor/new/basic-info form drifted with the OGC-1142 rework (getByLabel fill /
+  // waitForURL times out); the editor subpages below still work, so only the create is swapped.
+  const id = await createTestViaRest(page, { name, code });
 
   await nav(page, `${BASE}/MasterListsPage/TestCatalogEditor/${id}/sample-results`);
   await page.waitForTimeout(600);
