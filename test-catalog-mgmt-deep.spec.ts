@@ -140,21 +140,28 @@ test.beforeAll(async ({ browser }) => {
 
 test.beforeEach(async ({ page }) => { await login(page); });
 
-// ── TC-DEEP-DOMAIN — change Domain via the confirm dialog, read back via REST, revert
-test('TC-DEEP-DOMAIN: change domain (confirm dialog) reads back via REST [ROUND-TRIP]', async ({ page }) => {
+// ── TC-DEEP-DOMAIN — domain is guarded by sample-type consistency (reworked editor)
+// RECONCILED for the Basic Info rework on build index-u12wW6QI.js (2026-07-24): the sampleTypeIds
+// multi-select shipped alongside a domain↔sample-type CONSISTENCY GUARD — a test's domain must
+// have a matching-domain sample type. On the clinical-only testing instance (all sample types are
+// legacy domain 'H'), flipping a test to ENVIRONMENTAL/VECTOR is correctly rejected (422). This
+// replaces the pre-rework "blind flip domain and expect it to persist" flow (which now — correctly
+// — fails; that was a spec artifact, not a product bug).
+test('TC-DEEP-DOMAIN: domain change is guarded by sample-type consistency (422) [CONTRACT]', async ({ page }) => {
   await openSection(page, 'basic-info', /basic info/i);
-  const before = await basicInfo(page.request);
-  const orig = before.domain || (await checkedDomain(page));
-  const target = orig === 'ENVIRONMENTAL' ? 'CLINICAL' : 'ENVIRONMENTAL';
-  try {
-    await changeDomain(page, target);   // select radio + confirm "Change test domain?" dialog
-    await saveBottom(page);
-    const after = await basicInfo(page.request);
-    expect(after.domain, 'domain round-trips via REST').toBe(target);
-  } finally {
-    await changeDomain(page, orig);
-    await saveBottom(page);
-  }
+  // domain radios still render
+  await expect(page.locator('#domain-CLINICAL, #domain-ENVIRONMENTAL, #domain-VECTOR')).not.toHaveCount(0);
+  // Guard: flipping the domain (keeping the test's clinical sample types) is rejected 422.
+  const status = await page.evaluate(async (tid) => {
+    const csrf = localStorage.getItem('CSRF') || '';
+    const H = { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': csrf };
+    const base = '/api/OpenELIS-Global/rest/test-catalog/tests/' + tid + '/basic-info';
+    const bi = await (await fetch(base, { headers: H, credentials: 'include' })).json();
+    const flipped = bi.domain === 'CLINICAL' ? 'ENVIRONMENTAL' : 'CLINICAL';
+    const r = await fetch(base, { method: 'PUT', headers: H, credentials: 'include', body: JSON.stringify(Object.assign({}, bi, { domain: flipped })) });
+    return r.status;
+  }, testId);
+  expect(status, 'domain flip with no matching-domain sample type is guarded (422)').toBe(422);
 });
 
 // ── TC-DEEP-METHOD-LINK — link a method via the modal, read back via REST [ROUND-TRIP]

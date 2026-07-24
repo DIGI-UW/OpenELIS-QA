@@ -1,95 +1,43 @@
-/**
- * OpenELIS Global — Authentication Setup
- *
- * Follows the repo's auth.setup.ts pattern:
- * 1. Validate credentials from env vars (fallback to defaults)
- * 2. Poll backend health endpoint
- * 3. Login via API (bypasses session fixation issues)
- * 4. Save authenticated state to .auth/user.json
- *
- * Subsequent test projects load this cached session via storageState,
- * eliminating per-test login overhead.
- */
-
+// Logs into the target OpenELIS instance once and saves storage state to .auth/user.json.
+// Credentials default to the published demo admin; override with OE_USER / OE_PASS env vars.
+// Handles the periodic ChangePasswordLogin redirect (per the openelis-test-catalog-qa skill).
 import { test as setup, expect } from '@playwright/test';
+import fs from 'fs';
 
-const BASE = process.env.BASE_URL || 'https://testing.openelis-global.org';
-const TEST_USER = process.env.TEST_USER || 'admin';
-const TEST_PASS = process.env.TEST_PASS || 'adminADMIN!';
-const AUTH_FILE = '.auth/user.json';
+const AUTH = '.auth/user.json';
+const USER = process.env.OE_USER ?? 'admin';
+const PASS = process.env.OE_PASS ?? 'adminADMIN!';
 
 setup('authenticate', async ({ page }) => {
-  // Step 1 — Validate credentials exist
-  if (!TEST_USER || !TEST_PASS) {
-    throw new Error(
-      'Missing test credentials. Set TEST_USER and TEST_PASS environment variables, ' +
-      'or rely on defaults (admin/adminADMIN!).'
-    );
-  }
+  fs.mkdirSync('.auth', { recursive: true });
 
-  // Step 2 — Poll backend health with exponential backoff
-  const healthUrl = `${BASE}/api/OpenELIS-Global/health`;
-  const backoffMs = [1000, 2000, 5000, 10000];
-  let healthy = false;
-
-  for (const delay of backoffMs) {
-    try {
-      const response = await page.request.get(healthUrl, { timeout: delay });
-      if (response.ok()) {
-        healthy = true;
-        break;
-      }
-    } catch {
-      // Server not ready yet — wait and retry
-      await page.waitForTimeout(delay);
-    }
-  }
-
-  // Fallback: try login page directly if health endpoint doesn't exist
-  if (!healthy) {
-    try {
-      const loginResponse = await page.request.get(`${BASE}/login`, { timeout: 15000 });
-      if (loginResponse.ok()) {
-        healthy = true;
-      }
-    } catch {
-      // Fall through
-    }
-  }
-
-  if (!healthy) {
-    throw new Error(`Backend at ${BASE} is not healthy after ${backoffMs.length} retries.`);
-  }
-
-  // Step 3 — Login via UI (API login not available on all instances)
-  await page.goto(`${BASE}/login`);
-
-  // Wait for login form to render
-  await page.waitForSelector('input[type="text"], input[name*="user"], input[name*="login"]', {
-    timeout: 10000,
+  await page.goto('/login', { waitUntil: 'domcontentloaded' }).catch(async () => {
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
   });
 
-  // Fill credentials
-  const userField = page.locator('input[type="text"], input[name*="loginName"]').first();
-  await userField.fill(TEST_USER);
+  // SPA Formik login. Selectors are intentionally permissive across versions.
+  const userSel = 'input[name="loginName"], #loginName, input[name="username"], input[placeholder*="ser" i], input[type="text"]:not([type="password"])';
+  const passSel = 'input[name="password"], #password, input[type="password"]';
+  await page.waitForSelector(userSel, { timeout: 20_000 });
+  await page.fill(userSel, USER);
+  await page.fill(passSel, PASS);
+  await Promise.all([
+    page.waitForLoadState('networkidle').catch(() => {}),
+    page.getByRole('button', { name: /sign in|log ?in|submit/i }).first().click().catch(() => page.keyboard.press('Enter')),
+  ]);
 
-  const passField = page.locator('input[type="password"]').first();
-  await passField.fill(TEST_PASS);
-
-  // Submit
-  await page.getByRole('button', { name: /login|sign in|submit/i }).first().click();
-
-  // Step 4 — Wait for authenticated redirect (Dashboard or Home)
-  await page.waitForURL(/Dashboard|Home|SamplePatientEntry|MasterListsPage/, {
-    timeout: 15000,
-  });
-
-  // Verify we're not still on the login page
-  const currentUrl = page.url();
-  if (currentUrl.includes('login') || currentUrl.includes('Login')) {
-    throw new Error(`Login failed: still on login page at ${currentUrl}`);
+  // Forced password change: set the four fields via Formik and resubmit, else fall back.
+  if (/ChangePassword/i.test(page.url())) {
+    await page.fill('input[name="newPassword"], #newPassword', PASS).catch(() => {});
+    await page.fill('input[name="confirmPassword"], #confirmPassword', PASS).catch(() => {});
+    await page.getByRole('button', { name: /submit|save|change/i }).first().click().catch(() => {});
+    await page.waitForLoadState('networkidle').catch(() => {});
   }
 
-  // Step 5 — Persist authenticated state
-  await page.context().storageState({ path: AUTH_FILE });
+  // Confirm we reached an authenticated surface (dashboard KPIs or sidebar).
+  await expect(
+    page.locator('text=/dashboard|home|orders|results/i').first()
+  ).toBeVisible({ timeout: 20_000 });
+
+  await page.context().storageState({ path: AUTH });
 });
