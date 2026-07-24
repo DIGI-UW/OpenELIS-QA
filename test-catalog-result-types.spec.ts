@@ -40,12 +40,17 @@ const RESULT_TYPES: { code: string; label: string; realistic: string; unit?: str
 ];
 
 async function login(page: Page) {
-  await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
-  await page.fill('input[name="loginName"], #loginName, input[placeholder*="ser" i]', ADMIN.user);
-  await page.fill('input[name="password"], #password, input[type="password"]', ADMIN.pass);
+  await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' }).catch(() => {});
+  // Defensive: with a preloaded storageState (all-tc.config) we're already authenticated, so /login
+  // redirects away and no username field appears — skip fast instead of hanging on fill().
+  // (`placeholder*="ser"` matches the reworked login's "Username" field, which lost its name/id.)
+  const userField = page.locator('input[name="loginName"], #loginName, input[placeholder*="ser" i]').first();
+  if (!(await userField.isVisible({ timeout: 4000 }).catch(() => false))) return;
+  await userField.fill(ADMIN.user, { timeout: 8000 }).catch(() => {});
+  await page.fill('input[type="password"], #password', ADMIN.pass, { timeout: 8000 }).catch(() => {});
   await page.getByRole('button', { name: /sign in|log ?in|submit/i }).first()
-    .click().catch(() => page.keyboard.press('Enter'));
-  await page.waitForLoadState('networkidle').catch(() => {});
+    .click({ timeout: 8000 }).catch(() => page.keyboard.press('Enter').catch(() => {}));
+  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
 }
 
 /** Carbon typeahead ComboBox: click to open, then click the option by visible text. */
