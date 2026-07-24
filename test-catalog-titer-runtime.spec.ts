@@ -32,6 +32,7 @@
  */
 
 import { test, expect, Page, APIRequestContext } from '@playwright/test';
+import { placeLegacySerumOrder } from './legacy-order-helper';
 
 const BASE = process.env.BASE || 'https://testing.openelis-global.org';
 const REST = `${BASE}/api/OpenELIS-Global/rest`;
@@ -43,12 +44,17 @@ const PANEL = process.env.OE_PANEL || 'Bilan Biochimique';   // an existing Seru
 
 // ---------- helpers ----------
 async function login(page: Page) {
-  await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
-  await page.fill('input[name="loginName"], #loginName, input[placeholder*="ser" i]', ADMIN.user);
-  await page.fill('input[type="password"], #password', ADMIN.pass);
+  await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' }).catch(() => {});
+  // Defensive: with a preloaded storageState (all-tc.config) we're already authenticated, so /login
+  // redirects and no username field appears — skip fast instead of hanging on fill().
+  // (`placeholder*="ser"` matches the reworked login's "Username" field, which lost its name/id.)
+  const userField = page.locator('input[name="loginName"], #loginName, input[placeholder*="ser" i]').first();
+  if (!(await userField.isVisible({ timeout: 4000 }).catch(() => false))) return;
+  await userField.fill(ADMIN.user, { timeout: 8000 }).catch(() => {});
+  await page.fill('input[type="password"], #password', ADMIN.pass, { timeout: 8000 }).catch(() => {});
   await page.getByRole('button', { name: /login|sign in|submit/i }).first()
-    .click().catch(() => page.keyboard.press('Enter'));
-  await page.waitForLoadState('networkidle').catch(() => {});
+    .click({ timeout: 8000 }).catch(() => page.keyboard.press('Enter').catch(() => {}));
+  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
 }
 const getJson = (rq: APIRequestContext, url: string) =>
   rq.get(url, { headers: { Accept: 'application/json' } }).then((r) => r.json());
@@ -93,41 +99,9 @@ async function createTiterTest(page: Page, name: string, code: string): Promise<
  * failure mode of the manual native-setter runs.
  */
 async function placeSerumOrderViaPanel(page: Page, panelName: string): Promise<string> {
-  await page.goto(`${BASE}/order/enter`, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(600);
-
-  // Lab number
-  await page.getByRole('button', { name: /generate lab number/i }).click();
-  const labInput = page.getByPlaceholder(/enter or generate lab number/i);
-  await expect(labInput).not.toHaveValue('', { timeout: 10_000 });
-  const accession = await labInput.inputValue();
-
-  // Sample category defaults to Clinical. New patient:
-  await page.getByRole('button', { name: /^New Patient$/ }).click();
-  await page.getByPlaceholder(/nationality identifier/i).fill(`QA${Date.now()}`);
-  await page.getByPlaceholder(/last name/i).first().fill('QATiter');
-  await page.getByPlaceholder(/first name/i).first().fill('Tval');
-  await page.getByPlaceholder(/dd\/mm\/yyyy/i).first().fill('02/02/1985');
-  await page.getByRole('radio', { name: /^Male$/ }).check();
-
-  // Sample type -> Serum (native select #sampleType-0)
-  await page.locator('#sampleType-0').selectOption({ label: 'Serum' });
-  await page.waitForTimeout(600);
-
-  // Order Panels: check the panel by row — .check() fires onChange (the crux)
-  const panelRow = page.locator('div,li,label').filter({ hasText: new RegExp(`^\\s*${panelName}\\s*$`) }).first();
-  await panelRow.getByRole('checkbox').check({ force: true })
-    .catch(async () => { await page.getByText(panelName, { exact: true }).first().click(); });
-  await page.waitForTimeout(800);
-
-  // sanity: the panel members should now show as Order-Tests chips before we commit
-  await expect(page.getByText(panelName, { exact: true }).first()).toBeVisible();
-
-  // Save & Next (Enter Order -> Collect). Guard: it must actually advance.
-  await page.getByRole('button', { name: /^Save & Next$/ }).click();
-  await page.waitForURL(/\/order\/collect/, { timeout: 20_000 });
-
-  return accession;
+  // Migrated to the legacy /SamplePatientEntry path: the unified /order/enter drops the sample's
+  // tests (OGC-1132), making the order non-resultable and timing this spec out at result entry.
+  return placeLegacySerumOrder(page, panelName);
 }
 
 test.describe('Test Catalog editor — Titer result type at runtime', () => {
