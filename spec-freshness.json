@@ -2,7 +2,7 @@
   "_comment": "Source-of-truth freshness manifest for the OpenELIS Playwright suite. `status` per spec is auto-refreshed from a Playwright JSON run by scripts/refresh-freshness.mjs; `drift`/`notes` are curated by hand. status: fresh (green, verified passing on lastBuild) | partial (green core, a known non-blocking drift/flake) | drift (fails on real UI/route drift — needs a spec update) | unknown (not run against lastBuild yet).",
   "target": "testing.openelis-global.org",
   "currentBuild": "index-u12wW6QI.js",
-  "lastUpdated": "2026-07-24",
+  "lastUpdated": "2026-07-25",
   "driftCauses": {
     "OGC-1132": "Unified /order/enter drops the sample's tests (Hibernate type-mismatch) — order via legacy /SamplePatientEntry (placeLegacySerumOrder).",
     "OGC-1142-editor": "Test Catalog editor rework changed the UI new-test create form + add-component + ranges dialog — configure via REST (createTestViaRest / setComponentViaRest / setNormalCriticalRangeViaRest).",
@@ -10,16 +10,1235 @@
     "unified-results": "OGC-1020 R1 unified /Results worklist is flag-gated (RESULTS_ENTRY_UNIFIED_ROUTE)."
   },
   "specs": [
-    { "file": "test-catalog-mgmt.spec.ts", "area": "catalog-editor", "kind": "contract", "status": "fresh", "lastBuild": "index-u12wW6QI.js", "drift": [], "notes": "Editor fidelity + Basic Info save (OGC-1114 fixed)." },
-    { "file": "test-catalog-mgmt-deep.spec.ts", "area": "catalog-editor", "kind": "deep-roundtrip", "status": "fresh", "lastBuild": "index-u12wW6QI.js", "drift": [], "notes": "TC-DEEP-DOMAIN reconciled to the domain-sample-type consistency guard (422)." },
-    { "file": "test-catalog-editor-regressions.spec.ts", "area": "catalog-editor", "kind": "guard", "status": "fresh", "lastBuild": "index-u12wW6QI.js", "drift": [], "notes": "BLOCKER guards reconciled for OGC-1142 fixes." },
-    { "file": "test-catalog-activation-gate.spec.ts", "area": "catalog-activation", "kind": "contract", "status": "fresh", "lastBuild": "index-u12wW6QI.js", "drift": [], "notes": "Activation integrity gate (OGC-1141). Documents the REST create workflow." },
-    { "file": "test-catalog-mn-sampletypes.spec.ts", "area": "catalog-sampletypes", "kind": "contract", "status": "partial", "lastBuild": "index-u12wW6QI.js", "drift": [], "notes": "OGC-1145 m:n. MN-1/MN-2 green; MN-3 control (basic-info PUT) returned a one-off 500 under full-suite load — revalidation candidate, not a filed bug." },
-    { "file": "results-unified-worklist.spec.ts", "area": "results-worklist", "kind": "contract", "status": "fresh", "lastBuild": "index-u12wW6QI.js", "drift": ["unified-results"], "notes": "OGC-1020 R1. Flag-gated (skips when RESULTS_ENTRY_UNIFIED_ROUTE off)." },
-    { "file": "test-catalog-result-types.spec.ts", "area": "catalog-result-types", "kind": "runtime", "status": "fresh", "lastBuild": "index-u12wW6QI.js", "drift": ["OGC-1142-editor", "login-attrs"], "notes": "REHABBED 2026-07-24: create+component now via REST (createTestViaRest/setComponentViaRest). 7/7 result types green." },
-    { "file": "test-catalog-sections-roundtrip.spec.ts", "area": "catalog-editor", "kind": "deep-roundtrip", "status": "unknown", "lastBuild": null, "drift": ["login-attrs"], "notes": "Login made defensive; not re-run against u12wW6QI yet — verify next run." },
-    { "file": "test-catalog-downstream.spec.ts", "area": "catalog-downstream", "kind": "contract", "status": "unknown", "lastBuild": null, "drift": [], "notes": "Ran in the full suite; confirm verdict on next JSON run." },
-    { "file": "test-catalog-critical-indicator.spec.ts", "area": "results-flags", "kind": "guard-e2e", "status": "partial", "lastBuild": "index-u12wW6QI.js", "drift": ["OGC-1142-editor", "OGC-1132", "login-attrs"], "notes": "REHABBED create/component/ranges via REST + legacy order. Last run failed on a TRANSIENT browser crash (Target page closed) during the order-result E2E — config chain is fixed; rerun expected green." },
-    { "file": "test-catalog-titer-runtime.spec.ts", "area": "catalog-result-types", "kind": "runtime-e2e", "status": "drift", "lastBuild": "index-u12wW6QI.js", "drift": ["OGC-1142-editor", "OGC-1132", "login-attrs"], "notes": "REHABBED create/component via REST + legacy order. Remaining: a downstream locator.fill drift in the titer result-entry/panel E2E body (line ~92) — needs a further UI-selector reconciliation." }
+    {
+      "file": "test-catalog-mgmt.spec.ts",
+      "area": "catalog-editor",
+      "kind": "contract",
+      "status": "fresh",
+      "lastBuild": "index-u12wW6QI.js",
+      "drift": [],
+      "notes": "Editor fidelity + Basic Info save (OGC-1114 fixed)."
+    },
+    {
+      "file": "test-catalog-mgmt-deep.spec.ts",
+      "area": "catalog-editor",
+      "kind": "deep-roundtrip",
+      "status": "fresh",
+      "lastBuild": "index-u12wW6QI.js",
+      "drift": [],
+      "notes": "TC-DEEP-DOMAIN reconciled to the domain-sample-type consistency guard (422)."
+    },
+    {
+      "file": "test-catalog-editor-regressions.spec.ts",
+      "area": "catalog-editor",
+      "kind": "guard",
+      "status": "fresh",
+      "lastBuild": "index-u12wW6QI.js",
+      "drift": [],
+      "notes": "BLOCKER guards reconciled for OGC-1142 fixes."
+    },
+    {
+      "file": "test-catalog-activation-gate.spec.ts",
+      "area": "catalog-activation",
+      "kind": "contract",
+      "status": "fresh",
+      "lastBuild": "index-u12wW6QI.js",
+      "drift": [],
+      "notes": "Activation integrity gate (OGC-1141). Documents the REST create workflow."
+    },
+    {
+      "file": "test-catalog-mn-sampletypes.spec.ts",
+      "area": "catalog-sampletypes",
+      "kind": "contract",
+      "status": "partial",
+      "lastBuild": "index-u12wW6QI.js",
+      "drift": [],
+      "notes": "OGC-1145 m:n. MN-1/MN-2 green; MN-3 control (basic-info PUT) returned a one-off 500 under full-suite load — revalidation candidate, not a filed bug."
+    },
+    {
+      "file": "results-unified-worklist.spec.ts",
+      "area": "results-worklist",
+      "kind": "contract",
+      "status": "fresh",
+      "lastBuild": "index-u12wW6QI.js",
+      "drift": [
+        "unified-results"
+      ],
+      "notes": "OGC-1020 R1. Flag-gated (skips when RESULTS_ENTRY_UNIFIED_ROUTE off)."
+    },
+    {
+      "file": "test-catalog-result-types.spec.ts",
+      "area": "catalog-result-types",
+      "kind": "runtime",
+      "status": "fresh",
+      "lastBuild": "index-u12wW6QI.js",
+      "drift": [
+        "OGC-1142-editor",
+        "login-attrs"
+      ],
+      "notes": "REHABBED 2026-07-24: create+component now via REST (createTestViaRest/setComponentViaRest). 7/7 result types green."
+    },
+    {
+      "file": "test-catalog-sections-roundtrip.spec.ts",
+      "area": "catalog-editor",
+      "kind": "deep-roundtrip",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [
+        "login-attrs"
+      ],
+      "notes": "Login made defensive; not re-run against u12wW6QI yet — verify next run."
+    },
+    {
+      "file": "test-catalog-downstream.spec.ts",
+      "area": "catalog-downstream",
+      "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Ran in the full suite; confirm verdict on next JSON run."
+    },
+    {
+      "file": "test-catalog-critical-indicator.spec.ts",
+      "area": "results-flags",
+      "kind": "guard-e2e",
+      "status": "partial",
+      "lastBuild": "index-u12wW6QI.js",
+      "drift": [
+        "OGC-1142-editor",
+        "OGC-1132",
+        "login-attrs"
+      ],
+      "notes": "REHABBED create/component/ranges via REST + legacy order. Last run failed on a TRANSIENT browser crash (Target page closed) during the order-result E2E — config chain is fixed; rerun expected green."
+    },
+    {
+      "file": "test-catalog-titer-runtime.spec.ts",
+      "area": "catalog-result-types",
+      "kind": "runtime-e2e",
+      "status": "drift",
+      "lastBuild": "index-u12wW6QI.js",
+      "drift": [
+        "OGC-1142-editor",
+        "OGC-1132",
+        "login-attrs"
+      ],
+      "notes": "REHABBED create/component via REST + legacy order. Remaining: a downstream locator.fill drift in the titer result-entry/panel E2E body (line ~92) — needs a further UI-selector reconciliation."
+    },
+    {
+      "file": "_discover.spec.ts",
+      "area": "misc",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "_timing.spec.ts",
+      "area": "misc",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "config-pages.spec.ts",
+      "area": "misc",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "label-presets.spec.ts",
+      "area": "label",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tc-dom-probe.spec.ts",
+      "area": "misc",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/add-patient.docs.spec.ts",
+      "area": "patient",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/admin-discover.docs.spec.ts",
+      "area": "misc",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/admin-discover2.docs.spec.ts",
+      "area": "misc",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/analyzer-file-import.docs.spec.ts",
+      "area": "analyzer",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/analyzer-framework.docs.spec.ts",
+      "area": "analyzer",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/audit-trail.docs.spec.ts",
+      "area": "audit",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/barcode-labels.docs.spec.ts",
+      "area": "label",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/cleanup-probe-analyzers.docs.spec.ts",
+      "area": "analyzer",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/clinical-explore.docs.spec.ts",
+      "area": "misc",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/clinical-flow.docs.spec.ts",
+      "area": "misc",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/compliance-list.docs.spec.ts",
+      "area": "nce",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/cytology-dashboard.docs.spec.ts",
+      "area": "cytology",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/discover3.docs.spec.ts",
+      "area": "misc",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/discover4.docs.spec.ts",
+      "area": "misc",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/drift-fix.docs.spec.ts",
+      "area": "misc",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/drift.check.spec.ts",
+      "area": "misc",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/dump-print-config.docs.spec.ts",
+      "area": "print",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/electronic-lab-notebook.docs.spec.ts",
+      "area": "notebook",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/electronic-signatures.docs.spec.ts",
+      "area": "signature",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/env-bahasa.docs.spec.ts",
+      "area": "env",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/env-explore.docs.spec.ts",
+      "area": "env",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/env-flow.docs.spec.ts",
+      "area": "env",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/env-landing-split.docs.spec.ts",
+      "area": "env",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/env-order-populated.docs.spec.ts",
+      "area": "env",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/env-stages.docs.spec.ts",
+      "area": "env",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/env-vector-interactive.docs.spec.ts",
+      "area": "vector",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/env-vector-manual.docs.spec.ts",
+      "area": "vector",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/environmental-order-results.docs.spec.ts",
+      "area": "environmental",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/eqa.docs.spec.ts",
+      "area": "eqa",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/esig.docs.spec.ts",
+      "area": "esig",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/find-print-config.docs.spec.ts",
+      "area": "print",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/handoff-media.docs.spec.ts",
+      "area": "misc",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/home-hero.docs.spec.ts",
+      "area": "home",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/ht-final.docs.spec.ts",
+      "area": "misc",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/ihc-dashboard.docs.spec.ts",
+      "area": "ihc",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/instrument-library.docs.spec.ts",
+      "area": "instrument",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/inventory-management.docs.spec.ts",
+      "area": "inventory",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/label-presets.docs.spec.ts",
+      "area": "label",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/laporan-hasil-populated.docs.spec.ts",
+      "area": "misc",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/laporan-search.docs.spec.ts",
+      "area": "misc",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/legacy-clinical-order.docs.spec.ts",
+      "area": "order",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/locale-check.docs.spec.ts",
+      "area": "locale",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/multicomponent-runtime.docs.spec.ts",
+      "area": "misc",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/nce-capa.docs.spec.ts",
+      "area": "nce",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/nce-form-sample.docs.spec.ts",
+      "area": "nce",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/nce-form.docs.spec.ts",
+      "area": "nce",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/nce-subcat.docs.spec.ts",
+      "area": "nce",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/order-446.docs.spec.ts",
+      "area": "order",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/order-entry.docs.spec.ts",
+      "area": "order",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/org-capture.docs.spec.ts",
+      "area": "org",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/organizations-management.docs.spec.ts",
+      "area": "org",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/patch-inventory-thresholds.docs.spec.ts",
+      "area": "inventory",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/pathology-dashboard.docs.spec.ts",
+      "area": "pathology",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/patient-extras.docs.spec.ts",
+      "area": "patient",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/patient-mgmt-cap.docs.spec.ts",
+      "area": "patient",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/patient-order-enhancements.docs.spec.ts",
+      "area": "nce",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-analyzer-api.docs.spec.ts",
+      "area": "analyzer",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-analyzer-api2.docs.spec.ts",
+      "area": "analyzer",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-analyzer-api3.docs.spec.ts",
+      "area": "analyzer",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-analyzer-api4.docs.spec.ts",
+      "area": "analyzer",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-analyzer-api5.docs.spec.ts",
+      "area": "analyzer",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-analyzer-api6.docs.spec.ts",
+      "area": "analyzer",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-calc.docs.spec.ts",
+      "area": "calc",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-compliance.docs.spec.ts",
+      "area": "nce",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-compliance2.docs.spec.ts",
+      "area": "nce",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-compliance3.docs.spec.ts",
+      "area": "nce",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-device-fields.docs.spec.ts",
+      "area": "misc",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-freezer-api.docs.spec.ts",
+      "area": "freezer",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-inventory-api.docs.spec.ts",
+      "area": "inventory",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-inventory-api2.docs.spec.ts",
+      "area": "inventory",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-inventory-api3.docs.spec.ts",
+      "area": "inventory",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-inventory-api4.docs.spec.ts",
+      "area": "inventory",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-inventory-api5.docs.spec.ts",
+      "area": "inventory",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-inventory-api6.docs.spec.ts",
+      "area": "inventory",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-inventory-api7.docs.spec.ts",
+      "area": "inventory",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-inventory-delete.docs.spec.ts",
+      "area": "inventory",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-inventory-fields.docs.spec.ts",
+      "area": "inventory",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-min-stock.docs.spec.ts",
+      "area": "misc",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/probe-storage-create.docs.spec.ts",
+      "area": "storage",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/provider-capture.docs.spec.ts",
+      "area": "provider",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/reflex-discover.docs.spec.ts",
+      "area": "reflex",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/report-config-explore.docs.spec.ts",
+      "area": "report",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/result-validation.docs.spec.ts",
+      "area": "result",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/results-entry-cap.docs.spec.ts",
+      "area": "result",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/results-entry.docs.spec.ts",
+      "area": "result",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/sample-acceptance.docs.spec.ts",
+      "area": "nce",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/sample-shipment-referral.docs.spec.ts",
+      "area": "sample",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/sample-storage-management.docs.spec.ts",
+      "area": "storage",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/seed-analyzers.docs.spec.ts",
+      "area": "analyzer",
+      "kind": "seed",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/seed-calc.docs.spec.ts",
+      "area": "calc",
+      "kind": "seed",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/seed-cases.docs.spec.ts",
+      "area": "seed",
+      "kind": "seed",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/seed-compliance-tests.docs.spec.ts",
+      "area": "nce",
+      "kind": "seed",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/seed-compliance.docs.spec.ts",
+      "area": "nce",
+      "kind": "seed",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/seed-env-results.docs.spec.ts",
+      "area": "env",
+      "kind": "seed",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/seed-inventory.docs.spec.ts",
+      "area": "inventory",
+      "kind": "seed",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/seed-orders.docs.spec.ts",
+      "area": "order",
+      "kind": "seed",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/seed-orgs.docs.spec.ts",
+      "area": "org",
+      "kind": "seed",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/seed-providers.docs.spec.ts",
+      "area": "provider",
+      "kind": "seed",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/seed-reflex.docs.spec.ts",
+      "area": "reflex",
+      "kind": "seed",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/seed-storage.docs.spec.ts",
+      "area": "storage",
+      "kind": "seed",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/seed-vector-results.docs.spec.ts",
+      "area": "vector",
+      "kind": "seed",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/site-band.docs.spec.ts",
+      "area": "site",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/site-band2.docs.spec.ts",
+      "area": "site",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/site-band3.docs.spec.ts",
+      "area": "site",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/site-config-esig.docs.spec.ts",
+      "area": "esig",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/storage-investigation.docs.spec.ts",
+      "area": "storage",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/storage-picker.docs.spec.ts",
+      "area": "storage",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/test-catalog-mgmt.docs.spec.ts",
+      "area": "catalog",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/test-catalog-modals.docs.spec.ts",
+      "area": "catalog",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/user-dict-capture.docs.spec.ts",
+      "area": "misc",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/vector-bahasa.docs.spec.ts",
+      "area": "vector",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/vector-complete.docs.spec.ts",
+      "area": "vector",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/vector-deep-v2.docs.spec.ts",
+      "area": "vector",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/vector-deep-v3.docs.spec.ts",
+      "area": "vector",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/vector-flow.docs.spec.ts",
+      "area": "vector",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/vector-order-populated.docs.spec.ts",
+      "area": "vector",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/vector-stages.docs.spec.ts",
+      "area": "vector",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/docs/westgard-qc.docs.spec.ts",
+      "area": "westgard",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/ranges-discover.spec.ts",
+      "area": "ranges",
+      "kind": "probe",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    }
   ]
 }
