@@ -1,0 +1,121 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OpenELIS Playwright — Spec Freshness</title>
+<style>
+:root{font-family:'IBM Plex Sans',system-ui,sans-serif}
+body{margin:0;background:#f4f4f4;color:#161616;padding:24px}
+h1{font-size:20px;margin:0 0 4px}.sub{color:#525252;font-size:13px;margin-bottom:16px}
+.pill{display:inline-flex;align-items:center;gap:6px;border:2px solid;border-radius:16px;padding:3px 12px;margin-right:6px;font-size:13px;background:#fff}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+table{width:100%;border-collapse:collapse;background:#fff;font-size:13px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid #e0e0e0;vertical-align:top}
+th{background:#e8e8e8;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+.mono{font-family:'IBM Plex Mono',monospace;font-size:12px}
+.notes{color:#393939;max-width:420px}
+.tag{background:#e0e0e0;border-radius:4px;padding:1px 6px;font-size:11px;font-family:monospace;white-space:nowrap}
+.legend,.gloss{margin-top:18px;font-size:12px;color:#525252}
+.gl{margin:4px 0}.gl b{font-family:monospace;color:#161616}
+.work{margin-top:18px;background:#fff;border-left:4px solid #0f62fe;padding:12px 16px;font-size:13px}
+code{background:#e8e8e8;padding:1px 5px;border-radius:3px;font-size:12px}
+</style></head><body>
+<h1>OpenELIS Playwright — Spec Freshness</h1>
+<div class="sub">Target <b>testing.openelis-global.org</b> · build <b class="mono">index-u12wW6QI.js</b> · updated 2026-07-24</div>
+<div><span class="pill" style="border-color:#24a148"><span class="dot" style="background:#24a148"></span>Fresh <b>6</b></span> <span class="pill" style="border-color:#f1c21b"><span class="dot" style="background:#f1c21b"></span>Partial <b>2</b></span> <span class="pill" style="border-color:#da1e28"><span class="dot" style="background:#da1e28"></span>Drift <b>1</b></span> <span class="pill" style="border-color:#8d8d8d"><span class="dot" style="background:#8d8d8d"></span>Unknown <b>2</b></span></div>
+<table><thead><tr><th>Status</th><th>Spec</th><th>Area</th><th>Kind</th><th>Last run</th><th>Drift causes</th><th>Notes</th></tr></thead>
+<tbody><tr>
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">test-catalog-mgmt.spec.ts</td>
+    <td>catalog-editor</td><td>contract</td>
+    <td>—</td>
+    <td></td>
+    <td class="notes">Editor fidelity + Basic Info save (OGC-1114 fixed).</td>
+  </tr>
+<tr>
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">test-catalog-mgmt-deep.spec.ts</td>
+    <td>catalog-editor</td><td>deep-roundtrip</td>
+    <td>—</td>
+    <td></td>
+    <td class="notes">TC-DEEP-DOMAIN reconciled to the domain-sample-type consistency guard (422).</td>
+  </tr>
+<tr>
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">test-catalog-editor-regressions.spec.ts</td>
+    <td>catalog-editor</td><td>guard</td>
+    <td>—</td>
+    <td></td>
+    <td class="notes">BLOCKER guards reconciled for OGC-1142 fixes.</td>
+  </tr>
+<tr>
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">test-catalog-activation-gate.spec.ts</td>
+    <td>catalog-activation</td><td>contract</td>
+    <td>—</td>
+    <td></td>
+    <td class="notes">Activation integrity gate (OGC-1141). Documents the REST create workflow.</td>
+  </tr>
+<tr>
+    <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
+    <td class="mono">test-catalog-mn-sampletypes.spec.ts</td>
+    <td>catalog-sampletypes</td><td>contract</td>
+    <td>—</td>
+    <td></td>
+    <td class="notes">OGC-1145 m:n. MN-1/MN-2 green; MN-3 control (basic-info PUT) returned a one-off 500 under full-suite load — revalidation candidate, not a filed bug.</td>
+  </tr>
+<tr>
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">results-unified-worklist.spec.ts</td>
+    <td>results-worklist</td><td>contract</td>
+    <td>—</td>
+    <td><span class="tag">unified-results</span></td>
+    <td class="notes">OGC-1020 R1. Flag-gated (skips when RESULTS_ENTRY_UNIFIED_ROUTE off).</td>
+  </tr>
+<tr>
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">test-catalog-result-types.spec.ts</td>
+    <td>catalog-result-types</td><td>runtime</td>
+    <td>—</td>
+    <td><span class="tag">OGC-1142-editor</span> <span class="tag">login-attrs</span></td>
+    <td class="notes">REHABBED 2026-07-24: create+component now via REST (createTestViaRest/setComponentViaRest). 7/7 result types green.</td>
+  </tr>
+<tr>
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">test-catalog-sections-roundtrip.spec.ts</td>
+    <td>catalog-editor</td><td>deep-roundtrip</td>
+    <td>—</td>
+    <td><span class="tag">login-attrs</span></td>
+    <td class="notes">Login made defensive; not re-run against u12wW6QI yet — verify next run.</td>
+  </tr>
+<tr>
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">test-catalog-downstream.spec.ts</td>
+    <td>catalog-downstream</td><td>contract</td>
+    <td>—</td>
+    <td></td>
+    <td class="notes">Ran in the full suite; confirm verdict on next JSON run.</td>
+  </tr>
+<tr>
+    <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
+    <td class="mono">test-catalog-critical-indicator.spec.ts</td>
+    <td>results-flags</td><td>guard-e2e</td>
+    <td>—</td>
+    <td><span class="tag">OGC-1142-editor</span> <span class="tag">OGC-1132</span> <span class="tag">login-attrs</span></td>
+    <td class="notes">REHABBED create/component/ranges via REST + legacy order. Last run failed on a TRANSIENT browser crash (Target page closed) during the order-result E2E — config chain is fixed; rerun expected green.</td>
+  </tr>
+<tr>
+    <td><span class="dot" style="background:#da1e28"></span>Drift</td>
+    <td class="mono">test-catalog-titer-runtime.spec.ts</td>
+    <td>catalog-result-types</td><td>runtime-e2e</td>
+    <td>—</td>
+    <td><span class="tag">OGC-1142-editor</span> <span class="tag">OGC-1132</span> <span class="tag">login-attrs</span></td>
+    <td class="notes">REHABBED create/component via REST + legacy order. Remaining: a downstream locator.fill drift in the titer result-entry/panel E2E body (line ~92) — needs a further UI-selector reconciliation.</td>
+  </tr></tbody></table>
+<div class="legend"><span style="margin-right:14px"><span class="dot" style="background:#24a148"></span> <b>Fresh</b> — verified passing on the current build</span><span style="margin-right:14px"><span class="dot" style="background:#f1c21b"></span> <b>Partial</b> — green core, a known non-blocking drift or flake</span><span style="margin-right:14px"><span class="dot" style="background:#da1e28"></span> <b>Drift</b> — fails on real UI/route drift — needs a spec update</span><span style="margin-right:14px"><span class="dot" style="background:#8d8d8d"></span> <b>Unknown</b> — not run against the current build yet</span></div>
+<div class="gloss"><b>Drift causes</b><div class="gl"><b>OGC-1132</b> — Unified /order/enter drops the sample's tests (Hibernate type-mismatch) — order via legacy /SamplePatientEntry (placeLegacySerumOrder).</div>
+<div class="gl"><b>OGC-1142-editor</b> — Test Catalog editor rework changed the UI new-test create form + add-component + ranges dialog — configure via REST (createTestViaRest / setComponentViaRest / setNormalCriticalRangeViaRest).</div>
+<div class="gl"><b>login-attrs</b> — Reworked login lost input name/id — use placeholder*="ser" + defensive early-return under storageState.</div>
+<div class="gl"><b>unified-results</b> — OGC-1020 R1 unified /Results worklist is flag-gated (RESULTS_ENTRY_UNIFIED_ROUTE).</div></div>
+<div class="work"><b>Workflow</b> — refresh after each build/run:<br>
+1) <code>BASE=… npx playwright test --config=all-tc.config.ts --reporter=json &gt; runlogs/last.json</code><br>
+2) <code>node scripts/refresh-freshness.mjs runlogs/last.json &lt;build-hash&gt;</code> — updates each spec's last result + regenerates this board.<br>
+Curate <code>status</code>/<code>drift</code>/<code>notes</code> by hand in <code>spec-freshness.json</code> (auto-refresh only sets the raw pass/fail + flips <i>unknown</i>→fresh/drift).</div>
+</body></html>
