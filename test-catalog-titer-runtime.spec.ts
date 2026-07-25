@@ -112,13 +112,27 @@ test.describe('Test Catalog editor — Titer result type at runtime', () => {
     // 3. place the order (the step the manual wizard kept dropping tests on)
     const accession = await placeSerumOrderViaPanel(page, PANEL);
 
-    // 4. Results → By Order: the Titer test row must render an interactive control (not plain text)
-    await page.goto(`${BASE}/result?type=order&doRange=false`, { waitUntil: 'domcontentloaded' });
-    await page.getByPlaceholder(/accession/i).fill(accession);
-    await page.getByRole('button', { name: /^Search$/ }).click();
+    // 4. Result entry: the Titer test row must render an interactive control (not plain text).
+    // Flag-aware — when RESULTS_ENTRY_UNIFIED_ROUTE is on, legacy /result redirects to the unified
+    // /Results worklist (a different search field), so branch on the flag (see app-map unified-results).
+    const unified = await page.evaluate(async () => {
+      const r = await fetch('/api/OpenELIS-Global/rest/configuration-properties', { headers: { Accept: 'application/json' }, credentials: 'include' });
+      return (await r.json()).RESULTS_ENTRY_UNIFIED_ROUTE === 'true';
+    });
+    if (unified) {
+      await page.goto(`${BASE}/Results`, { waitUntil: 'domcontentloaded' });
+      await page.getByLabel(/lab unit/i).first().selectOption({ label: 'Biochemistry' }).catch(() => {});
+      await page.getByPlaceholder(/search by lab number/i).first().fill(accession);
+      await page.getByRole('button', { name: /load results/i }).click();
+      await page.waitForTimeout(2500);
+    } else {
+      await page.goto(`${BASE}/result?type=order&doRange=false`, { waitUntil: 'domcontentloaded' });
+      await page.getByPlaceholder(/accession/i).fill(accession);
+      await page.getByRole('button', { name: /^Search$/ }).click();
+    }
     const titerRow = page.locator('tr, [role=row], div').filter({ hasText: /Titer/i }).first();
     await expect(titerRow, 'Titer test appears at result entry').toBeVisible({ timeout: 15_000 });
-    const control = titerRow.locator('select, input[type=text], input:not([type=hidden]), [role=combobox]');
+    const control = titerRow.locator('select, input[type=text], input:not([type=hidden]), [role=combobox], .cds--multi-select, button[aria-haspopup]');
     await expect(control.first(), 'Titer row exposes an interactive result-entry control').toBeVisible();
 
     // 5. best-effort: enter a titer value, Save, then Validate

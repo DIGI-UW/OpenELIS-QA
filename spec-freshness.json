@@ -7,7 +7,8 @@
     "OGC-1132": "Unified /order/enter drops the sample's tests (Hibernate type-mismatch) — order via legacy /SamplePatientEntry (placeLegacySerumOrder).",
     "OGC-1142-editor": "Test Catalog editor rework changed the UI new-test create form + add-component + ranges dialog — configure via REST (createTestViaRest / setComponentViaRest / setNormalCriticalRangeViaRest).",
     "login-attrs": "Reworked login lost input name/id — use placeholder*=\"ser\" + defensive early-return under storageState.",
-    "unified-results": "OGC-1020 R1 unified /Results worklist is flag-gated (RESULTS_ENTRY_UNIFIED_ROUTE)."
+    "unified-results": "OGC-1020 R1 unified /Results worklist is flag-gated (RESULTS_ENTRY_UNIFIED_ROUTE).",
+    "load-flake": "E2E order→result specs intermittently crash the browser or hit 500s under full-suite load; they pass in isolation. Mitigate with retries or an isolated E2E tier, not spec edits."
   },
   "specs": [
     {
@@ -17,7 +18,9 @@
       "status": "fresh",
       "lastBuild": "index-u12wW6QI.js",
       "drift": [],
-      "notes": "Editor fidelity + Basic Info save (OGC-1114 fixed)."
+      "notes": "Editor fidelity + Basic Info save (OGC-1114 fixed).",
+      "lastResult": "pass",
+      "lastRun": "2026-07-25"
     },
     {
       "file": "test-catalog-mgmt-deep.spec.ts",
@@ -26,7 +29,9 @@
       "status": "fresh",
       "lastBuild": "index-u12wW6QI.js",
       "drift": [],
-      "notes": "TC-DEEP-DOMAIN reconciled to the domain-sample-type consistency guard (422)."
+      "notes": "TC-DEEP-DOMAIN reconciled to the domain-sample-type consistency guard (422).",
+      "lastResult": "pass",
+      "lastRun": "2026-07-25"
     },
     {
       "file": "test-catalog-editor-regressions.spec.ts",
@@ -35,7 +40,9 @@
       "status": "fresh",
       "lastBuild": "index-u12wW6QI.js",
       "drift": [],
-      "notes": "BLOCKER guards reconciled for OGC-1142 fixes."
+      "notes": "BLOCKER guards reconciled for OGC-1142 fixes.",
+      "lastResult": "pass",
+      "lastRun": "2026-07-25"
     },
     {
       "file": "test-catalog-activation-gate.spec.ts",
@@ -44,7 +51,9 @@
       "status": "fresh",
       "lastBuild": "index-u12wW6QI.js",
       "drift": [],
-      "notes": "Activation integrity gate (OGC-1141). Documents the REST create workflow."
+      "notes": "Activation integrity gate (OGC-1141). Documents the REST create workflow.",
+      "lastResult": "pass",
+      "lastRun": "2026-07-25"
     },
     {
       "file": "test-catalog-mn-sampletypes.spec.ts",
@@ -52,8 +61,12 @@
       "kind": "contract",
       "status": "partial",
       "lastBuild": "index-u12wW6QI.js",
-      "drift": [],
-      "notes": "OGC-1145 m:n. MN-1/MN-2 green; MN-3 control (basic-info PUT) returned a one-off 500 under full-suite load — revalidation candidate, not a filed bug."
+      "drift": [
+        "load-flake"
+      ],
+      "notes": "OGC-1145 m:n. MN-1/MN-2 green; MN-3 control (basic-info PUT) returns a one-off 500 under full-suite load — load-flake, not a filed bug.",
+      "lastResult": "fail",
+      "lastRun": "2026-07-25"
     },
     {
       "file": "results-unified-worklist.spec.ts",
@@ -64,7 +77,9 @@
       "drift": [
         "unified-results"
       ],
-      "notes": "OGC-1020 R1. Flag-gated (skips when RESULTS_ENTRY_UNIFIED_ROUTE off)."
+      "notes": "OGC-1020 R1. Flag-gated (skips when RESULTS_ENTRY_UNIFIED_ROUTE off).",
+      "lastResult": "pass",
+      "lastRun": "2026-07-25"
     },
     {
       "file": "test-catalog-result-types.spec.ts",
@@ -76,27 +91,34 @@
         "OGC-1142-editor",
         "login-attrs"
       ],
-      "notes": "REHABBED 2026-07-24: create+component now via REST (createTestViaRest/setComponentViaRest). 7/7 result types green."
+      "notes": "REHABBED 2026-07-24: create+component now via REST (createTestViaRest/setComponentViaRest). 7/7 result types green.",
+      "lastResult": "pass",
+      "lastRun": "2026-07-25"
     },
     {
       "file": "test-catalog-sections-roundtrip.spec.ts",
       "area": "catalog-editor",
       "kind": "deep-roundtrip",
-      "status": "unknown",
-      "lastBuild": null,
+      "status": "partial",
+      "lastBuild": "index-u12wW6QI.js",
       "drift": [
-        "login-attrs"
+        "login-attrs",
+        "load-flake"
       ],
-      "notes": "Login made defensive; not re-run against u12wW6QI yet — verify next run."
+      "notes": "Login made defensive. Failed under full-suite load with net::ERR_TOO_MANY_RETRIES on every test (instance overload), not spec drift — verify in isolation.",
+      "lastResult": "fail",
+      "lastRun": "2026-07-25"
     },
     {
       "file": "test-catalog-downstream.spec.ts",
       "area": "catalog-downstream",
       "kind": "contract",
-      "status": "unknown",
-      "lastBuild": null,
+      "status": "fresh",
+      "lastBuild": "index-u12wW6QI.js",
       "drift": [],
-      "notes": "Ran in the full suite; confirm verdict on next JSON run."
+      "notes": "Ran in the full suite; confirm verdict on next JSON run.",
+      "lastResult": "pass",
+      "lastRun": "2026-07-25"
     },
     {
       "file": "test-catalog-critical-indicator.spec.ts",
@@ -107,22 +129,28 @@
       "drift": [
         "OGC-1142-editor",
         "OGC-1132",
-        "login-attrs"
+        "login-attrs",
+        "load-flake"
       ],
-      "notes": "REHABBED create/component/ranges via REST + legacy order. Last run failed on a TRANSIENT browser crash (Target page closed) during the order-result E2E — config chain is fixed; rerun expected green."
+      "notes": "REHABBED create/component/ranges via REST + legacy order. GREEN in isolation; transient browser crash under full-suite load.",
+      "lastResult": "fail",
+      "lastRun": "2026-07-25"
     },
     {
       "file": "test-catalog-titer-runtime.spec.ts",
       "area": "catalog-result-types",
       "kind": "runtime-e2e",
-      "status": "drift",
+      "status": "partial",
       "lastBuild": "index-u12wW6QI.js",
       "drift": [
         "OGC-1142-editor",
         "OGC-1132",
-        "login-attrs"
+        "login-attrs",
+        "load-flake"
       ],
-      "notes": "REHABBED create/component via REST + legacy order. Remaining: a downstream locator.fill drift in the titer result-entry/panel E2E body (line ~92) — needs a further UI-selector reconciliation."
+      "notes": "Result-entry leg made flag-aware for unified /Results. GREEN in isolation (1.1m); failed under full-suite load — flaky (browser crash/contention), not drift.",
+      "lastResult": "fail",
+      "lastRun": "2026-07-25"
     },
     {
       "file": "_discover.spec.ts",
@@ -920,19 +948,23 @@
       "file": "tests/docs/results-entry-cap.docs.spec.ts",
       "area": "result",
       "kind": "docs-capture",
-      "status": "unknown",
-      "lastBuild": null,
+      "status": "drift",
+      "lastBuild": "index-u12wW6QI.js",
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "lastResult": "fail",
+      "lastRun": "2026-07-25"
     },
     {
       "file": "tests/docs/results-entry.docs.spec.ts",
       "area": "result",
       "kind": "docs-capture",
-      "status": "unknown",
-      "lastBuild": null,
+      "status": "fresh",
+      "lastBuild": "index-u12wW6QI.js",
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "lastResult": "pass",
+      "lastRun": "2026-07-25"
     },
     {
       "file": "tests/docs/sample-acceptance.docs.spec.ts",
@@ -1136,19 +1168,23 @@
       "file": "tests/docs/test-catalog-mgmt.docs.spec.ts",
       "area": "catalog",
       "kind": "docs-capture",
-      "status": "unknown",
-      "lastBuild": null,
+      "status": "fresh",
+      "lastBuild": "index-u12wW6QI.js",
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "lastResult": "pass",
+      "lastRun": "2026-07-25"
     },
     {
       "file": "tests/docs/test-catalog-modals.docs.spec.ts",
       "area": "catalog",
       "kind": "docs-capture",
-      "status": "unknown",
-      "lastBuild": null,
+      "status": "drift",
+      "lastBuild": "index-u12wW6QI.js",
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "lastResult": "fail",
+      "lastRun": "2026-07-25"
     },
     {
       "file": "tests/docs/user-dict-capture.docs.spec.ts",

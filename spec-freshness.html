@@ -20,28 +20,32 @@ code{background:#e8e8e8;padding:1px 5px;border-radius:3px;font-size:12px}
 </style></head><body>
 <h1>OpenELIS Playwright — Spec Freshness</h1>
 <div class="sub">Target <b>testing.openelis-global.org</b> · build <b class="mono">index-u12wW6QI.js</b> · <b>135</b> specs · updated 2026-07-25</div>
-<div id="filters"><span class="pill" style="border-color:#da1e28"><span class="dot" style="background:#da1e28"></span>Drift <b>1</b></span> <span class="pill" style="border-color:#f1c21b"><span class="dot" style="background:#f1c21b"></span>Partial <b>2</b></span> <span class="pill" style="border-color:#8d8d8d"><span class="dot" style="background:#8d8d8d"></span>Unknown <b>126</b></span> <span class="pill" style="border-color:#24a148"><span class="dot" style="background:#24a148"></span>Fresh <b>6</b></span></div>
+<div id="filters"><span class="pill" style="border-color:#da1e28"><span class="dot" style="background:#da1e28"></span>Drift <b>2</b></span> <span class="pill" style="border-color:#f1c21b"><span class="dot" style="background:#f1c21b"></span>Partial <b>4</b></span> <span class="pill" style="border-color:#8d8d8d"><span class="dot" style="background:#8d8d8d"></span>Unknown <b>120</b></span> <span class="pill" style="border-color:#24a148"><span class="dot" style="background:#24a148"></span>Fresh <b>9</b></span></div>
 <div style="margin:6px 0 12px"><span class="kpill">contract <b>5</b></span> <span class="kpill">deep-roundtrip <b>2</b></span> <span class="kpill">docs-capture <b>71</b></span> <span class="kpill">guard <b>1</b></span> <span class="kpill">guard-e2e <b>1</b></span> <span class="kpill">misc <b>1</b></span> <span class="kpill">probe <b>39</b></span> <span class="kpill">runtime <b>1</b></span> <span class="kpill">runtime-e2e <b>1</b></span> <span class="kpill">seed <b>13</b></span></div>
-<table id="tbl"><thead><tr><th>Status</th><th>Spec</th><th>Area</th><th>Kind</th><th>Last run</th><th>Drift</th><th>Notes</th></tr></thead><tbody><tr data-status="drift" data-kind="runtime-e2e">
+<table id="tbl"><thead><tr><th>Status</th><th>Spec</th><th>Area</th><th>Kind</th><th>Last run</th><th>Drift</th><th>Notes</th></tr></thead><tbody><tr data-status="drift" data-kind="docs-capture">
     <td><span class="dot" style="background:#da1e28"></span>Drift</td>
-    <td class="mono">test-catalog-titer-runtime.spec.ts</td><td>catalog-result-types</td><td>runtime-e2e</td>
-    <td>—</td><td><span class="tag">OGC-1142-editor</span> <span class="tag">OGC-1132</span> <span class="tag">login-attrs</span></td><td class="notes">REHABBED create/component via REST + legacy order. Remaining: a downstream locator.fill drift in the titer result-entry/panel E2E body (line ~92) — needs a further UI-selector reconciliation.</td></tr>
+    <td class="mono">tests/docs/results-entry-cap.docs.spec.ts</td><td>result</td><td>docs-capture</td>
+    <td><span style="color:#da1e28">fail</span> · 2026-07-25</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="drift" data-kind="docs-capture">
+    <td><span class="dot" style="background:#da1e28"></span>Drift</td>
+    <td class="mono">tests/docs/test-catalog-modals.docs.spec.ts</td><td>catalog</td><td>docs-capture</td>
+    <td><span style="color:#da1e28">fail</span> · 2026-07-25</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
 <tr data-status="partial" data-kind="contract">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">test-catalog-mn-sampletypes.spec.ts</td><td>catalog-sampletypes</td><td>contract</td>
-    <td>—</td><td></td><td class="notes">OGC-1145 m:n. MN-1/MN-2 green; MN-3 control (basic-info PUT) returned a one-off 500 under full-suite load — revalidation candidate, not a filed bug.</td></tr>
+    <td><span style="color:#da1e28">fail</span> · 2026-07-25</td><td><span class="tag">load-flake</span></td><td class="notes">OGC-1145 m:n. MN-1/MN-2 green; MN-3 control (basic-info PUT) returns a one-off 500 under full-suite load — load-flake, not a filed bug.</td></tr>
+<tr data-status="partial" data-kind="deep-roundtrip">
+    <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
+    <td class="mono">test-catalog-sections-roundtrip.spec.ts</td><td>catalog-editor</td><td>deep-roundtrip</td>
+    <td><span style="color:#da1e28">fail</span> · 2026-07-25</td><td><span class="tag">login-attrs</span> <span class="tag">load-flake</span></td><td class="notes">Login made defensive. Failed under full-suite load with net::ERR_TOO_MANY_RETRIES on every test (instance overload), not spec drift — verify in isolation.</td></tr>
 <tr data-status="partial" data-kind="guard-e2e">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">test-catalog-critical-indicator.spec.ts</td><td>results-flags</td><td>guard-e2e</td>
-    <td>—</td><td><span class="tag">OGC-1142-editor</span> <span class="tag">OGC-1132</span> <span class="tag">login-attrs</span></td><td class="notes">REHABBED create/component/ranges via REST + legacy order. Last run failed on a TRANSIENT browser crash (Target page closed) during the order-result E2E — config chain is fixed; rerun expected green.</td></tr>
-<tr data-status="unknown" data-kind="contract">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">test-catalog-downstream.spec.ts</td><td>catalog-downstream</td><td>contract</td>
-    <td>—</td><td></td><td class="notes">Ran in the full suite; confirm verdict on next JSON run.</td></tr>
-<tr data-status="unknown" data-kind="deep-roundtrip">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">test-catalog-sections-roundtrip.spec.ts</td><td>catalog-editor</td><td>deep-roundtrip</td>
-    <td>—</td><td><span class="tag">login-attrs</span></td><td class="notes">Login made defensive; not re-run against u12wW6QI yet — verify next run.</td></tr>
+    <td><span style="color:#da1e28">fail</span> · 2026-07-25</td><td><span class="tag">OGC-1142-editor</span> <span class="tag">OGC-1132</span> <span class="tag">login-attrs</span> <span class="tag">load-flake</span></td><td class="notes">REHABBED create/component/ranges via REST + legacy order. GREEN in isolation; transient browser crash under full-suite load.</td></tr>
+<tr data-status="partial" data-kind="runtime-e2e">
+    <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
+    <td class="mono">test-catalog-titer-runtime.spec.ts</td><td>catalog-result-types</td><td>runtime-e2e</td>
+    <td><span style="color:#da1e28">fail</span> · 2026-07-25</td><td><span class="tag">OGC-1142-editor</span> <span class="tag">OGC-1132</span> <span class="tag">login-attrs</span> <span class="tag">load-flake</span></td><td class="notes">Result-entry leg made flag-aware for unified /Results. GREEN in isolation (1.1m); failed under full-suite load — flaky (browser crash/contention), not drift.</td></tr>
 <tr data-status="unknown" data-kind="docs-capture">
     <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
     <td class="mono">tests/docs/add-patient.docs.spec.ts</td><td>patient</td><td>docs-capture</td>
@@ -240,14 +244,6 @@ code{background:#e8e8e8;padding:1px 5px;border-radius:3px;font-size:12px}
     <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
 <tr data-status="unknown" data-kind="docs-capture">
     <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/docs/results-entry-cap.docs.spec.ts</td><td>result</td><td>docs-capture</td>
-    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="unknown" data-kind="docs-capture">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/docs/results-entry.docs.spec.ts</td><td>result</td><td>docs-capture</td>
-    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="unknown" data-kind="docs-capture">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
     <td class="mono">tests/docs/sample-acceptance.docs.spec.ts</td><td>nce</td><td>docs-capture</td>
     <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
 <tr data-status="unknown" data-kind="docs-capture">
@@ -281,14 +277,6 @@ code{background:#e8e8e8;padding:1px 5px;border-radius:3px;font-size:12px}
 <tr data-status="unknown" data-kind="docs-capture">
     <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
     <td class="mono">tests/docs/storage-picker.docs.spec.ts</td><td>storage</td><td>docs-capture</td>
-    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="unknown" data-kind="docs-capture">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/docs/test-catalog-mgmt.docs.spec.ts</td><td>catalog</td><td>docs-capture</td>
-    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="unknown" data-kind="docs-capture">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/docs/test-catalog-modals.docs.spec.ts</td><td>catalog</td><td>docs-capture</td>
     <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
 <tr data-status="unknown" data-kind="docs-capture">
     <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
@@ -541,32 +529,45 @@ code{background:#e8e8e8;padding:1px 5px;border-radius:3px;font-size:12px}
 <tr data-status="fresh" data-kind="contract">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">results-unified-worklist.spec.ts</td><td>results-worklist</td><td>contract</td>
-    <td>—</td><td><span class="tag">unified-results</span></td><td class="notes">OGC-1020 R1. Flag-gated (skips when RESULTS_ENTRY_UNIFIED_ROUTE off).</td></tr>
+    <td><span style="color:#24a148">pass</span> · 2026-07-25</td><td><span class="tag">unified-results</span></td><td class="notes">OGC-1020 R1. Flag-gated (skips when RESULTS_ENTRY_UNIFIED_ROUTE off).</td></tr>
 <tr data-status="fresh" data-kind="contract">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">test-catalog-activation-gate.spec.ts</td><td>catalog-activation</td><td>contract</td>
-    <td>—</td><td></td><td class="notes">Activation integrity gate (OGC-1141). Documents the REST create workflow.</td></tr>
+    <td><span style="color:#24a148">pass</span> · 2026-07-25</td><td></td><td class="notes">Activation integrity gate (OGC-1141). Documents the REST create workflow.</td></tr>
+<tr data-status="fresh" data-kind="contract">
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">test-catalog-downstream.spec.ts</td><td>catalog-downstream</td><td>contract</td>
+    <td><span style="color:#24a148">pass</span> · 2026-07-25</td><td></td><td class="notes">Ran in the full suite; confirm verdict on next JSON run.</td></tr>
 <tr data-status="fresh" data-kind="contract">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">test-catalog-mgmt.spec.ts</td><td>catalog-editor</td><td>contract</td>
-    <td>—</td><td></td><td class="notes">Editor fidelity + Basic Info save (OGC-1114 fixed).</td></tr>
+    <td><span style="color:#24a148">pass</span> · 2026-07-25</td><td></td><td class="notes">Editor fidelity + Basic Info save (OGC-1114 fixed).</td></tr>
 <tr data-status="fresh" data-kind="deep-roundtrip">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">test-catalog-mgmt-deep.spec.ts</td><td>catalog-editor</td><td>deep-roundtrip</td>
-    <td>—</td><td></td><td class="notes">TC-DEEP-DOMAIN reconciled to the domain-sample-type consistency guard (422).</td></tr>
+    <td><span style="color:#24a148">pass</span> · 2026-07-25</td><td></td><td class="notes">TC-DEEP-DOMAIN reconciled to the domain-sample-type consistency guard (422).</td></tr>
+<tr data-status="fresh" data-kind="docs-capture">
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">tests/docs/results-entry.docs.spec.ts</td><td>result</td><td>docs-capture</td>
+    <td><span style="color:#24a148">pass</span> · 2026-07-25</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="fresh" data-kind="docs-capture">
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">tests/docs/test-catalog-mgmt.docs.spec.ts</td><td>catalog</td><td>docs-capture</td>
+    <td><span style="color:#24a148">pass</span> · 2026-07-25</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
 <tr data-status="fresh" data-kind="guard">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">test-catalog-editor-regressions.spec.ts</td><td>catalog-editor</td><td>guard</td>
-    <td>—</td><td></td><td class="notes">BLOCKER guards reconciled for OGC-1142 fixes.</td></tr>
+    <td><span style="color:#24a148">pass</span> · 2026-07-25</td><td></td><td class="notes">BLOCKER guards reconciled for OGC-1142 fixes.</td></tr>
 <tr data-status="fresh" data-kind="runtime">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">test-catalog-result-types.spec.ts</td><td>catalog-result-types</td><td>runtime</td>
-    <td>—</td><td><span class="tag">OGC-1142-editor</span> <span class="tag">login-attrs</span></td><td class="notes">REHABBED 2026-07-24: create+component now via REST (createTestViaRest/setComponentViaRest). 7/7 result types green.</td></tr></tbody></table>
+    <td><span style="color:#24a148">pass</span> · 2026-07-25</td><td><span class="tag">OGC-1142-editor</span> <span class="tag">login-attrs</span></td><td class="notes">REHABBED 2026-07-24: create+component now via REST (createTestViaRest/setComponentViaRest). 7/7 result types green.</td></tr></tbody></table>
 <div class="legend"><span style="margin-right:14px"><span class="dot" style="background:#24a148"></span> <b>Fresh</b> — verified passing on the current build</span><span style="margin-right:14px"><span class="dot" style="background:#f1c21b"></span> <b>Partial</b> — green core, a known non-blocking drift or flake</span><span style="margin-right:14px"><span class="dot" style="background:#da1e28"></span> <b>Drift</b> — fails on real UI/route drift — needs a spec update</span><span style="margin-right:14px"><span class="dot" style="background:#8d8d8d"></span> <b>Unknown</b> — not run against the current build yet</span></div>
 <div class="gloss"><b>Drift causes</b><div class="gl"><b>OGC-1132</b> — Unified /order/enter drops the sample's tests (Hibernate type-mismatch) — order via legacy /SamplePatientEntry (placeLegacySerumOrder).</div>
 <div class="gl"><b>OGC-1142-editor</b> — Test Catalog editor rework changed the UI new-test create form + add-component + ranges dialog — configure via REST (createTestViaRest / setComponentViaRest / setNormalCriticalRangeViaRest).</div>
 <div class="gl"><b>login-attrs</b> — Reworked login lost input name/id — use placeholder*="ser" + defensive early-return under storageState.</div>
-<div class="gl"><b>unified-results</b> — OGC-1020 R1 unified /Results worklist is flag-gated (RESULTS_ENTRY_UNIFIED_ROUTE).</div></div>
+<div class="gl"><b>unified-results</b> — OGC-1020 R1 unified /Results worklist is flag-gated (RESULTS_ENTRY_UNIFIED_ROUTE).</div>
+<div class="gl"><b>load-flake</b> — E2E order→result specs intermittently crash the browser or hit 500s under full-suite load; they pass in isolation. Mitigate with retries or an isolated E2E tier, not spec edits.</div></div>
 <div class="work"><b>Workflow</b> — refresh after each build/run:<br>
 1) <code>BASE=… npx playwright test --config=all-tc.config.ts --reporter=json &gt; runlogs/last.json</code> (repeat with the docs project for docs-capture specs)<br>
 2) <code>node scripts/refresh-freshness.mjs runlogs/last.json &lt;build-hash&gt;</code> — discovers new specs, updates last results, regenerates this board.<br>

@@ -9,6 +9,10 @@ export default defineConfig({
   testDir: '.',
   timeout: 180000,
   expect: { timeout: 15000 },
+  // retries distinguish LOAD-FLAKE from real drift: the testing instance degrades under full-suite
+  // load (net::ERR_TOO_MANY_RETRIES, browser crashes, 500s) and those specs pass on retry; a genuinely
+  // drifted spec fails every attempt. The JSON report's "flaky" vs "failed" then feeds the freshness board.
+  retries: 2,
   reporter: [['line']],
   workers: 1,
   fullyParallel: false,
