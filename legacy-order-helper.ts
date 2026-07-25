@@ -1,4 +1,5 @@
 import { Page, expect } from '@playwright/test';
+import { FIXTURES } from './app-map';
 
 const BASE = process.env.BASE || 'https://testing.openelis-global.org';
 
@@ -56,9 +57,9 @@ export async function setComponentViaRest(
   const pid = sr0.body?.components?.[0]?.id;
   let options = comp.options ?? [];
   if (!options.length && OPTION_RESULT_TYPES.has(comp.resultType)) {
-    // Borrow options from a seeded dictionary test (HIV INFANT VIRAL LOAD = 312 on testing); fall
-    // back to a minimal pair so the PUT still satisfies the dictionary-options requirement.
-    const donor = await apiCall(page, `/tests/312/sample-results`, 'GET');
+    // Borrow options from the seeded dictionary donor test (app-map FIXTURES.dictionaryDonorTest);
+    // fall back to a minimal pair so the PUT still satisfies the dictionary-options requirement.
+    const donor = await apiCall(page, `/tests/${FIXTURES.dictionaryDonorTest}/sample-results`, 'GET');
     const donorOpts = donor.body?.components?.[0]?.options ?? [];
     options = (donorOpts.length ? donorOpts.slice(0, 3) : [{ value: '1', valueName: 'Positive' }, { value: '2', valueName: 'Negative' }])
       .map((o: any, i: number) => ({ value: o.value, valueName: o.valueName, resultType: comp.resultType, sortOrder: i + 1, normal: !!o.normal }));
