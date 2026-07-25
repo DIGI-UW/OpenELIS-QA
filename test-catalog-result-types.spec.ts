@@ -22,11 +22,12 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+import { createTestViaRest, setComponentViaRest } from './legacy-order-helper';
 
 const BASE = process.env.BASE || 'https://testing.openelis-global.org';
 const REST = `${BASE}/api/OpenELIS-Global/rest/test-catalog`;
 const ADMIN = { user: process.env.OE_USER || 'admin', pass: process.env.OE_PASS || 'adminADMIN!' };
-const STAMP = `QA_AUTO_${new Date().toISOString().slice(5, 10).replace('-', '')}`;
+const STAMP = `QA_AUTO_${new Date().toISOString().slice(5, 10).replace('-', '')}_${Date.now().toString().slice(-5)}`;
 
 // resultType code ↔ picker label (the <select> value is the single-letter code).
 const RESULT_TYPES: { code: string; label: string; realistic: string; unit?: string }[] = [
@@ -62,19 +63,9 @@ async function pickCombo(page: Page, label: string, optionText: string) {
 
 /** Create a test via the unified New-test flow; returns the new testId parsed from the URL. */
 async function createTest(page: Page, name: string, code: string): Promise<string> {
-  await page.goto(`${BASE}/MasterListsPage/TestCatalogList?page=1&pageSize=25`, { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: /new test/i }).first().click();
-  await page.getByLabel('Test name', { exact: false }).first().fill(name);
-  await page.getByLabel('Reporting name', { exact: false }).first().fill(name);
-  await page.getByLabel('Test code', { exact: false }).first().fill(code);
-  await pickCombo(page, 'Lab Unit', 'Biochemistry');
-  await pickCombo(page, 'Sample type', 'Serum');
-  // The create Save is the section's own bottom Save (NOT the dead top toolbar Save).
-  await page.getByRole('button', { name: /^Save$/ }).last().click();
-  await page.waitForURL(/\/TestCatalogEditor\/\d+\/basic-info/, { timeout: 30_000 });
-  const m = page.url().match(/TestCatalogEditor\/(\d+)\//);
-  expect(m, 'new test id in URL').toBeTruthy();
-  return m![1];
+  // DOCUMENTED add-test workflow (REST POST /tests → 201 {testId}). The UI new-test form drifted
+  // with the OGC-1142 rework (getByLabel fill / waitForURL times out).
+  return createTestViaRest(page, { name, code });
 }
 
 test.describe('Test Catalog — a test per result type, configured & round-tripped', () => {
@@ -88,20 +79,9 @@ test.describe('Test Catalog — a test per result type, configured & round-tripp
       // 1) Create the test (lands Inactive on its Basic Info per FR-3).
       const id = await createTest(page, name, code);
 
-      // 2) Sample & Results → add one component of this result type.
-      await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/${id}/sample-results`, { waitUntil: 'domcontentloaded' });
-      await page.getByRole('button', { name: /add component/i }).first().click();
-      await page.getByLabel('Component code', { exact: false }).first().fill(rt.code);
-      await page.getByLabel('Component label', { exact: false }).first().fill(rt.realistic);
-      // Result type is a native <select> — selectOption drives React's onChange reliably
-      // (unlike a native value-setter, which does NOT propagate — verified live).
-      await page.locator('select[id*="comp-type"]').first().selectOption({ label: rt.label });
-      if (rt.code === 'N' && rt.unit) {
-        await page.getByLabel('Significant digits', { exact: false }).first().fill('2').catch(() => {});
-      }
-      // Section's own Save (bottom, next to "Add component") — the working one.
-      await page.getByRole('button', { name: /^Save$/ }).last().click();
-      await page.waitForTimeout(1500);
+      // 2) Configure the primary component of this result type via REST (the UI add-component flow
+      //    drifted with the OGC-1142 rework). Dictionary-backed types (D/M/C/T) get borrowed options.
+      await setComponentViaRest(page, id, { code: rt.code, label: rt.realistic, resultType: rt.code, significantDigits: rt.code === 'N' ? 2 : 1 });
 
       // 3) ROUND-TRIP: read back on the REST surface and assert the component + type persisted.
       const res = await request.get(`${REST}/tests/${id}/sample-results`, { headers: { Accept: 'application/json' } });

@@ -38,6 +38,68 @@ export async function createTestViaRest(
   return id;
 }
 
+// Dictionary-backed result types (single-select, multi-select, cascading, titer) need options.
+const OPTION_RESULT_TYPES = new Set(['D', 'M', 'C', 'T']);
+
+/**
+ * Configure the test's PRIMARY result component via REST (PUT /tests/{id}/sample-results), setting its
+ * resultType. Returns the component id. The UI add-component flow drifted with the OGC-1142 rework, so
+ * specs configure components through this documented endpoint instead. For dictionary-backed types
+ * (D/M/C/T) it auto-borrows a few real options from a seeded dictionary test when none are supplied.
+ */
+export async function setComponentViaRest(
+  page: Page,
+  id: string,
+  comp: { code: string; label: string; resultType: string; options?: any[]; significantDigits?: number },
+): Promise<string> {
+  const sr0 = await apiCall(page, `/tests/${id}/sample-results`, 'GET');
+  const pid = sr0.body?.components?.[0]?.id;
+  let options = comp.options ?? [];
+  if (!options.length && OPTION_RESULT_TYPES.has(comp.resultType)) {
+    // Borrow options from a seeded dictionary test (HIV INFANT VIRAL LOAD = 312 on testing); fall
+    // back to a minimal pair so the PUT still satisfies the dictionary-options requirement.
+    const donor = await apiCall(page, `/tests/312/sample-results`, 'GET');
+    const donorOpts = donor.body?.components?.[0]?.options ?? [];
+    options = (donorOpts.length ? donorOpts.slice(0, 3) : [{ value: '1', valueName: 'Positive' }, { value: '2', valueName: 'Negative' }])
+      .map((o: any, i: number) => ({ value: o.value, valueName: o.valueName, resultType: comp.resultType, sortOrder: i + 1, normal: !!o.normal }));
+  }
+  const put = await apiCall(page, `/tests/${id}/sample-results`, 'PUT', {
+    testId: id,
+    components: [{
+      id: pid, code: comp.code, label: comp.label, displayOrder: 0, resultType: comp.resultType,
+      isPrimary: true, showOnReport: true, allowMultipleReadings: false, significantDigits: comp.significantDigits ?? 1,
+      interpretations: [], options,
+    }],
+  });
+  expect(put.status, `set component (${comp.resultType}) -> 200`).toBe(200);
+  const after = await apiCall(page, `/tests/${id}/sample-results`, 'GET');
+  return String(after.body?.components?.[0]?.id ?? '');
+}
+
+/**
+ * Set a Normal + Critical range on the test's primary component via REST (PUT /tests/{id}/ranges).
+ * The ranges DTO is the same RangesResponse shape as GET; each range references a componentId. The UI
+ * ranges dialog drifted with the OGC-1142 rework, so specs set ranges through this endpoint instead.
+ */
+export async function setNormalCriticalRangeViaRest(
+  page: Page,
+  id: string,
+  r: { lowNormal: number; highNormal: number; lowCritical: number; highCritical: number },
+): Promise<void> {
+  const sr = await apiCall(page, `/tests/${id}/sample-results`, 'GET');
+  const componentId = sr.body?.components?.[0]?.id;
+  const put = await apiCall(page, `/tests/${id}/ranges`, 'PUT', {
+    testId: id,
+    ranges: [{
+      componentId, gender: ' ', minAge: 0, maxAge: 120,
+      lowNormal: r.lowNormal, highNormal: r.highNormal,
+      lowCritical: r.lowCritical, highCritical: r.highCritical,
+      lowValid: 0, highValid: r.highCritical * 2,
+    }],
+  });
+  expect(put.status, 'set ranges -> 200').toBe(200);
+}
+
 /**
  * Place a Serum clinical order carrying the test/panel `name` via the LEGACY /SamplePatientEntry
  * wizard, and return the generated accession (lab number).

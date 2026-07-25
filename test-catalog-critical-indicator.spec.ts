@@ -26,7 +26,7 @@
  */
 
 import { test, expect, Page, APIRequestContext } from '@playwright/test';
-import { placeLegacySerumOrder, createTestViaRest } from './legacy-order-helper';
+import { placeLegacySerumOrder, createTestViaRest, setComponentViaRest, setNormalCriticalRangeViaRest } from './legacy-order-helper';
 
 const BASE = process.env.BASE || 'https://testing.openelis-global.org';
 const REST = `${BASE}/api/OpenELIS-Global/rest`;
@@ -77,37 +77,15 @@ async function createNumericTest(page: Page, name: string, code: string): Promis
   // /TestCatalogEditor/new/basic-info form drifted with the OGC-1142 rework (getByLabel fill /
   // waitForURL times out); the editor subpages below still work, so only the create is swapped.
   const id = await createTestViaRest(page, { name, code });
-
-  await nav(page, `${BASE}/MasterListsPage/TestCatalogEditor/${id}/sample-results`);
-  await page.waitForTimeout(600);
-  await page.getByRole('button', { name: /add component/i }).first().click();
-  await page.getByLabel('Component code', { exact: false }).first().fill('VAL');
-  await page.getByLabel('Component label', { exact: false }).first().fill('Value');
-  // numeric is the default primary card; no chooser action needed
-  await page.getByRole('button', { name: /^Save$/ }).last().click();
-  await page.waitForTimeout(1000);
+  // Configure the numeric primary component via REST (the UI add-component flow drifted with OGC-1142).
+  await setComponentViaRest(page, id, { code: 'VAL', label: 'Value', resultType: 'N' });
   return id;
 }
 
 /** Add a Normal 5-100 / Critical 2-150 range (Any age) via the ranges section. */
 async function setNormalCriticalRange(page: Page, id: string) {
-  await nav(page, `${BASE}/MasterListsPage/TestCatalogEditor/${id}/ranges`);
-  await page.waitForTimeout(600);
-  await page.getByRole('button', { name: /add range/i }).first().click();
-  // Add/Edit-range dialog: fill the Normal + Critical low/high fields by their labels.
-  const fill = async (labelRe: RegExp, v: string) => {
-    const f = page.getByLabel(labelRe).first();
-    if (await f.count()) { await f.fill(v); }
-  };
-  await fill(/low.*normal|normal.*low/i, '5');
-  await fill(/high.*normal|normal.*high/i, '100');
-  await fill(/low.*critical|critical.*low/i, '2');
-  await fill(/high.*critical|critical.*high/i, '150');
-  // Save the dialog, then the section.
-  await page.getByRole('button', { name: /^(Add|Save|Apply|OK)$/ }).last().click();
-  await page.waitForTimeout(500);
-  await page.getByRole('button', { name: /^Save$/ }).last().click();
-  await page.waitForTimeout(1200);
+  // Set Normal 5-100 / Critical 2-150 via REST (the UI ranges dialog drifted with OGC-1142).
+  await setNormalCriticalRangeViaRest(page, id, { lowNormal: 5, highNormal: 100, lowCritical: 2, highCritical: 150 });
 }
 
 /** Place a Serum order carrying `panelName`; returns the accession. (Mirrors the titer spec.) */

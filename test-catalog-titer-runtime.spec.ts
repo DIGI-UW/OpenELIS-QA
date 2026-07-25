@@ -32,13 +32,13 @@
  */
 
 import { test, expect, Page, APIRequestContext } from '@playwright/test';
-import { placeLegacySerumOrder } from './legacy-order-helper';
+import { placeLegacySerumOrder, createTestViaRest, setComponentViaRest } from './legacy-order-helper';
 
 const BASE = process.env.BASE || 'https://testing.openelis-global.org';
 const REST = `${BASE}/api/OpenELIS-Global/rest`;
 const TC = `${REST}/test-catalog`;
 const ADMIN = { user: process.env.OE_USER || 'admin', pass: process.env.OE_PASS || 'adminADMIN!' };
-const STAMP = `QA_AUTO_${new Date().toISOString().slice(5, 10).replace('-', '')}`;
+const STAMP = `QA_AUTO_${new Date().toISOString().slice(5, 10).replace('-', '')}_${Date.now().toString().slice(-5)}`;
 const BIOCHEM = 'Biochemistry';
 const PANEL = process.env.OE_PANEL || 'Bilan Biochimique';   // an existing Serum panel to ride into Add Order
 
@@ -68,28 +68,10 @@ async function pickCombo(page: Page, label: string, optionText: string) {
 
 /** Create a Titer test via the New-test form + guided result-type chooser; returns its id. */
 async function createTiterTest(page: Page, name: string, code: string): Promise<string> {
-  await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/new/basic-info`, { waitUntil: 'domcontentloaded' });
-  await page.getByLabel('Test name', { exact: false }).first().fill(name);
-  await page.getByLabel('Reporting name', { exact: false }).first().fill(name);
-  const codeField = page.getByLabel('Test code', { exact: false }).first();
-  await codeField.click(); await codeField.fill(code);
-  await pickCombo(page, 'Lab Unit', BIOCHEM);
-  await pickCombo(page, 'Sample type', 'Serum');
-  await page.getByRole('button', { name: /^Save$/ }).last().click();
-  await page.waitForURL(/\/TestCatalogEditor\/\d+\/basic-info/, { timeout: 30_000 });
-  const id = page.url().match(/TestCatalogEditor\/(\d+)\//)![1];
-
-  // Sample & Results: add a Titer component
-  await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/${id}/sample-results`, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(600);
-  await page.getByRole('button', { name: /add component/i }).first().click();
-  await page.getByLabel('Component code', { exact: false }).first().fill('TITER1');
-  await page.getByLabel('Component label', { exact: false }).first().fill('Titer Value');
-  // reveal advanced/legacy types, then choose the Titer card (unique description text)
-  await page.getByRole('button', { name: /advanced \/ legacy types/i }).click();
-  await page.getByText(/dilution ratio such as/i).click();   // the Titer tile
-  await page.getByRole('button', { name: /^Save$/ }).last().click();  // section Save
-  await page.waitForTimeout(1200);
+  // DOCUMENTED add-test workflow (REST) — the UI new-test form + component chooser drifted with the
+  // OGC-1142 rework. Create via POST /tests, then set the Titer (T) primary component via REST.
+  const id = await createTestViaRest(page, { name, code });
+  await setComponentViaRest(page, id, { code: 'TITER1', label: 'Titer Value', resultType: 'T' });
   return id;
 }
 
