@@ -116,7 +116,7 @@ export async function setNormalCriticalRangeViaRest(
  * The order is resultable on Submit — no Collect walk needed. Callers should navigate to result entry
  * by the returned accession.
  */
-export async function placeLegacySerumOrder(page: Page, name: string): Promise<string> {
+export async function placeLegacyOrder(page: Page, name: string, sampleType = 'Serum'): Promise<string> {
   const stamp = Date.now().toString().slice(-8);
   await page.goto(`${BASE}/SamplePatientEntry`, { waitUntil: 'domcontentloaded' });
 
@@ -139,14 +139,14 @@ export async function placeLegacySerumOrder(page: Page, name: string): Promise<s
   await page.waitForTimeout(1200);
 
   // --- Add Sample: Serum + tick the test/panel by visible label text ---
-  await page.locator('#sampleId_0').selectOption({ label: 'Serum' });
+  await page.locator('#sampleId_0').selectOption({ label: sampleType });
   await page.waitForTimeout(1500);
   const clicked = await page.evaluate((nm) => {
     const lbl = [...document.querySelectorAll('label')].find((l) => ((l as HTMLElement).textContent || '').trim().includes(nm));
     if (lbl) { (lbl as HTMLElement).click(); return true; }
     return false;
   }, name);
-  if (!clicked) throw new Error(`placeLegacySerumOrder: test/panel "${name}" not found under Serum on /SamplePatientEntry`);
+  if (!clicked) throw new Error(`placeLegacyOrder: test/panel "${name}" not found under ${sampleType} on /SamplePatientEntry`);
   await page.waitForTimeout(500);
   await page.getByRole('button', { name: /^Next$/ }).click();
   await page.waitForTimeout(1200);
@@ -176,4 +176,31 @@ export async function placeLegacySerumOrder(page: Page, name: string): Promise<s
   await page.getByRole('button', { name: /^Submit$/ }).click();
   await page.waitForTimeout(3500);
   return accession;
+}
+
+/** Back-compat wrapper: place a Serum order via /SamplePatientEntry. */
+export const placeLegacySerumOrder = (page: Page, name: string): Promise<string> => placeLegacyOrder(page, name, 'Serum');
+
+/**
+ * Open result entry for `accession`, flag-aware. When RESULTS_ENTRY_UNIFIED_ROUTE is on, legacy
+ * /result redirects to the unified /Results worklist (a different search UI), so branch on the flag
+ * (see app-map unified-results). Leaves the page showing the loaded result rows for the accession.
+ */
+export async function openResultEntryByAccession(page: Page, accession: string, labUnitLabel = 'Biochemistry'): Promise<void> {
+  const unified = await page.evaluate(async () => {
+    const r = await fetch('/api/OpenELIS-Global/rest/configuration-properties', { headers: { Accept: 'application/json' }, credentials: 'include' });
+    return (await r.json()).RESULTS_ENTRY_UNIFIED_ROUTE === 'true';
+  });
+  if (unified) {
+    await page.goto(`${BASE}/Results`, { waitUntil: 'domcontentloaded' });
+    await page.getByLabel(/lab unit/i).first().selectOption({ label: labUnitLabel }).catch(() => {});
+    await page.getByPlaceholder(/search by lab number/i).first().fill(accession).catch(() => {});
+    await page.getByRole('button', { name: /load results/i }).click().catch(() => {});
+    await page.waitForTimeout(2500);
+  } else {
+    await page.goto(`${BASE}/result?type=order&doRange=false`, { waitUntil: 'domcontentloaded' });
+    await page.getByPlaceholder(/accession|lab number/i).first().fill(accession).catch(() => {});
+    await page.getByRole('button', { name: /^Search$/ }).first().click().catch(() => {});
+    await page.waitForTimeout(2000);
+  }
 }

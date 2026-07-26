@@ -665,11 +665,14 @@
       "file": "tests/docs/multicomponent-runtime.docs.spec.ts",
       "area": "misc",
       "kind": "docs-capture",
-      "status": "drift",
+      "status": "fresh",
       "lastBuild": "index-u12wW6QI.js",
-      "drift": [],
-      "notes": "Discovered — not yet assessed against the current build.",
-      "lastResult": "fail",
+      "drift": [
+        "OGC-1132",
+        "unified-results"
+      ],
+      "notes": "REHABBED: order via placeLegacyOrder (Respiratory Swab COVIDPCR) + flag-aware openResultEntryByAccession. MC-2 asserts N2+E render in unified /Results. 3 passed.",
+      "lastResult": "pass",
       "lastRun": "2026-07-26"
     },
     {
