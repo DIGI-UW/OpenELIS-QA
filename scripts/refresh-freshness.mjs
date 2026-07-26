@@ -63,12 +63,21 @@ for (const rel of walk(ROOT).sort()) {
 // ── (b) Optionally ingest a Playwright JSON report → per-spec pass/fail ──────────────────────────────
 if (reportPath && fs.existsSync(reportPath)) {
   const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
-  const byFile = {};
+  const byFile = {}; // file -> { fail, flaky }
+  const ok = (r) => r && (r.status === 'passed' || r.status === 'skipped');
   const walkR = (suites = []) => suites.forEach((s) => {
     const file = (s.file || s.title || '').split('/').pop();
     (s.specs || []).forEach((sp) => {
-      const ok = (sp.tests || []).every((t) => (t.results || []).every((r) => r.status === 'passed' || r.status === 'skipped'));
-      if (file) { byFile[file] = byFile[file] || { pass: 0, fail: 0 }; ok ? byFile[file].pass++ : byFile[file].fail++; }
+      if (!file) return;
+      byFile[file] = byFile[file] || { fail: false, flaky: false };
+      (sp.tests || []).forEach((t) => {
+        const res = t.results || [];
+        const last = res[res.length - 1];
+        // retry-aware: a test PASSES if its final attempt passed; it's FLAKY if an earlier attempt
+        // failed but the final passed; it FAILS (real drift) if the final attempt failed.
+        if (!ok(last)) byFile[file].fail = true;
+        else if (res.some((r) => !ok(r))) byFile[file].flaky = true;
+      });
     });
     walkR(s.suites || []);
   });
@@ -78,9 +87,12 @@ if (reportPath && fs.existsSync(reportPath)) {
   manifest.specs.forEach((spec) => {
     const r = byFile[spec.file.split('/').pop()];
     if (!r) return;
-    spec.lastResult = r.fail === 0 ? 'pass' : 'fail';
+    const verdict = r.fail ? 'drift' : r.flaky ? 'partial' : 'fresh';
+    spec.lastResult = r.fail ? 'fail' : r.flaky ? 'flaky' : 'pass';
     spec.lastBuild = build; spec.lastRun = now;
-    if (spec.status === 'unknown') spec.status = r.fail === 0 ? 'fresh' : 'drift';
+    // With retries the run is authoritative — set status for all specs (curated notes/drift kept).
+    spec.status = verdict;
+    if (verdict === 'partial' && !(spec.drift || []).includes('load-flake')) spec.drift = [...(spec.drift || []), 'load-flake'];
   });
   if (buildArg) manifest.currentBuild = buildArg;
   console.log('Ingested', Object.keys(byFile).length, 'spec results from', reportPath);
