@@ -61,7 +61,7 @@
       "file": "test-catalog-mn-sampletypes.spec.ts",
       "area": "catalog-sampletypes",
       "kind": "contract",
-      "status": "drift",
+      "status": "partial",
       "lastBuild": "index-u12wW6QI.js",
       "drift": [
         "load-flake"
@@ -101,7 +101,7 @@
       "file": "test-catalog-sections-roundtrip.spec.ts",
       "area": "catalog-editor",
       "kind": "deep-roundtrip",
-      "status": "drift",
+      "status": "partial",
       "lastBuild": "index-u12wW6QI.js",
       "drift": [
         "login-attrs",
@@ -126,7 +126,7 @@
       "file": "test-catalog-critical-indicator.spec.ts",
       "area": "results-flags",
       "kind": "guard-e2e",
-      "status": "drift",
+      "status": "partial",
       "lastBuild": "index-u12wW6QI.js",
       "drift": [
         "OGC-1142-editor",
@@ -142,7 +142,7 @@
       "file": "test-catalog-titer-runtime.spec.ts",
       "area": "catalog-result-types",
       "kind": "runtime-e2e",
-      "status": "drift",
+      "status": "partial",
       "lastBuild": "index-u12wW6QI.js",
       "drift": [
         "OGC-1142-editor",
@@ -1116,11 +1116,11 @@
       "file": "tests/docs/results-entry-cap.docs.spec.ts",
       "area": "result",
       "kind": "docs-capture",
-      "status": "drift",
+      "status": "fresh",
       "lastBuild": "index-u12wW6QI.js",
       "drift": [],
       "notes": "Discovered — not yet assessed against the current build.",
-      "lastResult": "fail",
+      "lastResult": "pass",
       "lastRun": "2026-07-26"
     },
     {
@@ -1391,11 +1391,11 @@
       "file": "tests/docs/test-catalog-modals.docs.spec.ts",
       "area": "catalog",
       "kind": "docs-capture",
-      "status": "drift",
+      "status": "fresh",
       "lastBuild": "index-u12wW6QI.js",
       "drift": [],
       "notes": "Discovered — not yet assessed against the current build.",
-      "lastResult": "fail",
+      "lastResult": "pass",
       "lastRun": "2026-07-26"
     },
     {
