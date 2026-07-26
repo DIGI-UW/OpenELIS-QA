@@ -22,6 +22,9 @@ export default defineConfig({
     {
       name: 'test-catalog',
       testMatch: /(test-catalog-.*|results-.*)\.spec\.ts/,
+      // Contract-tier only: exclude the docs-capture specs that share the test-catalog-*/results-*
+      // filename prefix, and the load-sensitive order→result E2E specs (those run alone via e2e.config).
+      testIgnore: /(\.docs\.spec\.ts|test-catalog-(critical-indicator|titer-runtime|sections-roundtrip)\.spec\.ts)/,
       dependencies: ['setup'],
       use: { storageState: '.auth/user.json' },
     },
