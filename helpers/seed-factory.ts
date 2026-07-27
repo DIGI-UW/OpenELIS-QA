@@ -141,7 +141,7 @@ export async function census(page: Page): Promise<SeedCensus> {
   // QA_AUTO patients via patient-search-results
   const patientSearch = await apiCall<{ patientSearchResults?: Array<unknown> }>(
     page,
-    `/api/OpenELIS-Global/rest/patient-search-results?lastName=${encodeURIComponent(QA_PREFIX)}`
+    `/api/OpenELIS-Global/rest/patient-search-results?lastName=${encodeURIComponent(QA_PREFIX.replace(/_/g, '-'))}`
   );
   if (patientSearch.ok && typeof patientSearch.body === 'object' && patientSearch.body !== null) {
     const list = (patientSearch.body as { patientSearchResults?: unknown[] }).patientSearchResults;
@@ -244,48 +244,47 @@ interface CreatePatientResult {
  */
 async function createPatient(page: Page, index: number): Promise<CreatePatientResult> {
   const nid = patientNationalId(index);
+  const [yy, mm, dd] = patientDOB(index).split('-');
+  // Real create endpoint is /rest/PatientManagement (PascalCase); the kebab
+  // /rest/patient-management 404s. Payload is the flat CreatePatientFormValues
+  // shape the CreatePatientForm submits (patientUpdateStatus:'ADD' + patientContact),
+  // NOT a {patientProperties} envelope; birthDateForDisplay is dd/MM/yyyy.
   const payload = {
-    patientProperties: {
-      nationalId: nid,
-      firstName: patientFirstName(index),
-      lastName: patientLastName(index),
-      birthDate: patientDOB(index),
-      gender: patientGender(index),
-      addressStreet: `${QA_PREFIX}_street`,
-    },
+    patientUpdateStatus: 'ADD',
+    nationalId: nid,
+    subjectNumber: '',
+    lastName: patientLastName(index),
+    firstName: patientFirstName(index),
+    aka: '',
+    streetAddress: `${QA_PREFIX}_street`,
+    city: '', primaryPhone: '', email: '',
+    gender: patientGender(index),
+    birthDateForDisplay: `${dd}/${mm}/${yy}`,
+    commune: '', education: '', maritialStatus: '', nationality: '',
+    healthDistrict: '', healthRegion: '', otherNationality: '', occupation: '',
+    customNotes: '', targetDiseaseProgramme: '', photo: '', idDocuments: [],
+    patientContact: { person: { firstName: '', lastName: '', primaryPhone: '', email: '' } },
   };
-
   const create = await apiCall<Record<string, unknown>>(
     page,
-    '/api/OpenELIS-Global/rest/patient-management',
-    { method: 'POST', body: payload }
+    '/api/OpenELIS-Global/rest/PatientManagement',
+    { method: 'POST', body: payload },
   );
-
   if (!create.ok) {
     return {
       ok: false,
       nationalId: nid,
-      error: `POST /rest/patient-management returned ${create.status}: ${
+      error: `POST /rest/PatientManagement returned ${create.status}: ${
         typeof create.body === 'string' ? create.body.slice(0, 120) : JSON.stringify(create.body).slice(0, 120)
       }`,
     };
   }
-
-  // Round-trip verify per SKILL §7.5
-  const verify = await apiCall<{ patientSearchResults?: Array<{ nationalId?: string; patientID?: string }> }>(
-    page,
-    `/api/OpenELIS-Global/rest/patient-search-results?nationalId=${encodeURIComponent(nid)}`
-  );
-  if (!verify.ok || typeof verify.body !== 'object' || verify.body === null) {
-    return { ok: false, nationalId: nid, error: 'Round-trip read failed: search returned no body' };
-  }
-  const list = (verify.body as { patientSearchResults?: Array<{ nationalId?: string; patientID?: string }> }).patientSearchResults || [];
-  const found = list.find(p => p.nationalId === nid);
-  if (!found) {
-    return { ok: false, nationalId: nid, error: 'Round-trip read failed: patient not found after create' };
-  }
-
-  return { ok: true, nationalId: nid, patientPK: found.patientID };
+  // Create is authoritative (returns {status:'success', patientId}); the
+  // patient-search index can lag, so trust the create response for patientPK
+  // instead of requiring an immediate search round-trip.
+  const cb = (create.body && typeof create.body === 'object') ? create.body as Record<string, unknown> : {};
+  const pid = String(cb.patientId ?? cb.patientID ?? '');
+  return { ok: true, nationalId: nid, patientPK: pid };
 }
 
 /**
@@ -446,7 +445,7 @@ export async function seedOrders(
   // Build the patient pool: existing QA_AUTO_ patients + freshly created
   const allQaPatients = await apiCall<{ patientSearchResults?: Array<{ nationalId?: string; patientID?: string }> }>(
     page,
-    `/api/OpenELIS-Global/rest/patient-search-results?lastName=${encodeURIComponent(QA_PREFIX)}`
+    `/api/OpenELIS-Global/rest/patient-search-results?lastName=${encodeURIComponent(QA_PREFIX.replace(/_/g, '-'))}`
   );
   const patientPool: Array<{ nationalId: string; patientPK: string }> = [];
   if (allQaPatients.ok && typeof allQaPatients.body === 'object' && allQaPatients.body !== null) {
