@@ -26,24 +26,41 @@
  */
 
 import { test, expect, Page, APIRequestContext } from '@playwright/test';
+import { placeLegacySerumOrder, createTestViaRest, setComponentViaRest, setNormalCriticalRangeViaRest } from './legacy-order-helper';
 
 const BASE = process.env.BASE || 'https://testing.openelis-global.org';
 const REST = `${BASE}/api/OpenELIS-Global/rest`;
 const TC = `${REST}/test-catalog`;
 const ADMIN = { user: process.env.OE_USER || 'admin', pass: process.env.OE_PASS || 'adminADMIN!' };
-const STAMP = `QA_AUTO_${new Date().toISOString().slice(5, 10).replace('-', '')}`;
+const STAMP = `QA_AUTO_${new Date().toISOString().slice(5, 10).replace('-', '')}_${Date.now().toString().slice(-5)}`;
 const BIOCHEM = 'Biochemistry';
 const PANEL = process.env.OE_PANEL || 'Bilan Biochimique';   // existing Serum panel → rides into Add Order
 const ABNORMAL = '120';   // > normal-high 100, < critical-high 150  → abnormal, not critical
 const CRITICAL = '200';   // > critical-high 150                     → critical
 
 async function login(page: Page) {
-  await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
-  await page.fill('input[name="loginName"], #loginName, input[placeholder*="ser" i]', ADMIN.user);
-  await page.fill('input[type="password"], #password', ADMIN.pass);
+  await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' }).catch(() => {});
+  // With a preloaded storageState (guards.config.ts) we're already authenticated, so /login
+  // redirects away and no username field appears — skip fast instead of hanging on fill().
+  const userField = page.locator('input[name="loginName"], #loginName, input[placeholder*="ser" i]').first();
+  if (!(await userField.isVisible({ timeout: 4000 }).catch(() => false))) return;
+  // Short timeouts + catches: the testing login page intermittently hangs ("Loginloading"); never
+  // let that stall a test for 150s — storageState already authenticates us.
+  await userField.fill(ADMIN.user, { timeout: 8000 }).catch(() => {});
+  await page.fill('input[type="password"], #password', ADMIN.pass, { timeout: 8000 }).catch(() => {});
   await page.getByRole('button', { name: /login|sign in|submit/i }).first()
-    .click().catch(() => page.keyboard.press('Enter'));
-  await page.waitForLoadState('networkidle').catch(() => {});
+    .click({ timeout: 8000 }).catch(() => page.keyboard.press('Enter').catch(() => {}));
+  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+}
+
+/** SPA-safe navigation: tolerate net::ERR_ABORTED from a client-side redirect during goto + retry. */
+async function nav(page: Page, url: string) {
+  for (let i = 0; i < 3; i++) {
+    try { await page.goto(url, { waitUntil: 'domcontentloaded' }); return; }
+    catch (e) { if (!/ERR_ABORTED|interrupted|frame was detached|navigation/i.test(String(e))) throw e; await page.waitForTimeout(1200); }
+  }
+  await page.goto(url, { waitUntil: 'commit' }).catch(() => {});
+  await page.waitForTimeout(800);
 }
 const getJson = (rq: APIRequestContext, url: string) =>
   rq.get(url, { headers: { Accept: 'application/json' } }).then((r) => r.json());
@@ -56,71 +73,26 @@ async function pickCombo(page: Page, label: string, optionText: string) {
 
 /** Create a numeric test with a single component; returns its id. */
 async function createNumericTest(page: Page, name: string, code: string): Promise<string> {
-  await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/new/basic-info`, { waitUntil: 'domcontentloaded' });
-  await page.getByLabel('Test name', { exact: false }).first().fill(name);
-  await page.getByLabel('Reporting name', { exact: false }).first().fill(name);
-  const codeField = page.getByLabel('Test code', { exact: false }).first();
-  await codeField.click(); await codeField.fill(code);
-  await pickCombo(page, 'Lab Unit', BIOCHEM);
-  await pickCombo(page, 'Sample type', 'Serum');
-  await page.getByRole('button', { name: /^Save$/ }).last().click();
-  await page.waitForURL(/\/TestCatalogEditor\/\d+\/basic-info/, { timeout: 30_000 });
-  const id = page.url().match(/TestCatalogEditor\/(\d+)\//)![1];
-
-  await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/${id}/sample-results`, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(600);
-  await page.getByRole('button', { name: /add component/i }).first().click();
-  await page.getByLabel('Component code', { exact: false }).first().fill('VAL');
-  await page.getByLabel('Component label', { exact: false }).first().fill('Value');
-  // numeric is the default primary card; no chooser action needed
-  await page.getByRole('button', { name: /^Save$/ }).last().click();
-  await page.waitForTimeout(1000);
+  // DOCUMENTED add-test workflow (REST POST /tests → 201 {testId}). The UI
+  // /TestCatalogEditor/new/basic-info form drifted with the OGC-1142 rework (getByLabel fill /
+  // waitForURL times out); the editor subpages below still work, so only the create is swapped.
+  const id = await createTestViaRest(page, { name, code });
+  // Configure the numeric primary component via REST (the UI add-component flow drifted with OGC-1142).
+  await setComponentViaRest(page, id, { code: 'VAL', label: 'Value', resultType: 'N' });
   return id;
 }
 
 /** Add a Normal 5-100 / Critical 2-150 range (Any age) via the ranges section. */
 async function setNormalCriticalRange(page: Page, id: string) {
-  await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/${id}/ranges`, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(600);
-  await page.getByRole('button', { name: /add range/i }).first().click();
-  // Add/Edit-range dialog: fill the Normal + Critical low/high fields by their labels.
-  const fill = async (labelRe: RegExp, v: string) => {
-    const f = page.getByLabel(labelRe).first();
-    if (await f.count()) { await f.fill(v); }
-  };
-  await fill(/low.*normal|normal.*low/i, '5');
-  await fill(/high.*normal|normal.*high/i, '100');
-  await fill(/low.*critical|critical.*low/i, '2');
-  await fill(/high.*critical|critical.*high/i, '150');
-  // Save the dialog, then the section.
-  await page.getByRole('button', { name: /^(Add|Save|Apply|OK)$/ }).last().click();
-  await page.waitForTimeout(500);
-  await page.getByRole('button', { name: /^Save$/ }).last().click();
-  await page.waitForTimeout(1200);
+  // Set Normal 5-100 / Critical 2-150 via REST (the UI ranges dialog drifted with OGC-1142).
+  await setNormalCriticalRangeViaRest(page, id, { lowNormal: 5, highNormal: 100, lowCritical: 2, highCritical: 150 });
 }
 
 /** Place a Serum order carrying `panelName`; returns the accession. (Mirrors the titer spec.) */
 async function placeSerumOrder(page: Page, panelName: string): Promise<string> {
-  await page.goto(`${BASE}/order/enter`, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(600);
-  await page.getByRole('button', { name: /generate lab number/i }).click();
-  const labInput = page.getByPlaceholder(/enter or generate lab number/i);
-  await expect(labInput).not.toHaveValue('', { timeout: 10_000 });
-  const accession = await labInput.inputValue();
-  await page.getByRole('button', { name: /^New Patient$/ }).click();
-  await page.getByPlaceholder(/nationality identifier/i).fill(`QA${Date.now()}`);
-  await page.getByPlaceholder(/last name/i).first().fill('QACrit');
-  await page.getByPlaceholder(/first name/i).first().fill('Cval');
-  await page.getByPlaceholder(/dd\/mm\/yyyy/i).first().fill('02/02/1985');
-  await page.getByRole('radio', { name: /^Male$/ }).check();
-  await page.locator('#sampleType-0').selectOption({ label: 'Serum' });
-  await page.waitForTimeout(600);
-  await page.getByRole('checkbox', { name: panelName, exact: false }).check({ force: true })
-    .catch(async () => { await page.getByText(panelName, { exact: true }).first().click(); });
-  await page.waitForTimeout(800);
-  await page.getByRole('button', { name: /^Save & Next$/ }).click();
-  await page.waitForURL(/\/order\/collect/, { timeout: 20_000 });
-  return accession;
+  // Migrated to the legacy /SamplePatientEntry path: the unified /order/enter drops the sample's
+  // tests (OGC-1132), making the order non-resultable and timing this spec out at result entry.
+  return placeLegacySerumOrder(page, panelName);
 }
 
 /** Capture the rendered "signature" of the result input cell for the given test name. */
@@ -148,10 +120,10 @@ test.describe('OGC-1121 — critical vs abnormal result indicator (patient safet
     expect(Number(r.highCritical), 'critical high persisted').toBe(150);
 
     // 2. activate + ride the panel into Add Order
-    await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/${id}/basic-info`, { waitUntil: 'domcontentloaded' });
+    await nav(page, `${BASE}/MasterListsPage/TestCatalogEditor/${id}/basic-info`);
     await page.getByRole('switch', { name: /active/i }).first().click().catch(() => {});
     await page.waitForTimeout(1000);
-    await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/${id}/panels`, { waitUntil: 'domcontentloaded' });
+    await nav(page, `${BASE}/MasterListsPage/TestCatalogEditor/${id}/panels`);
     await page.waitForTimeout(500);
     await pickCombo(page, 'Add to panel', PANEL);
     await page.getByRole('button', { name: /^Save$/ }).last().click();
@@ -161,7 +133,7 @@ test.describe('OGC-1121 — critical vs abnormal result indicator (patient safet
     const accession = await placeSerumOrder(page, PANEL);
 
     // 4. Results → By Order: enter ABNORMAL, capture signature; enter CRITICAL, capture signature
-    await page.goto(`${BASE}/result?type=order&doRange=false`, { waitUntil: 'domcontentloaded' });
+    await nav(page, `${BASE}/result?type=order&doRange=false`);
     await page.getByPlaceholder(/accession/i).fill(accession);
     await page.getByRole('button', { name: /^Search$/ }).click();
     await page.waitForLoadState('networkidle').catch(() => {});

@@ -1,0 +1,88 @@
+{
+  "_comment": "Machine-readable Application Map for OpenELIS Global — the single source of truth for routes, REST contracts, feature flags, fixtures, and volatile UI anchors that the Playwright suite AND the docs pipeline consume. When the app changes, update THIS file (a one-line diff) instead of hunting across specs. Consumed in code via app-map.ts; keep it in sync with what's verified live.",
+  "meta": {
+    "target": "testing.openelis-global.org",
+    "build": "index-u12wW6QI.js",
+    "version": "3.2.1.11",
+    "verifiedOn": "2026-07-25",
+    "restContextPath": "/api/OpenELIS-Global"
+  },
+
+  "routes": {
+    "login":               { "path": "/login", "notes": "SPA Formik login. Fields lost name/id in the rework — see uiAnchors.login.*" },
+    "home":                { "path": "/home" },
+    "clinicalOrder":       { "path": "/SamplePatientEntry", "status": "working", "notes": "Legacy patient-first wizard. Single POST /SamplePatientEntry with tests embedded in sampleXML → resultable analysis. USE THIS for orders." },
+    "genericOrderWizard":  { "path": "/order/enter", "status": "broken", "drift": "OGC-1132", "notes": "Unified wizard drops the sample's tests (decoupled sample-type-requests path); order comes up empty at Collect. Do not use for order fixtures." },
+    "unifiedResults":      { "path": "/Results", "gate": "RESULTS_ENTRY_UNIFIED_ROUTE", "fallback": "/result?type=unit", "notes": "OGC-1020 R1 worklist. When flag off, /Results redirects to legacy /result." },
+    "legacyResults":       { "path": "/result?type=unit", "notes": "Legacy per-lab-unit result entry (served when the unified flag is off)." },
+    "validationByOrder":   { "path": "/AccessionValidation", "notes": "Validation → search accession → tick Save/Save-All-Results → Validate. NOTE: multi-select (M) results do not surface here yet." },
+    "patientStatusReport": { "path": "/Report?type=patient&report=patientCILNSP_vreduit", "notes": "Reports → Routine → Patient Status Report → Report By Lab Number → Generate Printable Version (opens ReportPrint in a new tab)." },
+    "testCatalogList":     { "path": "/MasterListsPage/TestCatalogList?page=1&pageSize=25", "notes": "Loading this establishes the CSRF token in localStorage." },
+    "testCatalogEditor":   { "path": "/MasterListsPage/TestCatalogEditor/{id}/{section}", "sections": ["basic-info", "sample-results", "ranges", "methods", "panels", "terminology", "storage"], "drift": "OGC-1142-editor", "notes": "The UI NEW-test create form + add-component + ranges dialog drifted with OGC-1142 — configure via REST (see rest.endpoints). Editing existing sections still works." },
+    "resultEntryConfig":   { "path": "/MasterListsPage/ResultConfigurationMenu", "notes": "Admin → Result Entry Configuration. Where RESULTS_ENTRY_UNIFIED_ROUTE is toggled (Select row → Modify → True/False → Save)." },
+    "administration":      { "path": "/administration", "status": "server-route", "notes": "Hard nav 404s (client-side route); reach via the in-app Admin menu." }
+  },
+
+  "rest": {
+    "base": "/api/OpenELIS-Global/rest",
+    "csrf": { "source": "localStorage.getItem('CSRF')", "header": "X-CSRF-Token", "note": "The bare Playwright `request` fixture has NO CSRF and gets login HTML on writes. Use in-page window.fetch (page.evaluate) or apiCall() in legacy-order-helper.ts." },
+    "endpoints": {
+      "createTest":       { "method": "POST", "path": "/test-catalog/tests", "req": { "name": "str", "reportingName": "str", "code": "str (unique — 409 on dup)", "domain": "CLINICAL|ENVIRONMENTAL|VECTOR", "labUnitId": "str", "sampleTypeId": "str" }, "res": "201 { testId }", "notes": "The DOCUMENTED add-test workflow. New tests land INACTIVE." },
+      "basicInfo":        { "method": "GET|PUT", "path": "/test-catalog/tests/{id}/basic-info", "shape": "{ testId, name, code, description, domain, sampleTypeIds[], active, orderable }", "notes": "PUT with a domain that has no matching-domain sample type → 422 (consistency guard, OGC-1121-era)." },
+      "sampleResults":    { "method": "GET|PUT", "path": "/test-catalog/tests/{id}/sample-results", "componentShape": "{ id, code, label, displayOrder, resultType, isPrimary, showOnReport, allowMultipleReadings, significantDigits, interpretations[], options[] }", "optionShape": "{ value(dictId), valueName, resultType, sortOrder, normal }", "notes": "PUT the full components array. Dictionary-backed types (D/M/C/T) need options — borrow from fixtures.dictionaryDonorTest." },
+      "ranges":           { "method": "GET|PUT", "path": "/test-catalog/tests/{id}/ranges", "reqShape": "{ testId, ranges:[{ componentId, gender:' ', minAge, maxAge, lowNormal, highNormal, lowCritical, highCritical, lowValid, highValid }] }", "notes": "Same RangesResponse DTO for GET and PUT. Each range references a componentId (get it from sample-results first)." },
+      "completeness":     { "method": "GET", "path": "/test-catalog/tests/{id}/completeness", "shape": "{ complete, missing[], messages[] }" },
+      "activate":         { "method": "POST", "path": "/test-catalog/tests/{id}/activate", "notes": "Incomplete test → 422. Success → 200 with age/sex coverage." },
+      "labUnits":         { "method": "GET", "path": "/test-catalog/lab-units", "shape": "[{ id, name }]" },
+      "sampleTypeTests":  { "method": "GET", "path": "/sample-type-tests?sampleType={id}", "shape": "{ tests:[{ id, name }] }", "notes": "What's orderable under a specimen — used to verify m:n order-under-each." },
+      "testList":         { "method": "GET", "path": "/test-list", "shape": "[{ id, value }]", "notes": "The orderable index." },
+      "configProperties": { "method": "GET", "path": "/configuration-properties", "notes": "Runtime config incl. feature flags (read-only aggregate)." },
+      "orderSearch":      { "method": "GET", "path": "/order/search?labNumber={acc}", "shape": "{ samples:[{ tests:[] }] }", "notes": "Confirms a sample+tests actually persisted (empty samples = silent drop / missing requester)." },
+      "samplePatientEntry": { "method": "POST", "path": "/SamplePatientEntry", "notes": "The order write behind the legacy wizard." }
+    }
+  },
+
+  "flags": {
+    "RESULTS_ENTRY_UNIFIED_ROUTE": {
+      "key": "resultsEntryUnifiedRoute", "type": "text", "default": "false",
+      "editableAt": "Admin → Result Entry Configuration (routes.resultEntryConfig)",
+      "gates": "unified /Results worklist (OGC-1020 R1)",
+      "current": "true on testing (set 2026-07-24, left on per Casey)",
+      "source": "ConfigurationProperties.java + volume/properties/SystemConfiguration.properties"
+    }
+  },
+
+  "fixtures": {
+    "labUnits": { "56": "Biochemistry", "136": "Molecular Biology" },
+    "sampleTypes": { "2": "Serum", "3": "Plasma" },
+    "dictionaryDonorTest": "312",
+    "_dictionaryDonorTest_note": "HIV INFANT VIRAL LOAD on testing — borrow real dictionary options for D/M/C/T components.",
+    "requester": { "site": "Mulago", "provider": "Sarah" },
+    "patientIdRegex": "^[-a-z0-9/]*$ (hyphens, NO underscores) for subjectNumber/nationalId",
+    "resultTypeCodes": { "N": "Numeric", "D": "Single-select dictionary", "R": "Free text", "M": "Multi-select", "C": "Cascading multi-select", "T": "Titer", "A": "Alpha (validated text)" },
+    "domainSampleTypes": "testing is CLINICAL-only — all sample types are legacy domain 'H'; 0 Water/Vector units."
+  },
+
+  "uiAnchors": {
+    "login.username": { "selectors": ["input[placeholder*=\"ser\" i]", "#loginName", "input[name=\"loginName\"]"], "drift": "login-attrs", "note": "Reworked login lost name/id; placeholder='Username' still matches *=ser. Make login defensive under storageState." },
+    "login.password": { "selectors": ["input[type=\"password\"]", "#password"] },
+    "sampleTypeDropdown": { "note": "Carbon Dropdown backed by a native <select>. Programmatic value-set renders dependent lists but may NOT bind into the submitted manifest — prefer Playwright selectOption() or REST config." },
+    "carbonCombobox": { "note": "Open then REAL option-row click (pickCombo). combo.fill() types without committing → required field stays empty → silent Save no-op." },
+    "perRowSave": { "note": "Unified /Results has a per-analysis Save (per-result save scope). Saved row → read-only + Edit." }
+  },
+
+  "driftLedger": {
+    "OGC-1132": "Unified /order/enter drops the sample's tests (Hibernate type-mismatch in SampleTypeRequestDAOImpl) → order via clinicalOrder (/SamplePatientEntry).",
+    "OGC-1142-editor": "Test Catalog editor rework changed the UI new-test create form + add-component + ranges dialog → configure via rest.endpoints (createTest/sampleResults/ranges).",
+    "login-attrs": "Reworked login lost input name/id → use uiAnchors.login + defensive early-return under storageState.",
+    "unified-results": "OGC-1020 R1 unified /Results worklist is flag-gated (flags.RESULTS_ENTRY_UNIFIED_ROUTE)."
+  },
+
+  "verbs": {
+    "createTestViaRest": "legacy-order-helper.ts — POST /tests (documented create)",
+    "setComponentViaRest": "legacy-order-helper.ts — PUT sample-results (one component of a result type)",
+    "setNormalCriticalRangeViaRest": "legacy-order-helper.ts — PUT ranges (normal + critical)",
+    "placeLegacySerumOrder": "legacy-order-helper.ts — order a test/panel via /SamplePatientEntry",
+    "apiCall": "legacy-order-helper.ts — CSRF-aware in-page fetch"
+  }
+}

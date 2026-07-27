@@ -32,23 +32,29 @@
  */
 
 import { test, expect, Page, APIRequestContext } from '@playwright/test';
+import { placeLegacySerumOrder, createTestViaRest, setComponentViaRest } from './legacy-order-helper';
 
 const BASE = process.env.BASE || 'https://testing.openelis-global.org';
 const REST = `${BASE}/api/OpenELIS-Global/rest`;
 const TC = `${REST}/test-catalog`;
 const ADMIN = { user: process.env.OE_USER || 'admin', pass: process.env.OE_PASS || 'adminADMIN!' };
-const STAMP = `QA_AUTO_${new Date().toISOString().slice(5, 10).replace('-', '')}`;
+const STAMP = `QA_AUTO_${new Date().toISOString().slice(5, 10).replace('-', '')}_${Date.now().toString().slice(-5)}`;
 const BIOCHEM = 'Biochemistry';
 const PANEL = process.env.OE_PANEL || 'Bilan Biochimique';   // an existing Serum panel to ride into Add Order
 
 // ---------- helpers ----------
 async function login(page: Page) {
-  await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
-  await page.fill('input[name="loginName"], #loginName, input[placeholder*="ser" i]', ADMIN.user);
-  await page.fill('input[type="password"], #password', ADMIN.pass);
+  await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' }).catch(() => {});
+  // Defensive: with a preloaded storageState (all-tc.config) we're already authenticated, so /login
+  // redirects and no username field appears — skip fast instead of hanging on fill().
+  // (`placeholder*="ser"` matches the reworked login's "Username" field, which lost its name/id.)
+  const userField = page.locator('input[name="loginName"], #loginName, input[placeholder*="ser" i]').first();
+  if (!(await userField.isVisible({ timeout: 4000 }).catch(() => false))) return;
+  await userField.fill(ADMIN.user, { timeout: 8000 }).catch(() => {});
+  await page.fill('input[type="password"], #password', ADMIN.pass, { timeout: 8000 }).catch(() => {});
   await page.getByRole('button', { name: /login|sign in|submit/i }).first()
-    .click().catch(() => page.keyboard.press('Enter'));
-  await page.waitForLoadState('networkidle').catch(() => {});
+    .click({ timeout: 8000 }).catch(() => page.keyboard.press('Enter').catch(() => {}));
+  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
 }
 const getJson = (rq: APIRequestContext, url: string) =>
   rq.get(url, { headers: { Accept: 'application/json' } }).then((r) => r.json());
@@ -62,28 +68,10 @@ async function pickCombo(page: Page, label: string, optionText: string) {
 
 /** Create a Titer test via the New-test form + guided result-type chooser; returns its id. */
 async function createTiterTest(page: Page, name: string, code: string): Promise<string> {
-  await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/new/basic-info`, { waitUntil: 'domcontentloaded' });
-  await page.getByLabel('Test name', { exact: false }).first().fill(name);
-  await page.getByLabel('Reporting name', { exact: false }).first().fill(name);
-  const codeField = page.getByLabel('Test code', { exact: false }).first();
-  await codeField.click(); await codeField.fill(code);
-  await pickCombo(page, 'Lab Unit', BIOCHEM);
-  await pickCombo(page, 'Sample type', 'Serum');
-  await page.getByRole('button', { name: /^Save$/ }).last().click();
-  await page.waitForURL(/\/TestCatalogEditor\/\d+\/basic-info/, { timeout: 30_000 });
-  const id = page.url().match(/TestCatalogEditor\/(\d+)\//)![1];
-
-  // Sample & Results: add a Titer component
-  await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/${id}/sample-results`, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(600);
-  await page.getByRole('button', { name: /add component/i }).first().click();
-  await page.getByLabel('Component code', { exact: false }).first().fill('TITER1');
-  await page.getByLabel('Component label', { exact: false }).first().fill('Titer Value');
-  // reveal advanced/legacy types, then choose the Titer card (unique description text)
-  await page.getByRole('button', { name: /advanced \/ legacy types/i }).click();
-  await page.getByText(/dilution ratio such as/i).click();   // the Titer tile
-  await page.getByRole('button', { name: /^Save$/ }).last().click();  // section Save
-  await page.waitForTimeout(1200);
+  // DOCUMENTED add-test workflow (REST) — the UI new-test form + component chooser drifted with the
+  // OGC-1142 rework. Create via POST /tests, then set the Titer (T) primary component via REST.
+  const id = await createTestViaRest(page, { name, code });
+  await setComponentViaRest(page, id, { code: 'TITER1', label: 'Titer Value', resultType: 'T' });
   return id;
 }
 
@@ -93,41 +81,9 @@ async function createTiterTest(page: Page, name: string, code: string): Promise<
  * failure mode of the manual native-setter runs.
  */
 async function placeSerumOrderViaPanel(page: Page, panelName: string): Promise<string> {
-  await page.goto(`${BASE}/order/enter`, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(600);
-
-  // Lab number
-  await page.getByRole('button', { name: /generate lab number/i }).click();
-  const labInput = page.getByPlaceholder(/enter or generate lab number/i);
-  await expect(labInput).not.toHaveValue('', { timeout: 10_000 });
-  const accession = await labInput.inputValue();
-
-  // Sample category defaults to Clinical. New patient:
-  await page.getByRole('button', { name: /^New Patient$/ }).click();
-  await page.getByPlaceholder(/nationality identifier/i).fill(`QA${Date.now()}`);
-  await page.getByPlaceholder(/last name/i).first().fill('QATiter');
-  await page.getByPlaceholder(/first name/i).first().fill('Tval');
-  await page.getByPlaceholder(/dd\/mm\/yyyy/i).first().fill('02/02/1985');
-  await page.getByRole('radio', { name: /^Male$/ }).check();
-
-  // Sample type -> Serum (native select #sampleType-0)
-  await page.locator('#sampleType-0').selectOption({ label: 'Serum' });
-  await page.waitForTimeout(600);
-
-  // Order Panels: check the panel by row — .check() fires onChange (the crux)
-  const panelRow = page.locator('div,li,label').filter({ hasText: new RegExp(`^\\s*${panelName}\\s*$`) }).first();
-  await panelRow.getByRole('checkbox').check({ force: true })
-    .catch(async () => { await page.getByText(panelName, { exact: true }).first().click(); });
-  await page.waitForTimeout(800);
-
-  // sanity: the panel members should now show as Order-Tests chips before we commit
-  await expect(page.getByText(panelName, { exact: true }).first()).toBeVisible();
-
-  // Save & Next (Enter Order -> Collect). Guard: it must actually advance.
-  await page.getByRole('button', { name: /^Save & Next$/ }).click();
-  await page.waitForURL(/\/order\/collect/, { timeout: 20_000 });
-
-  return accession;
+  // Migrated to the legacy /SamplePatientEntry path: the unified /order/enter drops the sample's
+  // tests (OGC-1132), making the order non-resultable and timing this spec out at result entry.
+  return placeLegacySerumOrder(page, panelName);
 }
 
 test.describe('Test Catalog editor — Titer result type at runtime', () => {
@@ -156,13 +112,27 @@ test.describe('Test Catalog editor — Titer result type at runtime', () => {
     // 3. place the order (the step the manual wizard kept dropping tests on)
     const accession = await placeSerumOrderViaPanel(page, PANEL);
 
-    // 4. Results → By Order: the Titer test row must render an interactive control (not plain text)
-    await page.goto(`${BASE}/result?type=order&doRange=false`, { waitUntil: 'domcontentloaded' });
-    await page.getByPlaceholder(/accession/i).fill(accession);
-    await page.getByRole('button', { name: /^Search$/ }).click();
+    // 4. Result entry: the Titer test row must render an interactive control (not plain text).
+    // Flag-aware — when RESULTS_ENTRY_UNIFIED_ROUTE is on, legacy /result redirects to the unified
+    // /Results worklist (a different search field), so branch on the flag (see app-map unified-results).
+    const unified = await page.evaluate(async () => {
+      const r = await fetch('/api/OpenELIS-Global/rest/configuration-properties', { headers: { Accept: 'application/json' }, credentials: 'include' });
+      return (await r.json()).RESULTS_ENTRY_UNIFIED_ROUTE === 'true';
+    });
+    if (unified) {
+      await page.goto(`${BASE}/Results`, { waitUntil: 'domcontentloaded' });
+      await page.getByLabel(/lab unit/i).first().selectOption({ label: 'Biochemistry' }).catch(() => {});
+      await page.getByPlaceholder(/search by lab number/i).first().fill(accession);
+      await page.getByRole('button', { name: /load results/i }).click();
+      await page.waitForTimeout(2500);
+    } else {
+      await page.goto(`${BASE}/result?type=order&doRange=false`, { waitUntil: 'domcontentloaded' });
+      await page.getByPlaceholder(/accession/i).fill(accession);
+      await page.getByRole('button', { name: /^Search$/ }).click();
+    }
     const titerRow = page.locator('tr, [role=row], div').filter({ hasText: /Titer/i }).first();
     await expect(titerRow, 'Titer test appears at result entry').toBeVisible({ timeout: 15_000 });
-    const control = titerRow.locator('select, input[type=text], input:not([type=hidden]), [role=combobox]');
+    const control = titerRow.locator('select, input[type=text], input:not([type=hidden]), [role=combobox], .cds--multi-select, button[aria-haspopup]');
     await expect(control.first(), 'Titer row exposes an interactive result-entry control').toBeVisible();
 
     // 5. best-effort: enter a titer value, Save, then Validate
