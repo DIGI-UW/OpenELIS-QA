@@ -115,13 +115,15 @@ export type OrderTargetStatus =
  * creating new records.
  */
 export function patientNationalId(index: number): string {
-  return `${QA_PREFIX}_P${String(index).padStart(4, '0')}`;
+  // nationalId is validated server-side against ^[-a-z0-9/]*$ (lowercase, hyphen, slash; no _ or caps).
+  return `qa-auto-p${String(index).padStart(4, '0')}`;
 }
 
 export function patientLastName(index: number): string {
   // The actual last name on the patient record. Combined with QA_PREFIX
   // so patient search by lastName=QA_AUTO surfaces all seeded patients.
-  return `${QA_PREFIX}_${PATIENT_NAMES[index % PATIENT_NAMES.length].last}`;
+  // name validation rejects '_' — hyphenate the prefix so lastName is a legal name.
+  return `${QA_PREFIX.replace(/_/g, '-')}-${PATIENT_NAMES[index % PATIENT_NAMES.length].last}`;
 }
 
 export function patientFirstName(index: number): string {
