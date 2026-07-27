@@ -225,10 +225,13 @@
       "area": "order",
       "target": "testing",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
-      "drift": [],
-      "notes": "Clinical order create→receive→result→validate→report round-trip"
+      "status": "partial",
+      "lastResult": "blocked",
+      "drift": [
+        "needs-seed"
+      ],
+      "notes": "Clinical order create→receive→result→validate→report round-trip — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-ab-env-holding-time.spec.ts",
@@ -238,12 +241,13 @@
       "area": "environmental",
       "target": "indonesiademo",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
+      "status": "fresh",
+      "lastResult": "pass",
       "drift": [
         "silnas-target"
       ],
-      "notes": "Env holding-time exceedance flag through the sample lifecycle"
+      "notes": "Env holding-time exceedance flag through the sample lifecycle — Ran GREEN this cycle (2026-07-27).",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-b-rejection.spec.ts",
@@ -253,10 +257,13 @@
       "area": "validation",
       "target": "testing",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
-      "drift": [],
-      "notes": "Sample rejection lifecycle (reject reason → status → downstream block)"
+      "status": "partial",
+      "lastResult": "blocked",
+      "drift": [
+        "needs-seed"
+      ],
+      "notes": "Sample rejection lifecycle (reject reason → status → downstream block) — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-c-reflex-trigger.spec.ts",
@@ -266,10 +273,13 @@
       "area": "reflex",
       "target": "testing",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
-      "drift": [],
-      "notes": "Reflex rule fires on a qualifying result and spawns the reflex test"
+      "status": "partial",
+      "lastResult": "blocked",
+      "drift": [
+        "needs-seed"
+      ],
+      "notes": "Reflex rule fires on a qualifying result and spawns the reflex test — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-d-calculated-value.spec.ts",
@@ -279,10 +289,13 @@
       "area": "calc",
       "target": "testing",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
-      "drift": [],
-      "notes": "Calculated-value engine: inputs → derived output test on save"
+      "status": "partial",
+      "lastResult": "blocked",
+      "drift": [
+        "needs-seed"
+      ],
+      "notes": "Calculated-value engine: inputs → derived output test on save — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-e-sample-validation-lifecycle.spec.ts",
@@ -292,10 +305,13 @@
       "area": "validation",
       "target": "testing",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
-      "drift": [],
-      "notes": "Result entry → validation → release state machine"
+      "status": "partial",
+      "lastResult": "blocked",
+      "drift": [
+        "needs-seed"
+      ],
+      "notes": "Result entry → validation → release state machine — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-f-eqa-distribution.spec.ts",
@@ -305,10 +321,13 @@
       "area": "eqa",
       "target": "testing",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
-      "drift": [],
-      "notes": "EQA distribution → panel → result submission round-trip"
+      "status": "partial",
+      "lastResult": "gap",
+      "drift": [
+        "feature-gated"
+      ],
+      "notes": "EQA distribution → panel → result submission round-trip — Feature-gated on testing: eqaEnabled config off. GAP-by-design.",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-g-cold-chain-excursion.spec.ts",
@@ -318,12 +337,13 @@
       "area": "storage",
       "target": "indonesiademo",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
+      "status": "partial",
+      "lastResult": "gap",
       "drift": [
-        "silnas-target"
+        "feature-gated"
       ],
-      "notes": "Cold-chain excursion recorded against a stored sample item"
+      "notes": "Cold-chain excursion recorded against a stored sample item — Feature-gated on testing: no Cold Storage device configured. GAP-by-design.",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-h-permission-enforcement.spec.ts",
@@ -333,10 +353,13 @@
       "area": "security",
       "target": "testing",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
-      "drift": [],
-      "notes": "Role/permission enforcement across protected routes+actions"
+      "status": "partial",
+      "lastResult": "gap",
+      "drift": [
+        "feature-gated"
+      ],
+      "notes": "Role/permission enforcement across protected routes+actions — Feature-gated on testing: restricted-role user create blocked. GAP-by-design.",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-i-site-branding-to-report.spec.ts",
@@ -346,10 +369,11 @@
       "area": "report",
       "target": "testing",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
+      "status": "fresh",
+      "lastResult": "pass",
       "drift": [],
-      "notes": "Site branding config propagates onto a generated report"
+      "notes": "Site branding config propagates onto a generated report — Ran GREEN this cycle (2026-07-27).",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-j-audit-trail-coverage.spec.ts",
@@ -359,10 +383,13 @@
       "area": "audit",
       "target": "testing",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
-      "drift": [],
-      "notes": "Audit-trail records mutations across modules (coverage sweep)"
+      "status": "partial",
+      "lastResult": "blocked",
+      "drift": [
+        "needs-seed"
+      ],
+      "notes": "Audit-trail records mutations across modules (coverage sweep) — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-k-fhir-round-trip.spec.ts",
@@ -372,10 +399,13 @@
       "area": "fhir",
       "target": "testing",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
-      "drift": [],
-      "notes": "FHIR export/import round-trip of an order + result"
+      "status": "partial",
+      "lastResult": "blocked",
+      "drift": [
+        "needs-seed"
+      ],
+      "notes": "FHIR export/import round-trip of an order + result — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-l-lab-number-uniqueness.spec.ts",
@@ -385,10 +415,13 @@
       "area": "order",
       "target": "testing",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
-      "drift": [],
-      "notes": "Lab-number uniqueness/collision handling across concurrent orders"
+      "status": "partial",
+      "lastResult": "blocked",
+      "drift": [
+        "needs-seed"
+      ],
+      "notes": "Lab-number uniqueness/collision handling across concurrent orders — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-m-vector-surveillance.spec.ts",
@@ -398,12 +431,13 @@
       "area": "vector",
       "target": "indonesiademo",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
+      "status": "fresh",
+      "lastResult": "pass",
       "drift": [
         "silnas-target"
       ],
-      "notes": "Vector surveillance: trap→species ID→result→dashboard"
+      "notes": "Vector surveillance: trap→species ID→result→dashboard — Ran GREEN this cycle (2026-07-27).",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-n-environmental-sampling.spec.ts",
@@ -413,12 +447,13 @@
       "area": "environmental",
       "target": "indonesiademo",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
+      "status": "fresh",
+      "lastResult": "pass",
       "drift": [
         "silnas-target"
       ],
-      "notes": "Environmental sampling order→result→compliance evaluation"
+      "notes": "Environmental sampling order→result→compliance evaluation — Ran GREEN this cycle (2026-07-27).",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-o-referral-roundtrip.spec.ts",
@@ -428,10 +463,11 @@
       "area": "referral",
       "target": "testing",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
+      "status": "fresh",
+      "lastResult": "pass",
       "drift": [],
-      "notes": "Referral out→reference-lab result→acceptance round-trip"
+      "notes": "Referral out→reference-lab result→acceptance round-trip — Ran GREEN this cycle (2026-07-27).",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-p-patient-merge.spec.ts",
@@ -441,10 +477,11 @@
       "area": "patient",
       "target": "testing",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
+      "status": "fresh",
+      "lastResult": "pass",
       "drift": [],
-      "notes": "Patient merge consolidates orders/results without loss"
+      "notes": "Patient merge consolidates orders/results without loss — Ran GREEN this cycle (2026-07-27).",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-q-batch-order-entry.spec.ts",
@@ -454,10 +491,11 @@
       "area": "batch",
       "target": "testing",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
+      "status": "fresh",
+      "lastResult": "pass",
       "drift": [],
-      "notes": "Batch order entry creates N orders in one submission"
+      "notes": "Batch order entry creates N orders in one submission — Ran GREEN this cycle (2026-07-27).",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-r-sample-shipment.spec.ts",
@@ -467,10 +505,11 @@
       "area": "referral",
       "target": "testing",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
+      "status": "fresh",
+      "lastResult": "pass",
       "drift": [],
-      "notes": "Sample shipment manifest → dispatch → receipt"
+      "notes": "Sample shipment manifest → dispatch → receipt — Ran GREEN this cycle (2026-07-27).",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-s-aliquot-lineage.spec.ts",
@@ -480,10 +519,11 @@
       "area": "storage",
       "target": "testing",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
+      "status": "fresh",
+      "lastResult": "pass",
       "drift": [],
-      "notes": "Aliquot lineage: parent→child sample linkage & tracking"
+      "notes": "Aliquot lineage: parent→child sample linkage & tracking — Ran GREEN this cycle (2026-07-27).",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-t-workplan-worklist.spec.ts",
@@ -493,10 +533,11 @@
       "area": "workplan",
       "target": "testing",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
+      "status": "fresh",
+      "lastResult": "pass",
       "drift": [],
-      "notes": "Workplan build → worklist → result entry cross-link"
+      "notes": "Workplan build → worklist → result entry cross-link — Ran GREEN this cycle (2026-07-27).",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-u-print-barcode.spec.ts",
@@ -506,10 +547,11 @@
       "area": "barcode",
       "target": "testing",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
+      "status": "fresh",
+      "lastResult": "pass",
       "drift": [],
-      "notes": "Barcode label generation & print payload for a sample"
+      "notes": "Barcode label generation & print payload for a sample — Ran GREEN this cycle (2026-07-27).",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-w-pathology-case.spec.ts",
@@ -519,10 +561,11 @@
       "area": "pathology",
       "target": "testing",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
+      "status": "fresh",
+      "lastResult": "pass",
       "drift": [],
-      "notes": "Pathology case lifecycle (accession→report)"
+      "notes": "Pathology case lifecycle (accession→report) — Ran GREEN this cycle (2026-07-27).",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-x-electronic-orders.spec.ts",
@@ -532,10 +575,11 @@
       "area": "eorder",
       "target": "testing",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
+      "status": "fresh",
+      "lastResult": "pass",
       "drift": [],
-      "notes": "Inbound electronic order (eOrder) → sample creation"
+      "notes": "Inbound electronic order (eOrder) → sample creation — Ran GREEN this cycle (2026-07-27).",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-y-compliance-reporting.spec.ts",
@@ -545,12 +589,13 @@
       "area": "compliance",
       "target": "indonesiademo",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
+      "status": "fresh",
+      "lastResult": "pass",
       "drift": [
         "silnas-target"
       ],
-      "notes": "SILNAS compliance dashboard + report; carries OGC-1059 regression watch (complianceReport 500)"
+      "notes": "SILNAS compliance dashboard + report; carries — Ran GREEN this cycle (2026-07-27). OGC-1059 watch (Step 4): complianceReport now returns 200 — appears FIXED (was 500). Surface for Casey to verify/close.",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/chains/chain-z-compliance-standards-admin.spec.ts",
@@ -560,12 +605,13 @@
       "area": "compliance",
       "target": "indonesiademo",
       "branch": "main",
-      "status": "unknown",
-      "lastResult": "not-run-this-cycle",
+      "status": "fresh",
+      "lastResult": "pass",
       "drift": [
         "silnas-target"
       ],
-      "notes": "Compliance standards admin CRUD + activation round-trip"
+      "notes": "Compliance standards admin CRUD + activation round-trip — Ran GREEN this cycle (2026-07-27).",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/docs/add-patient.docs.spec.ts",
