@@ -75,18 +75,6 @@
         "unknown": 0
       }
     },
-    "Analyzers & QC": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 12,
-      "status": {
-        "fresh": 11,
-        "partial": 0,
-        "drift": 1,
-        "unknown": 0
-      }
-    },
     "Audit trail": {
       "coverage": "smoke",
       "deep": 0,
@@ -106,8 +94,8 @@
       "smoke": 2,
       "status": {
         "fresh": 1,
-        "partial": 0,
-        "drift": 1,
+        "partial": 1,
+        "drift": 0,
         "unknown": 0
       }
     },
@@ -121,18 +109,6 @@
         "partial": 0,
         "drift": 0,
         "unknown": 0
-      }
-    },
-    "Dashboard / site config": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 5,
-      "status": {
-        "fresh": 2,
-        "partial": 0,
-        "drift": 2,
-        "unknown": 1
       }
     },
     "Dictionary & config admin": {
@@ -166,8 +142,8 @@
       "smoke": 3,
       "status": {
         "fresh": 2,
-        "partial": 0,
-        "drift": 1,
+        "partial": 1,
+        "drift": 0,
         "unknown": 0
       }
     },
@@ -183,18 +159,6 @@
         "unknown": 0
       }
     },
-    "Exploration / tooling": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 12,
-      "status": {
-        "fresh": 7,
-        "partial": 0,
-        "drift": 1,
-        "unknown": 4
-      }
-    },
     "Immunohistochemistry": {
       "coverage": "smoke",
       "deep": 0,
@@ -207,18 +171,6 @@
         "unknown": 0
       }
     },
-    "Labels & Barcode": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 3,
-      "status": {
-        "fresh": 2,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 1
-      }
-    },
     "Localization (i18n)": {
       "coverage": "smoke",
       "deep": 0,
@@ -228,54 +180,6 @@
         "fresh": 1,
         "partial": 0,
         "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Non-conformance / CAPA": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 11,
-      "status": {
-        "fresh": 10,
-        "partial": 0,
-        "drift": 1,
-        "unknown": 0
-      }
-    },
-    "Order entry — Clinical": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 5,
-      "status": {
-        "fresh": 5,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Order entry — Environmental": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 8,
-      "status": {
-        "fresh": 6,
-        "partial": 0,
-        "drift": 2,
-        "unknown": 0
-      }
-    },
-    "Order entry — Vector": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 10,
-      "status": {
-        "fresh": 7,
-        "partial": 0,
-        "drift": 3,
         "unknown": 0
       }
     },
@@ -334,8 +238,8 @@
       "smoke": 2,
       "status": {
         "fresh": 1,
-        "partial": 0,
-        "drift": 1,
+        "partial": 1,
+        "drift": 0,
         "unknown": 0
       }
     },
@@ -363,37 +267,73 @@
         "unknown": 0
       }
     },
-    "Storage & Inventory": {
-      "coverage": "smoke",
+    "Analyzers & QC": {
+      "coverage": "shallow",
       "deep": 0,
-      "shallow": 0,
-      "smoke": 18,
+      "shallow": 6,
+      "smoke": 7,
       "status": {
-        "fresh": 18,
-        "partial": 0,
+        "fresh": 12,
+        "partial": 1,
         "drift": 0,
         "unknown": 0
       }
     },
-    "Unmapped": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 7,
-      "status": {
-        "fresh": 6,
-        "partial": 0,
-        "drift": 1,
-        "unknown": 0
-      }
-    },
-    "Test Catalog — activation gate": {
+    "Dashboard / site config": {
       "coverage": "shallow",
       "deep": 0,
       "shallow": 1,
-      "smoke": 0,
+      "smoke": 4,
       "status": {
-        "fresh": 1,
+        "fresh": 2,
+        "partial": 2,
+        "drift": 0,
+        "unknown": 1
+      }
+    },
+    "Exploration / tooling": {
+      "coverage": "shallow",
+      "deep": 0,
+      "shallow": 1,
+      "smoke": 16,
+      "status": {
+        "fresh": 12,
+        "partial": 1,
+        "drift": 0,
+        "unknown": 4
+      }
+    },
+    "Labels & Barcode": {
+      "coverage": "shallow",
+      "deep": 0,
+      "shallow": 1,
+      "smoke": 2,
+      "status": {
+        "fresh": 2,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 1
+      }
+    },
+    "Non-conformance / CAPA": {
+      "coverage": "shallow",
+      "deep": 0,
+      "shallow": 3,
+      "smoke": 8,
+      "status": {
+        "fresh": 10,
+        "partial": 1,
+        "drift": 0,
+        "unknown": 0
+      }
+    },
+    "Storage & Inventory": {
+      "coverage": "shallow",
+      "deep": 0,
+      "shallow": 7,
+      "smoke": 12,
+      "status": {
+        "fresh": 19,
         "partial": 0,
         "drift": 0,
         "unknown": 0
@@ -423,6 +363,42 @@
         "unknown": 0
       }
     },
+    "Order entry — Clinical": {
+      "coverage": "deep",
+      "deep": 3,
+      "shallow": 0,
+      "smoke": 2,
+      "status": {
+        "fresh": 5,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 0
+      }
+    },
+    "Order entry — Environmental": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 0,
+      "smoke": 7,
+      "status": {
+        "fresh": 7,
+        "partial": 1,
+        "drift": 0,
+        "unknown": 0
+      }
+    },
+    "Order entry — Vector": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 0,
+      "smoke": 9,
+      "status": {
+        "fresh": 7,
+        "partial": 3,
+        "drift": 0,
+        "unknown": 0
+      }
+    },
     "Result flags (critical/abnormal)": {
       "coverage": "deep",
       "deep": 1,
@@ -437,9 +413,9 @@
     },
     "Results entry": {
       "coverage": "deep",
-      "deep": 1,
+      "deep": 2,
       "shallow": 1,
-      "smoke": 3,
+      "smoke": 2,
       "status": {
         "fresh": 4,
         "partial": 1,
@@ -447,10 +423,22 @@
         "unknown": 0
       }
     },
+    "Test Catalog — activation gate": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 0,
+      "smoke": 0,
+      "status": {
+        "fresh": 1,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 0
+      }
+    },
     "Test Catalog — editor": {
       "coverage": "deep",
-      "deep": 2,
-      "shallow": 3,
+      "deep": 4,
+      "shallow": 1,
       "smoke": 2,
       "status": {
         "fresh": 5,

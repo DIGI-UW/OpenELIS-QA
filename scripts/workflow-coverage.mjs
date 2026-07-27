@@ -57,7 +57,9 @@ const RULES = [
   [/compliance/, 'Compliance reporting'],
   [/dictionary|user-dict/, 'Dictionary & config admin'],
   [/config-pages|site-band|home|hero/, 'Dashboard / site config'],
-  [/discover|timing|dom-probe|ranges-discover|drift|dump|find-|cleanup|patch-/, 'Exploration / tooling'],
+  [/device-fields/, 'Analyzers & QC'],
+  [/min-stock/, 'Storage & Inventory'],
+  [/discover|timing|dom-probe|ranges-discover|drift|dump|find-|cleanup|patch-|explore|handoff|ht-final|seed-cases|seed-orders/, 'Exploration / tooling'],
 ];
 
 // Canonical workflows that SHOULD exist — any with no spec show as uncovered.
@@ -78,7 +80,7 @@ for (const name of CANONICAL) wf[name] = { deep: [], shallow: [], smoke: [], sta
 for (const s of manifest.specs) {
   const name = workflowOf(s);
   wf[name] = wf[name] || { deep: [], shallow: [], smoke: [], status: { fresh: 0, partial: 0, drift: 0, unknown: 0 } };
-  const tier = DEPTH[s.kind] || 'smoke';
+  const tier = s.depth || DEPTH[s.kind] || 'smoke';   // prefer behaviour-classified depth (scripts/classify-depth.mjs)
   wf[name][tier].push(s.file.split('/').pop());
   wf[name].status[s.status] = (wf[name].status[s.status] || 0) + 1;
 }
