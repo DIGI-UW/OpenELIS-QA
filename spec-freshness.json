@@ -8,7 +8,9 @@
     "OGC-1142-editor": "Test Catalog editor rework changed the UI new-test create form + add-component + ranges dialog — configure via REST (createTestViaRest / setComponentViaRest / setNormalCriticalRangeViaRest).",
     "login-attrs": "Reworked login lost input name/id — use placeholder*=\"ser\" + defensive early-return under storageState.",
     "unified-results": "OGC-1020 R1 unified /Results worklist is flag-gated (RESULTS_ENTRY_UNIFIED_ROUTE).",
-    "load-flake": "Order→result E2E specs fail DETERMINISTICALLY under full-suite load (net::ERR_TOO_MANY_RETRIES / browser crashes / 500s persist across retries) but PASS in isolation. Not spec drift and not fixed by retries — run them alone via e2e.config.ts (isolated tier). all-tc.config now excludes them."
+    "load-flake": "Order→result E2E specs fail DETERMINISTICALLY under full-suite load (net::ERR_TOO_MANY_RETRIES / browser crashes / 500s persist across retries) but PASS in isolation. Not spec drift and not fixed by retries — run them alone via e2e.config.ts (isolated tier). all-tc.config now excludes them.",
+    "env-vector-target-gap": "The Environmental/Vector domain order UI is NOT deployed on testing.openelis-global.org (v3.2.1.11): /order/environmental/enter and /order/vector/enter render only the nav shell (no wizard, no step chrome), and the legacy /SamplePatientEntry sample-type list carries only clinical/pathology types (Serum, Whole Blood, Sputum, Histopathology, …) — NO Water or vector types. So an env/vector order cannot be placed on testing by any path. These specs are correct and green on indonesiademo (which has the domain). Run env/vector specs against BASE=https://indonesiademo.openelis-global.org, not testing. Directly probed env 2026-07-27; vector shares the identical domain-deployment gap.",
+    "seeder-indonesiademo": "Demo-data seeder spec (self-grounding, idempotent) intended to run one-at-a-time against indonesiademo to populate demo data; it is not a regression test for testing and is expected to no-op/fail there. Excluded from testing pass-rate."
   },
   "specs": [
     {
@@ -370,11 +372,11 @@
       "file": "tests/docs/drift.check.spec.ts",
       "area": "misc",
       "kind": "probe",
-      "status": "drift",
-      "lastBuild": "index-u12wW6QI.js",
+      "status": "fresh",
+      "lastBuild": "3.2.1.11",
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build.",
-      "lastResult": "fail",
+      "notes": "Meta doc-drift checker. Ran clean on testing v3.2.1.11: every manual section missing=0 routeErrors=0 (no UI drift). Working as designed.",
+      "lastResult": "pass",
       "lastRun": "2026-07-26"
     },
     {
@@ -436,12 +438,13 @@
       "file": "tests/docs/env-flow.docs.spec.ts",
       "area": "env",
       "kind": "docs-capture",
-      "status": "drift",
+      "status": "fresh",
       "lastBuild": "index-u12wW6QI.js",
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build.",
-      "lastResult": "fail",
-      "lastRun": "2026-07-26"
+      "notes": "VERIFIED on indonesiademo (its real target): full env wizard, SamplePatientEntry POST 200, 2 passed. False-drift under testing = target mismatch, not code drift.",
+      "lastResult": "pass",
+      "lastRun": "2026-07-26",
+      "target": "indonesiademo"
     },
     {
       "file": "tests/docs/env-landing-split.docs.spec.ts",
@@ -524,11 +527,13 @@
       "file": "tests/docs/esig.docs.spec.ts",
       "area": "esig",
       "kind": "docs-capture",
-      "status": "drift",
+      "status": "partial",
       "lastBuild": "index-u12wW6QI.js",
-      "drift": [],
-      "notes": "Discovered — not yet assessed against the current build.",
-      "lastResult": "fail",
+      "drift": [
+        "precondition"
+      ],
+      "notes": "Precondition-gated: needs electronicSignatureEnabled=true at run time. Capture-only (does not complete a sign). FAIL when flag off is expected, not code drift.",
+      "lastResult": "flaky",
       "lastRun": "2026-07-26"
     },
     {
@@ -568,12 +573,14 @@
       "file": "tests/docs/ht-final.docs.spec.ts",
       "area": "misc",
       "kind": "docs-capture",
-      "status": "drift",
+      "status": "partial",
       "lastBuild": "index-u12wW6QI.js",
-      "drift": [],
-      "notes": "Discovered — not yet assessed against the current build.",
-      "lastResult": "fail",
-      "lastRun": "2026-07-26"
+      "drift": [
+        "env-vector-target-gap"
+      ],
+      "notes": "Captures the env \"SOP Max Holding Time\" field via a groundwater sample-type filter — env domain absent on testing (see driftCauses.env-vector-target-gap). Run on indonesiademo.",
+      "lastResult": "blocked-on-target",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/docs/ihc-dashboard.docs.spec.ts",
@@ -1176,23 +1183,27 @@
       "file": "tests/docs/seed-analyzers.docs.spec.ts",
       "area": "analyzer",
       "kind": "seed",
-      "status": "drift",
+      "status": "partial",
       "lastBuild": "index-u12wW6QI.js",
-      "drift": [],
-      "notes": "Discovered — not yet assessed against the current build.",
-      "lastResult": "fail",
-      "lastRun": "2026-07-26"
+      "drift": [
+        "seeder-indonesiademo"
+      ],
+      "notes": "Demo-data SEEDER for analyzers — self-grounding + idempotent, targets indonesiademo (run one seeder per invocation). Not a testing regression spec; not expected to pass on testing.",
+      "lastResult": "n/a",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/docs/seed-calc.docs.spec.ts",
       "area": "calc",
       "kind": "seed",
-      "status": "drift",
+      "status": "partial",
       "lastBuild": "index-u12wW6QI.js",
-      "drift": [],
-      "notes": "Discovered — not yet assessed against the current build.",
-      "lastResult": "fail",
-      "lastRun": "2026-07-26"
+      "drift": [
+        "seeder-indonesiademo"
+      ],
+      "notes": "Demo-data SEEDER for calculated values — self-grounding + idempotent, targets indonesiademo (run one seeder per invocation). Not a testing regression spec; not expected to pass on testing.",
+      "lastResult": "n/a",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/docs/seed-cases.docs.spec.ts",
@@ -1209,12 +1220,14 @@
       "file": "tests/docs/seed-compliance-tests.docs.spec.ts",
       "area": "nce",
       "kind": "seed",
-      "status": "drift",
+      "status": "partial",
       "lastBuild": "index-u12wW6QI.js",
-      "drift": [],
-      "notes": "Discovered — not yet assessed against the current build.",
-      "lastResult": "fail",
-      "lastRun": "2026-07-26"
+      "drift": [
+        "seeder-indonesiademo"
+      ],
+      "notes": "Demo-data SEEDER for compliance-standard test links (env/compliance domain) — self-grounding + idempotent, targets indonesiademo (run one seeder per invocation). Not a testing regression spec; not expected to pass on testing.",
+      "lastResult": "n/a",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/docs/seed-compliance.docs.spec.ts",
@@ -1231,12 +1244,14 @@
       "file": "tests/docs/seed-env-results.docs.spec.ts",
       "area": "env",
       "kind": "seed",
-      "status": "drift",
+      "status": "partial",
       "lastBuild": "index-u12wW6QI.js",
-      "drift": [],
-      "notes": "Discovered — not yet assessed against the current build.",
-      "lastResult": "fail",
-      "lastRun": "2026-07-26"
+      "drift": [
+        "env-vector-target-gap"
+      ],
+      "notes": "Seeder: environmental results — GREEN on indonesiademo; env/vector domain UI absent on testing (see driftCauses.env-vector-target-gap). Run with BASE=indonesiademo.",
+      "lastResult": "blocked-on-target",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/docs/seed-inventory.docs.spec.ts",
@@ -1286,12 +1301,14 @@
       "file": "tests/docs/seed-reflex.docs.spec.ts",
       "area": "reflex",
       "kind": "seed",
-      "status": "drift",
+      "status": "partial",
       "lastBuild": "index-u12wW6QI.js",
-      "drift": [],
-      "notes": "Discovered — not yet assessed against the current build.",
-      "lastResult": "fail",
-      "lastRun": "2026-07-26"
+      "drift": [
+        "seeder-indonesiademo"
+      ],
+      "notes": "Demo-data SEEDER for reflex rules — self-grounding + idempotent, targets indonesiademo (run one seeder per invocation). Not a testing regression spec; not expected to pass on testing.",
+      "lastResult": "n/a",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/docs/seed-storage.docs.spec.ts",
@@ -1308,33 +1325,39 @@
       "file": "tests/docs/seed-vector-results.docs.spec.ts",
       "area": "vector",
       "kind": "seed",
-      "status": "drift",
+      "status": "partial",
       "lastBuild": "index-u12wW6QI.js",
-      "drift": [],
-      "notes": "Discovered — not yet assessed against the current build.",
-      "lastResult": "fail",
-      "lastRun": "2026-07-26"
+      "drift": [
+        "env-vector-target-gap"
+      ],
+      "notes": "Seeder: vector results — GREEN on indonesiademo; env/vector domain UI absent on testing (see driftCauses.env-vector-target-gap). Run with BASE=indonesiademo.",
+      "lastResult": "blocked-on-target",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/docs/site-band.docs.spec.ts",
       "area": "site",
       "kind": "docs-capture",
-      "status": "drift",
+      "status": "partial",
       "lastBuild": "index-u12wW6QI.js",
-      "drift": [],
-      "notes": "Discovered — not yet assessed against the current build.",
-      "lastResult": "fail",
+      "drift": [
+        "load-flake"
+      ],
+      "notes": "Best-effort ENGLISH marketing-shot capture, no assertions. False-drift = load-flake/slow (browser crash under full-suite load). Passes/skips isolated; belongs in isolated capture tier.",
+      "lastResult": "flaky",
       "lastRun": "2026-07-26"
     },
     {
       "file": "tests/docs/site-band2.docs.spec.ts",
       "area": "site",
       "kind": "docs-capture",
-      "status": "drift",
+      "status": "partial",
       "lastBuild": "index-u12wW6QI.js",
-      "drift": [],
-      "notes": "Discovered — not yet assessed against the current build.",
-      "lastResult": "fail",
+      "drift": [
+        "load-flake"
+      ],
+      "notes": "Populated-screen hunter (nested select x option crawl), no assertions. False-drift = load-flake/slow. Passes/skips isolated.",
+      "lastResult": "flaky",
       "lastRun": "2026-07-26"
     },
     {
@@ -1462,23 +1485,27 @@
       "file": "tests/docs/vector-flow.docs.spec.ts",
       "area": "vector",
       "kind": "docs-capture",
-      "status": "drift",
+      "status": "partial",
       "lastBuild": "index-u12wW6QI.js",
-      "drift": [],
-      "notes": "Discovered — not yet assessed against the current build.",
-      "lastResult": "fail",
-      "lastRun": "2026-07-26"
+      "drift": [
+        "env-vector-target-gap"
+      ],
+      "notes": "Vector order full-flow capture — GREEN on indonesiademo; env/vector domain UI absent on testing (see driftCauses.env-vector-target-gap). Run with BASE=indonesiademo.",
+      "lastResult": "blocked-on-target",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/docs/vector-order-populated.docs.spec.ts",
       "area": "vector",
       "kind": "docs-capture",
-      "status": "drift",
+      "status": "partial",
       "lastBuild": "index-u12wW6QI.js",
-      "drift": [],
-      "notes": "Discovered — not yet assessed against the current build.",
-      "lastResult": "fail",
-      "lastRun": "2026-07-26"
+      "drift": [
+        "env-vector-target-gap"
+      ],
+      "notes": "Vector order (populated) capture — GREEN on indonesiademo; env/vector domain UI absent on testing (see driftCauses.env-vector-target-gap). Run with BASE=indonesiademo.",
+      "lastResult": "blocked-on-target",
+      "lastRun": "2026-07-27"
     },
     {
       "file": "tests/docs/vector-stages.docs.spec.ts",
