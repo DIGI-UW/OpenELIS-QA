@@ -27,30 +27,6 @@
         "unknown": 0
       }
     },
-    "Batch entry": {
-      "coverage": "none",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 0,
-      "status": {
-        "fresh": 0,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Compliance reporting": {
-      "coverage": "none",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 0,
-      "status": {
-        "fresh": 0,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
     "Study management": {
       "coverage": "none",
       "deep": 0,
@@ -59,42 +35,6 @@
       "status": {
         "fresh": 0,
         "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Workplan": {
-      "coverage": "none",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 0,
-      "status": {
-        "fresh": 0,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Audit trail": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 1,
-      "status": {
-        "fresh": 1,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Calculated values": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 2,
-      "status": {
-        "fresh": 1,
-        "partial": 1,
         "drift": 0,
         "unknown": 0
       }
@@ -147,18 +87,6 @@
         "unknown": 0
       }
     },
-    "EQA": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 1,
-      "status": {
-        "fresh": 1,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
     "Immunohistochemistry": {
       "coverage": "smoke",
       "deep": 0,
@@ -183,25 +111,13 @@
         "unknown": 0
       }
     },
-    "Pathology": {
+    "Non-conformance / CAPA": {
       "coverage": "smoke",
       "deep": 0,
       "shallow": 0,
-      "smoke": 1,
+      "smoke": 5,
       "status": {
-        "fresh": 1,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Patient management": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 3,
-      "status": {
-        "fresh": 3,
+        "fresh": 5,
         "partial": 0,
         "drift": 0,
         "unknown": 0
@@ -214,54 +130,6 @@
       "smoke": 5,
       "status": {
         "fresh": 5,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Referrals, shipment & sample acceptance": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 1,
-      "status": {
-        "fresh": 1,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Reflex tests": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 2,
-      "status": {
-        "fresh": 1,
-        "partial": 1,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Reporting": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 3,
-      "status": {
-        "fresh": 3,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Result validation & release": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 1,
-      "status": {
-        "fresh": 1,
         "partial": 0,
         "drift": 0,
         "unknown": 0
@@ -303,42 +171,6 @@
         "unknown": 4
       }
     },
-    "Labels & Barcode": {
-      "coverage": "shallow",
-      "deep": 0,
-      "shallow": 1,
-      "smoke": 2,
-      "status": {
-        "fresh": 2,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 1
-      }
-    },
-    "Non-conformance / CAPA": {
-      "coverage": "shallow",
-      "deep": 0,
-      "shallow": 3,
-      "smoke": 8,
-      "status": {
-        "fresh": 10,
-        "partial": 1,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Storage & Inventory": {
-      "coverage": "shallow",
-      "deep": 0,
-      "shallow": 7,
-      "smoke": 12,
-      "status": {
-        "fresh": 19,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
     "Test Catalog — result types": {
       "coverage": "shallow",
       "deep": 0,
@@ -363,40 +195,184 @@
         "unknown": 0
       }
     },
+    "Audit trail": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 0,
+      "smoke": 1,
+      "status": {
+        "fresh": 1,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 1
+      }
+    },
+    "Batch entry": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 0,
+      "smoke": 0,
+      "status": {
+        "fresh": 0,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 1
+      }
+    },
+    "Calculated values": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 0,
+      "smoke": 2,
+      "status": {
+        "fresh": 1,
+        "partial": 1,
+        "drift": 0,
+        "unknown": 1
+      }
+    },
+    "Compliance reporting": {
+      "coverage": "deep",
+      "deep": 2,
+      "shallow": 3,
+      "smoke": 3,
+      "status": {
+        "fresh": 5,
+        "partial": 1,
+        "drift": 0,
+        "unknown": 2
+      }
+    },
+    "EQA": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 0,
+      "smoke": 1,
+      "status": {
+        "fresh": 1,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 1
+      }
+    },
+    "FHIR interoperability": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 0,
+      "smoke": 0,
+      "status": {
+        "fresh": 0,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 1
+      }
+    },
+    "Labels & Barcode": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 1,
+      "smoke": 2,
+      "status": {
+        "fresh": 2,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 2
+      }
+    },
     "Order entry — Clinical": {
       "coverage": "deep",
-      "deep": 3,
+      "deep": 6,
       "shallow": 0,
       "smoke": 2,
       "status": {
         "fresh": 5,
         "partial": 0,
         "drift": 0,
-        "unknown": 0
+        "unknown": 3
       }
     },
     "Order entry — Environmental": {
       "coverage": "deep",
-      "deep": 1,
+      "deep": 3,
       "shallow": 0,
       "smoke": 7,
       "status": {
         "fresh": 7,
         "partial": 1,
         "drift": 0,
-        "unknown": 0
+        "unknown": 2
       }
     },
     "Order entry — Vector": {
       "coverage": "deep",
-      "deep": 1,
+      "deep": 2,
       "shallow": 0,
       "smoke": 9,
       "status": {
         "fresh": 7,
         "partial": 3,
         "drift": 0,
-        "unknown": 0
+        "unknown": 1
+      }
+    },
+    "Pathology": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 0,
+      "smoke": 1,
+      "status": {
+        "fresh": 1,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 1
+      }
+    },
+    "Patient management": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 0,
+      "smoke": 3,
+      "status": {
+        "fresh": 3,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 1
+      }
+    },
+    "Referrals, shipment & sample acceptance": {
+      "coverage": "deep",
+      "deep": 2,
+      "shallow": 0,
+      "smoke": 1,
+      "status": {
+        "fresh": 1,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 2
+      }
+    },
+    "Reflex tests": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 0,
+      "smoke": 2,
+      "status": {
+        "fresh": 1,
+        "partial": 1,
+        "drift": 0,
+        "unknown": 1
+      }
+    },
+    "Reporting": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 0,
+      "smoke": 3,
+      "status": {
+        "fresh": 3,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 1
       }
     },
     "Result flags (critical/abnormal)": {
@@ -411,6 +387,18 @@
         "unknown": 0
       }
     },
+    "Result validation & release": {
+      "coverage": "deep",
+      "deep": 2,
+      "shallow": 0,
+      "smoke": 1,
+      "status": {
+        "fresh": 1,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 2
+      }
+    },
     "Results entry": {
       "coverage": "deep",
       "deep": 2,
@@ -421,6 +409,30 @@
         "partial": 1,
         "drift": 0,
         "unknown": 0
+      }
+    },
+    "Security & permissions": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 0,
+      "smoke": 0,
+      "status": {
+        "fresh": 0,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 1
+      }
+    },
+    "Storage & Inventory": {
+      "coverage": "deep",
+      "deep": 2,
+      "shallow": 7,
+      "smoke": 12,
+      "status": {
+        "fresh": 19,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 2
       }
     },
     "Test Catalog — activation gate": {
@@ -445,6 +457,18 @@
         "partial": 2,
         "drift": 0,
         "unknown": 0
+      }
+    },
+    "Workplan": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 0,
+      "smoke": 0,
+      "status": {
+        "fresh": 0,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 1
       }
     }
   }

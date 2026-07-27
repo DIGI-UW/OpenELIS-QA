@@ -24,12 +24,16 @@ const DEPTH = {
 
 // First-match rules map a spec (basename + area) to a workflow.
 const RULES = [
+  [/\bbatch\b|batch-order/, 'Batch entry'],
+  [/\bfhir\b/, 'FHIR interoperability'],
+  [/permission|\bsecurity\b|\bxss\b|csrf|sqli/, 'Security & permissions'],
   [/vector/, 'Order entry — Vector'],
   [/\benv\b|environmental/, 'Order entry — Environmental'],
-  [/clinical-flow|samplepatiententry|order-entry|legacy-clinical|patient-order|order-446|add-order/, 'Order entry — Clinical'],
+  [/clinical-flow|samplepatiententry|order-entry|legacy-clinical|patient-order|order-446|add-order|order-lifecycle|lab-number|electronic-order|\beorder\b/, 'Order entry — Clinical'],
   [/results-unified-worklist|results-entry|multicomponent|titer/, 'Results entry'],
   [/critical-indicator/, 'Result flags (critical/abnormal)'],
   [/result-validation|validation/, 'Result validation & release'],
+  [/compliance/, 'Compliance reporting'],   // before /nce/ — compliance specs carry area=nce but are their own workflow
   [/report|laporan/, 'Reporting'],
   [/mn-sampletypes/, 'Test Catalog — sample-type m:n'],
   [/result-types/, 'Test Catalog — result types'],
@@ -54,7 +58,6 @@ const RULES = [
   [/locale|bahasa/, 'Localization (i18n)'],
   [/audit/, 'Audit trail'],
   [/notebook/, 'Electronic lab notebook'],
-  [/compliance/, 'Compliance reporting'],
   [/dictionary|user-dict/, 'Dictionary & config admin'],
   [/config-pages|site-band|home|hero/, 'Dashboard / site config'],
   [/device-fields/, 'Analyzers & QC'],

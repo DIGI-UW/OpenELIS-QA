@@ -14,160 +14,6 @@
   },
   "specs": [
     {
-      "file": "test-catalog-mgmt.spec.ts",
-      "area": "catalog-editor",
-      "kind": "contract",
-      "status": "fresh",
-      "lastBuild": "index-u12wW6QI.js",
-      "drift": [],
-      "notes": "Editor fidelity + Basic Info save (OGC-1114 fixed).",
-      "lastResult": "pass",
-      "lastRun": "2026-07-26",
-      "depth": "shallow"
-    },
-    {
-      "file": "test-catalog-mgmt-deep.spec.ts",
-      "area": "catalog-editor",
-      "kind": "deep-roundtrip",
-      "status": "fresh",
-      "lastBuild": "index-u12wW6QI.js",
-      "drift": [],
-      "notes": "TC-DEEP-DOMAIN reconciled to the domain-sample-type consistency guard (422).",
-      "lastResult": "pass",
-      "lastRun": "2026-07-26",
-      "depth": "deep"
-    },
-    {
-      "file": "test-catalog-editor-regressions.spec.ts",
-      "area": "catalog-editor",
-      "kind": "guard",
-      "status": "partial",
-      "lastBuild": "index-u12wW6QI.js",
-      "drift": [
-        "load-flake"
-      ],
-      "notes": "BLOCKER guards reconciled for OGC-1142 fixes.",
-      "lastResult": "flaky",
-      "lastRun": "2026-07-26",
-      "depth": "deep"
-    },
-    {
-      "file": "test-catalog-activation-gate.spec.ts",
-      "area": "catalog-activation",
-      "kind": "contract",
-      "status": "fresh",
-      "lastBuild": "index-u12wW6QI.js",
-      "drift": [],
-      "notes": "Activation integrity gate (OGC-1141). Documents the REST create workflow.",
-      "lastResult": "pass",
-      "lastRun": "2026-07-26",
-      "depth": "deep"
-    },
-    {
-      "file": "test-catalog-mn-sampletypes.spec.ts",
-      "area": "catalog-sampletypes",
-      "kind": "contract",
-      "status": "partial",
-      "lastBuild": "index-u12wW6QI.js",
-      "drift": [
-        "load-flake"
-      ],
-      "notes": "OGC-1145 m:n. MN-1/MN-2 green; MN-3 basic-info PUT returns 500 across all retries under full-suite load — revalidate in isolation (possible backend-under-load or QA-data accumulation), not yet a filed bug.",
-      "lastResult": "fail",
-      "lastRun": "2026-07-26",
-      "depth": "shallow"
-    },
-    {
-      "file": "results-unified-worklist.spec.ts",
-      "area": "results-worklist",
-      "kind": "contract",
-      "status": "fresh",
-      "lastBuild": "index-u12wW6QI.js",
-      "drift": [
-        "unified-results"
-      ],
-      "notes": "OGC-1020 R1. Flag-gated (skips when RESULTS_ENTRY_UNIFIED_ROUTE off).",
-      "lastResult": "pass",
-      "lastRun": "2026-07-26",
-      "depth": "shallow"
-    },
-    {
-      "file": "test-catalog-result-types.spec.ts",
-      "area": "catalog-result-types",
-      "kind": "runtime",
-      "status": "fresh",
-      "lastBuild": "index-u12wW6QI.js",
-      "drift": [
-        "OGC-1142-editor",
-        "login-attrs"
-      ],
-      "notes": "REHABBED 2026-07-24: create+component now via REST (createTestViaRest/setComponentViaRest). 7/7 result types green.",
-      "lastResult": "pass",
-      "lastRun": "2026-07-26",
-      "depth": "shallow"
-    },
-    {
-      "file": "test-catalog-sections-roundtrip.spec.ts",
-      "area": "catalog-editor",
-      "kind": "deep-roundtrip",
-      "status": "partial",
-      "lastBuild": "index-u12wW6QI.js",
-      "drift": [
-        "login-attrs",
-        "load-flake"
-      ],
-      "notes": "Login defensive. Fails under full-suite load (ERR_TOO_MANY_RETRIES on every test). Moved to the isolated e2e.config tier — verify there.",
-      "lastResult": "fail",
-      "lastRun": "2026-07-26",
-      "depth": "deep"
-    },
-    {
-      "file": "test-catalog-downstream.spec.ts",
-      "area": "catalog-downstream",
-      "kind": "contract",
-      "status": "fresh",
-      "lastBuild": "index-u12wW6QI.js",
-      "drift": [],
-      "notes": "Ran in the full suite; confirm verdict on next JSON run.",
-      "lastResult": "pass",
-      "lastRun": "2026-07-26",
-      "depth": "deep"
-    },
-    {
-      "file": "test-catalog-critical-indicator.spec.ts",
-      "area": "results-flags",
-      "kind": "guard-e2e",
-      "status": "partial",
-      "lastBuild": "index-u12wW6QI.js",
-      "drift": [
-        "OGC-1142-editor",
-        "OGC-1132",
-        "login-attrs",
-        "load-flake"
-      ],
-      "notes": "REHABBED create/component/ranges via REST + legacy order. PASSES in isolation; fails under full-suite load. Moved to the isolated e2e.config tier.",
-      "lastResult": "fail",
-      "lastRun": "2026-07-26",
-      "depth": "deep"
-    },
-    {
-      "file": "test-catalog-titer-runtime.spec.ts",
-      "area": "catalog-result-types",
-      "kind": "runtime-e2e",
-      "status": "partial",
-      "lastBuild": "index-u12wW6QI.js",
-      "drift": [
-        "OGC-1142-editor",
-        "OGC-1132",
-        "login-attrs",
-        "load-flake"
-      ],
-      "notes": "Result-entry leg flag-aware for unified /Results. PASSES in isolation (1.1m); fails under full-suite load. Moved to the isolated e2e.config tier.",
-      "lastResult": "fail",
-      "lastRun": "2026-07-26",
-      "depth": "deep"
-    },
-    {
       "file": "_discover.spec.ts",
       "area": "misc",
       "kind": "probe",
@@ -208,6 +54,20 @@
       "depth": "shallow"
     },
     {
+      "file": "results-unified-worklist.spec.ts",
+      "area": "results-worklist",
+      "kind": "contract",
+      "status": "fresh",
+      "lastBuild": "index-u12wW6QI.js",
+      "drift": [
+        "unified-results"
+      ],
+      "notes": "OGC-1020 R1. Flag-gated (skips when RESULTS_ENTRY_UNIFIED_ROUTE off).",
+      "lastResult": "pass",
+      "lastRun": "2026-07-26",
+      "depth": "shallow"
+    },
+    {
       "file": "tc-dom-probe.spec.ts",
       "area": "misc",
       "kind": "probe",
@@ -216,6 +76,496 @@
       "drift": [],
       "notes": "Discovered — not yet assessed against the current build.",
       "depth": "smoke"
+    },
+    {
+      "file": "test-catalog-activation-gate.spec.ts",
+      "area": "catalog-activation",
+      "kind": "contract",
+      "status": "fresh",
+      "lastBuild": "index-u12wW6QI.js",
+      "drift": [],
+      "notes": "Activation integrity gate (OGC-1141). Documents the REST create workflow.",
+      "lastResult": "pass",
+      "lastRun": "2026-07-26",
+      "depth": "deep"
+    },
+    {
+      "file": "test-catalog-critical-indicator.spec.ts",
+      "area": "results-flags",
+      "kind": "guard-e2e",
+      "status": "partial",
+      "lastBuild": "index-u12wW6QI.js",
+      "drift": [
+        "OGC-1142-editor",
+        "OGC-1132",
+        "login-attrs",
+        "load-flake"
+      ],
+      "notes": "REHABBED create/component/ranges via REST + legacy order. PASSES in isolation; fails under full-suite load. Moved to the isolated e2e.config tier.",
+      "lastResult": "fail",
+      "lastRun": "2026-07-26",
+      "depth": "deep"
+    },
+    {
+      "file": "test-catalog-downstream.spec.ts",
+      "area": "catalog-downstream",
+      "kind": "contract",
+      "status": "fresh",
+      "lastBuild": "index-u12wW6QI.js",
+      "drift": [],
+      "notes": "Ran in the full suite; confirm verdict on next JSON run.",
+      "lastResult": "pass",
+      "lastRun": "2026-07-26",
+      "depth": "deep"
+    },
+    {
+      "file": "test-catalog-editor-regressions.spec.ts",
+      "area": "catalog-editor",
+      "kind": "guard",
+      "status": "partial",
+      "lastBuild": "index-u12wW6QI.js",
+      "drift": [
+        "load-flake"
+      ],
+      "notes": "BLOCKER guards reconciled for OGC-1142 fixes.",
+      "lastResult": "flaky",
+      "lastRun": "2026-07-26",
+      "depth": "deep"
+    },
+    {
+      "file": "test-catalog-mgmt-deep.spec.ts",
+      "area": "catalog-editor",
+      "kind": "deep-roundtrip",
+      "status": "fresh",
+      "lastBuild": "index-u12wW6QI.js",
+      "drift": [],
+      "notes": "TC-DEEP-DOMAIN reconciled to the domain-sample-type consistency guard (422).",
+      "lastResult": "pass",
+      "lastRun": "2026-07-26",
+      "depth": "deep"
+    },
+    {
+      "file": "test-catalog-mgmt.spec.ts",
+      "area": "catalog-editor",
+      "kind": "contract",
+      "status": "fresh",
+      "lastBuild": "index-u12wW6QI.js",
+      "drift": [],
+      "notes": "Editor fidelity + Basic Info save (OGC-1114 fixed).",
+      "lastResult": "pass",
+      "lastRun": "2026-07-26",
+      "depth": "shallow"
+    },
+    {
+      "file": "test-catalog-mn-sampletypes.spec.ts",
+      "area": "catalog-sampletypes",
+      "kind": "contract",
+      "status": "partial",
+      "lastBuild": "index-u12wW6QI.js",
+      "drift": [
+        "load-flake"
+      ],
+      "notes": "OGC-1145 m:n. MN-1/MN-2 green; MN-3 basic-info PUT returns 500 across all retries under full-suite load — revalidate in isolation (possible backend-under-load or QA-data accumulation), not yet a filed bug.",
+      "lastResult": "fail",
+      "lastRun": "2026-07-26",
+      "depth": "shallow"
+    },
+    {
+      "file": "test-catalog-result-types.spec.ts",
+      "area": "catalog-result-types",
+      "kind": "runtime",
+      "status": "fresh",
+      "lastBuild": "index-u12wW6QI.js",
+      "drift": [
+        "OGC-1142-editor",
+        "login-attrs"
+      ],
+      "notes": "REHABBED 2026-07-24: create+component now via REST (createTestViaRest/setComponentViaRest). 7/7 result types green.",
+      "lastResult": "pass",
+      "lastRun": "2026-07-26",
+      "depth": "shallow"
+    },
+    {
+      "file": "test-catalog-sections-roundtrip.spec.ts",
+      "area": "catalog-editor",
+      "kind": "deep-roundtrip",
+      "status": "partial",
+      "lastBuild": "index-u12wW6QI.js",
+      "drift": [
+        "login-attrs",
+        "load-flake"
+      ],
+      "notes": "Login defensive. Fails under full-suite load (ERR_TOO_MANY_RETRIES on every test). Moved to the isolated e2e.config tier — verify there.",
+      "lastResult": "fail",
+      "lastRun": "2026-07-26",
+      "depth": "deep"
+    },
+    {
+      "file": "test-catalog-titer-runtime.spec.ts",
+      "area": "catalog-result-types",
+      "kind": "runtime-e2e",
+      "status": "partial",
+      "lastBuild": "index-u12wW6QI.js",
+      "drift": [
+        "OGC-1142-editor",
+        "OGC-1132",
+        "login-attrs",
+        "load-flake"
+      ],
+      "notes": "Result-entry leg flag-aware for unified /Results. PASSES in isolation (1.1m); fails under full-suite load. Moved to the isolated e2e.config tier.",
+      "lastResult": "fail",
+      "lastRun": "2026-07-26",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/chains/chain-a-order-lifecycle.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "order",
+      "target": "testing",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [],
+      "notes": "Clinical order create→receive→result→validate→report round-trip"
+    },
+    {
+      "file": "tests/chains/chain-ab-env-holding-time.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "environmental",
+      "target": "indonesiademo",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [
+        "silnas-target"
+      ],
+      "notes": "Env holding-time exceedance flag through the sample lifecycle"
+    },
+    {
+      "file": "tests/chains/chain-b-rejection.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "validation",
+      "target": "testing",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [],
+      "notes": "Sample rejection lifecycle (reject reason → status → downstream block)"
+    },
+    {
+      "file": "tests/chains/chain-c-reflex-trigger.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "reflex",
+      "target": "testing",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [],
+      "notes": "Reflex rule fires on a qualifying result and spawns the reflex test"
+    },
+    {
+      "file": "tests/chains/chain-d-calculated-value.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "calc",
+      "target": "testing",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [],
+      "notes": "Calculated-value engine: inputs → derived output test on save"
+    },
+    {
+      "file": "tests/chains/chain-e-sample-validation-lifecycle.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "validation",
+      "target": "testing",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [],
+      "notes": "Result entry → validation → release state machine"
+    },
+    {
+      "file": "tests/chains/chain-f-eqa-distribution.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "eqa",
+      "target": "testing",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [],
+      "notes": "EQA distribution → panel → result submission round-trip"
+    },
+    {
+      "file": "tests/chains/chain-g-cold-chain-excursion.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "storage",
+      "target": "indonesiademo",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [
+        "silnas-target"
+      ],
+      "notes": "Cold-chain excursion recorded against a stored sample item"
+    },
+    {
+      "file": "tests/chains/chain-h-permission-enforcement.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "security",
+      "target": "testing",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [],
+      "notes": "Role/permission enforcement across protected routes+actions"
+    },
+    {
+      "file": "tests/chains/chain-i-site-branding-to-report.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "report",
+      "target": "testing",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [],
+      "notes": "Site branding config propagates onto a generated report"
+    },
+    {
+      "file": "tests/chains/chain-j-audit-trail-coverage.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "audit",
+      "target": "testing",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [],
+      "notes": "Audit-trail records mutations across modules (coverage sweep)"
+    },
+    {
+      "file": "tests/chains/chain-k-fhir-round-trip.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "fhir",
+      "target": "testing",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [],
+      "notes": "FHIR export/import round-trip of an order + result"
+    },
+    {
+      "file": "tests/chains/chain-l-lab-number-uniqueness.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "order",
+      "target": "testing",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [],
+      "notes": "Lab-number uniqueness/collision handling across concurrent orders"
+    },
+    {
+      "file": "tests/chains/chain-m-vector-surveillance.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "vector",
+      "target": "indonesiademo",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [
+        "silnas-target"
+      ],
+      "notes": "Vector surveillance: trap→species ID→result→dashboard"
+    },
+    {
+      "file": "tests/chains/chain-n-environmental-sampling.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "environmental",
+      "target": "indonesiademo",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [
+        "silnas-target"
+      ],
+      "notes": "Environmental sampling order→result→compliance evaluation"
+    },
+    {
+      "file": "tests/chains/chain-o-referral-roundtrip.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "referral",
+      "target": "testing",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [],
+      "notes": "Referral out→reference-lab result→acceptance round-trip"
+    },
+    {
+      "file": "tests/chains/chain-p-patient-merge.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "patient",
+      "target": "testing",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [],
+      "notes": "Patient merge consolidates orders/results without loss"
+    },
+    {
+      "file": "tests/chains/chain-q-batch-order-entry.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "batch",
+      "target": "testing",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [],
+      "notes": "Batch order entry creates N orders in one submission"
+    },
+    {
+      "file": "tests/chains/chain-r-sample-shipment.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "referral",
+      "target": "testing",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [],
+      "notes": "Sample shipment manifest → dispatch → receipt"
+    },
+    {
+      "file": "tests/chains/chain-s-aliquot-lineage.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "storage",
+      "target": "testing",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [],
+      "notes": "Aliquot lineage: parent→child sample linkage & tracking"
+    },
+    {
+      "file": "tests/chains/chain-t-workplan-worklist.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "workplan",
+      "target": "testing",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [],
+      "notes": "Workplan build → worklist → result entry cross-link"
+    },
+    {
+      "file": "tests/chains/chain-u-print-barcode.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "barcode",
+      "target": "testing",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [],
+      "notes": "Barcode label generation & print payload for a sample"
+    },
+    {
+      "file": "tests/chains/chain-w-pathology-case.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "pathology",
+      "target": "testing",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [],
+      "notes": "Pathology case lifecycle (accession→report)"
+    },
+    {
+      "file": "tests/chains/chain-x-electronic-orders.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "eorder",
+      "target": "testing",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [],
+      "notes": "Inbound electronic order (eOrder) → sample creation"
+    },
+    {
+      "file": "tests/chains/chain-y-compliance-reporting.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "compliance",
+      "target": "indonesiademo",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [
+        "silnas-target"
+      ],
+      "notes": "SILNAS compliance dashboard + report; carries OGC-1059 regression watch (complianceReport 500)"
+    },
+    {
+      "file": "tests/chains/chain-z-compliance-standards-admin.spec.ts",
+      "kind": "chain",
+      "depth": "deep",
+      "depthLock": true,
+      "area": "compliance",
+      "target": "indonesiademo",
+      "branch": "main",
+      "status": "unknown",
+      "lastResult": "not-run-this-cycle",
+      "drift": [
+        "silnas-target"
+      ],
+      "notes": "Compliance standards admin CRUD + activation round-trip"
     },
     {
       "file": "tests/docs/add-patient.docs.spec.ts",
