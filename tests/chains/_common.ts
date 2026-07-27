@@ -136,12 +136,12 @@ export async function findOrSeedOrder(page: Page): Promise<ChainOrderRef | null>
       // (this endpoint is what powers the Modify Order patient search)
       for (const p of patients.slice(0, 5)) {
         if (!p.patientID) continue;
-        const list = await apiCall<{ logbookList?: Array<{ accessionNumber?: string; testId?: string; testName?: string; sampleType?: string }> }>(
+        const list = await apiCall<{ testResult?: Array<{ accessionNumber?: string; testId?: string; testName?: string; sampleType?: string }> }>(
           page,
           `/api/OpenELIS-Global/rest/LogbookResults?patientPK=${encodeURIComponent(p.patientID)}`
         );
         if (list.ok && typeof list.body === 'object' && list.body !== null) {
-          const items = (list.body as { logbookList?: Array<{ accessionNumber?: string; testId?: string; testName?: string; sampleType?: string }> }).logbookList || [];
+          const items = (list.body as { testResult?: Array<{ accessionNumber?: string; testId?: string; testName?: string; sampleType?: string }> }).testResult || [];
           if (items.length > 0 && items[0].accessionNumber) {
             return {
               accession: items[0].accessionNumber,
