@@ -2,7 +2,7 @@
   "_comment": "Source-of-truth freshness manifest for the OpenELIS Playwright suite. `status` per spec is auto-refreshed from a Playwright JSON run by scripts/refresh-freshness.mjs; `drift`/`notes` are curated by hand. status: fresh (green, verified passing on lastBuild) | partial (green core, a known non-blocking drift/flake) | drift (fails on real UI/route drift — needs a spec update) | unknown (not run against lastBuild yet).",
   "target": "testing.openelis-global.org",
   "currentBuild": "index-u12wW6QI.js",
-  "lastUpdated": "2026-07-26",
+  "lastUpdated": "2026-07-27",
   "driftCauses": {
     "OGC-1132": "Unified /order/enter drops the sample's tests (Hibernate type-mismatch) — order via legacy /SamplePatientEntry (placeLegacySerumOrder).",
     "OGC-1142-editor": "Test Catalog editor rework changed the UI new-test create form + add-component + ranges dialog — configure via REST (createTestViaRest / setComponentViaRest / setNormalCriticalRangeViaRest).",
@@ -302,11 +302,13 @@
       "file": "tests/docs/clinical-flow.docs.spec.ts",
       "area": "misc",
       "kind": "docs-capture",
-      "status": "drift",
+      "status": "fresh",
       "lastBuild": "index-u12wW6QI.js",
-      "drift": [],
-      "notes": "Discovered — not yet assessed against the current build.",
-      "lastResult": "fail",
+      "drift": [
+        "OGC-1132"
+      ],
+      "notes": "REHABBED: capture walk moved to the working legacy /SamplePatientEntry 4-step wizard (Patient Info->Program->Add Sample->Add Order); persists samples=1 tests=1. 2 passed.",
+      "lastResult": "pass",
       "lastRun": "2026-07-26"
     },
     {
