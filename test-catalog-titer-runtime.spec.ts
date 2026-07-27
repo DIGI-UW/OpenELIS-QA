@@ -32,7 +32,7 @@
  */
 
 import { test, expect, Page, APIRequestContext } from '@playwright/test';
-import { placeLegacySerumOrder, createTestViaRest, setComponentViaRest } from './legacy-order-helper';
+import { placeLegacySerumOrder, createTestViaRest, setComponentViaRest, activateViaRest } from './legacy-order-helper';
 
 const BASE = process.env.BASE || 'https://testing.openelis-global.org';
 const REST = `${BASE}/api/OpenELIS-Global/rest`;
@@ -93,24 +93,23 @@ test.describe('Test Catalog editor — Titer result type at runtime', () => {
     test.setTimeout(180_000);
 
     // 1. create Titer test
-    const id = await createTiterTest(page, `${STAMP} TiterRT`, `${STAMP}_TIT`);
+    const name = `${STAMP} TiterRT`;
+    const id = await createTiterTest(page, name, `${STAMP}_TIT`);
 
-    // 2. verify type persisted, activate, add to panel
+    // 2. verify type persisted, activate via REST
     const sr = await getJson(request, `${TC}/tests/${id}/sample-results`);
     expect(sr.components[0].resultType, 'component persisted as Titer (T)').toBe('T');
 
-    await request.post(`${TC}/tests/${id}/activate`, { headers: { Accept: 'application/json' } });
-    await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/${id}/panels`, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-    await pickCombo(page, 'Add to panel', PANEL);
-    await page.getByRole('button', { name: /^Save$/ }).last().click();
-    await page.waitForTimeout(1200);
-    // confirm the test is reachable through the panel order-source
+    // The editor "Add to panel" combo drifted with the OGC-1142 rework (getByLabel/pickCombo hang the
+    // UI path). POST /tests/{id}/activate is the documented verb; with sampleType=Serum set at create,
+    // the active test is orderable on its own, so we order it directly by name (no panel).
+    await activateViaRest(page, id);
+    // confirm the active test surfaces under the Serum order-source
     const stt = await getJson(request, `${REST}/sample-type-tests?sampleType=2`);
-    expect(JSON.stringify(stt.panels || []), 'test rides into Add Order via the panel').toContain(id);
+    expect(JSON.stringify(stt), 'active Serum test rides into Add Order').toContain(id);
 
-    // 3. place the order (the step the manual wizard kept dropping tests on)
-    const accession = await placeSerumOrderViaPanel(page, PANEL);
+    // 3. place the order (order the active test directly by name)
+    const accession = await placeSerumOrderViaPanel(page, name);
 
     // 4. Result entry: the Titer test row must render an interactive control (not plain text).
     // Flag-aware — when RESULTS_ENTRY_UNIFIED_ROUTE is on, legacy /result redirects to the unified

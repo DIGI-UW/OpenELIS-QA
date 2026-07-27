@@ -26,7 +26,7 @@
  */
 
 import { test, expect, Page, APIRequestContext } from '@playwright/test';
-import { placeLegacySerumOrder, createTestViaRest, setComponentViaRest, setNormalCriticalRangeViaRest } from './legacy-order-helper';
+import { placeLegacySerumOrder, createTestViaRest, setComponentViaRest, setNormalCriticalRangeViaRest, activateViaRest, openResultEntryByAccession } from './legacy-order-helper';
 
 const BASE = process.env.BASE || 'https://testing.openelis-global.org';
 const REST = `${BASE}/api/OpenELIS-Global/rest`;
@@ -119,23 +119,20 @@ test.describe('OGC-1121 — critical vs abnormal result indicator (patient safet
     expect(Number(r.lowCritical), 'critical low persisted').toBe(2);
     expect(Number(r.highCritical), 'critical high persisted').toBe(150);
 
-    // 2. activate + ride the panel into Add Order
-    await nav(page, `${BASE}/MasterListsPage/TestCatalogEditor/${id}/basic-info`);
-    await page.getByRole('switch', { name: /active/i }).first().click().catch(() => {});
-    await page.waitForTimeout(1000);
-    await nav(page, `${BASE}/MasterListsPage/TestCatalogEditor/${id}/panels`);
-    await page.waitForTimeout(500);
-    await pickCombo(page, 'Add to panel', PANEL);
-    await page.getByRole('button', { name: /^Save$/ }).last().click();
-    await page.waitForTimeout(1200);
+    // 2. activate via REST. The editor's activate switch + "Add to panel" combo drifted with the
+    //    OGC-1142 rework and hang the UI path (getByLabel/pickCombo time out); POST /tests/{id}/activate
+    //    is the documented verb. createTestViaRest set sampleType=Serum, so once active the test is
+    //    orderable on its own — no panel needed; we order it directly by name below.
+    await activateViaRest(page, id);
 
-    // 3. place the order
-    const accession = await placeSerumOrder(page, PANEL);
+    // 3. place the order (order the active test directly by name)
+    const accession = await placeSerumOrder(page, name);
 
-    // 4. Results → By Order: enter ABNORMAL, capture signature; enter CRITICAL, capture signature
-    await nav(page, `${BASE}/result?type=order&doRange=false`);
-    await page.getByPlaceholder(/accession/i).fill(accession);
-    await page.getByRole('button', { name: /^Search$/ }).click();
+    // 4. Result entry: enter ABNORMAL, capture signature; enter CRITICAL, capture signature.
+    // Flag-aware — with RESULTS_ENTRY_UNIFIED_ROUTE on, legacy /result redirects to the unified
+    // /Results worklist (search-by-lab-number, not the "accession" field). openResultEntryByAccession
+    // branches on the flag and loads results either way (see app-map unified-results).
+    await openResultEntryByAccession(page, accession, 'Biochemistry');
     await page.waitForLoadState('networkidle').catch(() => {});
     const { row, input } = await cellSignature(page, name);
     await expect(input, 'numeric result input renders for the test').toBeVisible({ timeout: 20_000 });
