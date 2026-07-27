@@ -20,9 +20,53 @@ code{background:#e8e8e8;padding:1px 5px;border-radius:3px;font-size:12px}
 </style></head><body>
 <h1>OpenELIS Playwright — Spec Freshness</h1>
 <div class="sub">Target <b>testing.openelis-global.org</b> · build <b class="mono">index-u12wW6QI.js</b> · <b>161</b> specs · updated 2026-07-27</div>
-<div id="filters"><span class="pill" style="border-color:#da1e28"><span class="dot" style="background:#da1e28"></span>Drift <b>0</b></span> <span class="pill" style="border-color:#f1c21b"><span class="dot" style="background:#f1c21b"></span>Partial <b>17</b></span> <span class="pill" style="border-color:#8d8d8d"><span class="dot" style="background:#8d8d8d"></span>Unknown <b>32</b></span> <span class="pill" style="border-color:#24a148"><span class="dot" style="background:#24a148"></span>Fresh <b>112</b></span></div>
+<div id="filters"><span class="pill" style="border-color:#da1e28"><span class="dot" style="background:#da1e28"></span>Drift <b>0</b></span> <span class="pill" style="border-color:#f1c21b"><span class="dot" style="background:#f1c21b"></span>Partial <b>28</b></span> <span class="pill" style="border-color:#8d8d8d"><span class="dot" style="background:#8d8d8d"></span>Unknown <b>6</b></span> <span class="pill" style="border-color:#24a148"><span class="dot" style="background:#24a148"></span>Fresh <b>127</b></span></div>
 <div style="margin:6px 0 12px"><span class="kpill">chain <b>26</b></span> <span class="kpill">contract <b>5</b></span> <span class="kpill">deep-roundtrip <b>2</b></span> <span class="kpill">docs-capture <b>71</b></span> <span class="kpill">guard <b>1</b></span> <span class="kpill">guard-e2e <b>1</b></span> <span class="kpill">misc <b>1</b></span> <span class="kpill">probe <b>39</b></span> <span class="kpill">runtime <b>1</b></span> <span class="kpill">runtime-e2e <b>1</b></span> <span class="kpill">seed <b>13</b></span></div>
-<table id="tbl"><thead><tr><th>Status</th><th>Spec</th><th>Area</th><th>Kind</th><th>Last run</th><th>Drift</th><th>Notes</th></tr></thead><tbody><tr data-status="partial" data-kind="contract">
+<table id="tbl"><thead><tr><th>Status</th><th>Spec</th><th>Area</th><th>Kind</th><th>Last run</th><th>Drift</th><th>Notes</th></tr></thead><tbody><tr data-status="partial" data-kind="chain">
+    <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
+    <td class="mono">tests/chains/chain-a-order-lifecycle.spec.ts</td><td>order</td><td>chain</td>
+    <td><span style="color:#da1e28">blocked</span> · 2026-07-27</td><td><span class="tag">needs-seed</span></td><td class="notes">Clinical order create→receive→result→validate→report round-trip — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.</td></tr>
+<tr data-status="partial" data-kind="chain">
+    <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
+    <td class="mono">tests/chains/chain-b-rejection.spec.ts</td><td>validation</td><td>chain</td>
+    <td><span style="color:#da1e28">blocked</span> · 2026-07-27</td><td><span class="tag">needs-seed</span></td><td class="notes">Sample rejection lifecycle (reject reason → status → downstream block) — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.</td></tr>
+<tr data-status="partial" data-kind="chain">
+    <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
+    <td class="mono">tests/chains/chain-c-reflex-trigger.spec.ts</td><td>reflex</td><td>chain</td>
+    <td><span style="color:#da1e28">blocked</span> · 2026-07-27</td><td><span class="tag">needs-seed</span></td><td class="notes">Reflex rule fires on a qualifying result and spawns the reflex test — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.</td></tr>
+<tr data-status="partial" data-kind="chain">
+    <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
+    <td class="mono">tests/chains/chain-d-calculated-value.spec.ts</td><td>calc</td><td>chain</td>
+    <td><span style="color:#da1e28">blocked</span> · 2026-07-27</td><td><span class="tag">needs-seed</span></td><td class="notes">Calculated-value engine: inputs → derived output test on save — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.</td></tr>
+<tr data-status="partial" data-kind="chain">
+    <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
+    <td class="mono">tests/chains/chain-e-sample-validation-lifecycle.spec.ts</td><td>validation</td><td>chain</td>
+    <td><span style="color:#da1e28">blocked</span> · 2026-07-27</td><td><span class="tag">needs-seed</span></td><td class="notes">Result entry → validation → release state machine — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.</td></tr>
+<tr data-status="partial" data-kind="chain">
+    <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
+    <td class="mono">tests/chains/chain-f-eqa-distribution.spec.ts</td><td>eqa</td><td>chain</td>
+    <td><span style="color:#da1e28">gap</span> · 2026-07-27</td><td><span class="tag">feature-gated</span></td><td class="notes">EQA distribution → panel → result submission round-trip — Feature-gated on testing: eqaEnabled config off. GAP-by-design.</td></tr>
+<tr data-status="partial" data-kind="chain">
+    <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
+    <td class="mono">tests/chains/chain-g-cold-chain-excursion.spec.ts</td><td>storage</td><td>chain</td>
+    <td><span style="color:#da1e28">gap</span> · 2026-07-27</td><td><span class="tag">feature-gated</span></td><td class="notes">Cold-chain excursion recorded against a stored sample item — Feature-gated on testing: no Cold Storage device configured. GAP-by-design.</td></tr>
+<tr data-status="partial" data-kind="chain">
+    <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
+    <td class="mono">tests/chains/chain-h-permission-enforcement.spec.ts</td><td>security</td><td>chain</td>
+    <td><span style="color:#da1e28">gap</span> · 2026-07-27</td><td><span class="tag">feature-gated</span></td><td class="notes">Role/permission enforcement across protected routes+actions — Feature-gated on testing: restricted-role user create blocked. GAP-by-design.</td></tr>
+<tr data-status="partial" data-kind="chain">
+    <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
+    <td class="mono">tests/chains/chain-j-audit-trail-coverage.spec.ts</td><td>audit</td><td>chain</td>
+    <td><span style="color:#da1e28">blocked</span> · 2026-07-27</td><td><span class="tag">needs-seed</span></td><td class="notes">Audit-trail records mutations across modules (coverage sweep) — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.</td></tr>
+<tr data-status="partial" data-kind="chain">
+    <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
+    <td class="mono">tests/chains/chain-k-fhir-round-trip.spec.ts</td><td>fhir</td><td>chain</td>
+    <td><span style="color:#da1e28">blocked</span> · 2026-07-27</td><td><span class="tag">needs-seed</span></td><td class="notes">FHIR export/import round-trip of an order + result — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.</td></tr>
+<tr data-status="partial" data-kind="chain">
+    <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
+    <td class="mono">tests/chains/chain-l-lab-number-uniqueness.spec.ts</td><td>order</td><td>chain</td>
+    <td><span style="color:#da1e28">blocked</span> · 2026-07-27</td><td><span class="tag">needs-seed</span></td><td class="notes">Lab-number uniqueness/collision handling across concurrent orders — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.</td></tr>
+<tr data-status="partial" data-kind="contract">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">test-catalog-mn-sampletypes.spec.ts</td><td>catalog-sampletypes</td><td>contract</td>
     <td><span style="color:#da1e28">fail</span> · 2026-07-26</td><td><span class="tag">load-flake</span></td><td class="notes">OGC-1145 m:n. MN-1/MN-2 green; MN-3 basic-info PUT returns 500 across all retries under full-suite load — revalidate in isolation (possible backend-under-load or QA-data accumulation), not yet a filed bug.</td></tr>
@@ -90,110 +134,6 @@ code{background:#e8e8e8;padding:1px 5px;border-radius:3px;font-size:12px}
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/docs/seed-vector-results.docs.spec.ts</td><td>vector</td><td>seed</td>
     <td><span style="color:#da1e28">blocked-on-target</span> · 2026-07-27</td><td><span class="tag">env-vector-target-gap</span></td><td class="notes">Seeder: vector results — GREEN on indonesiademo; env/vector domain UI absent on testing (see driftCauses.env-vector-target-gap). Run with BASE=indonesiademo.</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-a-order-lifecycle.spec.ts</td><td>order</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td></td><td class="notes">Clinical order create→receive→result→validate→report round-trip</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-ab-env-holding-time.spec.ts</td><td>environmental</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td><span class="tag">silnas-target</span></td><td class="notes">Env holding-time exceedance flag through the sample lifecycle</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-b-rejection.spec.ts</td><td>validation</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td></td><td class="notes">Sample rejection lifecycle (reject reason → status → downstream block)</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-c-reflex-trigger.spec.ts</td><td>reflex</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td></td><td class="notes">Reflex rule fires on a qualifying result and spawns the reflex test</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-d-calculated-value.spec.ts</td><td>calc</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td></td><td class="notes">Calculated-value engine: inputs → derived output test on save</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-e-sample-validation-lifecycle.spec.ts</td><td>validation</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td></td><td class="notes">Result entry → validation → release state machine</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-f-eqa-distribution.spec.ts</td><td>eqa</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td></td><td class="notes">EQA distribution → panel → result submission round-trip</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-g-cold-chain-excursion.spec.ts</td><td>storage</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td><span class="tag">silnas-target</span></td><td class="notes">Cold-chain excursion recorded against a stored sample item</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-h-permission-enforcement.spec.ts</td><td>security</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td></td><td class="notes">Role/permission enforcement across protected routes+actions</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-i-site-branding-to-report.spec.ts</td><td>report</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td></td><td class="notes">Site branding config propagates onto a generated report</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-j-audit-trail-coverage.spec.ts</td><td>audit</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td></td><td class="notes">Audit-trail records mutations across modules (coverage sweep)</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-k-fhir-round-trip.spec.ts</td><td>fhir</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td></td><td class="notes">FHIR export/import round-trip of an order + result</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-l-lab-number-uniqueness.spec.ts</td><td>order</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td></td><td class="notes">Lab-number uniqueness/collision handling across concurrent orders</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-m-vector-surveillance.spec.ts</td><td>vector</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td><span class="tag">silnas-target</span></td><td class="notes">Vector surveillance: trap→species ID→result→dashboard</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-n-environmental-sampling.spec.ts</td><td>environmental</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td><span class="tag">silnas-target</span></td><td class="notes">Environmental sampling order→result→compliance evaluation</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-o-referral-roundtrip.spec.ts</td><td>referral</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td></td><td class="notes">Referral out→reference-lab result→acceptance round-trip</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-p-patient-merge.spec.ts</td><td>patient</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td></td><td class="notes">Patient merge consolidates orders/results without loss</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-q-batch-order-entry.spec.ts</td><td>batch</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td></td><td class="notes">Batch order entry creates N orders in one submission</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-r-sample-shipment.spec.ts</td><td>referral</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td></td><td class="notes">Sample shipment manifest → dispatch → receipt</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-s-aliquot-lineage.spec.ts</td><td>storage</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td></td><td class="notes">Aliquot lineage: parent→child sample linkage &amp; tracking</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-t-workplan-worklist.spec.ts</td><td>workplan</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td></td><td class="notes">Workplan build → worklist → result entry cross-link</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-u-print-barcode.spec.ts</td><td>barcode</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td></td><td class="notes">Barcode label generation &amp; print payload for a sample</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-w-pathology-case.spec.ts</td><td>pathology</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td></td><td class="notes">Pathology case lifecycle (accession→report)</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-x-electronic-orders.spec.ts</td><td>eorder</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td></td><td class="notes">Inbound electronic order (eOrder) → sample creation</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-y-compliance-reporting.spec.ts</td><td>compliance</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td><span class="tag">silnas-target</span></td><td class="notes">SILNAS compliance dashboard + report; carries OGC-1059 regression watch (complianceReport 500)</td></tr>
-<tr data-status="unknown" data-kind="chain">
-    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
-    <td class="mono">tests/chains/chain-z-compliance-standards-admin.spec.ts</td><td>compliance</td><td>chain</td>
-    <td><span style="color:#da1e28">not-run-this-cycle</span></td><td><span class="tag">silnas-target</span></td><td class="notes">Compliance standards admin CRUD + activation round-trip</td></tr>
 <tr data-status="unknown" data-kind="misc">
     <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
     <td class="mono">label-presets.spec.ts</td><td>label</td><td>misc</td>
@@ -218,6 +158,66 @@ code{background:#e8e8e8;padding:1px 5px;border-radius:3px;font-size:12px}
     <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
     <td class="mono">tests/ranges-discover.spec.ts</td><td>ranges</td><td>probe</td>
     <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="fresh" data-kind="chain">
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">tests/chains/chain-ab-env-holding-time.spec.ts</td><td>environmental</td><td>chain</td>
+    <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td><span class="tag">silnas-target</span></td><td class="notes">Env holding-time exceedance flag through the sample lifecycle — Ran GREEN this cycle (2026-07-27).</td></tr>
+<tr data-status="fresh" data-kind="chain">
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">tests/chains/chain-i-site-branding-to-report.spec.ts</td><td>report</td><td>chain</td>
+    <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td></td><td class="notes">Site branding config propagates onto a generated report — Ran GREEN this cycle (2026-07-27).</td></tr>
+<tr data-status="fresh" data-kind="chain">
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">tests/chains/chain-m-vector-surveillance.spec.ts</td><td>vector</td><td>chain</td>
+    <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td><span class="tag">silnas-target</span></td><td class="notes">Vector surveillance: trap→species ID→result→dashboard — Ran GREEN this cycle (2026-07-27).</td></tr>
+<tr data-status="fresh" data-kind="chain">
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">tests/chains/chain-n-environmental-sampling.spec.ts</td><td>environmental</td><td>chain</td>
+    <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td><span class="tag">silnas-target</span></td><td class="notes">Environmental sampling order→result→compliance evaluation — Ran GREEN this cycle (2026-07-27).</td></tr>
+<tr data-status="fresh" data-kind="chain">
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">tests/chains/chain-o-referral-roundtrip.spec.ts</td><td>referral</td><td>chain</td>
+    <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td></td><td class="notes">Referral out→reference-lab result→acceptance round-trip — Ran GREEN this cycle (2026-07-27).</td></tr>
+<tr data-status="fresh" data-kind="chain">
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">tests/chains/chain-p-patient-merge.spec.ts</td><td>patient</td><td>chain</td>
+    <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td></td><td class="notes">Patient merge consolidates orders/results without loss — Ran GREEN this cycle (2026-07-27).</td></tr>
+<tr data-status="fresh" data-kind="chain">
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">tests/chains/chain-q-batch-order-entry.spec.ts</td><td>batch</td><td>chain</td>
+    <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td></td><td class="notes">Batch order entry creates N orders in one submission — Ran GREEN this cycle (2026-07-27).</td></tr>
+<tr data-status="fresh" data-kind="chain">
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">tests/chains/chain-r-sample-shipment.spec.ts</td><td>referral</td><td>chain</td>
+    <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td></td><td class="notes">Sample shipment manifest → dispatch → receipt — Ran GREEN this cycle (2026-07-27).</td></tr>
+<tr data-status="fresh" data-kind="chain">
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">tests/chains/chain-s-aliquot-lineage.spec.ts</td><td>storage</td><td>chain</td>
+    <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td></td><td class="notes">Aliquot lineage: parent→child sample linkage &amp; tracking — Ran GREEN this cycle (2026-07-27).</td></tr>
+<tr data-status="fresh" data-kind="chain">
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">tests/chains/chain-t-workplan-worklist.spec.ts</td><td>workplan</td><td>chain</td>
+    <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td></td><td class="notes">Workplan build → worklist → result entry cross-link — Ran GREEN this cycle (2026-07-27).</td></tr>
+<tr data-status="fresh" data-kind="chain">
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">tests/chains/chain-u-print-barcode.spec.ts</td><td>barcode</td><td>chain</td>
+    <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td></td><td class="notes">Barcode label generation &amp; print payload for a sample — Ran GREEN this cycle (2026-07-27).</td></tr>
+<tr data-status="fresh" data-kind="chain">
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">tests/chains/chain-w-pathology-case.spec.ts</td><td>pathology</td><td>chain</td>
+    <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td></td><td class="notes">Pathology case lifecycle (accession→report) — Ran GREEN this cycle (2026-07-27).</td></tr>
+<tr data-status="fresh" data-kind="chain">
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">tests/chains/chain-x-electronic-orders.spec.ts</td><td>eorder</td><td>chain</td>
+    <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td></td><td class="notes">Inbound electronic order (eOrder) → sample creation — Ran GREEN this cycle (2026-07-27).</td></tr>
+<tr data-status="fresh" data-kind="chain">
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">tests/chains/chain-y-compliance-reporting.spec.ts</td><td>compliance</td><td>chain</td>
+    <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td><span class="tag">silnas-target</span></td><td class="notes">SILNAS compliance dashboard + report; carries — Ran GREEN this cycle (2026-07-27). OGC-1059 watch (Step 4): complianceReport now returns 200 — appears FIXED (was 500). Surface for Casey to verify/close.</td></tr>
+<tr data-status="fresh" data-kind="chain">
+    <td><span class="dot" style="background:#24a148"></span>Fresh</td>
+    <td class="mono">tests/chains/chain-z-compliance-standards-admin.spec.ts</td><td>compliance</td><td>chain</td>
+    <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td><span class="tag">silnas-target</span></td><td class="notes">Compliance standards admin CRUD + activation round-trip — Ran GREEN this cycle (2026-07-27).</td></tr>
 <tr data-status="fresh" data-kind="contract">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">results-unified-worklist.spec.ts</td><td>results-worklist</td><td>contract</td>
