@@ -34,5 +34,12 @@ export default defineConfig({
       dependencies: ['setup'],
       use: { storageState: '.auth/user.json' },
     },
+    // --- QA/QC control-lot lifecycle round-trip (self-seeding, cleans up) — --project=qc-control-lot ---
+    {
+      name: 'qc-control-lot',
+      testMatch: /qc-control-lot\.spec\.ts/,
+      dependencies: ['setup'],
+      use: { storageState: '.auth/user.json' },
+    },
   ],
 });
