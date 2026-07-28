@@ -28,5 +28,11 @@ export default defineConfig({
       dependencies: ['setup'],
       use: { storageState: '.auth/user.json' },
     },
+    {
+      name: 'qc-dashboard',
+      testMatch: /qc-dashboard\.spec\.ts/,
+      dependencies: ['setup'],
+      use: { storageState: '.auth/user.json' },
+    },
   ],
 });
