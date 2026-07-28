@@ -41,5 +41,12 @@ export default defineConfig({
       dependencies: ['setup'],
       use: { storageState: '.auth/user.json' },
     },
+    // --- QA/QC Westgard rule-config round-trip (toggle+restore, non-destructive) — --project=qc-rule-config ---
+    {
+      name: 'qc-rule-config',
+      testMatch: /qc-rule-config\.spec\.ts/,
+      dependencies: ['setup'],
+      use: { storageState: '.auth/user.json' },
+    },
   ],
 });
