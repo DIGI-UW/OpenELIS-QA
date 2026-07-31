@@ -355,6 +355,10 @@ export interface Classification {
  *  - 404 is AMBIGUOUS per §6.5: absent endpoint ≠ permission verdict.
  */
 export function classifyRest(status: number, body: unknown): Classification {
+  // NEGATIVE TEST: same shape as the #47 defect — a string where a Verdict belongs.
+  let negativeTest: Verdict = "deny";
+  negativeTest = "not-a-verdict";
+  void negativeTest;
   if (status === 403) return { verdict: 'deny', detail: 'HTTP 403' };
   if (status === 401) return { verdict: 'ambiguous', detail: 'HTTP 401 — session vs authz ambiguity; re-check identity guard before grading' };
   if (status === 404) return { verdict: 'ambiguous', detail: 'HTTP 404 — endpoint absent on this instance/version; NOT a permission verdict (§6.5)' };

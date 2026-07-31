@@ -1,0 +1,11 @@
+{
+  "_comment": "Whole-repo typecheck. EXPECTED TO FAIL today: 166 errors as of 2026-07-31, dominated by missing type imports (TS2304 'Cannot find name', e.g. specs using Page without importing it). Also worth triaging: TS2367 (comparison appears unintentional) and TS2305 (module has no exported member) \u2014 those are behaviour bugs hiding as type errors. Run `npm run typecheck:all` to see where things stand; move files into tsconfig.json's include as they go clean.",
+  "extends": "./tsconfig.json",
+  "include": [
+    "**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "archive"
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "_comment": "BLOCKING typecheck surface. Everything listed here compiles clean today and CI keeps it that way. This is a ratchet: when you fix the type errors in another spec, ADD IT HERE in the same PR. Use `npm run typecheck:all` to see the remaining backlog. Do not widen this to the whole repo until that backlog is zero \u2014 a gate that is red on arrival gets ignored.",
+  "compilerOptions": {
+    "target": "ES2021",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "helpers/apiShapes.ts",
+    "tests/rbac/**/*.ts",
+    "tests/chains/_common.ts",
+    "tests/chains/chain-h-permission-enforcement.spec.ts",
+    "tests/personas/persona-pa-receptionist.spec.ts",
+    "tests/personas/persona-pb-bench-tech.spec.ts",
+    "tests/personas/persona-pc-validating-biologist.spec.ts",
+    "auth.setup.ts",
+    "roles.setup.ts",
+    "rbac.config.ts",
+    "personas-roles.config.ts"
+  ]
+}

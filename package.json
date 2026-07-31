@@ -1,0 +1,22 @@
+{
+  "name": "openelis-qa",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Playwright QA harness for OpenELIS Global: contract suites, cross-module chains, role personas, and the RBAC/lab-unit permission axes.",
+  "scripts": {
+    "install:browsers": "playwright install chromium",
+    "typecheck": "tsc -p tsconfig.json",
+    "typecheck:all": "tsc -p tsconfig.all.json",
+    "test:rbac": "playwright test -c rbac.config.ts",
+    "test:unit-scope": "playwright test -c rbac.config.ts --project=unit-scope",
+    "test:catalogue-scope": "playwright test -c rbac.config.ts --project=catalogue-scope",
+    "test:personas-roles": "playwright test -c personas-roles.config.ts",
+    "test:all-tc": "playwright test -c all-tc.config.ts",
+    "freshness": "node scripts/refresh-freshness.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}
