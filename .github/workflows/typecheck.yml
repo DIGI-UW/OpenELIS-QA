@@ -1,0 +1,60 @@
+name: typecheck
+
+# Why this exists: three compile-level defects reached `main` in one week because
+# nothing typechecked the repo — expect.fail() (not a Playwright API; it throws
+# TypeError and masks the real assertion message) in chains E and H, and an
+# un-annotated `let verdict` in the RBAC matrix that widened to `string` and
+# stopped satisfying ProbeResult. All three were found by hand. One job catches
+# the whole class.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # NB: `npm ci` is deliberately not used — package-lock.json is gitignored
+      # in this repo, so there is no lockfile to install from.
+      - name: Install dev dependencies
+        run: npm install --no-audit --no-fund
+
+      # BLOCKING: the maintained surface (RBAC axes, personas, chain H,
+      # apiShapes, setups, configs). This is green today and must stay green.
+      - name: Typecheck maintained surface
+        run: npm run typecheck
+
+      # NON-BLOCKING: the rest of the repo. ~166 errors as of 2026-07-31,
+      # mostly missing type imports in older specs. Reported so the number is
+      # visible and can only go down; widen tsconfig.json's include as files
+      # are fixed.
+      - name: Measure whole-repo backlog (informational)
+        continue-on-error: true
+        run: |
+          set +e
+          npm run typecheck:all > /tmp/all.txt 2>&1
+          COUNT=$(grep -c "error TS" /tmp/all.txt)
+          echo "Whole-repo type errors: $COUNT"
+          {
+            echo "### Whole-repo typecheck backlog"
+            echo ""
+            echo "**$COUNT** errors outside the gated surface (non-blocking)."
+            echo ""
+            echo "Top offenders:"
+            echo '```'
+            grep -oE "^[a-zA-Z0-9_./-]+\.ts" /tmp/all.txt | sort | uniq -c | sort -rn | head -10
+            echo '```'
+            echo "By error code:"
+            echo '```'
+            grep -oE "error TS[0-9]+" /tmp/all.txt | sort | uniq -c | sort -rn | head -8
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
