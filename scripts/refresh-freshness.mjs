@@ -13,6 +13,14 @@
  * Usage:
  *   node scripts/refresh-freshness.mjs                     # discover + regenerate board
  *   node scripts/refresh-freshness.mjs runlogs/last.json index-u12wW6QI.js   # + ingest a JSON run
+ *   node scripts/refresh-freshness.mjs rbac-results/last-run.json <build> --session=role
+ *                                                          # + ingest a ROLE-SCOPED run
+ *
+ * SESSIONS: results are recorded per session label (default "admin"). Only the
+ * admin lane writes a spec's top-level `status`; other lanes add to
+ * `spec.sessions[label]` so a scoped run cannot overwrite the admin verdict.
+ * This is what stops "fresh" from silently meaning "fresh as admin" — see the
+ * Sessions column on the board.
  * where runlogs/last.json came from:
  *   npx playwright test --config=all-tc.config.ts --reporter=json > runlogs/last.json 2>/dev/null || true
  */
@@ -23,8 +31,21 @@ import { fileURLToPath } from 'url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MANIFEST = path.join(ROOT, 'spec-freshness.json');
 const OUT_HTML = path.join(ROOT, 'spec-freshness.html');
-const reportPath = process.argv[2];
-const buildArg = process.argv[3];
+const argv = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const reportPath = argv[0];
+const buildArg = argv[1];
+/** Which authenticated session produced this run (see nativeSession below). */
+const SESSION = (process.argv.find((a) => a.startsWith('--session=')) || '--session=admin').split('=')[1];
+/**
+ * A spec's headline `status` is owned by its NATIVE lane — the session it is
+ * designed to run under. For almost everything that's admin; for tests/rbac/* it
+ * is the role lane, because those specs only mean anything under a scoped
+ * session. Runs from any other lane are recorded in `sessions` without touching
+ * status, so e.g. a role-scoped persona failure can never flip an admin-verified
+ * spec to drift (that failure may just be the role legitimately lacking a
+ * surface — a human reads the Sessions column and decides).
+ */
+const nativeSession = (file) => (file.startsWith('tests/rbac/') ? 'role' : 'admin');
 
 const manifest = JSON.parse(fs.readFileSync(MANIFEST, 'utf8'));
 
@@ -47,6 +68,8 @@ function classify(rel) {
     if (/^probe-|discover|drift|dump-|find-|cleanup-|patch-|inspect/.test(base)) return { area: guessArea(base), kind: 'probe' };
     return { area: guessArea(base), kind: 'docs-capture' };
   }
+  if (rel.startsWith('tests/rbac/')) return { area: 'rbac', kind: 'permission' };
+  if (rel.startsWith('tests/personas/')) return { area: guessArea(base), kind: 'persona' };
   if (/^test-catalog-|^results-/.test(base)) return { area: 'catalog-results', kind: 'contract' };
   if (/discover|timing|dom-probe|ranges-discover|config-pages/.test(base)) return { area: guessArea(base), kind: 'probe' };
   return { area: guessArea(base), kind: 'misc' };
@@ -88,14 +111,26 @@ if (reportPath && fs.existsSync(reportPath)) {
     const r = byFile[spec.file.split('/').pop()];
     if (!r) return;
     const verdict = r.fail ? 'drift' : r.flaky ? 'partial' : 'fresh';
-    spec.lastResult = r.fail ? 'fail' : r.flaky ? 'flaky' : 'pass';
+    const result = r.fail ? 'fail' : r.flaky ? 'flaky' : 'pass';
+
+    // Always record the per-session result.
+    spec.sessions = { ...(spec.sessions || {}), [SESSION]: { result, build, run: now } };
+
+    // Only the admin lane owns the headline status. A role-scoped run that fails
+    // must NOT flip an admin-verified spec to drift (the failure may simply be
+    // that role legitimately lacking the surface) — it shows in the Sessions
+    // column instead, for a human to interpret.
+    if (SESSION !== nativeSession(spec.file)) return;
+
+    spec.lastResult = result;
     spec.lastBuild = build; spec.lastRun = now;
     // With retries the run is authoritative — set status for all specs (curated notes/drift kept).
     spec.status = verdict;
     if (verdict === 'partial' && !(spec.drift || []).includes('load-flake')) spec.drift = [...(spec.drift || []), 'load-flake'];
   });
   if (buildArg) manifest.currentBuild = buildArg;
-  console.log('Ingested', Object.keys(byFile).length, 'spec results from', reportPath);
+  console.log('Ingested', Object.keys(byFile).length, 'spec results from', reportPath,
+    `(session=${SESSION}; status written only for specs whose native lane is ${SESSION})`);
 }
 
 manifest.lastUpdated = new Date().toISOString().slice(0, 10);
@@ -118,9 +153,20 @@ const rows = specs.map((s) => {
   const st = STATUS[s.status] || STATUS.unknown;
   const drift = (s.drift || []).map((d) => `<span class="tag">${esc(d)}</span>`).join(' ');
   const last = s.lastResult ? `<span style="color:${s.lastResult === 'pass' ? '#24a148' : '#da1e28'}">${s.lastResult}</span>${s.lastRun ? ' · ' + esc(s.lastRun) : ''}` : '—';
-  return `<tr data-status="${s.status}" data-kind="${esc(s.kind)}">
+  // Sessions: which authenticated identities this spec has actually been run
+  // under. A spec with only `admin` is unverified for every real lab role.
+  const sess = s.sessions || {};
+  const sessKeys = Object.keys(sess);
+  const sessions = sessKeys.length
+    ? sessKeys.map((k) => {
+        const col = sess[k].result === 'pass' ? '#24a148' : sess[k].result === 'flaky' ? '#f1c21b' : '#da1e28';
+        return `<span class="tag" title="${esc(k)}: ${esc(sess[k].result)} on ${esc(sess[k].build || '?')} (${esc(sess[k].run || '?')})"><span class="dot" style="background:${col}"></span>${esc(k)}</span>`;
+      }).join(' ')
+    : '<span class="tag" style="opacity:.55">admin only</span>';
+  return `<tr data-status="${s.status}" data-kind="${esc(s.kind)}" data-sessions="${esc(sessKeys.join(' '))}">
     <td><span class="dot" style="background:${st.c}"></span>${st.label}</td>
     <td class="mono">${esc(s.file)}</td><td>${esc(s.area)}</td><td>${esc(s.kind)}</td>
+    <td>${sessions}</td>
     <td>${last}</td><td>${drift}</td><td class="notes">${esc(s.notes)}</td></tr>`;
 }).join('\n');
 const glossary = Object.entries(manifest.driftCauses).map(([k, v]) => `<div class="gl"><b>${esc(k)}</b> — ${esc(v)}</div>`).join('\n');
@@ -151,7 +197,7 @@ code{background:#e8e8e8;padding:1px 5px;border-radius:3px;font-size:12px}
 <div class="sub">Target <b>${esc(manifest.target)}</b> · build <b class="mono">${esc(manifest.currentBuild)}</b> · <b>${manifest.specs.length}</b> specs · updated ${esc(manifest.lastUpdated)}</div>
 <div id="filters">${summary}</div>
 <div style="margin:6px 0 12px">${kinds}</div>
-<table id="tbl"><thead><tr><th>Status</th><th>Spec</th><th>Area</th><th>Kind</th><th>Last run</th><th>Drift</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table>
+<table id="tbl"><thead><tr><th>Status</th><th>Spec</th><th>Area</th><th>Kind</th><th>Sessions</th><th>Last run</th><th>Drift</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table>
 <div class="legend">${Object.values(STATUS).map((s) => `<span style="margin-right:14px"><span class="dot" style="background:${s.c}"></span> <b>${s.label}</b> — ${s.d}</span>`).join('')}</div>
 <div class="gloss"><b>Drift causes</b>${glossary}</div>
 <div class="work"><b>Workflow</b> — refresh after each build/run:<br>

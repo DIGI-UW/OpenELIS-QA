@@ -19,652 +19,1113 @@ th{background:#e8e8e8;font-size:12px;text-transform:uppercase;letter-spacing:.03
 code{background:#e8e8e8;padding:1px 5px;border-radius:3px;font-size:12px}
 </style></head><body>
 <h1>OpenELIS Playwright — Spec Freshness</h1>
-<div class="sub">Target <b>testing.openelis-global.org</b> · build <b class="mono">index-u12wW6QI.js</b> · <b>161</b> specs · updated 2026-07-27</div>
-<div id="filters"><span class="pill" style="border-color:#da1e28"><span class="dot" style="background:#da1e28"></span>Drift <b>0</b></span> <span class="pill" style="border-color:#f1c21b"><span class="dot" style="background:#f1c21b"></span>Partial <b>28</b></span> <span class="pill" style="border-color:#8d8d8d"><span class="dot" style="background:#8d8d8d"></span>Unknown <b>6</b></span> <span class="pill" style="border-color:#24a148"><span class="dot" style="background:#24a148"></span>Fresh <b>127</b></span></div>
-<div style="margin:6px 0 12px"><span class="kpill">chain <b>26</b></span> <span class="kpill">contract <b>5</b></span> <span class="kpill">deep-roundtrip <b>2</b></span> <span class="kpill">docs-capture <b>71</b></span> <span class="kpill">guard <b>1</b></span> <span class="kpill">guard-e2e <b>1</b></span> <span class="kpill">misc <b>1</b></span> <span class="kpill">probe <b>39</b></span> <span class="kpill">runtime <b>1</b></span> <span class="kpill">runtime-e2e <b>1</b></span> <span class="kpill">seed <b>13</b></span></div>
-<table id="tbl"><thead><tr><th>Status</th><th>Spec</th><th>Area</th><th>Kind</th><th>Last run</th><th>Drift</th><th>Notes</th></tr></thead><tbody><tr data-status="partial" data-kind="chain">
+<div class="sub">Target <b>testing.openelis-global.org</b> · build <b class="mono">index-u12wW6QI.js</b> · <b>221</b> specs · updated 2026-07-31</div>
+<div id="filters"><span class="pill" style="border-color:#da1e28"><span class="dot" style="background:#da1e28"></span>Drift <b>1</b></span> <span class="pill" style="border-color:#f1c21b"><span class="dot" style="background:#f1c21b"></span>Partial <b>28</b></span> <span class="pill" style="border-color:#8d8d8d"><span class="dot" style="background:#8d8d8d"></span>Unknown <b>65</b></span> <span class="pill" style="border-color:#24a148"><span class="dot" style="background:#24a148"></span>Fresh <b>127</b></span></div>
+<div style="margin:6px 0 12px"><span class="kpill">chain <b>26</b></span> <span class="kpill">contract <b>9</b></span> <span class="kpill">deep-roundtrip <b>2</b></span> <span class="kpill">docs-capture <b>71</b></span> <span class="kpill">guard <b>1</b></span> <span class="kpill">guard-e2e <b>1</b></span> <span class="kpill">misc <b>50</b></span> <span class="kpill">permission <b>1</b></span> <span class="kpill">persona <b>6</b></span> <span class="kpill">probe <b>39</b></span> <span class="kpill">runtime <b>1</b></span> <span class="kpill">runtime-e2e <b>1</b></span> <span class="kpill">seed <b>13</b></span></div>
+<table id="tbl"><thead><tr><th>Status</th><th>Spec</th><th>Area</th><th>Kind</th><th>Sessions</th><th>Last run</th><th>Drift</th><th>Notes</th></tr></thead><tbody><tr data-status="drift" data-kind="permission" data-sessions="role">
+    <td><span class="dot" style="background:#da1e28"></span>Drift</td>
+    <td class="mono">tests/rbac/rbac-matrix.spec.ts</td><td>rbac</td><td>permission</td>
+    <td><span class="tag" title="role: fail on index-u12wW6QI.js (2026-07-31)"><span class="dot" style="background:#da1e28"></span>role</span></td>
+    <td><span style="color:#da1e28">fail</span> · 2026-07-31</td><td><span class="tag">OGC-1151</span></td><td class="notes">Role-scoped permission matrix (Reception/Results/Validation). Native lane is ROLE, not admin. 43/46 pass; the 3 failures are all INV-04 (OGC-1151) and are the intended tracking signal, not spec rot. rbac-baseline.json (16 entries) arms drift detection on the baseline-tier probes; 5 menu-visibility entries are deliberately unpinned until OGC-1151 is fixed. See rbac-README.md.</td></tr>
+<tr data-status="partial" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/chains/chain-a-order-lifecycle.spec.ts</td><td>order</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">blocked</span> · 2026-07-27</td><td><span class="tag">needs-seed</span></td><td class="notes">Clinical order create→receive→result→validate→report round-trip — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.</td></tr>
-<tr data-status="partial" data-kind="chain">
+<tr data-status="partial" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/chains/chain-b-rejection.spec.ts</td><td>validation</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">blocked</span> · 2026-07-27</td><td><span class="tag">needs-seed</span></td><td class="notes">Sample rejection lifecycle (reject reason → status → downstream block) — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.</td></tr>
-<tr data-status="partial" data-kind="chain">
+<tr data-status="partial" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/chains/chain-c-reflex-trigger.spec.ts</td><td>reflex</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">blocked</span> · 2026-07-27</td><td><span class="tag">needs-seed</span></td><td class="notes">Reflex rule fires on a qualifying result and spawns the reflex test — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.</td></tr>
-<tr data-status="partial" data-kind="chain">
+<tr data-status="partial" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/chains/chain-d-calculated-value.spec.ts</td><td>calc</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">blocked</span> · 2026-07-27</td><td><span class="tag">needs-seed</span></td><td class="notes">Calculated-value engine: inputs → derived output test on save — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.</td></tr>
-<tr data-status="partial" data-kind="chain">
+<tr data-status="partial" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/chains/chain-e-sample-validation-lifecycle.spec.ts</td><td>validation</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">blocked</span> · 2026-07-27</td><td><span class="tag">needs-seed</span></td><td class="notes">Result entry → validation → release state machine — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.</td></tr>
-<tr data-status="partial" data-kind="chain">
+<tr data-status="partial" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/chains/chain-f-eqa-distribution.spec.ts</td><td>eqa</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">gap</span> · 2026-07-27</td><td><span class="tag">feature-gated</span></td><td class="notes">EQA distribution → panel → result submission round-trip — Feature-gated on testing: eqaEnabled config off. GAP-by-design.</td></tr>
-<tr data-status="partial" data-kind="chain">
+<tr data-status="partial" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/chains/chain-g-cold-chain-excursion.spec.ts</td><td>storage</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">gap</span> · 2026-07-27</td><td><span class="tag">feature-gated</span></td><td class="notes">Cold-chain excursion recorded against a stored sample item — Feature-gated on testing: no Cold Storage device configured. GAP-by-design.</td></tr>
-<tr data-status="partial" data-kind="chain">
+<tr data-status="partial" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/chains/chain-h-permission-enforcement.spec.ts</td><td>security</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">gap</span> · 2026-07-27</td><td><span class="tag">feature-gated</span></td><td class="notes">Role/permission enforcement across protected routes+actions — Feature-gated on testing: restricted-role user create blocked. GAP-by-design.</td></tr>
-<tr data-status="partial" data-kind="chain">
+<tr data-status="partial" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/chains/chain-j-audit-trail-coverage.spec.ts</td><td>audit</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">blocked</span> · 2026-07-27</td><td><span class="tag">needs-seed</span></td><td class="notes">Audit-trail records mutations across modules (coverage sweep) — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.</td></tr>
-<tr data-status="partial" data-kind="chain">
+<tr data-status="partial" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/chains/chain-k-fhir-round-trip.spec.ts</td><td>fhir</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">blocked</span> · 2026-07-27</td><td><span class="tag">needs-seed</span></td><td class="notes">FHIR export/import round-trip of an order + result — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.</td></tr>
-<tr data-status="partial" data-kind="chain">
+<tr data-status="partial" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/chains/chain-l-lab-number-uniqueness.spec.ts</td><td>order</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">blocked</span> · 2026-07-27</td><td><span class="tag">needs-seed</span></td><td class="notes">Lab-number uniqueness/collision handling across concurrent orders — Blocked at early step: needs QA_AUTO_ seed data; seeder cannot create patients on current testing (POST /rest/patient-management → 404). GAP-by-design, not a regression.</td></tr>
-<tr data-status="partial" data-kind="contract">
+<tr data-status="partial" data-kind="contract" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">test-catalog-mn-sampletypes.spec.ts</td><td>catalog-sampletypes</td><td>contract</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">fail</span> · 2026-07-26</td><td><span class="tag">load-flake</span></td><td class="notes">OGC-1145 m:n. MN-1/MN-2 green; MN-3 basic-info PUT returns 500 across all retries under full-suite load — revalidate in isolation (possible backend-under-load or QA-data accumulation), not yet a filed bug.</td></tr>
-<tr data-status="partial" data-kind="deep-roundtrip">
+<tr data-status="partial" data-kind="deep-roundtrip" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">test-catalog-sections-roundtrip.spec.ts</td><td>catalog-editor</td><td>deep-roundtrip</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">fail</span> · 2026-07-26</td><td><span class="tag">login-attrs</span> <span class="tag">load-flake</span></td><td class="notes">Login defensive. Fails under full-suite load (ERR_TOO_MANY_RETRIES on every test). Moved to the isolated e2e.config tier — verify there.</td></tr>
-<tr data-status="partial" data-kind="docs-capture">
+<tr data-status="partial" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/docs/esig.docs.spec.ts</td><td>esig</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">flaky</span> · 2026-07-26</td><td><span class="tag">precondition</span></td><td class="notes">Precondition-gated: needs electronicSignatureEnabled=true at run time. Capture-only (does not complete a sign). FAIL when flag off is expected, not code drift.</td></tr>
-<tr data-status="partial" data-kind="docs-capture">
+<tr data-status="partial" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/docs/ht-final.docs.spec.ts</td><td>misc</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">blocked-on-target</span> · 2026-07-27</td><td><span class="tag">env-vector-target-gap</span></td><td class="notes">Captures the env "SOP Max Holding Time" field via a groundwater sample-type filter — env domain absent on testing (see driftCauses.env-vector-target-gap). Run on indonesiademo.</td></tr>
-<tr data-status="partial" data-kind="docs-capture">
+<tr data-status="partial" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/docs/site-band.docs.spec.ts</td><td>site</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">flaky</span> · 2026-07-26</td><td><span class="tag">load-flake</span></td><td class="notes">Best-effort ENGLISH marketing-shot capture, no assertions. False-drift = load-flake/slow (browser crash under full-suite load). Passes/skips isolated; belongs in isolated capture tier.</td></tr>
-<tr data-status="partial" data-kind="docs-capture">
+<tr data-status="partial" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/docs/site-band2.docs.spec.ts</td><td>site</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">flaky</span> · 2026-07-26</td><td><span class="tag">load-flake</span></td><td class="notes">Populated-screen hunter (nested select x option crawl), no assertions. False-drift = load-flake/slow. Passes/skips isolated.</td></tr>
-<tr data-status="partial" data-kind="docs-capture">
+<tr data-status="partial" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/docs/vector-flow.docs.spec.ts</td><td>vector</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">blocked-on-target</span> · 2026-07-27</td><td><span class="tag">env-vector-target-gap</span></td><td class="notes">Vector order full-flow capture — GREEN on indonesiademo; env/vector domain UI absent on testing (see driftCauses.env-vector-target-gap). Run with BASE=indonesiademo.</td></tr>
-<tr data-status="partial" data-kind="docs-capture">
+<tr data-status="partial" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/docs/vector-order-populated.docs.spec.ts</td><td>vector</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">blocked-on-target</span> · 2026-07-27</td><td><span class="tag">env-vector-target-gap</span></td><td class="notes">Vector order (populated) capture — GREEN on indonesiademo; env/vector domain UI absent on testing (see driftCauses.env-vector-target-gap). Run with BASE=indonesiademo.</td></tr>
-<tr data-status="partial" data-kind="guard">
+<tr data-status="partial" data-kind="guard" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">test-catalog-editor-regressions.spec.ts</td><td>catalog-editor</td><td>guard</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">flaky</span> · 2026-07-26</td><td><span class="tag">load-flake</span></td><td class="notes">BLOCKER guards reconciled for OGC-1142 fixes.</td></tr>
-<tr data-status="partial" data-kind="guard-e2e">
+<tr data-status="partial" data-kind="guard-e2e" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">test-catalog-critical-indicator.spec.ts</td><td>results-flags</td><td>guard-e2e</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">fail</span> · 2026-07-26</td><td><span class="tag">OGC-1142-editor</span> <span class="tag">OGC-1132</span> <span class="tag">login-attrs</span> <span class="tag">load-flake</span></td><td class="notes">REHABBED create/component/ranges via REST + legacy order. PASSES in isolation; fails under full-suite load. Moved to the isolated e2e.config tier.</td></tr>
-<tr data-status="partial" data-kind="runtime-e2e">
+<tr data-status="partial" data-kind="runtime-e2e" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">test-catalog-titer-runtime.spec.ts</td><td>catalog-result-types</td><td>runtime-e2e</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">fail</span> · 2026-07-26</td><td><span class="tag">OGC-1142-editor</span> <span class="tag">OGC-1132</span> <span class="tag">login-attrs</span> <span class="tag">load-flake</span></td><td class="notes">Result-entry leg flag-aware for unified /Results. PASSES in isolation (1.1m); fails under full-suite load. Moved to the isolated e2e.config tier.</td></tr>
-<tr data-status="partial" data-kind="seed">
+<tr data-status="partial" data-kind="seed" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/docs/seed-analyzers.docs.spec.ts</td><td>analyzer</td><td>seed</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">n/a</span> · 2026-07-27</td><td><span class="tag">seeder-indonesiademo</span></td><td class="notes">Demo-data SEEDER for analyzers — self-grounding + idempotent, targets indonesiademo (run one seeder per invocation). Not a testing regression spec; not expected to pass on testing.</td></tr>
-<tr data-status="partial" data-kind="seed">
+<tr data-status="partial" data-kind="seed" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/docs/seed-calc.docs.spec.ts</td><td>calc</td><td>seed</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">n/a</span> · 2026-07-27</td><td><span class="tag">seeder-indonesiademo</span></td><td class="notes">Demo-data SEEDER for calculated values — self-grounding + idempotent, targets indonesiademo (run one seeder per invocation). Not a testing regression spec; not expected to pass on testing.</td></tr>
-<tr data-status="partial" data-kind="seed">
+<tr data-status="partial" data-kind="seed" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/docs/seed-compliance-tests.docs.spec.ts</td><td>nce</td><td>seed</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">n/a</span> · 2026-07-27</td><td><span class="tag">seeder-indonesiademo</span></td><td class="notes">Demo-data SEEDER for compliance-standard test links (env/compliance domain) — self-grounding + idempotent, targets indonesiademo (run one seeder per invocation). Not a testing regression spec; not expected to pass on testing.</td></tr>
-<tr data-status="partial" data-kind="seed">
+<tr data-status="partial" data-kind="seed" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/docs/seed-env-results.docs.spec.ts</td><td>env</td><td>seed</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">blocked-on-target</span> · 2026-07-27</td><td><span class="tag">env-vector-target-gap</span></td><td class="notes">Seeder: environmental results — GREEN on indonesiademo; env/vector domain UI absent on testing (see driftCauses.env-vector-target-gap). Run with BASE=indonesiademo.</td></tr>
-<tr data-status="partial" data-kind="seed">
+<tr data-status="partial" data-kind="seed" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/docs/seed-reflex.docs.spec.ts</td><td>reflex</td><td>seed</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">n/a</span> · 2026-07-27</td><td><span class="tag">seeder-indonesiademo</span></td><td class="notes">Demo-data SEEDER for reflex rules — self-grounding + idempotent, targets indonesiademo (run one seeder per invocation). Not a testing regression spec; not expected to pass on testing.</td></tr>
-<tr data-status="partial" data-kind="seed">
+<tr data-status="partial" data-kind="seed" data-sessions="">
     <td><span class="dot" style="background:#f1c21b"></span>Partial</td>
     <td class="mono">tests/docs/seed-vector-results.docs.spec.ts</td><td>vector</td><td>seed</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#da1e28">blocked-on-target</span> · 2026-07-27</td><td><span class="tag">env-vector-target-gap</span></td><td class="notes">Seeder: vector results — GREEN on indonesiademo; env/vector domain UI absent on testing (see driftCauses.env-vector-target-gap). Run with BASE=indonesiademo.</td></tr>
-<tr data-status="unknown" data-kind="misc">
+<tr data-status="unknown" data-kind="contract" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/results-by-range.spec.ts</td><td>catalog-results</td><td>contract</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="contract" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/results-by-status.spec.ts</td><td>catalog-results</td><td>contract</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="contract" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/results-by-unit.spec.ts</td><td>catalog-results</td><td>contract</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="contract" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/results-entry.spec.ts</td><td>catalog-results</td><td>contract</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">gap-suites-AA-AD.spec.ts</td><td>misc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">gap-suites-AE-AG.spec.ts</td><td>misc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">gap-suites-AH-AP.spec.ts</td><td>misc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">gap-suites-AQ-AX.spec.ts</td><td>misc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
     <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
     <td class="mono">label-presets.spec.ts</td><td>label</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="unknown" data-kind="probe">
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">openelis-e2e.spec.ts</td><td>misc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">qc-control-lot.spec.ts</td><td>qc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">qc-dashboard.spec.ts</td><td>qc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">qc-rule-config.spec.ts</td><td>qc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/accessibility.spec.ts</td><td>misc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/admin-config.spec.ts</td><td>misc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/alerts-notifications.spec.ts</td><td>misc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/aliquot.spec.ts</td><td>misc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/api-crud-survey.spec.ts</td><td>misc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/batch-order-entry.spec.ts</td><td>order</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/calculated-values-ui.spec.ts</td><td>calc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/calculated-values.spec.ts</td><td>calc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/dashboard.spec.ts</td><td>misc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/data-export.spec.ts</td><td>misc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/deep-endpoint-testing.spec.ts</td><td>misc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/electronic-orders.spec.ts</td><td>order</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/electronic-signature.spec.ts</td><td>signature</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/eqa-workflow.spec.ts</td><td>eqa</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/fhir-integration.spec.ts</td><td>misc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/generic-sample.spec.ts</td><td>sample</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/i18n.spec.ts</td><td>misc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/inventory.spec.ts</td><td>inventory</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/loinc-dictionary.spec.ts</td><td>dictionary</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/non-conforming.spec.ts</td><td>misc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/order-creation-e2e.spec.ts</td><td>order</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/order-creation.spec.ts</td><td>order</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/order-entry.spec.ts</td><td>order</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/order-search.spec.ts</td><td>order</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/pathology.spec.ts</td><td>pathology</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/patient-history.spec.ts</td><td>patient</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/patient-management.spec.ts</td><td>patient</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/patient-merge.spec.ts</td><td>patient</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/performance.spec.ts</td><td>nce</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/print-barcode.spec.ts</td><td>barcode</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/referral-workflow.spec.ts</td><td>referral</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/reflex-testing-ui.spec.ts</td><td>reflex</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/reflex-testing.spec.ts</td><td>reflex</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/reports.spec.ts</td><td>report</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/sample-shipment.spec.ts</td><td>sample</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/session-security.spec.ts</td><td>misc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/storage-crud.spec.ts</td><td>storage</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/system-misc.spec.ts</td><td>misc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/validation.spec.ts</td><td>validation</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/workplan-deep.spec.ts</td><td>misc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="misc" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/workplan.spec.ts</td><td>misc</td><td>misc</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="persona" data-sessions="role">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/personas/persona-pa-receptionist.spec.ts</td><td>misc</td><td>persona</td>
+    <td><span class="tag" title="role: fail on index-u12wW6QI.js (2026-07-31)"><span class="dot" style="background:#da1e28"></span>role</span></td>
+    <td>—</td><td></td><td class="notes">Runs scoped as qa_recept via personas-roles.config.ts. Step 2 fails identically as admin (patient-management POST 404) — a spec bug, not a permission finding; needs a live capture of the real patient-create request before the assertion can be trusted.</td></tr>
+<tr data-status="unknown" data-kind="persona" data-sessions="role">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/personas/persona-pb-bench-tech.spec.ts</td><td>misc</td><td>persona</td>
+    <td><span class="tag" title="role: pass on index-u12wW6QI.js (2026-07-31)"><span class="dot" style="background:#24a148"></span>role</span></td>
+    <td>—</td><td></td><td class="notes">Runs scoped as qa_labtech. Read path fixed (LogbookResults returns testResult/resultValue, not logbookList/value). PARTIAL is correct on testing: the Hematology result-ENTRY queue is genuinely empty (the items awaiting validation are already entered). Seed Hematology orders to exercise it.</td></tr>
+<tr data-status="unknown" data-kind="persona" data-sessions="role">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/personas/persona-pc-validating-biologist.spec.ts</td><td>misc</td><td>persona</td>
+    <td><span class="tag" title="role: fail on index-u12wW6QI.js (2026-07-31)"><span class="dot" style="background:#da1e28"></span>role</span></td>
+    <td>—</td><td></td><td class="notes">Runs scoped as qa_validator. Queue endpoint corrected to AccessionValidation?unitType=&lt;labUnitId&gt;&amp;doRange=true (ResultValidation does not exist); Step 1 now passes with 2 items. Steps 2-3 return 400 — POST body shape still uncaptured, deliberately not guessed.</td></tr>
+<tr data-status="unknown" data-kind="persona" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/personas/persona-pd-lab-manager.spec.ts</td><td>misc</td><td>persona</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="persona" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/personas/persona-pe-qa-officer.spec.ts</td><td>misc</td><td>persona</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="persona" data-sessions="">
+    <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
+    <td class="mono">tests/personas/persona-pf-lab-administrator.spec.ts</td><td>misc</td><td>persona</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
+    <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
+<tr data-status="unknown" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
     <td class="mono">_discover.spec.ts</td><td>misc</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="unknown" data-kind="probe">
+<tr data-status="unknown" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
     <td class="mono">_timing.spec.ts</td><td>misc</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="unknown" data-kind="probe">
+<tr data-status="unknown" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
     <td class="mono">config-pages.spec.ts</td><td>misc</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="unknown" data-kind="probe">
+<tr data-status="unknown" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
     <td class="mono">tc-dom-probe.spec.ts</td><td>misc</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="unknown" data-kind="probe">
+<tr data-status="unknown" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#8d8d8d"></span>Unknown</td>
     <td class="mono">tests/ranges-discover.spec.ts</td><td>ranges</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td>—</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="chain">
+<tr data-status="fresh" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/chains/chain-ab-env-holding-time.spec.ts</td><td>environmental</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td><span class="tag">silnas-target</span></td><td class="notes">Env holding-time exceedance flag through the sample lifecycle — Ran GREEN this cycle (2026-07-27).</td></tr>
-<tr data-status="fresh" data-kind="chain">
+<tr data-status="fresh" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/chains/chain-i-site-branding-to-report.spec.ts</td><td>report</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td></td><td class="notes">Site branding config propagates onto a generated report — Ran GREEN this cycle (2026-07-27).</td></tr>
-<tr data-status="fresh" data-kind="chain">
+<tr data-status="fresh" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/chains/chain-m-vector-surveillance.spec.ts</td><td>vector</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td><span class="tag">silnas-target</span></td><td class="notes">Vector surveillance: trap→species ID→result→dashboard — Ran GREEN this cycle (2026-07-27).</td></tr>
-<tr data-status="fresh" data-kind="chain">
+<tr data-status="fresh" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/chains/chain-n-environmental-sampling.spec.ts</td><td>environmental</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td><span class="tag">silnas-target</span></td><td class="notes">Environmental sampling order→result→compliance evaluation — Ran GREEN this cycle (2026-07-27).</td></tr>
-<tr data-status="fresh" data-kind="chain">
+<tr data-status="fresh" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/chains/chain-o-referral-roundtrip.spec.ts</td><td>referral</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td></td><td class="notes">Referral out→reference-lab result→acceptance round-trip — Ran GREEN this cycle (2026-07-27).</td></tr>
-<tr data-status="fresh" data-kind="chain">
+<tr data-status="fresh" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/chains/chain-p-patient-merge.spec.ts</td><td>patient</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td></td><td class="notes">Patient merge consolidates orders/results without loss — Ran GREEN this cycle (2026-07-27).</td></tr>
-<tr data-status="fresh" data-kind="chain">
+<tr data-status="fresh" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/chains/chain-q-batch-order-entry.spec.ts</td><td>batch</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td></td><td class="notes">Batch order entry creates N orders in one submission — Ran GREEN this cycle (2026-07-27).</td></tr>
-<tr data-status="fresh" data-kind="chain">
+<tr data-status="fresh" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/chains/chain-r-sample-shipment.spec.ts</td><td>referral</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td></td><td class="notes">Sample shipment manifest → dispatch → receipt — Ran GREEN this cycle (2026-07-27).</td></tr>
-<tr data-status="fresh" data-kind="chain">
+<tr data-status="fresh" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/chains/chain-s-aliquot-lineage.spec.ts</td><td>storage</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td></td><td class="notes">Aliquot lineage: parent→child sample linkage &amp; tracking — Ran GREEN this cycle (2026-07-27).</td></tr>
-<tr data-status="fresh" data-kind="chain">
+<tr data-status="fresh" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/chains/chain-t-workplan-worklist.spec.ts</td><td>workplan</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td></td><td class="notes">Workplan build → worklist → result entry cross-link — Ran GREEN this cycle (2026-07-27).</td></tr>
-<tr data-status="fresh" data-kind="chain">
+<tr data-status="fresh" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/chains/chain-u-print-barcode.spec.ts</td><td>barcode</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td></td><td class="notes">Barcode label generation &amp; print payload for a sample — Ran GREEN this cycle (2026-07-27).</td></tr>
-<tr data-status="fresh" data-kind="chain">
+<tr data-status="fresh" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/chains/chain-w-pathology-case.spec.ts</td><td>pathology</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td></td><td class="notes">Pathology case lifecycle (accession→report) — Ran GREEN this cycle (2026-07-27).</td></tr>
-<tr data-status="fresh" data-kind="chain">
+<tr data-status="fresh" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/chains/chain-x-electronic-orders.spec.ts</td><td>eorder</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td></td><td class="notes">Inbound electronic order (eOrder) → sample creation — Ran GREEN this cycle (2026-07-27).</td></tr>
-<tr data-status="fresh" data-kind="chain">
+<tr data-status="fresh" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/chains/chain-y-compliance-reporting.spec.ts</td><td>compliance</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td><span class="tag">silnas-target</span></td><td class="notes">SILNAS compliance dashboard + report; carries — Ran GREEN this cycle (2026-07-27). OGC-1059 watch (Step 4): complianceReport now returns 200 — appears FIXED (was 500). Surface for Casey to verify/close.</td></tr>
-<tr data-status="fresh" data-kind="chain">
+<tr data-status="fresh" data-kind="chain" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/chains/chain-z-compliance-standards-admin.spec.ts</td><td>compliance</td><td>chain</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-27</td><td><span class="tag">silnas-target</span></td><td class="notes">Compliance standards admin CRUD + activation round-trip — Ran GREEN this cycle (2026-07-27).</td></tr>
-<tr data-status="fresh" data-kind="contract">
+<tr data-status="fresh" data-kind="contract" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">results-unified-worklist.spec.ts</td><td>results-worklist</td><td>contract</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td><span class="tag">unified-results</span></td><td class="notes">OGC-1020 R1. Flag-gated (skips when RESULTS_ENTRY_UNIFIED_ROUTE off).</td></tr>
-<tr data-status="fresh" data-kind="contract">
+<tr data-status="fresh" data-kind="contract" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">test-catalog-activation-gate.spec.ts</td><td>catalog-activation</td><td>contract</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Activation integrity gate (OGC-1141). Documents the REST create workflow.</td></tr>
-<tr data-status="fresh" data-kind="contract">
+<tr data-status="fresh" data-kind="contract" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">test-catalog-downstream.spec.ts</td><td>catalog-downstream</td><td>contract</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Ran in the full suite; confirm verdict on next JSON run.</td></tr>
-<tr data-status="fresh" data-kind="contract">
+<tr data-status="fresh" data-kind="contract" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">test-catalog-mgmt.spec.ts</td><td>catalog-editor</td><td>contract</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Editor fidelity + Basic Info save (OGC-1114 fixed).</td></tr>
-<tr data-status="fresh" data-kind="deep-roundtrip">
+<tr data-status="fresh" data-kind="deep-roundtrip" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">test-catalog-mgmt-deep.spec.ts</td><td>catalog-editor</td><td>deep-roundtrip</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">TC-DEEP-DOMAIN reconciled to the domain-sample-type consistency guard (422).</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/add-patient.docs.spec.ts</td><td>patient</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/analyzer-file-import.docs.spec.ts</td><td>analyzer</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/analyzer-framework.docs.spec.ts</td><td>analyzer</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/audit-trail.docs.spec.ts</td><td>audit</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/barcode-labels.docs.spec.ts</td><td>label</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/clinical-explore.docs.spec.ts</td><td>misc</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/clinical-flow.docs.spec.ts</td><td>misc</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td><span class="tag">OGC-1132</span></td><td class="notes">REHABBED: capture walk moved to the working legacy /SamplePatientEntry 4-step wizard (Patient Info-&gt;Program-&gt;Add Sample-&gt;Add Order); persists samples=1 tests=1. 2 passed.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/compliance-list.docs.spec.ts</td><td>nce</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/cytology-dashboard.docs.spec.ts</td><td>cytology</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/electronic-lab-notebook.docs.spec.ts</td><td>notebook</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/electronic-signatures.docs.spec.ts</td><td>signature</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/env-bahasa.docs.spec.ts</td><td>env</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/env-explore.docs.spec.ts</td><td>env</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/env-flow.docs.spec.ts</td><td>env</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">VERIFIED on indonesiademo (its real target): full env wizard, SamplePatientEntry POST 200, 2 passed. False-drift under testing = target mismatch, not code drift.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/env-landing-split.docs.spec.ts</td><td>env</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/env-order-populated.docs.spec.ts</td><td>env</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/env-stages.docs.spec.ts</td><td>env</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/env-vector-interactive.docs.spec.ts</td><td>vector</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/env-vector-manual.docs.spec.ts</td><td>vector</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/environmental-order-results.docs.spec.ts</td><td>environmental</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/eqa.docs.spec.ts</td><td>eqa</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/handoff-media.docs.spec.ts</td><td>misc</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/home-hero.docs.spec.ts</td><td>home</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/ihc-dashboard.docs.spec.ts</td><td>ihc</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/instrument-library.docs.spec.ts</td><td>instrument</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/inventory-management.docs.spec.ts</td><td>inventory</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/label-presets.docs.spec.ts</td><td>label</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/laporan-hasil-populated.docs.spec.ts</td><td>misc</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/laporan-search.docs.spec.ts</td><td>misc</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/legacy-clinical-order.docs.spec.ts</td><td>order</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/locale-check.docs.spec.ts</td><td>locale</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/multicomponent-runtime.docs.spec.ts</td><td>misc</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td><span class="tag">OGC-1132</span> <span class="tag">unified-results</span></td><td class="notes">REHABBED: order via placeLegacyOrder (Respiratory Swab COVIDPCR) + flag-aware openResultEntryByAccession. MC-2 asserts N2+E render in unified /Results. 3 passed.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/nce-capa.docs.spec.ts</td><td>nce</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/nce-form-sample.docs.spec.ts</td><td>nce</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/nce-form.docs.spec.ts</td><td>nce</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/nce-subcat.docs.spec.ts</td><td>nce</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/order-446.docs.spec.ts</td><td>order</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/order-entry.docs.spec.ts</td><td>order</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/org-capture.docs.spec.ts</td><td>org</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/organizations-management.docs.spec.ts</td><td>org</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/pathology-dashboard.docs.spec.ts</td><td>pathology</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/patient-extras.docs.spec.ts</td><td>patient</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/patient-mgmt-cap.docs.spec.ts</td><td>patient</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/patient-order-enhancements.docs.spec.ts</td><td>nce</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/provider-capture.docs.spec.ts</td><td>provider</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/report-config-explore.docs.spec.ts</td><td>report</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/result-validation.docs.spec.ts</td><td>result</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/results-entry-cap.docs.spec.ts</td><td>result</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/results-entry.docs.spec.ts</td><td>result</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/sample-acceptance.docs.spec.ts</td><td>nce</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/sample-shipment-referral.docs.spec.ts</td><td>sample</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/sample-storage-management.docs.spec.ts</td><td>storage</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/site-band3.docs.spec.ts</td><td>site</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/site-config-esig.docs.spec.ts</td><td>esig</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/storage-investigation.docs.spec.ts</td><td>storage</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/storage-picker.docs.spec.ts</td><td>storage</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/test-catalog-mgmt.docs.spec.ts</td><td>catalog</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/test-catalog-modals.docs.spec.ts</td><td>catalog</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/user-dict-capture.docs.spec.ts</td><td>misc</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/vector-bahasa.docs.spec.ts</td><td>vector</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/vector-complete.docs.spec.ts</td><td>vector</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/vector-deep-v2.docs.spec.ts</td><td>vector</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/vector-deep-v3.docs.spec.ts</td><td>vector</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/vector-stages.docs.spec.ts</td><td>vector</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="docs-capture">
+<tr data-status="fresh" data-kind="docs-capture" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/westgard-qc.docs.spec.ts</td><td>westgard</td><td>docs-capture</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/admin-discover.docs.spec.ts</td><td>misc</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/admin-discover2.docs.spec.ts</td><td>misc</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/cleanup-probe-analyzers.docs.spec.ts</td><td>analyzer</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/discover3.docs.spec.ts</td><td>misc</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/discover4.docs.spec.ts</td><td>misc</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/drift-fix.docs.spec.ts</td><td>misc</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/drift.check.spec.ts</td><td>misc</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Meta doc-drift checker. Ran clean on testing v3.2.1.11: every manual section missing=0 routeErrors=0 (no UI drift). Working as designed.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/dump-print-config.docs.spec.ts</td><td>print</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/find-print-config.docs.spec.ts</td><td>print</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/patch-inventory-thresholds.docs.spec.ts</td><td>inventory</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-analyzer-api.docs.spec.ts</td><td>analyzer</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-analyzer-api2.docs.spec.ts</td><td>analyzer</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-analyzer-api3.docs.spec.ts</td><td>analyzer</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-analyzer-api4.docs.spec.ts</td><td>analyzer</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-analyzer-api5.docs.spec.ts</td><td>analyzer</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-analyzer-api6.docs.spec.ts</td><td>analyzer</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-calc.docs.spec.ts</td><td>calc</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-compliance.docs.spec.ts</td><td>nce</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-compliance2.docs.spec.ts</td><td>nce</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-compliance3.docs.spec.ts</td><td>nce</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-device-fields.docs.spec.ts</td><td>misc</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-freezer-api.docs.spec.ts</td><td>freezer</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-inventory-api.docs.spec.ts</td><td>inventory</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-inventory-api2.docs.spec.ts</td><td>inventory</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-inventory-api3.docs.spec.ts</td><td>inventory</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-inventory-api4.docs.spec.ts</td><td>inventory</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-inventory-api5.docs.spec.ts</td><td>inventory</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-inventory-api6.docs.spec.ts</td><td>inventory</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-inventory-api7.docs.spec.ts</td><td>inventory</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-inventory-delete.docs.spec.ts</td><td>inventory</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-inventory-fields.docs.spec.ts</td><td>inventory</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-min-stock.docs.spec.ts</td><td>misc</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/probe-storage-create.docs.spec.ts</td><td>storage</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="probe">
+<tr data-status="fresh" data-kind="probe" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/reflex-discover.docs.spec.ts</td><td>reflex</td><td>probe</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="runtime">
+<tr data-status="fresh" data-kind="runtime" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">test-catalog-result-types.spec.ts</td><td>catalog-result-types</td><td>runtime</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td><span class="tag">OGC-1142-editor</span> <span class="tag">login-attrs</span></td><td class="notes">REHABBED 2026-07-24: create+component now via REST (createTestViaRest/setComponentViaRest). 7/7 result types green.</td></tr>
-<tr data-status="fresh" data-kind="seed">
+<tr data-status="fresh" data-kind="seed" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/seed-cases.docs.spec.ts</td><td>seed</td><td>seed</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="seed">
+<tr data-status="fresh" data-kind="seed" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/seed-compliance.docs.spec.ts</td><td>nce</td><td>seed</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="seed">
+<tr data-status="fresh" data-kind="seed" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/seed-inventory.docs.spec.ts</td><td>inventory</td><td>seed</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="seed">
+<tr data-status="fresh" data-kind="seed" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/seed-orders.docs.spec.ts</td><td>order</td><td>seed</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="seed">
+<tr data-status="fresh" data-kind="seed" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/seed-orgs.docs.spec.ts</td><td>org</td><td>seed</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="seed">
+<tr data-status="fresh" data-kind="seed" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/seed-providers.docs.spec.ts</td><td>provider</td><td>seed</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr>
-<tr data-status="fresh" data-kind="seed">
+<tr data-status="fresh" data-kind="seed" data-sessions="">
     <td><span class="dot" style="background:#24a148"></span>Fresh</td>
     <td class="mono">tests/docs/seed-storage.docs.spec.ts</td><td>storage</td><td>seed</td>
+    <td><span class="tag" style="opacity:.55">admin only</span></td>
     <td><span style="color:#24a148">pass</span> · 2026-07-26</td><td></td><td class="notes">Discovered — not yet assessed against the current build.</td></tr></tbody></table>
 <div class="legend"><span style="margin-right:14px"><span class="dot" style="background:#24a148"></span> <b>Fresh</b> — verified passing on the current build</span><span style="margin-right:14px"><span class="dot" style="background:#f1c21b"></span> <b>Partial</b> — green core, a known non-blocking drift or flake</span><span style="margin-right:14px"><span class="dot" style="background:#da1e28"></span> <b>Drift</b> — fails on real UI/route drift — needs a spec update</span><span style="margin-right:14px"><span class="dot" style="background:#8d8d8d"></span> <b>Unknown</b> — not run against the current build yet</span></div>
 <div class="gloss"><b>Drift causes</b><div class="gl"><b>OGC-1132</b> — Unified /order/enter drops the sample's tests (Hibernate type-mismatch) — order via legacy /SamplePatientEntry (placeLegacySerumOrder).</div>
@@ -673,7 +1134,8 @@ code{background:#e8e8e8;padding:1px 5px;border-radius:3px;font-size:12px}
 <div class="gl"><b>unified-results</b> — OGC-1020 R1 unified /Results worklist is flag-gated (RESULTS_ENTRY_UNIFIED_ROUTE).</div>
 <div class="gl"><b>load-flake</b> — Order→result E2E specs fail DETERMINISTICALLY under full-suite load (net::ERR_TOO_MANY_RETRIES / browser crashes / 500s persist across retries) but PASS in isolation. Not spec drift and not fixed by retries — run them alone via e2e.config.ts (isolated tier). all-tc.config now excludes them.</div>
 <div class="gl"><b>env-vector-target-gap</b> — The Environmental/Vector domain order UI is NOT deployed on testing.openelis-global.org (v3.2.1.11): /order/environmental/enter and /order/vector/enter render only the nav shell (no wizard, no step chrome), and the legacy /SamplePatientEntry sample-type list carries only clinical/pathology types (Serum, Whole Blood, Sputum, Histopathology, …) — NO Water or vector types. So an env/vector order cannot be placed on testing by any path. These specs are correct and green on indonesiademo (which has the domain). Run env/vector specs against BASE=https://indonesiademo.openelis-global.org, not testing. Directly probed env 2026-07-27; vector shares the identical domain-deployment gap.</div>
-<div class="gl"><b>seeder-indonesiademo</b> — Demo-data seeder spec (self-grounding, idempotent) intended to run one-at-a-time against indonesiademo to populate demo data; it is not a regression test for testing and is expected to no-op/fail there. Excluded from testing pass-rate.</div></div>
+<div class="gl"><b>seeder-indonesiademo</b> — Demo-data seeder spec (self-grounding, idempotent) intended to run one-at-a-time against indonesiademo to populate demo data; it is not a regression test for testing and is expected to no-op/fail there. Excluded from testing pass-rate.</div>
+<div class="gl"><b>OGC-1151</b> — Sidebar/nav menu is not role-filtered — bench roles (Reception/Results/Validation) see the full menu including Admin. Server-side enforcement holds, so this is UI gating only. rbac-matrix INV-04 fails for all 3 roles by design and is the tracking signal; it should go green when the fix lands.</div></div>
 <div class="work"><b>Workflow</b> — refresh after each build/run:<br>
 1) <code>BASE=… npx playwright test --config=all-tc.config.ts --reporter=json &gt; runlogs/last.json</code> (repeat with the docs project for docs-capture specs)<br>
 2) <code>node scripts/refresh-freshness.mjs runlogs/last.json &lt;build-hash&gt;</code> — discovers new specs, updates last results, regenerates this board.<br>

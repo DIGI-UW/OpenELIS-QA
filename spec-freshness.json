@@ -2,7 +2,7 @@
   "_comment": "Source-of-truth freshness manifest for the OpenELIS Playwright suite. `status` per spec is auto-refreshed from a Playwright JSON run by scripts/refresh-freshness.mjs; `drift`/`notes` are curated by hand. status: fresh (green, verified passing on lastBuild) | partial (green core, a known non-blocking drift/flake) | drift (fails on real UI/route drift — needs a spec update) | unknown (not run against lastBuild yet).",
   "target": "testing.openelis-global.org",
   "currentBuild": "index-u12wW6QI.js",
-  "lastUpdated": "2026-07-27",
+  "lastUpdated": "2026-07-31",
   "driftCauses": {
     "OGC-1132": "Unified /order/enter drops the sample's tests (Hibernate type-mismatch) — order via legacy /SamplePatientEntry (placeLegacySerumOrder).",
     "OGC-1142-editor": "Test Catalog editor rework changed the UI new-test create form + add-component + ranges dialog — configure via REST (createTestViaRest / setComponentViaRest / setNormalCriticalRangeViaRest).",
@@ -10,7 +10,8 @@
     "unified-results": "OGC-1020 R1 unified /Results worklist is flag-gated (RESULTS_ENTRY_UNIFIED_ROUTE).",
     "load-flake": "Order→result E2E specs fail DETERMINISTICALLY under full-suite load (net::ERR_TOO_MANY_RETRIES / browser crashes / 500s persist across retries) but PASS in isolation. Not spec drift and not fixed by retries — run them alone via e2e.config.ts (isolated tier). all-tc.config now excludes them.",
     "env-vector-target-gap": "The Environmental/Vector domain order UI is NOT deployed on testing.openelis-global.org (v3.2.1.11): /order/environmental/enter and /order/vector/enter render only the nav shell (no wizard, no step chrome), and the legacy /SamplePatientEntry sample-type list carries only clinical/pathology types (Serum, Whole Blood, Sputum, Histopathology, …) — NO Water or vector types. So an env/vector order cannot be placed on testing by any path. These specs are correct and green on indonesiademo (which has the domain). Run env/vector specs against BASE=https://indonesiademo.openelis-global.org, not testing. Directly probed env 2026-07-27; vector shares the identical domain-deployment gap.",
-    "seeder-indonesiademo": "Demo-data seeder spec (self-grounding, idempotent) intended to run one-at-a-time against indonesiademo to populate demo data; it is not a regression test for testing and is expected to no-op/fail there. Excluded from testing pass-rate."
+    "seeder-indonesiademo": "Demo-data seeder spec (self-grounding, idempotent) intended to run one-at-a-time against indonesiademo to populate demo data; it is not a regression test for testing and is expected to no-op/fail there. Excluded from testing pass-rate.",
+    "OGC-1151": "Sidebar/nav menu is not role-filtered — bench roles (Reception/Results/Validation) see the full menu including Admin. Server-side enforcement holds, so this is UI gating only. rbac-matrix INV-04 fails for all 3 roles by design and is the tracking signal; it should go green when the fix lands."
   },
   "specs": [
     {
@@ -2068,6 +2069,578 @@
       "drift": [],
       "notes": "Discovered — not yet assessed against the current build.",
       "depth": "smoke"
+    },
+    {
+      "file": "gap-suites-AA-AD.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "gap-suites-AE-AG.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "gap-suites-AH-AP.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "gap-suites-AQ-AX.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "openelis-e2e.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "qc-control-lot.spec.ts",
+      "area": "qc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "qc-dashboard.spec.ts",
+      "area": "qc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "qc-rule-config.spec.ts",
+      "area": "qc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/accessibility.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/admin-config.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/alerts-notifications.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/aliquot.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/api-crud-survey.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/batch-order-entry.spec.ts",
+      "area": "order",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/calculated-values-ui.spec.ts",
+      "area": "calc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/calculated-values.spec.ts",
+      "area": "calc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/dashboard.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/data-export.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/deep-endpoint-testing.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/electronic-orders.spec.ts",
+      "area": "order",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/electronic-signature.spec.ts",
+      "area": "signature",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/eqa-workflow.spec.ts",
+      "area": "eqa",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/fhir-integration.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/generic-sample.spec.ts",
+      "area": "sample",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/i18n.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/inventory.spec.ts",
+      "area": "inventory",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/loinc-dictionary.spec.ts",
+      "area": "dictionary",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/non-conforming.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/order-creation-e2e.spec.ts",
+      "area": "order",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/order-creation.spec.ts",
+      "area": "order",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/order-entry.spec.ts",
+      "area": "order",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/order-search.spec.ts",
+      "area": "order",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/pathology.spec.ts",
+      "area": "pathology",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/patient-history.spec.ts",
+      "area": "patient",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/patient-management.spec.ts",
+      "area": "patient",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/patient-merge.spec.ts",
+      "area": "patient",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/performance.spec.ts",
+      "area": "nce",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/personas/persona-pa-receptionist.spec.ts",
+      "area": "misc",
+      "kind": "persona",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Runs scoped as qa_recept via personas-roles.config.ts. Step 2 fails identically as admin (patient-management POST 404) — a spec bug, not a permission finding; needs a live capture of the real patient-create request before the assertion can be trusted.",
+      "sessions": {
+        "role": {
+          "result": "fail",
+          "build": "index-u12wW6QI.js",
+          "run": "2026-07-31"
+        }
+      }
+    },
+    {
+      "file": "tests/personas/persona-pb-bench-tech.spec.ts",
+      "area": "misc",
+      "kind": "persona",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Runs scoped as qa_labtech. Read path fixed (LogbookResults returns testResult/resultValue, not logbookList/value). PARTIAL is correct on testing: the Hematology result-ENTRY queue is genuinely empty (the items awaiting validation are already entered). Seed Hematology orders to exercise it.",
+      "sessions": {
+        "role": {
+          "result": "pass",
+          "build": "index-u12wW6QI.js",
+          "run": "2026-07-31"
+        }
+      }
+    },
+    {
+      "file": "tests/personas/persona-pc-validating-biologist.spec.ts",
+      "area": "misc",
+      "kind": "persona",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Runs scoped as qa_validator. Queue endpoint corrected to AccessionValidation?unitType=<labUnitId>&doRange=true (ResultValidation does not exist); Step 1 now passes with 2 items. Steps 2-3 return 400 — POST body shape still uncaptured, deliberately not guessed.",
+      "sessions": {
+        "role": {
+          "result": "fail",
+          "build": "index-u12wW6QI.js",
+          "run": "2026-07-31"
+        }
+      }
+    },
+    {
+      "file": "tests/personas/persona-pd-lab-manager.spec.ts",
+      "area": "misc",
+      "kind": "persona",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/personas/persona-pe-qa-officer.spec.ts",
+      "area": "misc",
+      "kind": "persona",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/personas/persona-pf-lab-administrator.spec.ts",
+      "area": "misc",
+      "kind": "persona",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/print-barcode.spec.ts",
+      "area": "barcode",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/rbac/rbac-matrix.spec.ts",
+      "area": "rbac",
+      "kind": "permission",
+      "status": "drift",
+      "lastBuild": "index-u12wW6QI.js",
+      "drift": [
+        "OGC-1151"
+      ],
+      "notes": "Role-scoped permission matrix (Reception/Results/Validation). Native lane is ROLE, not admin. 43/46 pass; the 3 failures are all INV-04 (OGC-1151) and are the intended tracking signal, not spec rot. rbac-baseline.json (16 entries) arms drift detection on the baseline-tier probes; 5 menu-visibility entries are deliberately unpinned until OGC-1151 is fixed. See rbac-README.md.",
+      "sessions": {
+        "role": {
+          "result": "fail",
+          "build": "index-u12wW6QI.js",
+          "run": "2026-07-31"
+        }
+      },
+      "lastResult": "fail",
+      "lastRun": "2026-07-31"
+    },
+    {
+      "file": "tests/referral-workflow.spec.ts",
+      "area": "referral",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/reflex-testing-ui.spec.ts",
+      "area": "reflex",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/reflex-testing.spec.ts",
+      "area": "reflex",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/reports.spec.ts",
+      "area": "report",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/results-by-range.spec.ts",
+      "area": "catalog-results",
+      "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/results-by-status.spec.ts",
+      "area": "catalog-results",
+      "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/results-by-unit.spec.ts",
+      "area": "catalog-results",
+      "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/results-entry.spec.ts",
+      "area": "catalog-results",
+      "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/sample-shipment.spec.ts",
+      "area": "sample",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/session-security.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/storage-crud.spec.ts",
+      "area": "storage",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/system-misc.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/validation.spec.ts",
+      "area": "validation",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/workplan-deep.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
+    },
+    {
+      "file": "tests/workplan.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build."
     }
   ]
 }
