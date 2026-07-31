@@ -110,6 +110,13 @@ export interface UnitScopedUser {
   sectionNames: string[];
   /** name -> id for sections the user must NOT see. U-05 checks each against admin. */
   outOfScopeSections: Record<string, string>;
+  /**
+   * Which scoping axis this user exercises:
+   *   'validation' → the validation queue (unit-scope.spec.ts)
+   *   'catalogue'  → the ORDER-ENTRY tests/panels catalogue (order-catalogue-scope.spec.ts)
+   * Defaults to ['validation'] when omitted.
+   */
+  axes?: Array<'validation' | 'catalogue'>;
   storageState: string;
 }
 
@@ -125,6 +132,29 @@ export const UNIT_SCOPED_USERS: UnitScopedUser[] = [
     sectionNames: ['Hematology'],
     outOfScopeSections: { Biochemistry: '56', Immunology: '59', 'Molecular Biology': '136' },
     storageState: '.auth/role-heme.json',
+    axes: ['validation'],
+  },
+  {
+    /**
+     * Reception granted on ONE section. Requirement (product owner 2026-07-31):
+     * "Reception can be assigned to a particular test section as well, they
+     * should only see the tests and panels for their own test section."
+     *
+     * Measured on testing v3.2.1.11: this user sees 1 sample type (Whole Blood),
+     * 18 tests and 2 panels, where admin sees 12 / 237 / 5. The filtering lives
+     * in /rest/user-sample-types + /rest/sample-type-tests.
+     */
+    key: 'recept-heme',
+    displayName: 'Receptionist, Hematology only',
+    login: process.env.OE_RECEPT_HEME_USER ?? 'qa_recept_heme',
+    password: process.env.OE_RECEPT_HEME_PASS ?? 'QArecepth1!',
+    role: 'Reception',
+    roleNotHeld: 'Validation',
+    sectionIds: ['36'],
+    sectionNames: ['Hematology'],
+    outOfScopeSections: { Biochemistry: '56', Immunology: '59', 'Molecular Biology': '136' },
+    storageState: '.auth/role-recept-heme.json',
+    axes: ['catalogue'],
   },
 ];
 

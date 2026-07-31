@@ -55,7 +55,11 @@ async function adminQueue(browser: Browser, sectionId: string): Promise<string[]
   }
 }
 
-for (const user of UNIT_SCOPED_USERS) {
+// Only users exercising the validation-queue axis; the order-catalogue axis
+// lives in order-catalogue-scope.spec.ts.
+const VALIDATION_USERS = UNIT_SCOPED_USERS.filter(u => (u.axes ?? ['validation']).includes('validation'));
+
+for (const user of VALIDATION_USERS) {
   test.describe(`Unit scope — ${user.displayName} (${user.login})`, () => {
     let identityOk = false;
     let session: SessionPayload | null = null;

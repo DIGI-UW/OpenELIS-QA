@@ -1640,3 +1640,42 @@ export function patientSearchUrl(params: Partial<Record<(typeof PATIENT_SEARCH_P
  */
 export const TEST_LIST_IS_ROLE_SCOPED = true;
 export const ALL_TESTS_UNSCOPED = '/api/OpenELIS-Global/rest/displayList/ALL_TESTS';
+
+/**
+ * ORDER-ENTRY CATALOGUE — and which endpoint is section-scoped.
+ *
+ * The Add Order sample/test picker (addOrder/SampleType.jsx) loads:
+ *
+ *     GET /rest/user-sample-types                  → the Sample Type dropdown
+ *     GET /rest/sample-type-tests?sampleType=<id>   → {tests[], panels[]} for that type
+ *
+ * BOTH are scoped to the caller's test sections. Measured 2026-07-31 on testing
+ * v3.2.1.11, same instant:
+ *
+ *     admin                    12 sample types · 237 tests · 5 panels
+ *     Reception @ AllLabUnits  12 sample types · 237 tests · 5 panels
+ *     Reception @ Hematology    1 sample type  ·  18 tests · 2 panels
+ *
+ * So the requirement "a section-assigned receptionist sees only their own
+ * section's tests and panels" is implemented HERE — regression-tested by
+ * tests/rbac/order-catalogue-scope.spec.ts.
+ *
+ * Do NOT use /rest/test-list for order entry: it is scoped to *result-entry*
+ * sections and returns an empty array for Reception
+ * (§TEST_LIST_IS_ROLE_SCOPED). And do not use displayList/ALL_TESTS either —
+ * it is UNSCOPED (187 tests for every role), so it would show a Hematology
+ * receptionist the whole catalogue.
+ *
+ * Bonus: sample-type-tests solves test↔sample-type pairing for free, because it
+ * returns the tests valid FOR a given sample type. Picking a test from an
+ * unscoped flat list and guessing sampleTypeId '1' is what made persona PA's
+ * order POST 400 (it paired an Immunohistochemistry test with sample type 1).
+ */
+export const USER_SAMPLE_TYPES = '/api/OpenELIS-Global/rest/user-sample-types';
+export const SAMPLE_TYPE_TESTS = (sampleTypeId: string | number) =>
+  `/api/OpenELIS-Global/rest/sample-type-tests?sampleType=${sampleTypeId}`;
+
+export interface SampleTypeTestsResponse {
+  tests?: Array<{ id?: string; name?: string; value?: string }>;
+  panels?: Array<{ id?: string; name?: string; value?: string }>;
+}

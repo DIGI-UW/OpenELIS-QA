@@ -6,6 +6,7 @@ import { defineConfig, devices } from '@playwright/test';
 //   npx playwright test -c rbac.config.ts --project=setup-roles # (re)provision + re-auth role users only
 //   npx playwright test -c rbac.config.ts --project=rbac-matrix # matrix only (role states already fresh)
 //   npx playwright test -c rbac.config.ts --project=unit-scope  # role × lab-unit axis only
+//   npx playwright test -c rbac.config.ts --project=catalogue-scope # Reception × section catalogue
 //
 // BASE / BASE_URL both honored (playwright.config.ts uses BASE, tests/chains/_common.ts uses BASE_URL).
 const BASE = process.env.BASE ?? process.env.BASE_URL ?? 'https://testing.openelis-global.org';
@@ -38,6 +39,15 @@ export default defineConfig({
       name: 'unit-scope',
       testDir: './tests/rbac',
       testMatch: /unit-scope\.spec\.ts/,
+      dependencies: ['setup-roles'],
+    },
+
+    // 3c) Reception × section: the ORDER-ENTRY catalogue (tests + panels) must
+    //     show only the user's own test section.
+    {
+      name: 'catalogue-scope',
+      testDir: './tests/rbac',
+      testMatch: /order-catalogue-scope\.spec\.ts/,
       dependencies: ['setup-roles'],
     },
 
