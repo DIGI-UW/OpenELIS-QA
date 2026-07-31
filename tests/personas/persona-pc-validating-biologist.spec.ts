@@ -19,6 +19,11 @@
 
 import { test, expect } from '@playwright/test';
 import { BASE, apiCall, markStep } from '../chains/_common';
+import {
+  ACCESSION_VALIDATION,
+  accessionValidationQuery,
+  markValidationRows,
+} from '../../helpers/apiShapes';
 
 const PERSONA = 'PC';
 const HEMATOLOGY_SECTION_ID = '36';
@@ -34,7 +39,7 @@ test.describe.serial('Persona PC — Validating Biologist', () => {
     // for the Validation role — verified by control run 2026-07-31). The
     // validation queue is AccessionValidation, filtered by `unitType`.
     const r = await apiCall<{ resultList?: Array<{ accessionNumber?: string; testId?: string; analysisId?: string }> }>(
-      page, `/api/OpenELIS-Global/rest/AccessionValidation?accessionNumber=&unitType=${HEMATOLOGY_SECTION_ID}&date=&doRange=true`
+      page, accessionValidationQuery({ sectionId: HEMATOLOGY_SECTION_ID })
     );
     if (!r.ok) {
       markStep(PERSONA, 1, 'FAIL', `AccessionValidation HTTP ${r.status}`);
@@ -59,44 +64,62 @@ test.describe.serial('Persona PC — Validating Biologist', () => {
   test('Step 2 — Reject first result for retest with note (PERSIST)', async ({ page }) => {
     if (queueItems.length === 0) test.skip();
     await page.goto(BASE);
-    const item = queueItems[0];
-    const r = await apiCall<unknown>(page, '/api/OpenELIS-Global/rest/AccessionValidation', {
-      method: 'POST',
-      body: { paging: { totalPages: 1 }, validationList: [
-        {
-          accessionNumber: item.accessionNumber,
-          testId: item.testId,
-          accepted: false,
-          rejected: true,
-          retest: true,
-          note: 'PC persona: re-run for QC variance',
-        },
-      ] },
-    });
+    await page.waitForLoadState('networkidle');
+
+    // §v6.23: this is a STRUTS FORM ROUND-TRIP, not a REST write. Validation.jsx
+    // POSTs the ENTIRE object returned by the GET; per-row flags are
+    // resultList[i].isAccepted / .isRejected / .note. The previous
+    // {paging, validationList:[...]} body was invented and 400s.
+    const g = await apiCall<Record<string, unknown>>(page, accessionValidationQuery({ sectionId: HEMATOLOGY_SECTION_ID }));
+    const form = (g.ok && g.body && typeof g.body === 'object') ? g.body as Record<string, unknown> : null;
+    if (!form) {
+      markStep(PERSONA, 2, 'BLOCKED', `Could not re-read the validation form (HTTP ${g.status})`);
+      return;
+    }
+    markValidationRows(form, { reject: [0], note: 'PC persona: re-run for QC variance' });
+
+    const r = await apiCall<unknown>(page, ACCESSION_VALIDATION, { method: 'POST', body: form });
     if (!r.ok) {
-      markStep(PERSONA, 2, 'BLOCKED', `Reject-for-retest HTTP ${r.status}`);
+      markStep(PERSONA, 2, 'BLOCKED',
+        `Reject-for-retest HTTP ${r.status}`,
+        `Body: ${(typeof r.body === 'string' ? r.body : JSON.stringify(r.body)).slice(0, 200)}`);
       test.info().annotations.push({ type: 'blocked', description: 'reject path unavailable' });
       return;
     }
-    markStep(PERSONA, 2, 'PASS', `${item.accessionNumber} marked for retest`);
+    markStep(PERSONA, 2, 'PASS', `${queueItems[0].accessionNumber} marked for retest`);
   });
 
   test('Step 3 — Validate remaining queue items (PERSIST)', async ({ page }) => {
     if (queueItems.length <= 1) test.skip();
     await page.goto(BASE);
-    const toValidate = queueItems.slice(1);
-    const r = await apiCall<unknown>(page, '/api/OpenELIS-Global/rest/AccessionValidation', {
-      method: 'POST',
-      body: { paging: { totalPages: 1 }, validationList: toValidate.map(item => ({
-        accessionNumber: item.accessionNumber, testId: item.testId, accepted: true, rejected: false,
-      })) },
-    });
+    await page.waitForLoadState('networkidle');
+
+    // Re-read the form (Step 2 changed it), then accept every row except the
+    // one just rejected. Rows are addressed by array index — the API response
+    // carries no usable row id (§v6.23).
+    const g = await apiCall<Record<string, unknown>>(page, accessionValidationQuery({ sectionId: HEMATOLOGY_SECTION_ID }));
+    const form = (g.ok && g.body && typeof g.body === 'object') ? g.body as Record<string, unknown> : null;
+    if (!form) {
+      markStep(PERSONA, 3, 'FAIL', `Could not re-read the validation form (HTTP ${g.status})`);
+      expect(form, 'validation form must be readable').toBeTruthy(); return;
+    }
+    const rows = (form.resultList as Array<Record<string, unknown>>) ?? [];
+    const accept = rows.map((_, i) => i).filter(i => i !== 0);
+    if (accept.length === 0) {
+      markStep(PERSONA, 3, 'PARTIAL', 'Only one row in the queue; nothing left to validate after the retest');
+      test.skip(); return;
+    }
+    markValidationRows(form, { accept });
+
+    const r = await apiCall<unknown>(page, ACCESSION_VALIDATION, { method: 'POST', body: form });
     if (!r.ok) {
-      markStep(PERSONA, 3, 'FAIL', `Bulk validate HTTP ${r.status}`);
+      markStep(PERSONA, 3, 'FAIL',
+        `Bulk validate HTTP ${r.status}`,
+        `Body: ${(typeof r.body === 'string' ? r.body : JSON.stringify(r.body)).slice(0, 200)}`);
       expect(r.ok).toBeTruthy(); return;
     }
-    validatedAccession = toValidate[0].accessionNumber;
-    markStep(PERSONA, 3, 'PASS', `${toValidate.length} results validated; first=${validatedAccession}`);
+    validatedAccession = queueItems[1]?.accessionNumber ?? queueItems[0].accessionNumber;
+    markStep(PERSONA, 3, 'PASS', `${accept.length} results validated; first=${validatedAccession}`);
   });
 
   test('Step 4 — Confirm validated case appears on Patient Results (CROSS-LINK)', async ({ page }) => {

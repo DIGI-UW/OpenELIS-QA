@@ -226,7 +226,13 @@ export const PROBES: Probe[] = [
   {
     id: 'BASE-02', kind: 'rest', tier: 'baseline',
     target: `${API}/test-list`,
-    description: 'Test list (referral/aliquot filter source) — read-only reference data, likely open',
+    description:
+      'Test list (referral/aliquot filter source). CAVEAT: this endpoint is ROLE-SCOPED and ' +
+      'returns HTTP 200 with an EMPTY array for Reception (admin/Results see 187 tests, ' +
+      'Reception sees 0 — measured 2026-07-31). classifyRest grades any 2xx as `allow`, so ' +
+      'this row records "allow" for a caller who can read nothing useful. Accurate about ' +
+      'access, misleading about usefulness — see apiShapes §TEST_LIST_IS_ROLE_SCOPED. If you ' +
+      'need to assert usefulness, add a content-aware probe rather than trusting this verdict.',
     expect: { receptionist: 'baseline', labtech: 'baseline', validator: 'baseline' },
   },
   {
