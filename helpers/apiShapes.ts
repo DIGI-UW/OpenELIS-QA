@@ -1209,3 +1209,199 @@ export interface NceFormState {
 // The Y-RECON test should always pass on a healthy instance; a failure
 // indicates either data divergence or a tile-to-endpoint mapping bug.
 
+
+// =============================================================================
+// v6.22 — Session, authorization signals, and user creation
+// Captured live on testing.openelis-global.org v3.2.1.11 (2026-07-30) during the
+// role-scoped RBAC suite build-out (rbac.config.ts). Every item here replaced an
+// inferred value that was wrong — §6.5b in action.
+// =============================================================================
+
+/**
+ * Current-session endpoint. NOTE THE PATH: it is NOT under `/rest`.
+ * `/rest/session` → 404 NoHandlerFoundException. The frontend fetches
+ * `config.serverBaseUrl + "/session"` (see App.jsx getUserSessionDetails).
+ *
+ * This is the canonical identity check for any multi-user / role-scoped spec:
+ * it is the ONLY cheap way to prove which user a storage state actually belongs
+ * to. A "scoped" run on a stale .auth file silently probes as admin and
+ * false-PASSes every deny assertion.
+ */
+export const SESSION_ENDPOINT = '/api/OpenELIS-Global/session';
+
+/** Live-verified response shape of GET /api/OpenELIS-Global/session. */
+export interface SessionResponse {
+  authenticated: boolean;
+  loginMethod: 'FORM' | 'SAML' | 'OAUTH' | string;
+  sessionId: string;
+  /** SystemUser PK as a string, e.g. "113". */
+  userId: string;
+  loginName: string;
+  firstName: string;
+  lastName: string;
+  /** GLOBAL role names, e.g. ["Global Administrator"]. Bench roles appear below. */
+  roles: string[];
+  /**
+   * Lab-unit roles keyed by test-section id, or the literal "AllLabUnits" when
+   * the role was granted across all units.
+   * e.g. {"AllLabUnits":["Reception"]} or {"36":["Results"]}.
+   */
+  userLabRolesMap: Record<string, string[]>;
+  /** Same token as localStorage['CSRF']. */
+  csrf: string;
+}
+
+/**
+ * AUTHORIZATION DENIAL SIGNALS — do not assume 403.
+ *
+ * 1. REST: an unauthorized call returns **HTTP 401**, not 403, even with a
+ *    perfectly live session. Verified: a Reception-only user calling
+ *    /rest/UnifiedSystemUser gets 401 while GET /session still returns
+ *    authenticated:true for that same context.
+ *
+ *    Consequence for Chain H (§11, Step 3): its "401 = ambiguous session issue"
+ *    branch is wrong on this build. Disambiguate instead — re-check /session; if
+ *    still authenticated as the expected user, a 401 IS the deny verdict.
+ *
+ * 2. SPA admin routes: render an in-page "Access Denied" (HTTP 200).
+ *
+ * 3. Legacy JSP surfaces: **redirect to `Home?access=denied` with HTTP 200**.
+ *    Classify by the URL query param, not the status code. Note the legacy JSP
+ *    layer runs a separate auth system (§6.4), so its verdict can differ from
+ *    the SPA's for the same nominal permission.
+ */
+export const DENY_SIGNALS = {
+  restStatus: 401 as const,
+  spaBodyPattern: /not authorized|access denied|forbidden|insufficient/i,
+  jspRedirectPattern: /access[=_-]denied/i,
+} as const;
+
+/**
+ * USER CREATION — corrects the long-standing "BUG-3: UserCreate POST 500".
+ *
+ * Two SEPARATE things were conflated under "BUG-3", and this block only
+ * settles the first:
+ *
+ * (1) PAYLOAD SHAPE — settled. `POST /rest/UnifiedSystemUser` accepts the exact
+ *     `UnifiedSystemUserForm` shape below; verified 2026-07-30 00:39Z on testing
+ *     v3.2.1.11 by creating qa_probe_shape, qa_recept, qa_labtech and
+ *     qa_validator, all of which then authenticated and ran the full RBAC matrix.
+ *     The old payload never could have worked (see the 400 note below).
+ *
+ * (2) A SEPARATE SERVER-SIDE 500 — open. From ~01:29Z the same day, the same
+ *     instance began returning HTTP 500 {"error":"Internal Server Error"} to
+ *     EVERY create, including the byte-identical body that had just succeeded.
+ *     Ruled out by probe (12 payload variants): login-name length, underscores
+ *     in names, AllLabUnits vs section-keyed role maps, no-roles-at-all,
+ *     global-role-only, and initials collisions (createSystemUser derives
+ *     initials from firstName[0]+lastName[0] — novel initials 500 too).
+ *     Instance data and version were unchanged (dashboard 139/6, v3.2.1.11) and
+ *     admin plus all three seeded users still authenticate, so it is not a reset.
+ *     Cause needs server logs. PRACTICAL RULE: do not read a 500 here as a
+ *     payload defect, and do not build a spec that depends on creating users —
+ *     reuse pre-seeded role users (Chain H Step 1 does this now).
+ *
+ * Two distinct historic failures, two distinct causes:
+ *  - **400 HttpMessageNotReadableException** — the old payload
+ *    ({loginName, password, firstName, lastName, systemRoles, active}) does not
+ *    match the form at all, so Jackson cannot deserialize it. It never could.
+ *  - **500 Internal Server Error** — sending `loginUserId: '0'` /
+ *    `systemUserId: '0'`. The controller decides new-vs-existing with
+ *    `isBlankOrNull(loginUserId)`, so '0' is treated as an EXISTING id and
+ *    `loginService.get(0)` NPEs. **Blank strings mean "new".**
+ *
+ * Also note: BOTH success and validation-failure return **HTTP 200**.
+ * Discriminate on the response body:
+ *   success → {forward: "redirect:/UnifiedSystemUser"}
+ *   failure → {forward: "unifiedSystemUserDefinition"}
+ *
+ * Role ids are per-instance — resolve them from the GET preform
+ * (`globalRoles` / `labUnitRoles`), never hard-code. Bench roles are LAB-UNIT
+ * roles and go in `selectedTestSectionLabUnits`, NOT `selectedRoles`.
+ * Observed on testing: labUnitRoles Reception=4, Results=5, Reports=7,
+ * Validation=10; globalRoles Global Administrator=1, User Account Admin=2.
+ */
+export interface UnifiedSystemUserCreateBody {
+  /** MUST be '' for a new user. '0' → server 500. */
+  loginUserId: '';
+  /** MUST be '' for a new user. */
+  systemUserId: '';
+  userLoginName: string;
+  userPassword: string;
+  confirmPassword: string;
+  userFirstName: string;
+  userLastName: string;
+  /** @NotBlank @ValidDate(FUTURE), dd/MM/yyyy. */
+  expirationDate: string;
+  accountLocked: 'Y' | 'N';
+  accountDisabled: 'Y' | 'N';
+  accountActive: 'Y' | 'N';
+  /** Numeric string, must parse to 1..600. */
+  timeout: string;
+  /** GLOBAL role ids only. */
+  selectedRoles: string[];
+  testSectionId: string;
+  selectedLabUnitRoles: string[];
+  /** Lab-unit roles: {testSectionId | 'AllLabUnits': [roleId]}. */
+  selectedTestSectionLabUnits: Record<string, string[]>;
+  systemUserIdToCopy: string;
+  allowCopyUserRoles: 'Y' | 'N';
+}
+
+/** Build a valid create body. Pass a role id resolved from the GET preform. */
+export function buildUserCreateBody(opts: {
+  loginName: string;
+  password: string;
+  firstName?: string;
+  lastName?: string;
+  /** Lab-unit role id (e.g. '4' Reception) — the common case for bench users. */
+  labUnitRoleId?: string;
+  /** Test-section id to scope to; omit for all units. */
+  testSectionId?: string;
+  /** Global role ids (e.g. ['1'] Global Administrator). */
+  globalRoleIds?: string[];
+  /** dd/MM/yyyy in the future; defaults to +5 years. */
+  expirationDate?: string;
+}): UnifiedSystemUserCreateBody {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() + 5);
+  const expiry =
+    opts.expirationDate ??
+    `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  return {
+    loginUserId: '',
+    systemUserId: '',
+    userLoginName: opts.loginName,
+    userPassword: opts.password,
+    confirmPassword: opts.password,
+    userFirstName: opts.firstName ?? 'QA',
+    userLastName: opts.lastName ?? 'Auto',
+    expirationDate: expiry,
+    accountLocked: 'N',
+    accountDisabled: 'N',
+    accountActive: 'Y',
+    timeout: '480',
+    selectedRoles: opts.globalRoleIds ?? [],
+    testSectionId: '',
+    selectedLabUnitRoles: [],
+    selectedTestSectionLabUnits: opts.labUnitRoleId
+      ? { [opts.testSectionId ?? 'AllLabUnits']: [opts.labUnitRoleId] }
+      : {},
+    systemUserIdToCopy: '',
+    allowCopyUserRoles: 'N',
+  };
+}
+
+/** True when a UnifiedSystemUser POST actually persisted (both cases are 200). */
+export function userCreateSucceeded(body: unknown): boolean {
+  const f = (body && typeof body === 'object' ? (body as { forward?: string }).forward : '') ?? '';
+  return /redirect:\/UnifiedSystemUser/.test(f);
+}
+
+/**
+ * PLAYWRIGHT GOTCHA (not an OpenELIS fact, but it cost a debugging cycle):
+ * `locator.isVisible({ timeout })` does NOT wait — it returns the current state
+ * immediately, so it races the SPA render and reports a false negative. For
+ * "did login succeed?", poll SESSION_ENDPOINT instead of probing the DOM.
+ */
+export const ISVISIBLE_DOES_NOT_WAIT = true;

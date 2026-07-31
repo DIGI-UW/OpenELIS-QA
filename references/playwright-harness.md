@@ -191,7 +191,11 @@ await page.evaluate(() => {
 
 ### 10.5 — Test Data
 - Use existing data (patient Abby Sebby ID 0123456, accession 26CPHL00008, Test Analyzer Alpha)
-- Avoid creating new tests (BUG-1), new users (BUG-3), or clicking Carbon checkboxes (BUG-2 EXT)
+- Avoid creating new tests (BUG-1) or clicking Carbon checkboxes (BUG-2 EXT)
+- User creation is NOT blocked: "BUG-3 UserCreate 500" was a client payload defect, corrected
+  2026-07-30. Use `buildUserCreateBody()` / `userCreateSucceeded()` from `helpers/apiShapes.ts`
+  (§v6.22). Blank `loginUserId`/`systemUserId` mean "new" — sending `'0'` is what produced the 500 —
+  and both success and validation-failure return HTTP 200, so discriminate on the `forward` body.
 - Use `QA_AUTO_` prefix for any data you must create
 
 ### 10.6 — Async Results in javascript_tool

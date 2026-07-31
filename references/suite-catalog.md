@@ -22,7 +22,7 @@
 | **A — Test Catalog** | TC-01–08 | Create/edit/deactivate/reactivate tests, panels, ranges | BUG-1 (TestAdd POST 500), BUG-7/7a, BUG-8, BUG-12, BUG-13 |
 | **B — Order Workflow** | TC-09–11 | Add sample, place order, enter results, H/L flags | Depends on Suite A |
 | **C — Edit Order** | TC-EO-01–04 | Modify placed orders, edit results | BUG-4 (new accession on modify) |
-| **D — RBAC** | TC-RBAC-01–10 | Role-based access: receptionist + lab tech flows | BUG-3 (user creation POST 500) |
+| **D — RBAC** | TC-RBAC-01–10 | Role-based access: receptionist + lab tech flows | Superseded for automation by the role-scoped matrix (`rbac.config.ts`, `tests/rbac/`) — see `rbac-README.md`. BUG-3 was a payload defect, not a server block (apiShapes §v6.22). |
 | **E — Validation** | TC-VAL-01–08 | Approve/reject/refer results, notes, flag overrides | URL: `/ResultValidation` |
 | **F — Results By Unit** | TC-BU-01–05 | Lab section worklist, filter, enter results | URL discovery needed |
 | **G — Non-Conforming** | TC-NC-01–05 | Rejected samples, NC flag, validation of NC orders | — |
