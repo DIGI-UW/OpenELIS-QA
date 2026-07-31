@@ -29,6 +29,7 @@ import {
   ROLE_USERS,
   PROBES,
   ProbeResult,
+  Verdict,
   assertIdentity,
   classifyRest,
   classifyRoute,
@@ -84,7 +85,11 @@ for (const role of ROLE_USERS) {
           `false-PASS deny-tests. Re-run setup-roles (delete ${role.storageState} first).`
         );
 
-        let verdict; let detail;
+        // Annotated: without these, assigning the literal 'deny' in the 401
+        // disambiguation below widens `verdict` to string and it no longer
+        // satisfies ProbeResult.verdict.
+        let verdict: Verdict;
+        let detail: string;
         if (probe.kind === 'rest') {
           const r = await apiCall(page, probe.target);
           ({ verdict, detail } = classifyRest(r.status, r.body));

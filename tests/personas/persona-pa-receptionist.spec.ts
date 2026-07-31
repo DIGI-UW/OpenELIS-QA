@@ -35,7 +35,9 @@ import {
   buildPatientCreateBody,
   patientCreateSucceeded,
   qaPatientNationalId,
-  ALL_TESTS_UNSCOPED,
+  USER_SAMPLE_TYPES,
+  SAMPLE_TYPE_TESTS,
+  SampleTypeTestsResponse,
 } from '../../helpers/apiShapes';
 
 const PERSONA = 'PA';
@@ -124,24 +126,49 @@ test.describe.serial('Persona PA — Receptionist', () => {
     markStep(PERSONA, 2, 'PASS', `Patient ${NATIONAL_ID} created with patientPK=${patientPK}`);
   });
 
-  test('Step 3 — Discover test catalog for order (RENDER)', async ({ page }) => {
+  test('Step 3 — Discover orderable tests from the order-entry catalogue (RENDER)', async ({ page }) => {
     await page.goto(BASE);
-    // FLAT ARRAY of {id, value} — NOT {testList: [...]}. apiShapes records this as
-    // spec bug #4 for /rest/test-list; the same wrong unwrap was still here, which
-    // made Step 3 report an empty catalogue while the endpoint returned 187 entries.
-    const t = await apiCall<Array<{ id?: string; value?: string }>>(
-      page, ALL_TESTS_UNSCOPED
-    );
-    const tests = Array.isArray(t.body) ? (t.body as Array<{ id?: string; value?: string }>) : [];
-    if (tests.length === 0) {
-      markStep(PERSONA, 3, 'FAIL', 'Empty test catalog',
-        'displayList/ALL_TESTS returned nothing. NOTE /rest/test-list is role-scoped and is\n         empty for Reception (apiShapes §v6.23) — if you switched this back to test-list, that\n         is why.'); expect(tests.length).toBeGreaterThan(0); return;
+    await page.waitForLoadState('networkidle');
+
+    // Use what the Add Order UI uses (addOrder/SampleType.jsx): the SECTION-SCOPED
+    // pair user-sample-types -> sample-type-tests. This matters twice over:
+    //   * scope — displayList/ALL_TESTS is UNSCOPED (187 tests for every role), so
+    //     a section-assigned receptionist would be shown the whole catalogue;
+    //     /rest/test-list is scoped to *result-entry* sections and is empty for
+    //     Reception. Neither reflects what this role should order from.
+    //   * pairing — sample-type-tests returns the tests valid FOR a sample type,
+    //     so test↔sampleType is correct by construction. Guessing sampleTypeId '1'
+    //     against a flat list is what made Step 4 return 400.
+    const st = await apiCall<Array<{ id?: string; value?: string }>>(page, USER_SAMPLE_TYPES);
+    const sampleTypes = (Array.isArray(st.body) ? st.body as Array<{ id?: string; value?: string }> : [])
+      .filter(x => x.id);
+    if (sampleTypes.length === 0) {
+      markStep(PERSONA, 3, 'FAIL',
+        'No sample types offered to this receptionist',
+        'user-sample-types is section-scoped — an empty list means this desk cannot order anything. ' +
+        'Check the user\'s test-section assignment (apiShapes §USER_SAMPLE_TYPES).');
+      expect(sampleTypes.length).toBeGreaterThan(0); return;
     }
-    testId = tests[0].id!;
-    // ALL_TESTS carries no sample-type mapping (that lives on /rest/TestAdd's
-    // sampleTypeList). Default to '1' and let Step 4 surface a mismatch.
-    sampleTypeId = '1';
-    markStep(PERSONA, 3, 'PASS', `Using test ${testId} (${tests[0].value}) of ${tests.length}, sampleType ${sampleTypeId}`);
+
+    // Walk the offered types until one yields a test.
+    for (const ty of sampleTypes) {
+      const r = await apiCall<SampleTypeTestsResponse>(page, SAMPLE_TYPE_TESTS(ty.id!));
+      const body = (r.ok && r.body && typeof r.body === 'object') ? r.body as SampleTypeTestsResponse : {};
+      const first = (body.tests ?? []).find(t => t.id);
+      if (first) {
+        testId = String(first.id);
+        sampleTypeId = String(ty.id);
+        markStep(PERSONA, 3, 'PASS',
+          `Ordering ${first.name ?? first.value ?? testId} on ${ty.value} ` +
+          `(test ${testId} / sampleType ${sampleTypeId}) from ${sampleTypes.length} offered type(s)`);
+        return;
+      }
+    }
+
+    markStep(PERSONA, 3, 'FAIL',
+      `None of the ${sampleTypes.length} offered sample types has an orderable test`,
+      'sample-type-tests returned no tests for any type this user can see.');
+    expect(testId, 'an orderable test must exist').toBeTruthy();
   });
 
   test('Step 4 — Place order on Routine Testing program (PERSIST)', async ({ page }) => {
