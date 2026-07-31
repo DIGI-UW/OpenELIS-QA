@@ -39,6 +39,21 @@ export async function createTestViaRest(
   return id;
 }
 
+/**
+ * Activate a test via the documented REST verb (POST /rest/test-catalog/tests/{id}/activate), the
+ * CSRF-aware in-page path — the bare Playwright `request` fixture omits the X-CSRF-Token and 403s.
+ * Requires a complete, active primary component (set one via setComponentViaRest first). Verifies the
+ * flip through GET /tests/{id}/basic-info. Replaces the editor's activate-switch UI, which drifted
+ * with the OGC-1142 rework. A REST-activated test carrying a sampleType is orderable on its own — no
+ * panel assignment needed.
+ */
+export async function activateViaRest(page: Page, id: string): Promise<void> {
+  const res = await apiCall(page, `/tests/${id}/activate`, 'POST', {});
+  const basic = await apiCall(page, `/tests/${id}/basic-info`, 'GET');
+  expect(basic.body?.active,
+    `test ${id} active after activate (POST ${res.status}: ${JSON.stringify(res.body).slice(0, 200)})`).toBeTruthy();
+}
+
 // Dictionary-backed result types (single-select, multi-select, cascading, titer) need options.
 const OPTION_RESULT_TYPES = new Set(['D', 'M', 'C', 'T']);
 
@@ -92,7 +107,7 @@ export async function setNormalCriticalRangeViaRest(
   const put = await apiCall(page, `/tests/${id}/ranges`, 'PUT', {
     testId: id,
     ranges: [{
-      componentId, gender: ' ', minAge: 0, maxAge: 120,
+      componentId, gender: ' ', minAge: 0, maxAge: null,   // null = unbounded top band; activation 409s on any age gap to Infinity
       lowNormal: r.lowNormal, highNormal: r.highNormal,
       lowCritical: r.lowCritical, highCritical: r.highCritical,
       lowValid: 0, highValid: r.highCritical * 2,
