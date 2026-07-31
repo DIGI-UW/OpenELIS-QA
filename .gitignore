@@ -18,3 +18,9 @@ blob-report/
 
 # Backup files
 *.bak
+
+# Auth storage states (contain live session cookies — never commit)
+.auth/
+
+# RBAC run output (reviewed baseline is committed as rbac-baseline.json)
+rbac-results/
