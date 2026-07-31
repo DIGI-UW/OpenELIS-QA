@@ -62,6 +62,16 @@ legacy set to a role builder. Guessed expectations would all churn at that point
 Invariants survive the transition; everything else is per-instance data you
 regenerate — the spec engine doesn't change.
 
+**Never baseline a probe whose current value is a known bug.** `rbac-baseline.json`
+means "this is CORRECT", so pinning buggy behavior cements it and makes the suite
+fail when the bug is *fixed*. The committed baseline from the 2026-07-30 run
+deliberately **excludes the five menu-visibility entries** (`labtech:EXP-03`,
+`labtech:EXP-06`, `receptionist:EXP-05`, `receptionist:EXP-06`,
+`validator:EXP-03`): they read `allow` only because the nav menu isn't role-filtered
+(OGC-1151). They stay unpinned — recorded and annotated each run — until that fix
+lands, at which point set them to their intended verdicts. `INV-04` (admin menu)
+already fails loudly and is the tracking signal.
+
 **Both enforcement surfaces.** Menu hiding is RENDER-tier cosmetics; the REST layer
 is the security boundary; and per §6.4 the legacy JSP pages run a *separate* auth
 system whose gating can differ from the SPA. The matrix therefore has four probe
