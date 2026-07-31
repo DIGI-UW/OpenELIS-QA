@@ -30,15 +30,18 @@ test.describe.serial('Persona PC — Validating Biologist', () => {
   test('Step 1 — Open Validation Routine for Hematology (RENDER)', async ({ page }) => {
     await page.goto(BASE);
     await page.waitForLoadState('networkidle');
-    const r = await apiCall<{ validationList?: Array<{ accessionNumber?: string; testId?: string }> }>(
-      page, `/api/OpenELIS-Global/rest/ResultValidation?testUnitId=${HEMATOLOGY_SECTION_ID}`
+    // §6.5 correction: /rest/ResultValidation does not exist (404 for admin AND
+    // for the Validation role — verified by control run 2026-07-31). The
+    // validation queue is AccessionValidation, filtered by `unitType`.
+    const r = await apiCall<{ resultList?: Array<{ accessionNumber?: string; testId?: string; analysisId?: string }> }>(
+      page, `/api/OpenELIS-Global/rest/AccessionValidation?accessionNumber=&unitType=${HEMATOLOGY_SECTION_ID}&date=&doRange=true`
     );
     if (!r.ok) {
-      markStep(PERSONA, 1, 'FAIL', `ResultValidation HTTP ${r.status}`);
+      markStep(PERSONA, 1, 'FAIL', `AccessionValidation HTTP ${r.status}`);
       expect(r.ok).toBeTruthy(); return;
     }
     const list = (typeof r.body === 'object' && r.body !== null)
-      ? ((r.body as { validationList?: Array<{ accessionNumber?: string; testId?: string }> }).validationList || [])
+      ? ((r.body as { resultList?: Array<{ accessionNumber?: string; testId?: string }> }).resultList || [])
       : [];
     queueItems = list.filter(i => i.accessionNumber && i.testId).map(i => ({
       accessionNumber: i.accessionNumber!,
@@ -57,7 +60,7 @@ test.describe.serial('Persona PC — Validating Biologist', () => {
     if (queueItems.length === 0) test.skip();
     await page.goto(BASE);
     const item = queueItems[0];
-    const r = await apiCall<unknown>(page, '/api/OpenELIS-Global/rest/ResultValidation', {
+    const r = await apiCall<unknown>(page, '/api/OpenELIS-Global/rest/AccessionValidation', {
       method: 'POST',
       body: { paging: { totalPages: 1 }, validationList: [
         {
@@ -82,7 +85,7 @@ test.describe.serial('Persona PC — Validating Biologist', () => {
     if (queueItems.length <= 1) test.skip();
     await page.goto(BASE);
     const toValidate = queueItems.slice(1);
-    const r = await apiCall<unknown>(page, '/api/OpenELIS-Global/rest/ResultValidation', {
+    const r = await apiCall<unknown>(page, '/api/OpenELIS-Global/rest/AccessionValidation', {
       method: 'POST',
       body: { paging: { totalPages: 1 }, validationList: toValidate.map(item => ({
         accessionNumber: item.accessionNumber, testId: item.testId, accepted: true, rejected: false,

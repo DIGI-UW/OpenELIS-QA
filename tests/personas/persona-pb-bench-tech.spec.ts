@@ -36,14 +36,14 @@ test.describe.serial('Persona PB — Bench Tech (Hematology)', () => {
   test('Step 1 — Open Workplan filtered to Hematology (RENDER)', async ({ page }) => {
     await page.goto(BASE);
     await page.waitForLoadState('networkidle');
-    const r = await apiCall<{ logbookList?: Array<{ accessionNumber?: string; testId?: string }> }>(
+    const r = await apiCall<{ testResult?: Array<{ accessionNumber?: string; testId?: string }> }>(
       page, `/api/OpenELIS-Global/rest/LogbookResults?testUnitId=${HEMATOLOGY_SECTION_ID}`
     );
     if (!r.ok) {
       markStep(PERSONA, 1, 'FAIL', `LogbookResults HTTP ${r.status}`); expect(r.ok).toBeTruthy(); return;
     }
     const list = (typeof r.body === 'object' && r.body !== null)
-      ? ((r.body as { logbookList?: Array<{ accessionNumber?: string; testId?: string }> }).logbookList || [])
+      ? ((r.body as { testResult?: Array<{ accessionNumber?: string; testId?: string }> }).testResult || [])
       : [];
     workItems = list.filter(i => i.accessionNumber && i.testId).map(i => ({
       accessionNumber: i.accessionNumber!,
@@ -100,13 +100,15 @@ test.describe.serial('Persona PB — Bench Tech (Hematology)', () => {
     await page.goto(BASE);
     let confirmed = 0;
     for (const accession of processed) {
-      const r = await apiCall<{ resultList?: Array<{ value?: string }> }>(
+      // LogbookResults returns `testResult`, and the row's entered value is
+      // `resultValue` (apiShapes: LogbookResultsResponse / LogbookTestResult).
+      const r = await apiCall<{ testResult?: Array<{ resultValue?: string }> }>(
         page, `/api/OpenELIS-Global/rest/LogbookResults?accessionNumber=${encodeURIComponent(accession)}`
       );
       const items = (r.ok && typeof r.body === 'object' && r.body !== null)
-        ? ((r.body as { resultList?: Array<{ value?: string }> }).resultList || [])
+        ? ((r.body as { testResult?: Array<{ resultValue?: string }> }).testResult || [])
         : [];
-      if (items.some(it => it.value && it.value !== '')) confirmed++;
+      if (items.some(it => it.resultValue && it.resultValue !== '')) confirmed++;
     }
     if (confirmed < processed.length) {
       markStep(PERSONA, 3, 'FAIL',
