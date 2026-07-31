@@ -48,5 +48,12 @@ export default defineConfig({
       dependencies: ['setup'],
       use: { storageState: '.auth/user.json' },
     },
+    // --- QA/QC alerts + violation counts + Levey-Jennings charts contract — --project=qc-alerts-charts ---
+    {
+      name: 'qc-alerts-charts',
+      testMatch: /qc-alerts-charts\.spec\.ts/,
+      dependencies: ['setup'],
+      use: { storageState: '.auth/user.json' },
+    },
   ],
 });
