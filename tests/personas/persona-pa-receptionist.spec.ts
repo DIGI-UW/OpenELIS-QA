@@ -29,10 +29,36 @@
 
 import { test, expect } from '@playwright/test';
 import { BASE, apiCall, markStep } from '../chains/_common';
+import {
+  PATIENT_MANAGEMENT,
+  QA_PATIENT_NAME_SAFE,
+  buildPatientCreateBody,
+  patientCreateSucceeded,
+  qaPatientNationalId,
+  ALL_TESTS_UNSCOPED,
+} from '../../helpers/apiShapes';
 
 const PERSONA = 'PA';
-const NATIONAL_ID = `QA_AUTO_PA_${Date.now()}`;
-const PATIENT = { firstName: 'Persona', lastName: 'PA_Walker', dob: '1985-04-12', gender: 'F' };
+/**
+ * ONE national id for the whole persona: Step 1 searches for it, Step 2 creates
+ * it, Step 3 orders against it, and Step 5's BUG-37 check compares the order's
+ * linked patient to it. Two different ids here would manufacture a false BUG-37.
+ *
+ * It must satisfy nationalId's own regex — (?i)^[-a-z0-9/]*$ — hyphens and
+ * slashes allowed, UNDERSCORES NOT. So the usual QA_AUTO_ tag is rejected here;
+ * qaPatientNationalId() emits the hyphenated form (apiShapes §v6.23).
+ */
+const NATIONAL_ID = qaPatientNationalId();
+/**
+ * Names obey a different regex again: lowercase letters plus . ' - and space.
+ * "PA_Walker" would 400 with "invalid name format".
+ */
+const PATIENT = {
+  firstName: 'persona',
+  lastName: QA_PATIENT_NAME_SAFE,
+  dob: '1985-04-12',
+  gender: 'F' as const,
+};
 
 test.describe.serial('Persona PA — Receptionist', () => {
   let patientPK: string | null = null;
@@ -44,7 +70,7 @@ test.describe.serial('Persona PA — Receptionist', () => {
     await page.goto(BASE);
     await page.waitForLoadState('networkidle');
     const r = await apiCall<{ patientSearchResults?: Array<unknown> }>(
-      page, `/api/OpenELIS-Global/rest/patient-search-results?nationalId=${encodeURIComponent(NATIONAL_ID)}`
+      page, `/api/OpenELIS-Global/rest/patient-search-results?nationalID=${encodeURIComponent(NATIONAL_ID)}`
     );
     if (!r.ok) {
       markStep(PERSONA, 1, 'FAIL', `patient-search-results HTTP ${r.status}`);
@@ -58,27 +84,35 @@ test.describe.serial('Persona PA — Receptionist', () => {
 
   test('Step 2 — Create new patient since search was empty (PERSIST)', async ({ page }) => {
     await page.goto(BASE);
-    const create = await apiCall<{ patientID?: string }>(
-      page, '/api/OpenELIS-Global/rest/patient-management', {
+    // §v6.23: the real endpoint is /rest/PatientManagement (the old
+    // "/rest/patient-management" 404s) and the body is FLAT
+    // CreatePatientFormValues — not wrapped in patientProperties, which belongs
+    // to SamplePatientEntry. Verified live 2026-07-31: 200 {patientId, status}.
+    //
+    // NOTE the name: FIRST/LAST_NAME_REGEX reject uppercase, digits and
+    // underscores, so the QA_AUTO_ convention cannot be used here. The
+    // machine-readable tag goes in nationalId instead.
+    const create = await apiCall<{ patientId?: string; status?: string; error?: string }>(
+      page, PATIENT_MANAGEMENT, {
         method: 'POST',
-        body: {
-          patientProperties: {
-            nationalId: NATIONAL_ID,
-            firstName: PATIENT.firstName,
-            lastName: PATIENT.lastName,
-            birthDate: PATIENT.dob,
-            gender: PATIENT.gender,
-            patientUpdateStatus: 'NEW',
-          },
-        },
+        body: buildPatientCreateBody({
+          firstName: PATIENT.firstName,
+          lastName: PATIENT.lastName,
+          gender: PATIENT.gender,
+          nationalId: NATIONAL_ID,
+        }),
       });
-    if (!create.ok) {
-      markStep(PERSONA, 2, 'FAIL', `patient-management POST HTTP ${create.status}`);
+    if (!create.ok || !patientCreateSucceeded(create.body)) {
+      markStep(PERSONA, 2, 'FAIL',
+        `PatientManagement POST HTTP ${create.status}`,
+        `Body: ${(typeof create.body === 'string' ? create.body : JSON.stringify(create.body)).slice(0, 250)}. ` +
+        `Field-level regexes bite here: name fields allow only lowercase + . ' - and space; ` +
+        `nationalId allows only (?i)[-a-z0-9/] — no underscores in either. See apiShapes §v6.23.`);
       expect(create.ok).toBeTruthy(); return;
     }
     // Round-trip to retrieve patientPK
     const verify = await apiCall<{ patientSearchResults?: Array<{ patientID?: string }> }>(
-      page, `/api/OpenELIS-Global/rest/patient-search-results?nationalId=${encodeURIComponent(NATIONAL_ID)}`
+      page, `/api/OpenELIS-Global/rest/patient-search-results?nationalID=${encodeURIComponent(NATIONAL_ID)}`
     );
     patientPK = (verify.ok && typeof verify.body === 'object' && verify.body !== null)
       ? ((verify.body as { patientSearchResults?: Array<{ patientID?: string }> }).patientSearchResults?.[0]?.patientID ?? null)
@@ -92,18 +126,22 @@ test.describe.serial('Persona PA — Receptionist', () => {
 
   test('Step 3 — Discover test catalog for order (RENDER)', async ({ page }) => {
     await page.goto(BASE);
-    const t = await apiCall<{ testList?: Array<{ id?: string; sampleTypeId?: string }> }>(
-      page, '/api/OpenELIS-Global/rest/test-list?activeOnly=true'
+    // FLAT ARRAY of {id, value} — NOT {testList: [...]}. apiShapes records this as
+    // spec bug #4 for /rest/test-list; the same wrong unwrap was still here, which
+    // made Step 3 report an empty catalogue while the endpoint returned 187 entries.
+    const t = await apiCall<Array<{ id?: string; value?: string }>>(
+      page, ALL_TESTS_UNSCOPED
     );
-    const tests = (t.ok && typeof t.body === 'object' && t.body !== null)
-      ? ((t.body as { testList?: Array<{ id?: string; sampleTypeId?: string }> }).testList || [])
-      : [];
+    const tests = Array.isArray(t.body) ? (t.body as Array<{ id?: string; value?: string }>) : [];
     if (tests.length === 0) {
-      markStep(PERSONA, 3, 'FAIL', 'Empty test catalog'); expect(tests.length).toBeGreaterThan(0); return;
+      markStep(PERSONA, 3, 'FAIL', 'Empty test catalog',
+        'displayList/ALL_TESTS returned nothing. NOTE /rest/test-list is role-scoped and is\n         empty for Reception (apiShapes §v6.23) — if you switched this back to test-list, that\n         is why.'); expect(tests.length).toBeGreaterThan(0); return;
     }
     testId = tests[0].id!;
-    sampleTypeId = tests[0].sampleTypeId || '1';
-    markStep(PERSONA, 3, 'PASS', `Using test ${testId} sampleType ${sampleTypeId}`);
+    // ALL_TESTS carries no sample-type mapping (that lives on /rest/TestAdd's
+    // sampleTypeList). Default to '1' and let Step 4 surface a mismatch.
+    sampleTypeId = '1';
+    markStep(PERSONA, 3, 'PASS', `Using test ${testId} (${tests[0].value}) of ${tests.length}, sampleType ${sampleTypeId}`);
   });
 
   test('Step 4 — Place order on Routine Testing program (PERSIST)', async ({ page }) => {

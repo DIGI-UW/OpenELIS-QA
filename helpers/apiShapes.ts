@@ -1405,3 +1405,238 @@ export function userCreateSucceeded(body: unknown): boolean {
  * "did login succeed?", poll SESSION_ENDPOINT instead of probing the DOM.
  */
 export const ISVISIBLE_DOES_NOT_WAIT = true;
+
+// =============================================================================
+// v6.23 — Persona write paths: patient create + validation save
+// Captured 2026-07-31 on testing v3.2.1.11: endpoints read out of the frontend
+// source (CreatePatientForm.tsx, Validation.jsx), then each POST verified live
+// with a round-trip. Replaces two invented shapes in the persona specs.
+// =============================================================================
+
+/**
+ * Patient create/update. The personas used `/rest/patient-management`, which
+ * does not exist (404). The real endpoint is `/rest/PatientManagement` and the
+ * body is FLAT — CreatePatientFormValues, not wrapped in `patientProperties`
+ * (that wrapper belongs to SamplePatientEntry, a different endpoint).
+ *
+ * Success: HTTP 200 {patientId, status:"success"}. Verified round-trip on
+ * `/rest/patient-search-results?lastName=...`.
+ *
+ * `patientUpdateStatus` uses the same enum as SamplePatientEntry: ADD for new,
+ * UPDATE to edit, NO_ACTION to pass through. "CREATE" is not a member.
+ *
+ * The frontend strips `years`/`months`/`days` before submitting (display-only
+ * age decomposition) — send birthDateForDisplay (dd/MM/yyyy) instead.
+ */
+export const PATIENT_MANAGEMENT = '/api/OpenELIS-Global/rest/PatientManagement';
+
+export interface PatientManagementBody {
+  patientUpdateStatus: 'ADD' | 'UPDATE' | 'NO_ACTION';
+  nationalId: string;
+  subjectNumber: string;
+  lastName: string;
+  firstName: string;
+  aka: string;
+  streetAddress: string;
+  city: string;
+  primaryPhone: string;
+  email: string;
+  gender: 'M' | 'F' | '';
+  /** dd/MM/yyyy */
+  birthDateForDisplay: string;
+  commune: string;
+  education: string;
+  /** sic — server spelling. */
+  maritialStatus: string;
+  nationality: string;
+  healthDistrict: string;
+  healthRegion: string;
+  otherNationality: string;
+  occupation: string;
+  customNotes: string;
+  targetDiseaseProgramme: string;
+  photo: string;
+  idDocuments: unknown[];
+  patientContact: { person: { firstName: string; lastName: string; primaryPhone: string; email: string } };
+}
+
+/**
+ * NAME VALIDATION — this bit the QA test-data convention.
+ *
+ * FIRST_NAME_REGEX and LAST_NAME_REGEX (both readable from
+ * `/rest/configuration-properties`) are, on a default install:
+ *
+ *     ^[.'a-zàâçéèêëîïôûùüÿñæœ -]*$
+ *
+ * i.e. LOWERCASE letters (incl. accented), period, apostrophe, space, hyphen.
+ * No uppercase, NO DIGITS, NO UNDERSCORE. So the skill's `QA_AUTO_<MMDD>`
+ * test-data prefix is REJECTED on patient names with
+ * `400 {"error":"lastName: invalid name format, possibly illegal character"}`.
+ *
+ * Use a conforming marker for patient names — e.g. `qa-auto-probe`.
+ *
+ * AND `nationalId` enforces a SECOND, DIFFERENT regex (discovered the hard way
+ * after moving the QA tag there to dodge the name rule):
+ *
+ *     (?i)^[-a-z0-9/]*$
+ *
+ * case-insensitive letters/digits plus hyphen and slash — still NO UNDERSCORE.
+ * So the skill's `QA_AUTO_<MMDD>` prefix is rejected on the name fields AND on
+ * nationalId. For patient records use a hyphenated tag (`qa-auto-0731-<ts>`,
+ * see qaPatientNationalId()). Read both regexes per instance rather than
+ * assuming the defaults; deployments localise them.
+ */
+export const PATIENT_NAME_REGEX_PROPERTY = 'LAST_NAME_REGEX' as const;
+export const QA_PATIENT_NAME_SAFE = 'qa-auto-probe' as const;
+/** nationalId-safe QA tag: hyphens only (underscores are rejected). */
+export const qaPatientNationalId = (
+  stamp = new Date().toISOString().slice(5, 10).replace('-', '')
+) => `qa-auto-${stamp}-${Date.now()}`;
+
+export function buildPatientCreateBody(opts: {
+  firstName: string;            // must satisfy FIRST_NAME_REGEX
+  lastName: string;             // must satisfy LAST_NAME_REGEX
+  gender?: 'M' | 'F';
+  birthDateForDisplay?: string; // dd/MM/yyyy
+  nationalId?: string;          // NOT name-validated — safe place for a QA_AUTO_ tag
+}): PatientManagementBody {
+  return {
+    patientUpdateStatus: 'ADD',
+    nationalId: opts.nationalId ?? `QA${Date.now()}`,
+    subjectNumber: '',
+    lastName: opts.lastName,
+    firstName: opts.firstName,
+    aka: '', streetAddress: '', city: '', primaryPhone: '', email: '',
+    gender: opts.gender ?? 'F',
+    birthDateForDisplay: opts.birthDateForDisplay ?? '01/01/1990',
+    commune: '', education: '', maritialStatus: '', nationality: '',
+    healthDistrict: '', healthRegion: '', otherNationality: '', occupation: '',
+    customNotes: '', targetDiseaseProgramme: '', photo: '', idDocuments: [],
+    patientContact: { person: { firstName: '', lastName: '', primaryPhone: '', email: '' } },
+  };
+}
+
+/** True when PatientManagement actually persisted. */
+export function patientCreateSucceeded(body: unknown): boolean {
+  if (!body || typeof body !== 'object') return false;
+  const b = body as { status?: string; patientId?: string; error?: string };
+  return !b.error && (b.status === 'success' || Boolean(b.patientId));
+}
+
+/**
+ * Validation save. This is a STRUTS FORM ROUND-TRIP, not a REST resource write:
+ * `Validation.jsx` does
+ *
+ *     postToOpenElisServer("/rest/AccessionValidation", JSON.stringify(props.results), ...)
+ *
+ * where `props.results` is the ENTIRE object returned by the matching GET. So the
+ * write protocol is: GET the form → mutate rows in place → POST the whole object
+ * back. The personas' invented `{paging, validationList:[...]}` body 400s.
+ *
+ * Per-row flags live on the row itself: `isAccepted`, `isRejected`, `note`
+ * (the UI binds `resultList[i].isAccepted` etc.). Rows carry no usable `id` in
+ * the API response — address them by array index.
+ *
+ * Verified live: GET (unitType=36) → POST the object back unmodified → HTTP 200
+ * echoing ResultValidationForm. Echoing unmodified is also the safe way to check
+ * the shape without consuming a validation queue.
+ */
+export const ACCESSION_VALIDATION = '/api/OpenELIS-Global/rest/AccessionValidation';
+
+export function accessionValidationQuery(opts: { sectionId?: string; accessionNumber?: string; date?: string } = {}): string {
+  const p = new URLSearchParams({
+    accessionNumber: opts.accessionNumber ?? '',
+    unitType: opts.sectionId ?? '',
+    date: opts.date ?? '',
+    doRange: 'true',
+  });
+  return `${ACCESSION_VALIDATION}?${p.toString()}`;
+}
+
+/**
+ * Mark rows on a fetched validation form. Mutates and returns the SAME object,
+ * which is what must be POSTed back.
+ *
+ * `accept` and `reject` are arrays of row indices. A row must not be both.
+ */
+export function markValidationRows(
+  form: Record<string, unknown>,
+  opts: { accept?: number[]; reject?: number[]; note?: string }
+): Record<string, unknown> {
+  const rows = (form.resultList as Array<Record<string, unknown>>) ?? [];
+  for (const i of opts.accept ?? []) {
+    if (!rows[i]) continue;
+    rows[i].isAccepted = true;
+    rows[i].isRejected = false;
+    if (opts.note) rows[i].note = opts.note;
+  }
+  for (const i of opts.reject ?? []) {
+    if (!rows[i]) continue;
+    rows[i].isRejected = true;
+    rows[i].isAccepted = false;
+    if (opts.note) rows[i].note = opts.note;
+  }
+  return form;
+}
+
+/**
+ * PATIENT SEARCH PARAMS — case matters, and a wrong name fails SILENTLY.
+ *
+ * `/rest/patient-search-results` ignores unknown params instead of erroring, so
+ * `?nationalId=X` (lowercase d) returns `{patientSearchResults: []}` for every
+ * value — including patients that exist. Verified 2026-07-31: patient 101 was
+ * invisible to `nationalId=` and found by `nationalID=`.
+ *
+ * That is a vacuous-PASS generator: any test asserting "0 results" against a
+ * misspelled param can never fail. Persona PA had exactly that bug.
+ *
+ * The supported set, from SearchPatientForm.tsx's query builder:
+ */
+export const PATIENT_SEARCH_PARAMS = [
+  'lastName', 'firstName', 'STNumber', 'subjectNumber',
+  'nationalID',        // capital D — NOT nationalId
+  'labNumber', 'guid', 'dateOfBirth', 'gender', 'suppressExternalSearch',
+] as const;
+
+/** Build a patient search URL, guarding against the silent-ignore trap. */
+export function patientSearchUrl(params: Partial<Record<(typeof PATIENT_SEARCH_PARAMS)[number], string>>): string {
+  for (const k of Object.keys(params)) {
+    if (!(PATIENT_SEARCH_PARAMS as readonly string[]).includes(k)) {
+      throw new Error(
+        `patientSearchUrl: "${k}" is not a supported patient-search param, and this endpoint ` +
+        `IGNORES unknown params rather than failing — your filter would silently match nothing. ` +
+        `Supported: ${PATIENT_SEARCH_PARAMS.join(', ')}`);
+    }
+  }
+  const qs = new URLSearchParams(params as Record<string, string>).toString();
+  return `/api/OpenELIS-Global/rest/patient-search-results?${qs}`;
+}
+
+/**
+ * ROLE-SCOPED LIST ENDPOINTS — 200 + empty array is NOT the same as "allowed".
+ *
+ * Measured 2026-07-31 on testing v3.2.1.11, same instant, three sessions:
+ *
+ *   GET /rest/test-list             admin 187 · qa_labtech (Results) 187 · qa_recept (Reception) 0
+ *   GET /rest/displayList/ALL_TESTS admin 187 · qa_labtech 187 · qa_recept 187
+ *
+ * All returned HTTP 200. `test-list` is scoped to the caller's result-entry test
+ * sections, so a Reception-only user gets an empty catalogue with no error.
+ * `displayList/ALL_TESTS` is not scoped — use it for anything a receptionist
+ * needs (order entry), and reserve `test-list` for result-entry surfaces.
+ *
+ * TWO LESSONS:
+ *  1. Specs must assert on CONTENT, not status. "HTTP 200" hid a total absence
+ *     of data here, and Persona PA failed with "Empty test catalog" as a result.
+ *  2. The RBAC matrix's own `classifyRest` grades 2xx as `allow`, so a
+ *     role-scoped-to-empty endpoint records as allow. That is accurate about
+ *     *access* and misleading about *usefulness* — see the note on BASE-02 in
+ *     tests/rbac/_rbac.ts.
+ *
+ * Whether Reception SHOULD see the test catalogue is a product question, not a
+ * settled bug: `/rest/test-list` is consumed by order QA review, results search,
+ * referred-out tests and several admin pages, so the blast radius depends on
+ * which surfaces a receptionist is expected to reach.
+ */
+export const TEST_LIST_IS_ROLE_SCOPED = true;
+export const ALL_TESTS_UNSCOPED = '/api/OpenELIS-Global/rest/displayList/ALL_TESTS';
