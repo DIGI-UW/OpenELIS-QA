@@ -107,7 +107,9 @@ test.describe.serial('Chain E — Sample Validation Lifecycle', () => {
     if (!r.ok) { markStep('E', 6, 'FAIL', `ReportPrint HTTP ${r.status}`); expect(r.ok).toBeTruthy(); return; }
     const buf = Buffer.from(String(r.body), 'base64');
     if (!(buf.length >= 4 && buf.toString('ascii', 0, 4) === '%PDF')) {
-      markStep('E', 6, 'FAIL', 'Not a PDF'); expect.fail('Not a PDF'); return;
+      markStep('E', 6, 'FAIL', 'Not a PDF');
+      // expect.fail() is not a Playwright API — assert explicitly.
+      expect(false, 'Not a PDF').toBeTruthy(); return;
     }
     // PDF text extraction is noisy — just check that the corrected
     // value appears and the initial wrong value doesn't.

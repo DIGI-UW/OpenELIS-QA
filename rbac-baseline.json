@@ -1,0 +1,18 @@
+{
+  "labtech:BASE-01": "allow",
+  "labtech:BASE-02": "allow",
+  "labtech:BASE-03": "allow",
+  "labtech:BASE-04": "deny",
+  "labtech:EXP-02": "deny",
+  "receptionist:BASE-01": "allow",
+  "receptionist:BASE-02": "allow",
+  "receptionist:BASE-03": "deny",
+  "receptionist:BASE-04": "deny",
+  "receptionist:EXP-04": "deny",
+  "validator:BASE-01": "allow",
+  "validator:BASE-02": "allow",
+  "validator:BASE-03": "deny",
+  "validator:BASE-04": "deny",
+  "validator:EXP-02": "deny",
+  "validator:EXP-04": "deny"
+}
