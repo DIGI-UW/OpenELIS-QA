@@ -20,14 +20,14 @@
 
 import { test as setup, expect, Browser } from '@playwright/test';
 import * as fs from 'fs';
-import { ROLE_USERS, RoleUser, assertIdentity } from './tests/rbac/_rbac';
+import { ROLE_USERS, RoleUser, UNIT_SCOPED_USERS, UnitScopedUser, assertIdentity } from './tests/rbac/_rbac';
 import { apiCall } from './tests/chains/_common';
 
 const BASE = process.env.BASE_URL || process.env.BASE || 'https://testing.openelis-global.org';
 
 type LoginOutcome = 'ok' | 'badcreds' | 'pwchange-stuck';
 
-async function loginAndSaveState(browser: Browser, user: RoleUser): Promise<LoginOutcome> {
+async function loginAndSaveState(browser: Browser, user: RoleUser | UnitScopedUser): Promise<LoginOutcome> {
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
   try {
@@ -96,7 +96,9 @@ async function loginAndSaveState(browser: Browser, user: RoleUser): Promise<Logi
  */
 async function createViaAdmin(
   browser: Browser,
-  user: RoleUser
+  user: RoleUser | UnitScopedUser,
+  /** Grant the role on ONE section instead of AllLabUnits (unit-scoped users). */
+  sectionId?: string
 ): Promise<{ ok: boolean; status: number; detail: string }> {
   const ctx = await browser.newContext({ storageState: '.auth/user.json' });
   const page = await ctx.newPage();
@@ -111,13 +113,14 @@ async function createViaAdmin(
       (preBody.labUnitRoles as Array<Record<string, unknown>>) ?? [],
       (preBody.globalRoles as Array<Record<string, unknown>>) ?? []
     );
-    const match = user.roleCandidates
+    const candidates = 'roleCandidates' in user ? user.roleCandidates : [user.role];
+    const match = candidates
       .map(cand => allRoles.find(r => String(r.roleName ?? '').trim().toLowerCase() === cand.toLowerCase()))
       .find(Boolean);
     if (!match) {
       return {
         ok: false, status: pre.status,
-        detail: `none of [${user.roleCandidates.join(', ')}] found in preform roles: ` +
+        detail: `none of [${candidates.join(', ')}] found in preform roles: ` +
           allRoles.map(r => String(r.roleName ?? '').trim()).join(', '),
       };
     }
@@ -147,7 +150,9 @@ async function createViaAdmin(
         selectedRoles: isLabUnitRole ? [] : [roleId],
         testSectionId: '',
         selectedLabUnitRoles: [],
-        selectedTestSectionLabUnits: isLabUnitRole ? { AllLabUnits: [roleId] } : {},
+        selectedTestSectionLabUnits: isLabUnitRole
+          ? { [sectionId ?? 'AllLabUnits']: [roleId] }
+          : {},
         systemUserIdToCopy: '',
         allowCopyUserRoles: 'N',
       },
@@ -157,7 +162,7 @@ async function createViaAdmin(
     return {
       ok, status: r.status,
       detail: ok
-        ? `created ${user.login} with role "${String(match.roleName).trim()}" (id ${roleId}, ${isLabUnitRole ? 'AllLabUnits' : 'global'})`
+        ? `created ${user.login} with role "${String(match.roleName).trim()}" (id ${roleId}, ${isLabUnitRole ? (sectionId ? `section ${sectionId}` : 'AllLabUnits') : 'global'})`
         : `POST ${r.status}, forward="${forward}" — validation/save failure (body: ${(typeof r.body === 'string' ? r.body : JSON.stringify(r.body)).slice(0, 300)})`,
     };
   } finally {
@@ -193,6 +198,37 @@ for (const user of ROLE_USERS) {
         `[roles.setup] ${user.login}: forced-password-change loop — the server rejected reusing the same password. ` +
         `Reset the account password manually and pass it via env (e.g. OE_${user.key === 'receptionist' ? 'RECEPT' : user.key === 'labtech' ? 'LABTECH' : 'VALID'}_PASS).`
       );
+    }
+
+    expect(outcome, `${user.login} must be able to log in with a verified identity`).toBe('ok');
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Unit-scoped users (second axis). Same reuse-first contract: verify login,
+// provision only as a fallback, never save a state that fails the guard.
+// ---------------------------------------------------------------------------
+for (const user of UNIT_SCOPED_USERS) {
+  setup(`unit-scoped user ready — ${user.key} (${user.login})`, async ({ browser }) => {
+    fs.mkdirSync('.auth', { recursive: true });
+    let outcome = await loginAndSaveState(browser, user);
+
+    if (outcome === 'badcreds') {
+      // eslint-disable-next-line no-console
+      console.log(`[roles.setup] ${user.login} cannot log in — provisioning scoped to section ${user.sectionIds[0]}`);
+      const r = await createViaAdmin(browser, user, user.sectionIds[0]);
+      // eslint-disable-next-line no-console
+      console.log(`[roles.setup] provision ${user.login}: ${r.detail}`);
+      if (!r.ok) {
+        throw new Error(
+          `[roles.setup] ${user.login} is missing and the API create failed (HTTP ${r.status}: ${r.detail}).\n` +
+          `Seed once manually: Admin -> User Management -> Add User -> login "${user.login}", ` +
+          `role "${user.role}" granted ONLY on ${user.sectionNames.join(', ')} (not All Lab Units). ` +
+          `Then re-run:\n  npx playwright test -c rbac.config.ts --project=setup-roles\n` +
+          `NOTE: a 500 here is a known transient server-side condition, not a payload problem ` +
+          `(helpers/apiShapes.ts §v6.22) — retry before hand-seeding.`);
+      }
+      outcome = await loginAndSaveState(browser, user);
     }
 
     expect(outcome, `${user.login} must be able to log in with a verified identity`).toBe('ok');

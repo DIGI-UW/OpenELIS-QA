@@ -5,6 +5,7 @@ import { defineConfig, devices } from '@playwright/test';
 //   npx playwright test -c rbac.config.ts                       # full: admin setup → role setup → matrix
 //   npx playwright test -c rbac.config.ts --project=setup-roles # (re)provision + re-auth role users only
 //   npx playwright test -c rbac.config.ts --project=rbac-matrix # matrix only (role states already fresh)
+//   npx playwright test -c rbac.config.ts --project=unit-scope  # role × lab-unit axis only
 //
 // BASE / BASE_URL both honored (playwright.config.ts uses BASE, tests/chains/_common.ts uses BASE_URL).
 const BASE = process.env.BASE ?? process.env.BASE_URL ?? 'https://testing.openelis-global.org';
@@ -31,6 +32,15 @@ export default defineConfig({
     { name: 'setup-roles', testDir: '.', testMatch: /roles\.setup\.ts/, dependencies: ['setup'] },
 
     // 3) the role × probe matrix (contexts are opened per-role inside the spec)
+    // 3b) the role × lab-unit axis (section scoping). Separate project so it can
+    //     run alone; shares setup-roles, which also seeds the unit-scoped users.
+    {
+      name: 'unit-scope',
+      testDir: './tests/rbac',
+      testMatch: /unit-scope\.spec\.ts/,
+      dependencies: ['setup-roles'],
+    },
+
     {
       name: 'rbac-matrix',
       testDir: './tests/rbac',

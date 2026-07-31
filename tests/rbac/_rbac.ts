@@ -82,6 +82,53 @@ export const ROLE_USERS: RoleUser[] = [
 ];
 
 // -----------------------------------------------------------------------------
+// Unit-scoped users — the SECOND permission axis (role × lab unit)
+// -----------------------------------------------------------------------------
+// A Hematology tech and a Serology tech hold the SAME role, so the role axis
+// alone treats them as identical. These users carry a role granted to ONE test
+// section, which is what makes section leakage testable. See unit-scope.spec.ts.
+//
+// Section ids/names captured from the live UnifiedSystemUser preform on testing
+// v3.2.1.11 (2026-07-31); regenerate per instance — they are NOT portable.
+
+export interface UnitScopedUser {
+  key: string;
+  displayName: string;
+  login: string;
+  password: string;
+  /** Lab-unit role name granted (must exist in the preform's labUnitRoles). */
+  role: string;
+  /** Role the user must NOT hold — U-03 asserts its section list is empty. */
+  roleNotHeld: string;
+  /** Granted section ids. */
+  sectionIds: string[];
+  /**
+   * Granted section NAMES. Required because `session.userLabRolesMap` is keyed
+   * by section name for a scoped user (vs the literal "AllLabUnits" when
+   * unscoped) — captured live, not inferred.
+   */
+  sectionNames: string[];
+  /** name -> id for sections the user must NOT see. U-05 checks each against admin. */
+  outOfScopeSections: Record<string, string>;
+  storageState: string;
+}
+
+export const UNIT_SCOPED_USERS: UnitScopedUser[] = [
+  {
+    key: 'heme',
+    displayName: 'Validator, Hematology only',
+    login: process.env.OE_HEME_USER ?? 'qa_heme',
+    password: process.env.OE_HEME_PASS ?? 'QAheme1!',
+    role: 'Validation',
+    roleNotHeld: 'Results',
+    sectionIds: ['36'],
+    sectionNames: ['Hematology'],
+    outOfScopeSections: { Biochemistry: '56', Immunology: '59', 'Molecular Biology': '136' },
+    storageState: '.auth/role-heme.json',
+  },
+];
+
+// -----------------------------------------------------------------------------
 // Probe matrix
 // -----------------------------------------------------------------------------
 
