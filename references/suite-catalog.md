@@ -394,36 +394,69 @@
 
 ---
 
-## Section 5 — URL Discovery Patterns
+## Section 5 — Route Inventory (extracted from the shipped SPA router)
 
-For screens not in the confirmed URL table, try these patterns in order:
+> **Re-verified 2026-08-01 against `https://testing.openelis-global.org`.** These are no longer
+> "patterns to try" — they are the actual `Route,{path:…}` declarations extracted from the live
+> JS bundle, cross-checked against the SideNav `link:` map and an authenticated REST probe.
+>
+> **Method (repeat this, don't hand-check).** A React SPA returns **200 for any path**, so HTTP
+> status cannot confirm a frontend route and a 404-then-try-alternates loop is meaningless. Fetch
+> `/` → read the `<script src>` → download the bundle → extract `Route,{path:` declarations and
+> `link:` values. Ten seconds, and it is exhaustive.
 
-**Results screens:** `/AccessionResults`, `/ResultsByPatient`, `/ResultsByOrder`, `/PatientResults`
-**Validation screens:** `/ResultValidation?type=routine`, `/ResultValidation?type=order`, `/ResultValidation`, `/AccessionValidation`, `/AccessionValidationRange`, `/ResultValidationByTestDate`
-**Workplan:** `/WorkPlanByTest?type=test`, `/WorkPlanByPanel?type=panel`, `/WorkPlanByTestSection?type=`, `/WorkPlanByPriority?type=priority`
-**Reports:** `/Report?type=patient` (confirmed working), Hamburger -> Reports menu
-**FHIR:** `<BASE>/api/fhir/metadata` (WARNING: BUG-14 — times out 60s)
-**NC Events:** `/ReportNonConformingEvent`, `/ViewNonConformingEvent`, `/NCECorrectiveAction`
-**LOINC:** `/MasterListsPage/LOINCCodes`, `/LOINCManagement`
-**Audit:** `/AuditLog`, `/SystemLog`, `/MasterListsPage/AuditLog`
-**Pathology:** `/PathologyDashboard`, `/ImmunohistochemistryDashboard`, `/CytologyDashboard`
-**Analyzers:** `/analyzers`, `/analyzers/errors`, `/analyzers/types`
-**EQA:** `/EQADistribution`, `/EQAManagement`, `/EQAParticipants`, `/EQAResults`
-**Inventory:** `/Inventory` (Dashboard+Catalog+Reports tabs)
-**Alerts:** `/Alerts`
-**Orders:** `/ElectronicOrders`, `/SampleBatchEntrySetup`, `/PrintBarcode`
-**Storage:** `/Storage`, `/Storage/samples`
-**Aliquot:** `/Aliquot`
-**Order Programs:** `/genericProgram`
+**Results / Logbook:** `/Results`, `/LogbookResults`, `/AccessionResults`, `/PatientResults`, `/PatientResults/:patientId`, `/RangeResults`, `/StatusResults`, `/AnalyzerResults`, `/result`
+**Validation:** `/ResultValidation`, `/ResultValidationByTestDate`, `/AccessionValidation`, `/AccessionValidationRange`, `/validation`
+**Workplan:** `/WorkplanByTest`, `/WorkplanByPanel`, `/WorkplanByPriority`, **`/WorkPlanByTestSection`**
+  ⚠ Note the casing: three are `Workplan`, the TestSection one is `WorkPlan`. This is a real
+  inconsistency in the app, not a typo here — get it wrong and you get a blank SPA shell, not a 404.
+**Reports:** `/Report`, `/RoutineReport`, `/RoutineReports`, `/StudyReport`, `/StudyReports`, `/TATReport`; PDF generation via JSP `/api/OpenELIS-Global/ReportPrint`. Nav links carry `?type=…&report=…` (e.g. `/RoutineReport?type=indicator&report=statisticsReport`).
+**Orders:** `/order`, `/SamplePatientEntry`, `/SampleEdit`, `/ModifyOrder`, `/SampleManagement`, `/ElectronicOrders`, `/SampleBatchEntrySetup`, `/PrintBarcode`
+**Order wizard steps:** `<base>/enter`, `<base>/collect`, `<base>/label`, `<base>/qa`
+**Patient:** `/PatientManagement/:patientId?`, `/PatientHistory`, `/PatientMerge`
+**NCE:** `/NceDashboard`, `/ReportNonConformingEvent`, `/ViewNonConformingEvent`, `/NCECorrectiveAction`
+**Pathology:** `/PathologyDashboard`, `/CytologyDashboard`, `/ImmunohistochemistryDashboard`, plus `/PathologyCaseView/:pathologySampleId`, `/CytologyCaseView/:cytologySampleId`, `/ImmunohistochemistryCaseView/:immunohistochemistrySampleId`
+**Analyzers:** `/analyzers`, `/analyzers/new`, `/analyzers/types`, `/analyzers/errors`, `/analyzers/custom-field-types`, `/analyzers/:id/edit`, `/analyzers/:id/mappings`, `/analyzers/:id/qc-rules`
+**Analyzer QC:** `/analyzers/qc/db`, `/analyzers/qc/rule-config`, `/analyzers/qc/control-lots`, `/analyzers/qc/control-lots/new`, `/analyzers/qc/control-lots/:id`, `/analyzers/qc/charts/:analyzerId`, `/analyzers/qc/instruments/:instrumentId`
+**EQA:** `/EQAManagement`, `/EQADistribution`, `/EQADistribution/create`, `/EQAMyPrograms`, `/EQAOrders`, `/EQAParticipants`, `/EQAResults`
+**Storage:** `/Storage` + `/Storage/{rooms,devices,shelves,racks,boxes}` (each with `/new` and `/:id/edit`), `/Storage/sample-items`, `/Storage/sample-items/:id/manage-location`
+**Shipment / referral:** `/SampleShipment`, `/SampleShipment/:tab`, `/SampleShipment/receive`, `/SampleShipment/create-box`, `/SampleShipment/reports`, `/SampleShipment/settings`, `/SampleShipment/box/:boxId`, `/ReferredOutTests`
+**NoteBook:** `/NoteBookDashboard`, `/NoteBookEntryForm`, `/NoteBookEntryForm/:notebookid`, `/NoteBookInstanceEntryForm/:notebookid`, `/NoteBookInstanceEditForm/:notebookentryid`, `/NotebookSampleOrder/:notebookId`, `/NotebookSampleOrder/:notebookId/:notebookEntryId`
+**Generic sample / programs:** `/GenericSample/Order`, `/GenericSample/Edit`, `/GenericSample/Import`, `/GenericSample/Results`, `/genericProgram`, `/programView/:programSampleId`
+**Other:** `/Dashboard`, `/landing`, `/login`, `/ChangePasswordLogin`, `/Alerts`, `/Aliquot`, `/inventory`, `/FreezerMonitoring`, `/AuditTrailReport`, `/MasterListsPage`, `/admin`
+**FHIR:** `<BASE>/api/fhir/metadata` (⚠ BUG-14 — times out 60s; unchanged)
 
-If a URL returns 404, try alternates before marking as GAP. Record the working URL in your log.
+### ⚠ Corrections — routes this catalog previously listed that are WRONG
 
-> **Route-verification status — 2026-07-01 (monthly consolidation):** the non-admin patterns
-> above were **not** re-verified against the live app this cycle (unattended run; the instance is
-> up but gated at login and no authenticated session was available). They carry their
-> last-confirmed **v3.2.1.x** status — treat as presumed-valid, not freshly confirmed. No 404s or
-> route changes are asserted this cycle. Admin routes remain owned by
-> `openelis-design/references/admin-ia-inventory.md`.
+| Was documented | Reality (2026-08-01) |
+|---|---|
+| `/Inventory` | **`/inventory`** — lowercase |
+| `/Storage/samples` | **`/Storage/sample-items`** |
+| `/AuditLog`, `/SystemLog`, `/MasterListsPage/AuditLog` | **`/AuditTrailReport`** (nav uses `?type=system`) |
+| `/WorkPlanByTest`, `/WorkPlanByPanel`, `/WorkPlanByPriority` | **`/WorkplanByTest`, `/WorkplanByPanel`, `/WorkplanByPriority`** |
+| `/ResultsByPatient`, `/ResultsByOrder` | **not routes** — drop |
+| `/LOINCManagement`, `/MasterListsPage/LOINCCodes` | **not routes** — drop |
+| `/EQAParticipants` etc. listed as the whole module | incomplete — `/EQAMyPrograms`, `/EQAOrders`, `/EQADistribution/create` were missing |
+
+Because a SPA 200s on everything, each of these previously "passed" a naive reachability check
+while rendering an empty shell. Any historical PASS that only asserted reachability on one of
+these paths should be treated as unverified.
+
+### Feature-state changes confirmed by authenticated REST probe (2026-08-01)
+
+- **EQA V2 is live** — `/rest/eqa/programs` 200, `/rest/eqa/programs/{id}/enrollments` 200,
+  `/rest/eqa/my-programs` 200, `/rest/eqa/orders/summary` 200. EQA suites previously skipped as
+  "module not built" are now in scope.
+- **Test↔Reagent linkage is live** — `GET /rest/test-catalog/{testId}/reagents` 200. Note the flat
+  `/rest/test-reagents` and `/rest/reagents` **404** — it is nested under `test-catalog`.
+- **QA/QC (Westgard) is live** — `/rest/qc/dashboard/summary` 200 (matches the qc-* specs already
+  in the harness).
+- **Configurable Label Presets is live** — `/MasterListsPage/labelPresets`.
+- **Alert acknowledgment is live** — `POST /rest/alerts/{id}/acknowledge`,
+  `POST /rest/qc/violations/{id}/acknowledge`.
+- **`/MasterListsPage/menuConfiguration` is genuinely absent from the router** — this *explains*
+  BUG-49's blank page. It is not a rendering bug; the parent route was never registered. Worth
+  re-checking how BUG-49 is worded in Jira.
 
 ---
 

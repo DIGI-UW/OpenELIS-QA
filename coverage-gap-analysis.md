@@ -312,3 +312,63 @@ boxes (`/SampleShipment` → `/boxes`).
 Domain filtering (not built — see openelis-design current-state-gotchas). New admin config pages
 (Test Notification, Menu Config, Application Properties) are admin-route coverage — deferred to
 `openelis-design/admin-ia-inventory.md`, not maintained here.
+
+---
+
+## Delta — 2026-08-01 (monthly consolidation, live-verified)
+
+This pass had an authenticated session and the full router inventory, so — unlike the
+2026-07-01 delta — the routes below are **confirmed to exist**. What is *not* confirmed is
+whether each has a test case; that still needs a `master-test-cases.md` check before authoring.
+
+### UNCOVERED — real routes with no obvious case (confirm, then author)
+
+| Route(s) | Why it matters | Confidence |
+|---|---|---|
+| `/PatientMerge` | Merge is destructive and irreversible in effect; a wrong merge corrupts two patients' histories. Listed as a **GAP** in the 2026-03-24 menu map and still no case. | high — long-standing gap |
+| `/FreezerMonitoring` | Cold-chain excursions invalidate specimens. Phase 17/28 exercised it by *render*; no alerting/threshold case. | medium |
+| `/ReferredOutTests` | Referral TAT + the D-016 in-transit signal; complements the still-open `/SampleShipment/reference-lab-results` gap. | medium |
+| `/TATReport` | The QA-dashboard TAT model (D-014/D-015) has a report surface with no case. | medium |
+| `/Storage/{devices,shelves,racks,boxes}` CRUD (+ `/new`, `/:id/edit`) | Phase 28 covered **rooms** CRUD end-to-end; the other four levels of the hierarchy are unexercised. Storage is a 5-level tree — a break at shelf/rack level misplaces specimens. | high |
+| `/Storage/sample-items/:id/manage-location` | The actual specimen-relocation action; the route name was wrong in this catalog until today, so it cannot have been tested. | high |
+| `/analyzers/:id/qc-rules`, `/analyzers/custom-field-types`, `/analyzers/new` | QC-rule binding per analyzer; the `qc-*` specs cover the REST surface but not these UI routes. | medium |
+| `/EQAMyPrograms`, `/EQAOrders`, `/EQADistribution/create` | EQA V2 is **now built** (verified today) — these three routes were never in the catalog. | high |
+| `/GenericSample/{Order,Edit,Import,Results}` | A whole generic-sample lane with no cases at all. `/GenericSample/Import` in particular is a write path. | high |
+| `/NotebookSampleOrder/:notebookId(/:notebookEntryId)`, `/NoteBookInstanceEntryForm/:notebookid` | NoteBook write paths. Only the dashboard was ever tested (and it was NOTE-19 blank). | medium |
+| `/programView/:programSampleId` | Program-scoped sample view; pairs with `/genericProgram`. | low |
+| `/AuditTrailReport` | Was tested — if at all — under the wrong names (`/AuditLog`, `/SystemLog`). ISO 15189 traceability surface. Re-verify. | high |
+| Test Catalog Reagents tab (`/rest/test-catalog/{testId}/reagents`) | Linkage went from not-built to built; no case exists because it was correctly out of scope until now. | high |
+
+### NEEDS-GUIDANCE — do not author expected results without Casey
+
+Logged as questions in `references/open-questions.md` rather than guessed at:
+
+1. **`/PatientMerge`** — what is the expected end state for the *losing* patient record, given
+   No-Hard-Delete? Deactivated-and-linked, or tombstoned? And do that patient's existing
+   accessions/results re-point to the surviving record or stay put?
+2. **`/GenericSample/Import`** — what is a valid import payload, and what should happen on a
+   partial-failure file (all-or-nothing, or accept-good-rows-and-report)? Also whether this
+   overlaps the CSV Bulk Sample Intake epic (OGC-1138) or is a separate legacy path.
+3. **`/FreezerMonitoring`** — what constitutes a reportable excursion (threshold + duration),
+   and does an excursion raise an Alert that requires acknowledgment now that
+   `/rest/alerts/{id}/acknowledge` ships?
+4. **EQA V2 enrollment lifecycle** — the states an enrollment moves through
+   (`/rest/eqa/programs/{id}/enrollments`), and what `/EQAMyPrograms` should show for a
+   non-admin participant vs an admin. EQA was specced long before it was built, so the shipped
+   states may not match the FRS.
+5. **`/Storage` hierarchy** — on deactivating a rack/shelf that still contains sample-items,
+   is the expected behavior a block, a cascade, or an orphan-and-warn?
+
+### Re-check (previously asserted, now doubtful)
+
+- **BUG-49** — `/MasterListsPage/menuConfiguration` is absent from the router entirely. Any case
+  asserting "renders blank" is asserting the wrong thing; the parent route was never registered.
+- Any historical PASS that asserted only *reachability* on `/Inventory`, `/Storage/samples`,
+  `/AuditLog`, `/SystemLog`, `/ResultsByPatient`, `/ResultsByOrder`, `/LOINCManagement`, or the
+  mis-cased Workplan routes — the SPA 200s on nonexistent paths, so those PASSes proved nothing.
+
+### Now testable (were correctly deferred as unbuilt, no longer are)
+
+EQA V2 · Test↔Reagent linkage · configurable Label Presets (`/MasterListsPage/labelPresets`) ·
+alert acknowledgment. **Analyzer Maintenance & Service** (`/analyzers/maintenance`) remains
+**absent** from the router — still specced-not-built, still not a coverage gap.

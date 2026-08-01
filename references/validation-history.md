@@ -203,3 +203,39 @@ re-verification was deferred** — non-admin route-discovery patterns carry thei
 v3.2.1.x status (see `references/suite-catalog.md` §5). No new bugs observed; bug state remains in
 Jira (per `references/bug-triage.md`). Coverage-gap delta and new NEEDS-GUIDANCE workflow
 questions recorded in `coverage-gap-analysis.md` and `references/open-questions.md`.
+
+---
+
+**2026-08-01 — Monthly consolidation pass (no new suite execution; live verification only).**
+Unlike the 2026-07-01 pass, this one **did** reach an authenticated session on
+`testing.openelis-global.org` (`POST /ValidateLogin?apiCall=true` with the public
+`admin/adminADMIN!` credentials), so route and feature-state claims are freshly confirmed
+rather than carried forward.
+
+- **Route inventory rebuilt from the shipped SPA router.** Extracted every `Route,{path:…}`
+  declaration and the SideNav `link:` map from the live JS bundle
+  (`/assets/index-D1-xYVYM.js`, ~3.7 MB) — 199 router paths, 141 nav links. `suite-catalog.md`
+  §5 was rewritten from that output. **Seven previously-documented routes are wrong or
+  nonexistent** (`/Inventory`, `/Storage/samples`, `/AuditLog`, `/SystemLog`,
+  `/ResultsByPatient`, `/ResultsByOrder`, `/LOINCManagement`) and three Workplan routes had the
+  wrong casing.
+- **Methodology correction worth keeping.** A React SPA returns **200 for any path**, so the old
+  "try these URLs in order, 404 means GAP" approach could never have detected a bad route — it
+  silently passed on an empty shell. Bundle extraction is the reliable check and takes seconds.
+  Historical PASSes that asserted only reachability on the seven bad routes above should be
+  treated as unverified.
+- **Four feature-state flips confirmed by REST probe:** EQA V2 (`/rest/eqa/programs` +
+  `/…/enrollments` + `/my-programs` + `/orders/summary` all 200), Test↔Reagent linkage
+  (`/rest/test-catalog/{testId}/reagents` 200), QA/QC Westgard
+  (`/rest/qc/dashboard/summary` 200), and alert acknowledgment
+  (`/rest/alerts/{id}/acknowledge`). EQA suites previously skipped as "module absent" are back
+  in scope.
+- **BUG-49 re-characterised.** `/MasterListsPage/menuConfiguration` is **absent from the
+  router** — the blank page is an unregistered parent route, not a rendering failure. The Jira
+  wording likely needs updating.
+- **No new suite execution and no new bugs filed.** Bug state remains in Jira per
+  `references/bug-triage.md`, which was reviewed this pass and left unchanged — it correctly
+  keeps Jira as the single source of truth, keeps the 2-of-3 revalidation gate, and carries no
+  embedded status table.
+- Coverage-gap delta and new NEEDS-GUIDANCE questions recorded in `coverage-gap-analysis.md`
+  and `references/open-questions.md`.

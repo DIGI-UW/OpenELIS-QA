@@ -1,5 +1,36 @@
 # openelis-test-catalog-qa — Changelog
 
+## 2026-08-01 — monthly consolidation (state refresh, no suite execution)
+
+**First pass with a live authenticated session since the route table was written.** Rebuilt
+`references/suite-catalog.md` §5 from the shipped SPA router (199 `Route,{path:…}` declarations
++ 141 SideNav links extracted from the live bundle) instead of the old "try these URLs, 404
+means GAP" pattern list.
+
+**Methodology correction:** a React SPA returns 200 for *any* path, so the old reachability
+check could never detect a bad route — it passed on an empty shell. Seven documented routes
+turned out to be wrong or nonexistent (`/Inventory` → `/inventory`, `/Storage/samples` →
+`/Storage/sample-items`, `/AuditLog` + `/SystemLog` → `/AuditTrailReport`, `/ResultsByPatient`,
+`/ResultsByOrder`, `/LOINCManagement`) and three Workplan routes had the wrong casing. Any
+historical PASS that asserted only reachability on those should be treated as unverified.
+
+**Four feature-state flips** confirmed by authenticated REST probe — EQA V2, Test↔Reagent
+linkage, QA/QC Westgard, and alert acknowledgment are all live. EQA suites previously skipped
+as "module absent" are back in scope.
+
+**BUG-49 re-characterised:** `/MasterListsPage/menuConfiguration` is absent from the router, so
+the blank page is an unregistered parent route rather than a rendering failure — the Jira
+wording likely needs updating.
+
+**Coverage-gap pass:** 13 UNCOVERED routes listed in `coverage-gap-analysis.md` and 5
+NEEDS-GUIDANCE workflows appended to `references/open-questions.md` (patient merge semantics,
+GenericSample import failure mode, freezer excursion definition, EQA V2 enrollment lifecycle,
+storage-hierarchy deactivation). No expected results were invented for workflows not understood.
+
+`SKILL.md` unchanged (evergreen methodology); `references/bug-triage.md` reviewed and left
+as-is — it correctly keeps Jira as the single source of truth with the 2-of-3 revalidation gate
+and no embedded status table.
+
 ## text-merge (2026-07-08) — QA Tracker workflow + open-questions resolved (text only)
 
 - Consolidates the text changes from `skill/qa-tracker-artifact` and `skill/consolidation-2026-07`
