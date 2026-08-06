@@ -18,6 +18,7 @@
 |---|---|---|---|---|---|
 | _ex_ | Reflex on already-validated sample | reflex rule references a test on a sample already validated | (a) reflex should not fire; (b) fires + reopens; (c) fires into a new order | testing v3.2.1.x | determines whether a "no reflex" result is PASS or a missed trigger |
 
+| 3 | Add Order patient photo editability in view mode | On `/SamplePatientEntry` with an existing patient selected, the patient panel is read-only (`fieldset[disabled]`, 12 inputs disabled) but `PatientImageSelector` gets `disabled={false}`. Since PR #3987 portaled the dialogs out of the fieldset, the picker's controls are live (0/11 disabled: Import, Take Photo, Change Image, Confirm) — so the photo is editable where nothing else is. | (a) caller should pass `disabled` in sync ⇒ click opens the read-only **View Photo** viewer; (b) photo capture during order entry is intended ⇒ make it visually explicit and keep it editable | testing v3.2.1.11 (PR #3987) | decides whether the regression suite asserts the viewer or the picker. The spec currently pins OBSERVED behaviour (picker) and fails loudly either way it is resolved. Also gates OGC draft F-1. |
 
 _(append new rows above this line)_
 

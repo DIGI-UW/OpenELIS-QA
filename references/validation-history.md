@@ -203,3 +203,62 @@ re-verification was deferred** — non-admin route-discovery patterns carry thei
 v3.2.1.x status (see `references/suite-catalog.md` §5). No new bugs observed; bug state remains in
 Jira (per `references/bug-triage.md`). Coverage-gap delta and new NEEDS-GUIDANCE workflow
 questions recorded in `coverage-gap-analysis.md` and `references/open-questions.md`.
+
+---
+
+**2026-08-06 — PR #3987 targeted regression (testing.openelis-global.org v3.2.1.11)**
+
+Fifteen-item defect PR DIGI-UW/OpenELIS-Global-2#3987 (merged 2026-08-05). Substrate:
+Claude in Chrome only — the sandbox has no network route to the instance, so the
+Playwright harness could not run. Full report:
+`qa-report-testing-20260806-1830.md`.
+
+**Build gate passed before grading:** `GET /rest/reflexrules?id=999999` → `[]` where
+pre-PR code ignored the param and returned all rows. Census healthy (81 patients,
+142 orders in progress, 349 tests) — not a reset instance.
+
+**Result: 13 PASS · 2 GAP · 0 regressions.**
+
+- **PASS** items 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15. Highlights: item 1 all four
+  coverage sub-cases on a zero-range fixture; item 3 Plasma `Specimen.type` carrying
+  `snomed 119361006` + `loinc 12345-6` beside the OpenELIS coding with the
+  `NARROWER_THAN` correctly excluded; item 6 zero cross-specimen LOINC leakage on
+  `ServiceRequest`; item 4 proven with a purpose-built two-specimen order
+  (`DomFlip(Plasma)` vs `DomFlip(Serum)`, no `+n`); item 11 rollback leaving 0 rows;
+  item 15 all four rows incl. the already-active round-trip persisting its edit.
+- **item 5 closed on a second pass.** The first pass was PARTIAL: the only
+  validation-ready analysis was single-component and unbanded, where fixed and broken
+  code return the same string. Built the discriminating fixture instead — a sex- AND
+  age-banded range on QA test 442 (M 0–18 → `1–10`, M 18–∞ → `100–200`, F → `500–600`,
+  both sexes `COMPLETE`), entered results on the two-specimen order
+  `DEV01260000000000133` (patient male, age 36). Results Entry **and** Validation both
+  read **`100.0 - 200.0`** with `significantDigits` 1 — the adult-male band, not the
+  child band and not the female band. That is exactly the pre-fix failure mode
+  (Validation never resolved the patient, so no band could match). Now a deterministic
+  spec: `item 5 (banded)`, which seeds its own bands.
+- **GAP** items 12, 13 — `patientCILNSP_vreduit` not deployed (`/rest/report-list`
+  404) and no multi-component test exists. Recorded GAP, not PASS.
+
+**Two new findings, neither a #3987 defect** (both cleared 2-of-3 revalidation):
+F-1 Add Order photo is editable on the read-only patient panel
+(`PatientImageSelector` gets `disabled={false}` under a `fieldset[disabled]`; #3987
+removed the accidental protection the caller relied on) → open question Q3 + OGC
+draft. F-2 the five `id-documents-section` dialogs are still unportaled with 100% of
+controls disabled in view mode — the same defect item 10 fixed, in an untouched
+component. Tickets **drafted, not submitted**, per instruction.
+
+**Harness finding:** `seed-tat-data.ts`'s `createSampleOrder` defaults
+(`providerPersonId 9000002`, `referringSiteId 9000100`, `programId 2`) are
+dev-fixture ids and cause a bare 500 off dev; empty strings work. Now
+`playwright-harness.md` §11.1.
+
+**Delivered:** TC-12…TC-26 in `references/test-cases.md`; `pr3987.config.ts` +
+three specs (`test-catalog-pr3987-regression`, `patient-photo-pr3987`,
+`fhir-specimen-terminology-pr3987`, 16 tests, typecheck clean, **not yet executed**);
+`playwright-harness.md` §11; `apiShapes.ts` PR-#3987 shapes.
+
+**All configuration written during the run was restored and the restore verified**
+(tests 422/427/442 terminology and sample types 2/3) — with ONE deliberate exception:
+the sex+age-banded ranges on QA test 442 were **left in place**, because a banded
+range is what makes the item 5 assertion meaningful, and 442 is a QA-owned test. Seeded patients and orders left in place
+per the never-hard-delete rule and listed in the report's §8.2.

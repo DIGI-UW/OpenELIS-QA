@@ -250,3 +250,105 @@ If all API calls from all tabs start hanging, connection pool is exhausted:
 ---
 
 ## Step 4 — Cleanup
+
+---
+
+## Section 11 — PR #3987 findings (live-validated 2026-08-06, testing v3.2.1.11)
+
+Authored while regression-testing DIGI-UW/OpenELIS-Global-2#3987. Everything here
+was confirmed by live capture per §6.5b — the shapes live in `helpers/apiShapes.ts`
+under the `PR #3987` banner; this section records the *operational* traps.
+
+### 11.1 — Order seeding: the upstream helper's defaults 500 off dev
+
+`frontend/playwright/helpers/seed-tat-data.ts` (`createSampleOrder`) defaults
+`providerPersonId: "9000002"`, `referringSiteId: "9000100"` and `programId: "2"`.
+Those are **dev.docker-compose fixture ids**. On testing.openelis-global.org they
+don't exist and `POST /rest/SamplePatientEntry` answers a bare
+
+```
+500 {"timestamp":…,"status":500,"error":"Internal Server Error"}
+```
+
+with **no field diagnostic** — easy to misread as "order entry is broken". Sending
+**empty strings** for all three succeeds (200 + generated accession). Any spec that
+seeds an order off dev must clear them; consider fixing the helper upstream.
+
+### 11.2 — Multi-specimen orders (the fixture items 4/6/12 need)
+
+Put **one `<sample sampleID='..' tests='..'/>` element per specimen** inside
+`<samples>` in `sampleXML`. That yields one analysis per specimen on the SAME
+accession. Without it you cannot tell item 4 fixed from broken — a single-specimen
+order reads `Name(Specimen)` either way.
+
+Accession generation first: `GET /rest/SampleEntryGenerateScanProvider` → the labNo
+is in `JSON.parse(body).body`.
+
+### 11.3 — FHIR base path is resolved
+
+`/api/OpenELIS-Global/fhir` answers `application/fhir+json` and accepts that Accept
+header. Bare `/fhir`, `/fhir/R4` and `/fhir/metadata` all return the SPA HTML shell
+with **status 200** — so a naive "did it 200?" probe passes against HTML. Check the
+content-type, and prefer `FHIR_BASE` from `apiShapes.ts` over re-probing.
+
+**The transform runs at PERSIST.** Terminology configured *after* an order was
+placed never appears on that order's resources. Always: configure → then order.
+
+### 11.4 — Range coverage: three assertion traps
+
+1. `AgeInterval.toAge` for an open tail is the JSON **string** `"Infinity"`.
+   `expect(toAge).toBe(Infinity)` fails. Use `toAgeAsNumber()`.
+2. An open-ended range is expressed by **omitting `maxAge`** (send `null`), and it
+   is absent from the read-back DTO. `maxAge: 999` is a finite bound that
+   legitimately leaves a `[999, Infinity)` tail gap — this fabricates a "coverage
+   bug" in your own fixture.
+3. `statusFor()` reports **`GAP` when gaps exist even if overlaps also exist**. To
+   assert `OVERLAP`, the widest range must be open-ended.
+
+Also: `componentId` / `sampleTypeId` are **omitted** when null — assert
+`toBeUndefined()`, not `toBeNull()`.
+
+### 11.5 — The two gates on `POST …/activate` fire in a fixed order
+
+*Completeness* (hard, `422` + `{complete,missing,messages}`) is evaluated **before**
+*coverage* (soft, `409` + coverage report). A test with no primary result component
+answers `422 NO_PRIMARY_RESULT_TYPE` and you can never reach the coverage 409 on it.
+A coverage-gate fixture must therefore be an otherwise-COMPLETE test.
+
+### 11.6 — Patient name/nationalId regexes (correction)
+
+The §PATIENT_NAME_REGEX_PROPERTY note says names allow "No uppercase". On testing
+v3.2.1.11 **uppercase is accepted** (`lastName: "QaAuto"` → 200). What is confirmed
+rejected in name fields is **digits and underscores**:
+
+```
+"QaAuto"      -> 200
+"QaAuto0806"  -> 400 invalid name format, possibly illegal character
+"QA_AUTO_0806"-> 400
+```
+
+So the skill's `QA_AUTO_<MMDD>` prefix still cannot go in a patient name — use an
+alphabetic marker and carry the run id in `nationalId`/`subjectNumber`. Read
+`LAST_NAME_REGEX` per instance; deployments localise it.
+
+### 11.7 — `fetch()` result blocking in `javascript_tool` (recurrence of §10.7)
+
+Returning response **bodies** from a multi-URL probe loop tripped
+`[BLOCKED: Cookie/query string data]` and lost the whole call's output. Returning
+only **statuses and content-type booleans** worked. When probing several endpoints
+at once, project the response down to primitives inside the page and assemble the
+narrative outside.
+
+### 11.8 — Which dialog is which (item 10 scope trap)
+
+`div.id-documents-section` renders its own modals, **including one also headed
+"Select Patient Photo"**. The PR only portaled `PatientImageSelector`'s two dialogs
+(`Select Patient Photo`, `View Photo`). Filter out the `id-documents-section`
+subtree by ancestor, not by heading text, or the assertion grades the wrong dialogs
+and reports a false FAIL.
+
+Reading a component's own `disabled` prop (as distinct from an ancestor
+`fieldset[disabled]`) is worth doing before grading any view-mode behaviour — walk
+`__reactFiber$` up to the named component and read `memoizedProps.disabled`. On Add
+Order the fieldset is disabled while the selector's prop is `false`, and those two
+facts grade differently.
