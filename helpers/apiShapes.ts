@@ -1679,3 +1679,232 @@ export interface SampleTypeTestsResponse {
   tests?: Array<{ id?: string; name?: string; value?: string }>;
   panels?: Array<{ id?: string; name?: string; value?: string }>;
 }
+
+// =============================================================================
+// PR #3987 — live-validated 2026-08-06 on testing.openelis-global.org v3.2.1.11
+//
+// Fifteen-item defect PR (DIGI-UW/OpenELIS-Global-2#3987, merged 2026-08-05).
+// Every constant and quirk below was confirmed by live capture in a browser
+// context on that instance, per §6.5b — none of it is inferred from the diff.
+// =============================================================================
+
+/**
+ * FHIR base path — RESOLVED for testing v3.2.1.11 (2026-08-06).
+ *
+ * `/api/OpenELIS-Global/fhir` answers `content-type: application/fhir+json`
+ * and accepts the `application/fhir+json` Accept header. The bare `/fhir`,
+ * `/fhir/R4` and `/fhir/metadata` paths all return the SPA HTML shell (200 +
+ * text/html), which is what the 2026-05-13 pilot saw. So the candidate list
+ * above is still correct in ORDER, but on testing the first entry now wins
+ * outright — prefer this constant over re-probing.
+ */
+export const FHIR_BASE = '/api/OpenELIS-Global/fhir' as const;
+
+/**
+ * Range-coverage report — `GET /rest/test-catalog/tests/{testId}/ranges`.
+ *
+ * TWO SERIALIZATION QUIRKS a spec must encode (both confirmed live):
+ *
+ *  1. `AgeInterval.toAge` for an open-ended tail gap serializes as the JSON
+ *     STRING `"Infinity"`, not a number. `expect(gap.toAge).toBe(Infinity)`
+ *     FAILS. Compare against the string, or normalise via `toAgeAsNumber()`.
+ *  2. An open-ended range is expressed by OMITTING `maxAge` (send `null`);
+ *     it is then absent from the stored DTO on read-back. Sending a large
+ *     finite bound like `maxAge: 999` does NOT mean "no upper limit" — it
+ *     legitimately leaves a `[999, Infinity)` tail gap, which is what makes
+ *     a naive fixture look like a coverage bug when it isn't.
+ *
+ * STATUS PRECEDENCE: `statusFor()` reports `GAP` when gaps exist even if
+ * overlaps ALSO exist. To assert `OVERLAP` you need a fixture with no tail
+ * gap — i.e. the widest range must be open-ended.
+ */
+export type CoverageStatus = 'COMPLETE' | 'GAP' | 'OVERLAP' | 'EMPTY';
+
+export interface AgeInterval {
+  fromAge: number;
+  /** `number` for a bounded interval, the string `"Infinity"` for an open tail. */
+  toAge: number | 'Infinity';
+  componentId?: string | null;
+  componentLabel?: string | null;
+}
+
+export interface SexCoverage {
+  sex: 'M' | 'F';
+  status: CoverageStatus;
+  gaps: AgeInterval[];
+  overlaps: AgeInterval[];
+}
+
+export interface CoverageReport {
+  male: SexCoverage;
+  female: SexCoverage;
+}
+
+export interface RangesResponse {
+  testId: string;
+  ranges: RangeDto[];
+  coverage: CoverageReport;
+  sampleTypes: Array<{ id: string; name: string; domain: string }>;
+}
+
+/**
+ * `componentId` and `sampleTypeId` are OMITTED from the response when null —
+ * do not assert `toBeNull()`, assert `toBeUndefined()` or use `?? null`.
+ */
+export interface RangeDto {
+  id?: string;
+  componentId?: string | null;
+  sampleTypeId?: string | null;
+  gender: 'M' | 'F';
+  minAge: number;
+  /** Absent when the range is open-ended. */
+  maxAge?: number;
+  lowNormal?: number;
+  highNormal?: number;
+  lowCritical?: number;
+  highCritical?: number;
+  lowValid?: number;
+  highValid?: number;
+  lowReporting?: number | null;
+  highReporting?: number | null;
+}
+
+/** Normalise `toAge` for arithmetic/comparison. */
+export const toAgeAsNumber = (i: AgeInterval): number =>
+  i.toAge === 'Infinity' ? Number.POSITIVE_INFINITY : Number(i.toAge);
+
+/** `GET /rest/test-catalog/tests/{testId}/loinc-integrity` (PR item 2). */
+export interface LoincIntegrity {
+  loinc?: string;
+  active: boolean;
+  /**
+   * TRUE only when the test is active AND orderable AND `test.loinc` is blank
+   * AND there is no ACTIVE LOINC terminology mapping in ANY scope. Post-#3987
+   * a component-scoped or specimen-scoped mapping clears this; a SNOMED-only
+   * or `is_active='N'` mapping does NOT.
+   */
+  noLoinc: boolean;
+  duplicates: Array<{ testId: string; name: string }>;
+}
+
+/** A row of `GET /rest/test-catalog/tests` (PR items 2 + 8). */
+export interface TestListRow {
+  testId: string;
+  /** KEEPS the "+n" abbreviation, e.g. `Anti-CD 3(Immunohistochemistry specimen +2)`. */
+  name: string;
+  sampleType?: string;
+  sampleTypes?: string[];
+  code?: string;
+  domain?: string;
+  active: boolean;
+  amr?: boolean;
+  coverageIncomplete?: boolean;
+  /** `test.loinc` non-blank OR an active LOINC mapping in any scope (item 2). */
+  hasLoinc: boolean;
+  findings?: unknown[];
+  errorCount?: number;
+  warningCount?: number;
+  infoCount?: number;
+}
+
+/**
+ * `GET /rest/test-catalog/tests/{testId}` (PR item 8) — the EDITOR envelope.
+ * `name` names EVERY associated specimen, comma-separated, with NO space
+ * before the paren: `Anti-Pan Keratin(Immunohistochemistry specimen, Tissue
+ * antemortem, Tissue post mortem)`. It must never match /\+\d+\)/.
+ * The LIST row (above) deliberately keeps the abbreviation.
+ */
+export interface EditorEnvelope {
+  testId: string;
+  name: string;
+  code?: string;
+  domain?: string;
+  applicableSections: string[];
+}
+
+/** Terminology mapping — test-level and sample-type-level share this shape. */
+export interface TerminologyMappingDto {
+  id?: string;
+  source: 'LOINC' | 'SNOMED' | 'CIEL' | 'OCL' | 'WHONET';
+  code: string;
+  relationship?: 'SAME_AS' | 'BROADER_THAN' | 'NARROWER_THAN';
+  /** Omitted when the mapping is shared across all specimens. */
+  sampleTypeId?: string;
+  /** Omitted for whole-test mappings. */
+  componentId?: string;
+}
+
+/** Terminology system URLs emitted into FHIR codings (PR items 3 + 6). */
+export const TERMINOLOGY_SYSTEM_URL: Record<string, string | null> = {
+  LOINC: 'http://loinc.org',
+  SNOMED: 'http://snomed.info/sct',
+  CIEL: 'https://openconceptlab.org/orgs/CIEL/sources/CIEL',
+  OCL: 'https://openconceptlab.org',
+  /** Unrecognised by `terminologySystemUrl()` → coding is SKIPPED entirely. */
+  WHONET: null,
+};
+
+export const OE_SAMPLE_TYPE_SYSTEM = 'http://openelis-global.org/sampleType' as const;
+
+/**
+ * Patient name / nationalId regexes — CORRECTION to the §PATIENT_NAME_REGEX_PROPERTY
+ * note above, measured 2026-08-06 on testing v3.2.1.11.
+ *
+ * That note says the name regex allows "No uppercase". On this deployment
+ * UPPERCASE IS ACCEPTED: `lastName: "QaAuto"` / `firstName: "Fixture"` both
+ * returned `200 {"status":"success","patientId":"114"}`, and `nationalId:
+ * "QAPplain"` was accepted too. What IS rejected is confirmed unchanged —
+ * DIGITS and UNDERSCORES in name fields:
+ *
+ *     lastName: "QaAuto0806" -> 400 invalid name format
+ *     lastName: "QA_AUTO_0806" -> 400 invalid name format
+ *     lastName: "QaAuto"     -> 200
+ *
+ * Deployments localise these regexes, so the standing advice holds: read
+ * `LAST_NAME_REGEX` per instance rather than trusting either note.
+ */
+export const PATIENT_NAME_ILLEGAL_CHAR_ERROR =
+  'invalid name format, possibly illegal character' as const;
+
+/** Exact item-14 error string — a hard-coded English literal, NOT an i18n key. */
+export const PHOTO_UNREADABLE_ERROR =
+  'The photo could not be read as an image. Supported formats are JPEG, PNG, GIF and BMP.' as const;
+
+/** Valid base64 that is NOT a decodable image — trips the item-14 branch. */
+export const UNDECODABLE_PHOTO_DATA_URI =
+  'data:image/jpeg;base64,SGVsbG8gd29ybGQ=' as const;
+
+/**
+ * `GET /rest/patient-photos/{patientPK}/{isThumbnail}` → `{ data }`.
+ * `""` when there is no photo (never undefined). Called with `false` by
+ * `SearchPatientForm`, so `data` is the full `data:<type>;base64,<payload>`.
+ */
+export interface PatientPhotoResponse {
+  data: string;
+}
+
+/**
+ * `POST /rest/SamplePatientEntry` — order creation.
+ *
+ * WARNING (2026-08-06): the upstream helper
+ * `frontend/playwright/helpers/seed-tat-data.ts` defaults
+ * `providerPersonId: "9000002"`, `referringSiteId: "9000100"` and
+ * `programId: "2"`. Those are dev.docker-compose fixture ids. On
+ * testing.openelis-global.org they do not exist and the POST answers a bare
+ * **HTTP 500** (`{"status":500,"error":"Internal Server Error"}`) with no
+ * field diagnostic. Sending EMPTY STRINGS for all three succeeds (200 + a
+ * generated accession). Any spec that seeds an order on a non-dev instance
+ * must clear them.
+ *
+ * MULTI-SPECIMEN: put one `<sample sampleID='..' tests='..'/>` element per
+ * specimen inside `<samples>` — that yields one analysis per specimen on the
+ * SAME accession, which is the fixture PR items 4 / 6 / 12 need.
+ */
+export const SAMPLE_PATIENT_ENTRY = '/api/OpenELIS-Global/rest/SamplePatientEntry';
+export const ACCESSION_GENERATOR =
+  '/api/OpenELIS-Global/rest/SampleEntryGenerateScanProvider';
+export const ORDER_SEED_DEV_ONLY_IDS = {
+  providerPersonId: '9000002',
+  referringSiteId: '9000100',
+  programId: '2',
+} as const;

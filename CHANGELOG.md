@@ -1,5 +1,46 @@
 # openelis-test-catalog-qa — Changelog
 
+## 2026-08-06 — PR #3987 regression coverage (TC-12…TC-26 + Playwright suite)
+
+Targeted verification of DIGI-UW/OpenELIS-Global-2#3987 (15-item defect PR, merged
+2026-08-05) on testing.openelis-global.org v3.2.1.11: **13 PASS · 2 GAP ·
+0 regressions**. Report: `qa-report-testing-20260806-1830.md`.
+
+- **references/test-cases.md**: NEW PR-#3987 block, TC-12…TC-26. TC-12 is a **build
+  gate** — a pre-PR build answers the same endpoints with the old semantics, so an
+  ungated run reports PASS on a build lacking the fix.
+- **NEW `pr3987.config.ts`** + three specs (16 tests, typecheck clean, not yet
+  executed): `test-catalog-pr3987-regression.spec.ts` (items 1,2,4*,5,7,8,15) —
+  including `item 5 (banded)`, which SEEDS a sex+age-banded range rather than hoping
+  the instance has one, because on an unbanded fixture the fixed and broken code
+  return the same string,
+  `patient-photo-pr3987.spec.ts` (9,10,11,14), `fhir-specimen-terminology-pr3987.spec.ts`
+  (3,6,4 + fixture-gated 12,13). All self-seeding and self-reverting.
+- **tsconfig.json**: the four new files added to the blocking typecheck surface
+  (the ratchet its own comment requires).
+- **helpers/apiShapes.ts**: PR-#3987 shapes — coverage/range DTOs, `LoincIntegrity`,
+  `TestListRow`, `EditorEnvelope`, terminology system URLs, `FHIR_BASE`, the exact
+  item-14 error literal, order-seeding constants. All live-captured per §6.5b.
+- **references/playwright-harness.md**: NEW §11 — `seed-tat-data.ts`'s dev-only
+  provider/site/program ids cause a bare 500 off dev (§11.1); multi-specimen order
+  recipe (§11.2); FHIR base resolved, and the transform runs at PERSIST (§11.3);
+  three range-coverage assertion traps incl. `toAge` being the string `"Infinity"`
+  (§11.4); completeness-before-coverage gate order (§11.5); patient name regex
+  correction — uppercase IS accepted, digits/underscores are not (§11.6);
+  `javascript_tool` fetch-body blocking recurrence (§11.7); the duplicate
+  "Select Patient Photo" dialog scope trap (§11.8).
+- **references/suite-catalog.md**: PR-3987 suite indexed with per-project fixture cost.
+- **references/open-questions.md**: Q3 — should the Add Order photo be editable while
+  the rest of the patient panel is read-only?
+- **references/validation-history.md**: run appended.
+- Two findings drafted as OGC tickets but **NOT submitted** (per instruction), both
+  past the 2-of-3 revalidation gate and neither a #3987 defect: photo editable on the
+  read-only Add Order panel; the five `id-documents-section` dialogs still unportaled
+  and fully disabled in view mode.
+
+\* item 4 is only partially decidable without a two-specimen order; the FHIR project
+proves it properly.
+
 ## text-merge (2026-07-08) — QA Tracker workflow + open-questions resolved (text only)
 
 - Consolidates the text changes from `skill/qa-tracker-artifact` and `skill/consolidation-2026-07`

@@ -427,3 +427,21 @@ If a URL returns 404, try alternates before marking as GAP. Record the working U
 
 ---
 
+---
+
+### PR-3987 regression suite (added 2026-08-06)
+
+Fifteen-item defect PR DIGI-UW/OpenELIS-Global-2#3987 (merged 2026-08-05). Cases
+**TC-12 … TC-26** in `references/test-cases.md`; automation in `pr3987.config.ts`.
+
+| Project | Items | Cost | Notes |
+|---|---|---|---|
+| `pr3987-catalog` | 1, 2, 4*, 5, 7, 8, 15 | read-mostly, self-reverting | safe on any instance |
+| `pr3987-patient` | 9, 10, 11, 14 | **creates patients** | one create must fail and roll back |
+| `pr3987-fhir` | 3, 6, 4, (12, 13) | **seeds an order**, rewrites terminology | heaviest; 12/13 skip unless the CILNSP report + a multi-component test exist |
+
+\* item 4 is only *partially* decidable in `pr3987-catalog` (needs a two-specimen
+order); `pr3987-fhir` proves it properly.
+
+**Run TC-12 (the build gate) first.** A pre-#3987 build answers the same endpoints
+with the old semantics, so an ungated run reports PASS on a build lacking the fix.
