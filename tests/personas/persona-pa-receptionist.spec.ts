@@ -174,28 +174,55 @@ test.describe.serial('Persona PA — Receptionist', () => {
   test('Step 4 — Place order on Routine Testing program (PERSIST)', async ({ page }) => {
     if (!patientPK || !testId) test.skip();
     await page.goto(BASE);
+    // Live-verified SamplePatientEntry shape (2026-08-06). The body that used to be
+    // here was invented (sampleItems[], no sampleXML, no labNo) and returned HTTP 400
+    // HttpMessageNotReadableException — the server could not even deserialize it.
+    // playwright-harness.md 6.5b: capture the shape, don't infer it.
+    const form = await apiCall<{ currentDate?: string }>(page, '/api/OpenELIS-Global/rest/SamplePatientEntry');
+    const today = (form.ok && form.body && (form.body as { currentDate?: string }).currentDate) || '';
+    const genRes = await apiCall<{ body?: string }>(page, '/api/OpenELIS-Global/rest/SampleEntryGenerateScanProvider');
+    const labNo = (genRes.ok && genRes.body && (genRes.body as { body?: string }).body) || '';
+    const q = String.fromCharCode(39);
+    const sampleXML = `<?xml version="1.0" encoding="utf-8"?><samples><sample sampleID=${q}${sampleTypeId}${q} date=${q}${q} time=${q}${q} collector=${q}${q} quantity=${q}${q} uom=${q}${q} tests=${q}${testId}${q} testSectionMap=${q}${q} testSampleTypeMap=${q}${q} panels=${q}${q} rejected=${q}false${q} rejectReasonId=${q}${q} initialConditionIds=${q}${q} numOrderLabels=${q}1${q} numSpecimenLabels=${q}1${q}/></samples>`;
     const create = await apiCall<{ accessionNumber?: string }>(
       page, '/api/OpenELIS-Global/rest/SamplePatientEntry', {
         method: 'POST',
         body: {
+          rememberSiteAndRequester: false, currentDate: null, projects: null, customNotificationLogic: false,
+          patientEmailNotificationTestIds: [], patientSMSNotificationTestIds: [],
+          providerEmailNotificationTestIds: [], providerSMSNotificationTestIds: [],
+          patientUpdateStatus: 'UPDATE', referralItems: [], referralOrganizations: null,
+          referralReasons: null, sampleTypes: null, sampleXML,
           patientProperties: { patientPK, nationalId: NATIONAL_ID, patientUpdateStatus: 'UPDATE' },
+          patientSearch: null, patientEnhancedSearch: null, patientClinicalProperties: null,
           sampleOrderItems: {
-            newSampleEntry: 'true',
-            collectionDate: new Date().toISOString().slice(0, 10),
-            receivedDate: new Date().toISOString().slice(0, 10),
-            priority: 'ROUTINE',
-            paymentStatus: 'NONE',
+            newRequesterName: '', orderTypes: [], orderType: '', externalOrderNumber: '', labNo,
+            requestDate: today, receivedDateForDisplay: today, receivedTime: '09:30',
+            requesterSampleID: '', referringPatientNumber: '', referringSiteId: '',
+            referringSiteDepartmentId: '', referringSiteCode: '', referringSiteName: '',
+            referringSiteDepartmentName: '', referringSiteList: [], referringSiteDepartmentList: [],
+            providersList: [], providerId: '', providerPersonId: '', providerFirstName: '', providerLastName: '',
+            facilityAddressStreet: '', facilityAddressCommune: '', facilityPhone: '', facilityFax: '',
+            paymentOptionSelection: '', paymentOptions: [], modified: true, sampleId: '', readOnly: false,
+            billingReferenceNumber: '', testLocationCode: '', otherLocationCode: '', testLocationCodeList: [],
+            program: '', programList: [], contactTracingIndexName: '', contactTracingIndexRecordNumber: '',
+            priorityList: [], priority: 'ROUTINE', programId: '', additionalQuestions: null,
+            isEQASample: false, eqaProgramId: '', eqaProviderOrganizationId: '', eqaProviderSampleId: '',
+            eqaParticipantId: '', eqaDeadline: '', eqaPriority: 'STANDARD',
           },
-          sampleItems: [{ sampleTypeId, tests: [{ testId, isReportable: true }] }],
+          initialSampleConditionList: [], sampleNatureList: null, testSectionList: [],
+          warning: false, useReferral: false, rejectReasonList: null,
         },
       });
     if (!create.ok) {
       markStep(PERSONA, 4, 'FAIL', `Order POST HTTP ${create.status}`);
       expect(create.ok).toBeTruthy(); return;
     }
-    accession = (typeof create.body === 'object' && create.body !== null)
+    // The POST echoes the form back, not an accessionNumber — the accession is the
+    // labNo reserved from SampleEntryGenerateScanProvider (verified live 2026-08-06).
+    accession = labNo || ((typeof create.body === 'object' && create.body !== null)
       ? (create.body as { accessionNumber?: string }).accessionNumber ?? null
-      : null;
+      : null);
     if (!accession) {
       markStep(PERSONA, 4, 'FAIL', 'Order saved but no accession returned');
       expect(accession).toBeTruthy(); return;

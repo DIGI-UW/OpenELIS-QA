@@ -86,20 +86,24 @@ test.describe.serial('Chain A — Order Lifecycle', () => {
     if (!order) test.skip();
 
     await page.goto(BASE);
-    const readback = await apiCall<{ patientProperties?: { nationalId?: string; firstName?: string; lastName?: string } }>(
+    const readback = await apiCall<{ patientSearchResults?: Array<{ nationalId?: string; firstName?: string; lastName?: string }> }>(
       page,
-      `/api/OpenELIS-Global/rest/SampleEdit?labNumber=${encodeURIComponent(order!.accession)}`
+      // NOTE (2026-08-06): GET /rest/SampleEdit returns the BLANK form scaffold
+      // (searchFinished:false, patient fields empty) regardless of labNumber — it does
+      // not perform the lookup, so reading linkage from it produced a false BUG-37.
+      // patient-search-results?labNumber= is the live-verified linkage surface.
+      `/api/OpenELIS-Global/rest/patient-search-results?labNumber=${encodeURIComponent(order!.accession)}`
     );
 
     if (!readback.ok) {
-      markStep('A', 2, 'FAIL', `SampleEdit lookup returned HTTP ${readback.status}`,
+      markStep('A', 2, 'FAIL', `patient-search-results lookup returned HTTP ${readback.status}`,
         `Cannot verify linkage without the read-back endpoint.`);
-      expect(readback.ok, `SampleEdit returned ${readback.status}`).toBeTruthy();
+      expect(readback.ok, `patient-search-results returned ${readback.status}`).toBeTruthy();
       return;
     }
 
     const linkedNationalId = (typeof readback.body === 'object' && readback.body !== null)
-      ? ((readback.body as { nationalId?: string }).nationalId)
+      ? ((readback.body as { patientSearchResults?: Array<{ nationalId?: string }> }).patientSearchResults || [])[0]?.nationalId
       : undefined;
 
     if (linkedNationalId !== order!.patientNationalId) {

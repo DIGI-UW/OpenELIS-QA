@@ -127,7 +127,7 @@ test.describe.serial('Persona PC — Validating Biologist', () => {
     await page.goto(BASE);
     await page.waitForTimeout(2000); // validation may be async
     const r = await apiCall<{ resultList?: Array<{ status?: string; accessionNumber?: string }> }>(
-      page, `/api/OpenELIS-Global/rest/PatientResults?accessionNumber=${encodeURIComponent(validatedAccession!)}`
+      page, `/api/OpenELIS-Global/rest/LogbookResults?accessionNumber=${encodeURIComponent(validatedAccession!)}`
     );
     if (!r.ok) {
       markStep(PERSONA, 4, 'FAIL', `PatientResults HTTP ${r.status}`);
