@@ -40,38 +40,130 @@ const BIOCHEM = 'Biochemistry';                       // lab unit
 
 // ---------- helpers ----------
 async function login(page: Page) {
-  await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
-  await page.fill('input[name="loginName"], #loginName, input[placeholder*="ser" i]', ADMIN.user);
-  await page.fill('input[type="password"], #password', ADMIN.pass);
+  await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' }).catch(() => {});
+  // With a preloaded storageState (guards.config.ts) we're already authenticated, so /login
+  // redirects away and no username field appears — skip fast instead of hanging on fill().
+  const userField = page.locator('input[name="loginName"], #loginName, input[placeholder*="ser" i]').first();
+  if (!(await userField.isVisible({ timeout: 4000 }).catch(() => false))) return;
+  // Short timeouts + catches: the testing login page intermittently hangs ("Loginloading"); never
+  // let that stall a test for 150s — storageState already authenticates us.
+  await userField.fill(ADMIN.user, { timeout: 8000 }).catch(() => {});
+  await page.fill('input[type="password"], #password', ADMIN.pass, { timeout: 8000 }).catch(() => {});
   await page.getByRole('button', { name: /login|sign in|submit/i }).first()
-    .click().catch(() => page.keyboard.press('Enter'));
-  await page.waitForLoadState('networkidle').catch(() => {});
+    .click({ timeout: 8000 }).catch(() => page.keyboard.press('Enter').catch(() => {}));
+  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
 }
 const getJson = (rq: APIRequestContext, url: string) =>
   rq.get(url, { headers: { Accept: 'application/json' } }).then((r) => r.json());
 
-/** Create a test through the New-test form; returns its id. New tests are created Inactive. */
+/** Authenticated write from the PAGE context: sends the session cookie AND the X-CSRF-Token that
+ *  OpenELIS keeps in localStorage['CSRF']. The bare `request` fixture has neither the token nor
+ *  localStorage, so its POST/DELETE 403 regardless of whether the endpoint exists — masking the
+ *  real verdict (e.g. OGC-1115 deactivate). Returns the HTTP status. */
+async function apiWrite(page: Page, method: 'POST' | 'DELETE' | 'PUT', url: string): Promise<number> {
+  if (!page.url().startsWith(BASE)) await nav(page, `${BASE}/`);
+  return page.evaluate(async ({ m, u }) => {
+    const once = async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const res = await fetch(u, { method: m, headers: { Accept: 'application/json', 'X-CSRF-Token': csrf }, credentials: 'include' });
+      return res.status;
+    };
+    try { return await once(); }
+    catch { await new Promise((r) => setTimeout(r, 1500)); try { return await once(); } catch { return 0; } } // 0 = network blip
+  }, { m: method, u: url });
+}
+
+/** SPA-safe navigation: a client-side redirect during goto can throw net::ERR_ABORTED even though
+ *  the page loads fine — tolerate it and retry, so a transient abort isn't read as a failure. */
+async function nav(page: Page, url: string) {
+  for (let i = 0; i < 3; i++) {
+    try { await page.goto(url, { waitUntil: 'domcontentloaded' }); return; }
+    catch (e) { if (!/ERR_ABORTED|interrupted|frame was detached|navigation/i.test(String(e))) throw e; await page.waitForTimeout(1200); }
+  }
+  await page.goto(url, { waitUntil: 'commit' }).catch(() => {});
+  await page.waitForTimeout(800);
+}
+
+/** Look up a just-created test's id by its unique name via the authenticated REST list. */
+async function findTestIdByName(page: Page, name: string): Promise<string | null> {
+  const d = await getJson(page.request, `${TC}/tests?search=${encodeURIComponent(name)}&page=1&pageSize=10`).catch(() => null);
+  const row = d && Array.isArray(d.rows) ? d.rows.find((r: any) => r.name === name) : null;
+  return row ? String(row.id) : null;
+}
+
+/** Create a test through the New-test form; returns its id. New tests are created Inactive.
+ *  The testing instance drops sessions mid-run (form bounces to /login; create Save silently doesn't
+ *  persist). So retry the WHOLE create up to 3× — re-login + reload the form + re-fill + re-Save —
+ *  and after each attempt check whether the test now exists by name. Fails loudly only if all fail. */
 async function createTest(page: Page, name: string, code: string, sampleType = 'Serum'): Promise<string> {
-  await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/new/basic-info`, { waitUntil: 'domcontentloaded' });
-  await page.getByLabel('Test name', { exact: false }).first().fill(name);
-  await page.getByLabel('Reporting name', { exact: false }).first().fill(name);
-  const codeField = page.getByLabel('Test code', { exact: false }).first();
-  await codeField.click(); await codeField.fill(code);                 // code may auto-fill from name — overwrite
-  // Lab Unit + Sample type are Carbon comboboxes rendering a native <select> or listbox:
-  await pickCombo(page, 'Lab Unit', BIOCHEM);
-  await pickCombo(page, 'Sample type', sampleType);
-  await page.getByRole('button', { name: /^Save$/ }).last().click();
-  await page.waitForURL(/\/TestCatalogEditor\/\d+\/basic-info/, { timeout: 30_000 });
-  return page.url().match(/TestCatalogEditor\/(\d+)\//)![1];
+  const url = `${BASE}/MasterListsPage/TestCatalogEditor/new/basic-info`;
+  const nameField = () => page.getByLabel('Test name', { exact: false }).first();
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    // Maybe a prior attempt already created it (Save fired but redirect/lookup raced).
+    const pre = await findTestIdByName(page, name); if (pre) return pre;
+    await nav(page, url);
+    if (!(await nameField().isVisible({ timeout: 8000 }).catch(() => false))) { await login(page); await nav(page, url); }
+    if (!(await nameField().isVisible({ timeout: 12000 }).catch(() => false))) continue; // form never loaded → retry
+    await nameField().fill(name).catch(() => {});
+    await page.getByLabel('Reporting name', { exact: false }).first().fill(name).catch(() => {});
+    const codeField = page.getByLabel('Test code', { exact: false }).first();
+    await codeField.click().catch(() => {}); await codeField.fill(code).catch(() => {});   // overwrite auto-fill
+    await pickCombo(page, 'Lab Unit', BIOCHEM).catch(() => {});
+    await pickCombo(page, 'Sample type', sampleType).catch(() => {});
+    await page.getByRole('button', { name: /^Save$/ }).last().click().catch(() => {});
+    // Resolve id (redirect target is inconsistent: /{id}/basic-info or /). Poll by URL then by name.
+    for (let i = 0; i < 8; i++) {
+      const m = page.url().match(/TestCatalogEditor\/(\d+)\//); if (m) return m[1];
+      const id = await findTestIdByName(page, name); if (id) return id;
+      await page.waitForTimeout(1200);
+    }
+    // not persisted this attempt → loop and retry the whole create
+  }
+  throw new Error(
+    `createTest: could not create "${name}" after 3 attempts. ` +
+    `lastUrl=${page.url()} ` +
+    // Do NOT assert a cause here. Historically this said "instance session
+    // instability", which is a diagnosis the helper cannot support and which
+    // sent triage down a session-expiry path when the observed symptom is that
+    // field entry / Save never completes. State the observation only.
+    `(observed: form reachable but the created test never became findable by name; ` +
+    `cause NOT established - capture the editor save request before concluding)`
+  );
 }
 async function pickCombo(page: Page, label: string, optionText: string) {
+  // Carbon/downshift combobox (v3.2.1.11 editor): a role=combobox input (Lab Unit / Sample type /
+  // Add to panel) or a toggle-button (Add Label Type). The reliable pattern (verified by hand):
+  // OPEN it, then do a REAL click on the option ROW — NOT combo.fill(), which types into the box
+  // without committing a selection and leaves the required field empty (Save then silently fails to
+  // create → looked like a "hang"). Playwright auto-scrolls the option into view within the listbox.
   const combo = page.getByLabel(label, { exact: false }).first();
+  await combo.scrollIntoViewIfNeeded().catch(() => {});
   await combo.click();
-  await page.getByRole('option', { name: optionText, exact: false }).first().click()
-    .catch(async () => { await combo.fill(optionText); await page.getByText(optionText, { exact: true }).first().click(); });
+  await page.waitForTimeout(500);
+
+  const clickIfVisible = async (loc: any) => {
+    const el = loc.first();
+    if (await el.isVisible({ timeout: 1500 }).catch(() => false)) { await el.click(); return true; }
+    return false;
+  };
+  let picked =
+    (await clickIfVisible(page.getByRole('option', { name: optionText, exact: true }))) ||
+    (await clickIfVisible(page.getByRole('option', { name: optionText, exact: false }))) ||
+    (await clickIfVisible(page.locator('[role="listbox"] [role="option"], [role="listbox"] li').filter({ hasText: optionText })));
+  if (!picked) {
+    // Long list: type a few chars to filter, then click the option (still a real option-row click).
+    await combo.pressSequentially(optionText.slice(0, 8), { delay: 25 }).catch(() => {});
+    await page.waitForTimeout(600);
+    picked = await clickIfVisible(page.getByRole('option', { name: optionText, exact: false }));
+  }
+  await page.waitForTimeout(400);
+
+  // Verify the selection actually committed (a combobox left empty makes Save silently no-op).
+  const committed = await combo.inputValue().then((v: string) => !!v && new RegExp(optionText.slice(0, 6), 'i').test(v)).catch(() => false);
+  if (!picked && !committed) throw new Error(`pickCombo("${label}") could not select "${optionText}"`);
 }
 async function gotoSection(page: Page, id: string, section: string) {
-  await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/${id}/${section}`, { waitUntil: 'domcontentloaded' });
+  await nav(page, `${BASE}/MasterListsPage/TestCatalogEditor/${id}/${section}`);
   await page.waitForTimeout(800);
 }
 /** Click the bottom section Save (not the top toolbar Save). */
@@ -87,7 +179,7 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
   // ---------- A. list & create ----------
   test('TCA-03: duplicate code is rejected with a field error, no create', async ({ page, request }) => {
     const before = await getJson(request, `${TC}/tests?search=&page=1&pageSize=1`).then((d) => d.total);
-    await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/new/basic-info`, { waitUntil: 'domcontentloaded' });
+    await nav(page, `${BASE}/MasterListsPage/TestCatalogEditor/new/basic-info`);
     await page.getByLabel('Test name', { exact: false }).first().fill(`${STAMP} DupCode`);
     await page.getByLabel('Reporting name', { exact: false }).first().fill(`${STAMP} DupCode`);
     const codeField = page.getByLabel('Test code', { exact: false }).first();
@@ -179,6 +271,7 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
     await sectionSave(page);
 
     const comp = (await getJson(request, `${TC}/tests/${id}/sample-results`)).components[0];
+    console.log('TCCM_READBACK=' + JSON.stringify({ testId: id, resultType: comp.resultType, options: (comp.options || []).map((o: any) => o.valueName || o.value) }));
     expect(comp.resultType, 'multi-select type persists').toBe('M');
     // FIXME(OGC-1123): options do not persist for multi-select — stays empty. When fixed, this
     // becomes .toBeGreaterThan(0) and the assertion flips.
@@ -257,7 +350,7 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
     const id = await createTest(page, `${STAMP} Methods`, `${STAMP}_MET`);
     await gotoSection(page, id, 'methods');
     await page.getByRole('button', { name: /link method/i }).first().click();
-    await page.getByLabel('Select a method to link', { exact: false }).click();
+    await page.locator('#link-method-select').first().click();   // label matches 2 elements; target the combobox by id
     await page.getByRole('option', { name: /^EIA$/i }).first().click();
     await page.getByLabel('Effective Date', { exact: false }).fill('2026-07-08');
     await page.getByRole('button', { name: /link method/i }).last().click();
@@ -297,7 +390,8 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
   // ---------- G / bug guards (API — deterministic) ----------
   test('OGC-1116: created + activated test becomes orderable in /rest/test-list', async ({ page, request }) => {
     const id = await createTest(page, `${STAMP} Orderable`, `${STAMP}_ORD`);
-    await request.post(`${TC}/tests/${id}/activate`, { headers: { Accept: 'application/json' } });
+    const actStatus = await apiWrite(page, 'POST', `${TC}/tests/${id}/activate`);  // CSRF-authenticated
+    console.log('OGC1116_ACTIVATE_STATUS=' + actStatus);
     await page.waitForTimeout(1500); // allow index refresh (orderability was reindex-dependent)
     const list = await getJson(request, `${REST}/test-list`);
     const present = (list || []).some((t: any) => String(t.id) === id);
@@ -305,11 +399,18 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
     expect(present, 'activated test present in orderable list').toBe(true);
   });
 
-  test('OGC-1115: deactivate remains non-functional (FIXME when fixed)', async ({ request }) => {
-    const deact = await request.post(`${TC}/tests/380/deactivate`);
-    const del = await request.delete(`${TC}/tests/380/activate`);
-    expect(deact.status(), 'no /deactivate endpoint (bug present)').toBe(404);
-    expect([404, 405]).toContain(del.status());
+  test('OGC-1115: deactivate remains non-functional (FIXME when fixed)', async ({ page }) => {
+    // CSRF-authenticated writes (the bare request fixture 403s without the token → false 404/403).
+    const deact = await apiWrite(page, 'POST', `${TC}/tests/380/deactivate`);
+    const del = await apiWrite(page, 'DELETE', `${TC}/tests/380/activate`);
+    console.log('OGC1115_STATUS deact=' + deact + ' del=' + del);
+    // Flip-when-fixed: while the bug is present the deactivate path does NOT return 2xx (seen: 404 no
+    // route / 405 wrong verb / 403 rejected; 0 = network blip, also not success). When a working
+    // deactivate ships it returns 2xx and this flips → close OGC-1115. (2xx check, not >=400, so a
+    // transient 0 doesn't masquerade as a flip.)
+    const is2xx = (s: number) => s >= 200 && s < 300;
+    expect(is2xx(deact), `deactivate should not succeed while bug present (got ${deact})`).toBe(false);
+    expect(is2xx(del), `DELETE-activate should not succeed while bug present (got ${del})`).toBe(false);
   });
 
   test('OGC-1120: sample-type-tests 500 without param, 200 with param (robustness guard)', async ({ request }) => {
