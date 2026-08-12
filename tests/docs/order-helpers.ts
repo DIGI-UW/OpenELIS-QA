@@ -43,6 +43,45 @@ export async function selectSite(page: Page, query = 'MUL'): Promise<boolean> {
   } catch { return false; }
 }
 
+/**
+ * Sampling Site for Environmental/Vector orders. The field is a typeahead ("Search by site name
+ * or code"); a match shows a result to Select, and if nothing matches it offers "+ Add new site".
+ * Verified live on indonesiademo (v3.2.1.10): env/vector sites are often unseeded, so add-new is
+ * the reliable path. Returns true when either an existing site is selected or a new one is staged.
+ */
+export async function selectOrAddSite(page: Page, query = 'QA_AUTO Site'): Promise<boolean> {
+  // Sampling Site is a typeahead needing a few chars + time to resolve. Either an existing match
+  // ("Select") or an "Add new site" affordance appears; confirm the resulting "Selected"/"New"
+  // chip so a silent miss (which would gate Save & Next) is caught rather than passing quietly.
+  let outcome = 'none';
+  try {
+    const site = page.getByPlaceholder(/site name or code/i).first();
+    await site.click({ timeout: 3000 });
+    await site.fill('', { timeout: 2000 }).catch(() => {});
+    await site.type(query, { delay: 40 });           // per-char typing so the typeahead fires
+    await page.waitForTimeout(1800);                 // allow the async site lookup to settle
+    const sel = page.getByRole('button', { name: /^select$/i }).first();
+    const add = page.getByRole('button', { name: /add new site/i }).first();
+    if (await sel.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await sel.click({ timeout: 2000 }); outcome = 'selected-existing';
+    } else if (await add.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await add.click({ timeout: 2000 }); outcome = 'added-new';
+    }
+    await page.waitForTimeout(800);
+    const chip = await page.getByText(/^(selected|new)$/i).first().isVisible({ timeout: 2500 }).catch(() => false);
+    console.log('SITE_RESULT=' + outcome + ' chip=' + chip);
+    return chip;
+  } catch (e) {
+    console.log('SITE_RESULT=error ' + String(e).slice(0, 80));
+    return false;
+  }
+}
+
+/** Set the required Environmental "Collection Method" (Composite 24h / Grab Sample / etc.). */
+export async function setCollectionMethod(page: Page, optionRe: RegExp = /composite 24h|grab sample|composite 8h/i): Promise<string | null> {
+  return await setSelectByOption(page, optionRe);
+}
+
 /** Set a native <select> whose options include optionRe to that option (React-safe). */
 export async function setSelectByOption(page: Page, optionRe: RegExp): Promise<string | null> {
   return await page.evaluate((src) => {
@@ -92,12 +131,12 @@ export async function clickButton(page: Page, nameRe: RegExp, waitMs = 1800): Pr
 // --- ENVIRONMENTAL-specific helpers ---
 // Env order entry differs from Vector: Applicable Compliance Standards is a Carbon combobox,
 // Tests & Panels is a per-row toggle button, and Sample Type options include DUPLICATES where
-// one copy has NO tests (OGC-1063). Use a sample type known to carry tests: Groundwater or
-// Surface Water (English-named tests: pH, Lead, TDS, Dissolved Oxygen, BOD, Mercury, Total
-// Coliform, E. coli Presence). "Drinking Water" (one of two) has no tests — avoid it.
+// one copy has NO tests (OGC-1063). Verified live (indonesiademo v3.2.1.10) the env Sample Type
+// options are: Water, Hemodialysis Water, Sanitation Hygiene Water, Swimming Pool Water. "Water"
+// carries English-named tests (pH, Lead, ...). Default to it; avoid any option that shows no tests.
 
 /** Set the per-sample-manifest Sample Type to an option that actually carries tests. */
-export async function selectEnvSampleType(page: Page, optionRe: RegExp = /^\s*Groundwater\s*$/i): Promise<string | null> {
+export async function selectEnvSampleType(page: Page, optionRe: RegExp = /^\s*Water\s*$/i): Promise<string | null> {
   return await setSelectByOption(page, optionRe);
 }
 
@@ -147,3 +186,146 @@ export async function selectComplianceStandard(page: Page, optionRe: RegExp): Pr
   } catch {}
   return false;
 }
+
+/**
+ * Attach a response listener that records every non-GET write to the app's REST layer.
+ * Returns the live array (mutated as responses arrive). Gold-standard oracle: a driven click
+ * "worked" only if it produced a persisted write — and logging every write URL reveals which
+ * endpoint a given (possibly domain-split) wizard actually saves through.
+ */
+export type WriteRec = { url: string; method: string; status: number; body?: string };
+export function trackWrites(page: Page): WriteRec[] {
+  const writes: WriteRec[] = [];
+  page.on('response', (r) => {
+    const m = r.request().method();
+    if (m !== 'GET' && m !== 'HEAD' && m !== 'OPTIONS' && /\/rest\//.test(r.url())) {
+      const rec: WriteRec = { url: r.url().replace(/^https?:\/\/[^/]+/, ''), method: m, status: r.status() };
+      // request payload is synchronous & reliable; grab it for save-ish endpoints to diagnose 4xx.
+      const rq = r.request().postData();
+      if (rq && /(SamplePatientEntry|sample-type-requests|sample-item)/i.test(rec.url)) rec.body = rq.replace(/\s+/g, ' ').slice(0, 1500);
+      writes.push(rec);
+    }
+  });
+  return writes;
+}
+
+/** Assert a driven Save actually persisted: at least one 2xx write to a save-ish endpoint. */
+export function assertOrderPersisted(writes: WriteRec[], label = 'order'): void {
+  const saveish = writes.filter(w =>
+    /(SamplePatientEntry|sample-type-requests|sample-item|sampleItem|analysis|\border\b|patient)/i.test(w.url));
+  const ok = saveish.some(w => w.status >= 200 && w.status < 300);
+  expect(ok, label + ': a driven Save must produce a 2xx REST write (gold standard = clicks with an asserted effect). Writes seen: ' + JSON.stringify(writes)).toBeTruthy();
+}
+
+/**
+ * Env & Vector orders REQUIRE at least one of Requesting Organization or Requestor
+ * (backend: errors.requester.org.or.requestor.required — OGC-1074). Fill a Requestor so the
+ * order can actually save; without this SamplePatientEntry 400s (and, alongside it, spurious
+ * patientProperties.gender/nationalId messages appear that clear once the requester is present).
+ */
+export async function fillRequestor(page: Page, first = 'QA', last = 'Tester'): Promise<boolean> {
+  const tryFill = async (re: RegExp, val: string) => {
+    const byRole = page.getByRole('textbox', { name: re }).first();
+    if (await byRole.isVisible({ timeout: 1500 }).catch(() => false)) { await byRole.fill(val); return true; }
+    const byLabel = page.getByLabel(re).first();
+    if (await byLabel.isVisible({ timeout: 800 }).catch(() => false)) { await byLabel.fill(val); return true; }
+    return false;
+  };
+  const f = await tryFill(/^first name$/i, first);
+  const l = await tryFill(/^last name$/i, last);
+  console.log('REQUESTOR_FILLED first=' + f + ' last=' + l);
+  await page.waitForTimeout(400);
+  return f || l;
+}
+
+/**
+ * MANDATORY for every order. The Requester (Site + Provider) is REQUIRED for the sample+tests to
+ * persist. On the unified clinical wizard (testing v3.2.1.11+) omitting it does NOT error — the
+ * Enter-Order Save returns 200 but SILENTLY DROPS the whole sample (order.samples: []), so the
+ * order reaches Collect showing "No tests have been ordered" and is never resultable. That silent
+ * drop caused a false-positive "multi-component is broken" bug report (see reference below); a real
+ * COVID-19 PCR order placed WITH a Requester is fully resultable. So: ALWAYS call this before
+ * Save & Next, and gate the run with assertSamplePersisted() afterwards.
+ *
+ * Flow (matches the live UI): Site Search -> type -> click the result's Select; Provider Search ->
+ * type -> click the result's Select. Falls back to the free-text Requestor (env/vector, OGC-1074)
+ * when the search UI isn't present. Site/Provider autocompletes require EXISTING records — free
+ * text alone shows "No suggestions" and does NOT satisfy the requirement.
+ */
+export async function fillRequester(
+  page: Page,
+  opts: { site?: string; provider?: string; first?: string; last?: string } = {},
+): Promise<boolean> {
+  const site = opts.site ?? 'MUL';           // "Mulago" on testing; matches selectSite default
+  const provider = opts.provider ?? 'Sarah'; // seeded provider on testing
+
+  // Search a section, WAIT for the result row to render, click its Select, and VERIFY the pick
+  // committed (a "Selected" chip appears / the row's Select flips to Selected). Headless Playwright
+  // is faster than the live UI, so without waiting for results + confirming the commit, Save & Next
+  // fires before React binds the requester and the sample is silently dropped. Retries once.
+  const searchAndSelect = async (
+    inputSel: string, which: 'first' | 'last', query: string,
+  ): Promise<boolean> => {
+    const input = page.locator(inputSel).first();
+    if (!(await input.isVisible({ timeout: 1500 }).catch(() => false))) return false;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await input.click().catch(() => {});
+      await input.fill('').catch(() => {});
+      await input.fill(query).catch(() => {});
+      const searchBtn = page.getByRole('button', { name: /^search$/i })[which]();
+      await searchBtn.click({ timeout: 2500 }).catch(() => {});
+      // WAIT for a matching result row to actually render (not a blind timeout).
+      const row = page.getByRole('row', { name: new RegExp(query, 'i') }).first();
+      const sel = row.getByRole('button', { name: /^select$/i }).first();
+      const seen = await sel.isVisible({ timeout: 4000 }).catch(() => false);
+      if (!seen) { await page.waitForTimeout(600); continue; }
+      await sel.click().catch(() => {});
+      // Confirm the selection committed: a "Selected" chip appears. Report HONESTLY — do not
+      // pretend success if the chip never shows (a false "committed" is what let the empty-sample
+      // slip through before). The real gate is assertSamplePersisted() downstream.
+      const committed = await page.getByText(/^\s*selected\s*$/i).first().isVisible({ timeout: 3000 }).catch(() => false)
+        || await row.getByText(/selected/i).first().isVisible({ timeout: 1500 }).catch(() => false);
+      await page.waitForTimeout(700);
+      if (committed) return true;
+    }
+    return false; // clicked but never confirmed — caller/assertSamplePersisted will surface the empty order
+  };
+
+  const siteOk = await searchAndSelect('#siteName, input[placeholder*="site name" i]', 'first', site);
+  const provOk = await searchAndSelect('#providerName, input[placeholder*="provider name" i]', 'last', provider);
+
+  // --- Fallback: free-text Requestor (env/vector allow it) ---
+  if (!siteOk && !provOk) {
+    const legacy = await fillRequestor(page, opts.first ?? 'QA', opts.last ?? 'Tester').catch(() => false);
+    console.log('REQUESTER_FILLED via=freetext ok=' + legacy);
+    await page.waitForTimeout(600);
+    return legacy;
+  }
+  console.log('REQUESTER_FILLED site=' + siteOk + ' provider=' + provOk);
+  // Let React fully commit the requester into form state before the caller clicks Save & Next.
+  await page.waitForTimeout(1200);
+  return siteOk && provOk;
+}
+
+/**
+ * FALSE-POSITIVE GUARD. After placing + saving an order, confirm the SAMPLE actually persisted —
+ * i.e. the order record carries the sample and its tests. A 200 from SamplePatientEntry is NOT
+ * enough: without a Requester the save returns 200 with order.samples: [] and the order is silently
+ * empty. This is the check that distinguishes an unresultable-order PRODUCT bug from an operator
+ * error (missing Requester). Prefer this over assertOrderPersisted for order->result chains.
+ */
+export async function assertSamplePersisted(page: Page, labNumber: string, restBase?: string): Promise<void> {
+  const base = restBase || (process.env.BASE || 'https://testing.openelis-global.org') + '/api/OpenELIS-Global/rest';
+  const order = await page.request
+    .get(`${base}/order/search?labNumber=${encodeURIComponent(labNumber)}`, { headers: { Accept: 'application/json' } })
+    .then((r) => r.json()).catch(() => ({} as any));
+  const samples: any[] = order.samples || [];
+  const testCount = samples.reduce((n, s) => n + ((s.tests || []).length || 0), 0);
+  console.log('SAMPLE_PERSISTED lab=' + labNumber + ' samples=' + samples.length + ' tests=' + testCount);
+  expect(samples.length,
+    `${labNumber}: order.samples is EMPTY after save — the sample was silently dropped. ` +
+    `Almost always a MISSING REQUESTER (Site + Provider), NOT a product bug. Call fillRequester() before Save & Next. ` +
+    `Do NOT file a bug on this without first confirming the Requester was set.`).toBeGreaterThan(0);
+  expect(testCount, `${labNumber}: sample persisted but carries no tests`).toBeGreaterThan(0);
+}
+
