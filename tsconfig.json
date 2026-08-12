@@ -21,6 +21,9 @@
     "tests/personas/persona-pb-bench-tech.spec.ts",
     "tests/personas/persona-pc-validating-biologist.spec.ts",
     "auth.setup.ts",
+    "tests/helpers/pick-combo.ts",
+    "test-catalog-sections-roundtrip.spec.ts",
+    "guards.config.ts",
     "roles.setup.ts",
     "rbac.config.ts",
     "personas-roles.config.ts"
