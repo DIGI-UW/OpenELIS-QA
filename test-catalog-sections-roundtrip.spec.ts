@@ -29,6 +29,8 @@
  */
 
 import { test, expect, Page, APIRequestContext } from '@playwright/test';
+// pickCombo now lives in tests/helpers/pick-combo.ts (rewritten 2026-08-12 - see the header there).
+import { pickCombo } from './tests/helpers/pick-combo';
 
 const BASE = process.env.BASE || 'https://testing.openelis-global.org';
 const REST = `${BASE}/api/OpenELIS-Global/rest`;
@@ -73,15 +75,75 @@ async function apiWrite(page: Page, method: 'POST' | 'DELETE' | 'PUT', url: stri
   }, { m: method, u: url });
 }
 
+/** What is actually on screen right now. Used to tell three states apart that otherwise look the
+ *  same from the outside: the route mounted (form), the session ended (login form), or the SPA
+ *  booted its shell without its config (empty shell — no side nav, 0 inputs, EMPTY version string).
+ *  Also doubles as the diagnostic payload logged when a form never appears. */
+async function pageState(page: Page) {
+  const d = await page.evaluate(() => {
+    const text = document.body.innerText;
+    return {
+      url: location.href,
+      textLen: text.length,
+      buttons: document.querySelectorAll('button').length,
+      inputs: document.querySelectorAll('input').length,
+      hasNav: !!document.querySelector('nav'),
+      // A healthy load shows e.g. "Version:  3.2.1.11"; a config-less boot leaves it empty.
+      version: (text.match(/Version:\s*([0-9][0-9.]*)/) || [])[1] || '',
+      hasLoginForm:
+        !!document.querySelector('input[type="password"]') ||
+        !!document.querySelector('input[name="loginName"]') ||
+        !!document.querySelector('#loginName'),
+      head: text.slice(0, 200),
+    };
+  }).catch((e) => ({ evalError: String(e).slice(0, 140) } as any));
+  const state: 'login' | 'shell' | 'booted' | 'unknown' =
+    d.evalError ? 'unknown'
+    : d.hasLoginForm ? 'login'
+    : (d.hasNav || d.inputs > 0 || !!d.version) ? 'booted'
+    : 'shell';
+  return { ...d, state };
+}
+
+/** Wait until the SPA has really booted (side nav, or any input, or a non-empty version string),
+ *  not merely until domcontentloaded. Returns whether it got there. */
+async function waitForAppBoot(page: Page, timeout = 15000): Promise<boolean> {
+  const deadline = Date.now() + timeout;
+  for (;;) {
+    const s = await pageState(page);
+    if (s.state === 'booted' || s.state === 'login') return s.state === 'booted';
+    if (Date.now() >= deadline) return false;
+    await page.waitForTimeout(500);
+  }
+}
+
 /** SPA-safe navigation: a client-side redirect during goto can throw net::ERR_ABORTED even though
- *  the page loads fine — tolerate it and retry, so a transient abort isn't read as a failure. */
+ *  the page loads fine — tolerate it and retry, so a transient abort isn't read as a failure.
+ *
+ *  2026-08-12: this used to return the moment 'domcontentloaded' fired, with no settle. Callers then
+ *  asserted (and on failure navigated AGAIN) against a shell that was still fetching its config —
+ *  and each fresh navigation aborts that fetch. Observed result: the app shell renders with no side
+ *  nav, 0 inputs and an EMPTY version string, identically on all three createTest attempts. So now
+ *  nav() settles: network-idle-ish, then wait for a real boot signal, and if the shell is still
+ *  empty do ONE plain reload and settle again (a reload lets the config fetch finish; another
+ *  goto/login round trip does not). */
 async function nav(page: Page, url: string) {
-  for (let i = 0; i < 3; i++) {
-    try { await page.goto(url, { waitUntil: 'domcontentloaded' }); return; }
+  let navigated = false;
+  for (let i = 0; i < 3 && !navigated; i++) {
+    try { await page.goto(url, { waitUntil: 'domcontentloaded' }); navigated = true; }
     catch (e) { if (!/ERR_ABORTED|interrupted|frame was detached|navigation/i.test(String(e))) throw e; await page.waitForTimeout(1200); }
   }
-  await page.goto(url, { waitUntil: 'commit' }).catch(() => {});
-  await page.waitForTimeout(800);
+  if (!navigated) await page.goto(url, { waitUntil: 'commit' }).catch(() => {});
+
+  await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+  if (await waitForAppBoot(page)) return;
+
+  const before = await pageState(page);
+  if (before.state === 'login') return;            // logged out — the caller decides what to do
+  console.log('NAV_EMPTY_SHELL_RELOAD', JSON.stringify(before));
+  await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {});
+  await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+  if (!(await waitForAppBoot(page))) console.log('NAV_STILL_EMPTY_AFTER_RELOAD', JSON.stringify(await pageState(page)));
 }
 
 /** Look up a just-created test's id by its unique name via the authenticated REST list. */
@@ -102,15 +164,51 @@ async function createTest(page: Page, name: string, code: string, sampleType = '
     // Maybe a prior attempt already created it (Save fired but redirect/lookup raced).
     const pre = await findTestIdByName(page, name); if (pre) return pre;
     await nav(page, url);
-    if (!(await nameField().isVisible({ timeout: 8000 }).catch(() => false))) { await login(page); await nav(page, url); }
-    if (!(await nameField().isVisible({ timeout: 12000 }).catch(() => false))) continue; // form never loaded → retry
-    await nameField().fill(name).catch(() => {});
-    await page.getByLabel('Reporting name', { exact: false }).first().fill(name).catch(() => {});
+    if (!(await nameField().isVisible({ timeout: 8000 }).catch(() => false))) {
+      // 2026-08-12: DIAGNOSE BEFORE REACTING. This used to assume "logged out" and always ran
+      // login() + nav() — more navigation on top of a still-bootstrapping SPA, which is what kept
+      // the shell empty. Only log in when a login form is actually on screen; for an empty shell the
+      // remedy is a plain reload + settle.
+      const s = await pageState(page);
+      console.log('CREATETEST_NOFORM' + attempt, JSON.stringify(s));
+      if (s.state === 'login') {
+        await login(page);
+        await nav(page, url);
+      } else {
+        await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {});
+        await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+        await waitForAppBoot(page);
+      }
+    }
+    if (!(await nameField().isVisible({ timeout: 12000 }).catch(() => false))) {
+      // Still no form after the targeted remedy. Say WHAT rendered rather than failing silently —
+      // an empty app shell and a logout look identical from the outside otherwise.
+      console.log('CREATETEST_NOFORM' + attempt + '_AFTER_REMEDY', JSON.stringify(await pageState(page)));
+      continue;
+    }
+    // Required fields: let these throw. A silently-skipped fill makes Save no-op and the failure
+    // then surfaces 3 attempts later as an unexplained "could not create".
+    await nameField().fill(name);
+    // Reporting name is not always present/required across versions — tolerated, but never silent.
+    await page.getByLabel('Reporting name', { exact: false }).first().fill(name)
+      .catch((e) => console.log('CREATETEST_REPORTING_NAME_FILL_FAILED', String(e).slice(0, 140)));
     const codeField = page.getByLabel('Test code', { exact: false }).first();
-    await codeField.click().catch(() => {}); await codeField.fill(code).catch(() => {});   // overwrite auto-fill
-    await pickCombo(page, 'Lab Unit', BIOCHEM).catch(() => {});
-    await pickCombo(page, 'Sample type', sampleType).catch(() => {});
-    await page.getByRole('button', { name: /^Save$/ }).last().click().catch(() => {});
+    await codeField.click().catch(() => {});   // focus is best-effort; the fill below is not
+    await codeField.fill(code);                // overwrite auto-fill
+    // 2026-08-12: the label is 'Sample types' (plural), and the .catch(() => {}) used to swallow a
+    // failed pick so Save then silently no-opped. Let pickCombo throw - a required field left
+    // empty is a real failure, not something to step over.
+    await pickCombo(page, 'Lab Unit', BIOCHEM);
+    await pickCombo(page, 'Sample types', sampleType);
+    // 2026-08-12: a swallowed Save click meant "nothing was submitted" was indistinguishable from
+    // "submitted and rejected". Log it and start a fresh attempt instead of polling for an id that
+    // was never requested.
+    try {
+      await page.getByRole('button', { name: /^Save$/ }).last().click();
+    } catch (e) {
+      console.log('CREATETEST_SAVE_CLICK_FAILED' + attempt, String(e).slice(0, 200));
+      continue;
+    }
     // Resolve id (redirect target is inconsistent: /{id}/basic-info or /). Poll by URL then by name.
     for (let i = 0; i < 8; i++) {
       const m = page.url().match(/TestCatalogEditor\/(\d+)\//); if (m) return m[1];
@@ -129,38 +227,6 @@ async function createTest(page: Page, name: string, code: string, sampleType = '
     `(observed: form reachable but the created test never became findable by name; ` +
     `cause NOT established - capture the editor save request before concluding)`
   );
-}
-async function pickCombo(page: Page, label: string, optionText: string) {
-  // Carbon/downshift combobox (v3.2.1.11 editor): a role=combobox input (Lab Unit / Sample type /
-  // Add to panel) or a toggle-button (Add Label Type). The reliable pattern (verified by hand):
-  // OPEN it, then do a REAL click on the option ROW — NOT combo.fill(), which types into the box
-  // without committing a selection and leaves the required field empty (Save then silently fails to
-  // create → looked like a "hang"). Playwright auto-scrolls the option into view within the listbox.
-  const combo = page.getByLabel(label, { exact: false }).first();
-  await combo.scrollIntoViewIfNeeded().catch(() => {});
-  await combo.click();
-  await page.waitForTimeout(500);
-
-  const clickIfVisible = async (loc: any) => {
-    const el = loc.first();
-    if (await el.isVisible({ timeout: 1500 }).catch(() => false)) { await el.click(); return true; }
-    return false;
-  };
-  let picked =
-    (await clickIfVisible(page.getByRole('option', { name: optionText, exact: true }))) ||
-    (await clickIfVisible(page.getByRole('option', { name: optionText, exact: false }))) ||
-    (await clickIfVisible(page.locator('[role="listbox"] [role="option"], [role="listbox"] li').filter({ hasText: optionText })));
-  if (!picked) {
-    // Long list: type a few chars to filter, then click the option (still a real option-row click).
-    await combo.pressSequentially(optionText.slice(0, 8), { delay: 25 }).catch(() => {});
-    await page.waitForTimeout(600);
-    picked = await clickIfVisible(page.getByRole('option', { name: optionText, exact: false }));
-  }
-  await page.waitForTimeout(400);
-
-  // Verify the selection actually committed (a combobox left empty makes Save silently no-op).
-  const committed = await combo.inputValue().then((v: string) => !!v && new RegExp(optionText.slice(0, 6), 'i').test(v)).catch(() => false);
-  if (!picked && !committed) throw new Error(`pickCombo("${label}") could not select "${optionText}"`);
 }
 async function gotoSection(page: Page, id: string, section: string) {
   await nav(page, `${BASE}/MasterListsPage/TestCatalogEditor/${id}/${section}`);
@@ -185,7 +251,7 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
     const codeField = page.getByLabel('Test code', { exact: false }).first();
     await codeField.click(); await codeField.fill('Amylase-Serum');          // existing code
     await pickCombo(page, 'Lab Unit', BIOCHEM);
-    await pickCombo(page, 'Sample type', 'Serum');
+    await pickCombo(page, 'Sample types', 'Serum');
     await page.getByRole('button', { name: /^Save$/ }).last().click();
     await expect(page.getByText(/a test with this code already exists/i)).toBeVisible();
     await expect(page).toHaveURL(/\/new\/basic-info/);                       // no redirect => no create
