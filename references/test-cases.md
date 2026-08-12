@@ -404,3 +404,390 @@ After all test cases complete, perform the following cleanup steps:
 4. **Navigate to Test Panels**, find and delete/deactivate `QA_AUTO_Panel`
 
 Log all cleanup actions. If any cleanup fails, note it but do not count as a test failure.
+
+---
+
+# PR #3987 regression block — TC-12 … TC-26
+
+Added 2026-08-06 after live verification of **DIGI-UW/OpenELIS-Global-2#3987**
+(merged 2026-08-05), a fifteen-item defect PR. Executed against
+testing.openelis-global.org v3.2.1.11; per-item results are in the run report and
+`references/validation-history.md`.
+
+**Automation:** every case below is encoded in the Playwright suite —
+`pr3987.config.ts` with projects `pr3987-catalog`, `pr3987-patient`, `pr3987-fhir`.
+Prefer running the suite; the manual steps here are for exploratory re-checks and
+for instances where the harness can't run.
+
+**Build gate (do this first — TC-12).** Several of these items are invisible
+rather than broken when absent: a pre-#3987 build answers the same endpoints with
+the *old* semantics and a careless run reports PASS. Confirm the merge is present
+before grading anything else.
+
+**Fixture rule.** Do NOT reuse the ids from the PR description (322, 442, patient
+114). They were dev/QA artefacts. Discover fixtures per instance — §0.6.
+
+---
+
+## TC-12 — Build gate: `?id=` is honoured (PR #3987 present)
+
+**Section:** Reflex / Calculated Value · **Severity:** Blocker for this block
+**Acceptance criterion:** `FUNCTION`
+
+1. `GET /api/OpenELIS-Global/rest/reflexrules` → note the row count *N*.
+2. `GET …/reflexrules?id=999999` (an id that cannot exist).
+3. `GET …/reflexrules?id=` (blank).
+
+**Success:** step 2 returns `[]`; step 3 returns all *N*.
+**If step 2 returns *N* rows the build predates #3987** — stop, report
+"build lacks the merge", and grade nothing else in this block.
+
+---
+
+## TC-13 — Reflex/Calculation `?id=` filter, both endpoints
+
+**Section:** Reflex / Calculated Value · **Severity:** Medium
+**Acceptance criterion:** `FUNCTION`
+
+For each of `/reflexrules` and `/test-calculations`:
+
+1. Unfiltered → *N* rows; take the first row's `id`.
+2. `?id=<that id>` → exactly 1 row, matching id.
+3. `?id=0<that id>` (zero-padded) → `[]`.
+4. `?id=999999` → `[]`; `?id=` → *N* rows.
+
+**Why step 3 matters:** the param binds as `String` and is compared to an
+`Integer` id via `id.equals(String.valueOf(...))`. A zero-padded value must NOT
+match — this is the bug the PR caught mid-change.
+
+**UI half:** in the Test Catalog editor's Reflex/Calc section, a reflex row links
+to `/MasterListsPage/reflex?id=<OWNING RULE id>` — the `reflex_rule` id, not the
+`test_reflex` row id. A legacy row that no rule owns links to the unfiltered
+`/MasterListsPage/reflex`. Calculated rows link to
+`/MasterListsPage/calculatedValue?id=<calculation id>`.
+
+---
+
+## TC-14 — Editor names every specimen; list keeps "+n"
+
+**Section:** Test Catalog editor · **Severity:** Medium
+**Acceptance criterion:** `ROUND-TRIP` (two surfaces must disagree in the right way)
+
+1. In the catalog list, find a test whose name carries `+n`, e.g.
+   `Anti-CD 3(Immunohistochemistry specimen +2)`. Note it.
+2. `GET /rest/test-catalog/tests/{testId}` → read `name`.
+
+**Success:**
+- The **list** row still shows the `+n` abbreviation (this half must NOT change).
+- The **editor** `name` spells out every specimen, comma-separated, e.g.
+  `Anti-CD 3(Immunohistochemistry specimen, Tissue antemortem, Tissue post mortem)`.
+- The editor name never matches `/\+\d+\)/`, the specimen count equals `n+1`, and
+  the base name before the paren is identical on both surfaces.
+- **No space before the paren** — the format is `<name>(<specimens>)`.
+
+---
+
+## TC-15 — "No LOINC" clears for a mapping in ANY scope
+
+**Section:** Test Catalog terminology · **Severity:** High (a false "No LOINC"
+warning on a test that *has* a LOINC code drives wrong remediation)
+**Acceptance criterion:** `ROUND-TRIP`
+
+**Preconditions:** an ACTIVE + ORDERABLE test with a blank `test.loinc` column and
+zero terminology mappings, so `noLoinc` starts `true`.
+
+Read the flag from **two** surfaces after each write —
+`GET …/tests/{id}/loinc-integrity` → `noLoinc`, and the catalog list row →
+`hasLoinc`:
+
+| Write (`PUT …/tests/{id}/terminology`) | `noLoinc` | `hasLoinc` |
+|---|---|---|
+| baseline, no mappings | `true` | `false` |
+| SNOMED `119364003` only | `true` | `false` |
+| LOINC, whole-test (no `sampleTypeId`) | **`false`** | **`true`** |
+| LOINC, specimen-scoped (`sampleTypeId` set) | **`false`** | **`true`** |
+| LOINC with `is_active='N'` | `true` | `false` |
+
+**Cleanup:** restore `mappings: []` and re-assert the baseline row.
+
+---
+
+## TC-16 — Range coverage: gaps judged against group + shared ranges
+
+**Section:** Test Catalog ranges · **Severity:** High (a false "Fully Covered"
+means results in the uncovered band get no reference range at all)
+**Acceptance criterion:** `ROUND-TRIP`
+
+**Preconditions:** a test with ZERO ranges (coverage `EMPTY`), with ≥1 sample type.
+
+Write via `PUT /rest/test-catalog/tests/{id}/ranges` and read `coverage.male`:
+
+| # | Ranges written | Expected |
+|---|---|---|
+| a | male, `sampleTypeId` set, 0–30, **no** shared range | `status:"GAP"`, 1 gap, `fromAge:30`, `toAge:"Infinity"` |
+| b | shared open-ended 0–∞ **+** the 0–30 specimen override | `status:"COMPLETE"`, no gaps, **no overlaps** |
+| c | two overrides in ONE specimen scope: 0–20 and 10–∞ | `status:"OVERLAP"`, `overlaps:[{10,20}]`, no gaps |
+
+**Three traps that produce false results — encode all three:**
+1. **`toAge` is the JSON string `"Infinity"`,** not a number. `=== Infinity` fails.
+2. **Open-ended means OMITTING `maxAge`** (send `null`). `maxAge: 999` is a finite
+   bound and legitimately leaves a `[999, Infinity)` tail gap — which looks like a
+   coverage bug but isn't. Case (b) and (c) both need a genuinely open upper bound.
+3. **`GAP` outranks `OVERLAP`** in `statusFor()`. If a fixture has both, status
+   reads `GAP`, so case (c) needs the widest range open-ended or the assertion
+   silently tests the wrong thing.
+
+Also: `componentId`/`sampleTypeId` are **omitted** from the response when null —
+assert `undefined`, not `null`.
+
+**Cleanup:** `PUT` `{ranges: []}` and confirm coverage returns to `EMPTY`.
+
+**Note:** the coverage 409 on `POST …/activate` cannot be reached on a test with no
+primary result component — the *completeness* gate answers `422
+NO_PRIMARY_RESULT_TYPE` first (that's OGC-1142's hard gate, working as designed).
+To exercise the soft coverage gate the fixture needs a complete test.
+
+---
+
+## TC-17 — `basic-info` cannot activate an inactive test (409)
+
+**Section:** Test Catalog editor · **Severity:** High (a caller was told an
+activation saved when it never happened)
+**Acceptance criterion:** `PERSIST`
+
+**Preconditions:** an INACTIVE test **that already has sample types** — otherwise
+the `422` validation (empty sample-type set on an active-or-orderable test) fires
+first and masks the 409 you're testing.
+
+| Test state | Body | Expected |
+|---|---|---|
+| inactive | `{...basicInfo, active:true}` | **409**, empty body, flag still inactive |
+| inactive | `{...basicInfo, active:false}` | 200 |
+| inactive | `active` key absent | 200 |
+| **already active** | `{...basicInfo, active:true, description:"<marker>"}` | **200** and the description **persists** |
+
+Re-read `GET …/tests/{id}/basic-info` after each write. The legitimate activation
+path is unchanged: `POST …/tests/{id}/activate`.
+
+**Cleanup:** restore the original description.
+
+---
+
+## TC-18 — Results Entry and Validation show the SAME reference range
+
+**Section:** Results / Validation · **Severity:** Critical — patient safety. Two
+clinicians reading two different "normal" ranges for one result.
+**Acceptance criterion:** `CROSS-LINK`
+
+1. Find an accession awaiting validation:
+   `GET /rest/AccessionValidation?unitType=<sectionId>&doRange=true`.
+2. `GET /rest/LogbookResults?labNumber=<accession>`.
+3. Join the two by `analysisId` and diff.
+
+**Success:** for every analysis on both screens, `normalRange` is **byte-identical**
+and `testName` matches. Both are built by
+`getDisplayReferenceRange(limit, significantDigits, " - ")`, so a difference in
+significant digits (`30.00 - 50.00` vs `30.0 - 50.0`) is a FAIL, not cosmetic.
+
+**Assert something was actually compared.** If no `analysisId` appears on both
+screens the test must FAIL as inconclusive, not pass vacuously.
+
+**Fixture strength matters.** A single-component test with an unbanded range
+exercises the easy path. The bug was that Validation took the test-level limit and
+never resolved the patient — so it only bites on an **age- or sex-banded** range,
+or a **multi-component** test. Grade a run on an unbanded fixture as PARTIAL.
+
+---
+
+## TC-19 — Analysis row names its OWN specimen (no "+n")
+
+**Section:** Results / Validation · **Severity:** High
+**Acceptance criterion:** `CROSS-LINK`
+
+**Preconditions:** the same test ordered on **two** specimens on one accession —
+put one `<sample sampleID='..' tests='..'/>` per specimen in the
+`POST /rest/SamplePatientEntry` `sampleXML`.
+
+**Success:** `GET /rest/LogbookResults?labNumber=<accession>` returns two rows whose
+`testName` values **differ**, each ending `(<its own specimen>)` — e.g.
+`Albumin(DBS)` and `Albumin(Urines)`. Neither may match `/\+\d+\)/`.
+Format is `<name>(<specimen>)` with **no space** before the paren.
+
+A single-specimen instance cannot distinguish fixed from broken here — both read
+`Name(Specimen)`. The two-specimen order is the whole test.
+
+---
+
+## TC-20 — Sample Type terminology reaches FHIR `Specimen.type`
+
+**Section:** FHIR · **Severity:** High (configured terminology silently dropped)
+**Acceptance criterion:** `REPORTABLE`
+
+FHIR base on current builds: **`/api/OpenELIS-Global/fhir`** (bare `/fhir` returns
+the SPA HTML shell).
+
+1. `PUT /rest/sample-types/{id}/terminology` with, for specimen A: SNOMED
+   `119361006` `SAME_AS`, LOINC `12345-6` `SAME_AS`, **and** SNOMED `999999999`
+   `NARROWER_THAN`. For specimen B: SNOMED `119364003` `SAME_AS`.
+2. **Place a NEW order** on both specimens. The transform runs at *persist* —
+   pre-existing Specimens are never retro-fitted, so an old accession proves nothing.
+3. `GET /api/OpenELIS-Global/fhir/Specimen?_count=100&_sort=-_lastUpdated`, pick the
+   two whose `accessionIdentifier.value` starts with your accession.
+
+**Success:**
+- The `http://openelis-global.org/sampleType` coding is still present.
+- Specimen A's `type.coding` also carries `snomed|119361006` **and** `loinc|12345-6`.
+- `999999999` is **absent** — `SAME_AS` wins over `NARROWER_THAN` within a system.
+- Specimen B carries `snomed|119364003` and does **not** carry A's LOINC.
+- `display` on each added coding is the sample type's localized name.
+- `WHONET` and any unrecognised source yields a null system URL → coding **skipped**.
+
+**Cleanup:** restore both sample types' baseline mappings and verify.
+
+---
+
+## TC-21 — Test terminology filtered to the resource's own specimen
+
+**Section:** FHIR · **Severity:** High (an Observation carrying another specimen's
+LOINC code is clinically wrong)
+**Acceptance criterion:** `REPORTABLE`
+
+1. On one test, `PUT …/tests/{id}/terminology` with three LOINC mappings: one
+   `sampleTypeId`=A, one `sampleTypeId`=B, one **shared** (no `sampleTypeId`).
+2. Order that test on both A and B (one accession, two samples).
+3. Read `ServiceRequest`, `Observation` and `DiagnosticReport`, matching each to its
+   specimen via the `specimen[].reference`.
+
+**Success:** the resource on specimen A carries A's code **and** the shared code,
+and **NOT** B's code. Symmetrically for B. A `sample_type_id = NULL` mapping applies
+to every specimen. Pre-fix all three codes appeared on both.
+
+**Cleanup:** restore the test's baseline mappings.
+
+---
+
+## TC-22 — Add Order loads an existing patient's photo on first paint
+
+**Section:** Patient / Order entry · **Severity:** High
+**Acceptance criterion:** `ROUND-TRIP`
+
+**This is Add Order specific.** Add/Edit Patient kept working throughout, which is
+why the regression (introduced by 9d211b225 / PR 3576) hid so long. Testing only
+the patient screens will report a false PASS.
+
+1. Ensure a patient HAS a photo — `GET /rest/patient-photos/{id}/false` returns
+   `data` longer than a placeholder. Seed one if not (TC-24).
+2. Reach Add Order by **each** path: select the patient from the search results,
+   and the `?patientId=<id>` deep link. Both funnel through `fetchPatientDetails`.
+3. Inspect `img.patient-image`.
+
+**Success:** `src` is a `data:` URI **byte-identical** to the stored photo, present
+on first paint. A blank or placeholder src means the patient object was handed to
+the consumer before the fetch resolved — the consumer seeds its form once, so a
+late assignment never lands. A patient with no photo yields `""`, never `undefined`.
+
+---
+
+## TC-23 — Photo dialogs escape the disabled fieldset
+
+**Section:** Patient photo · **Severity:** Medium (a dialog you cannot close)
+**Acceptance criterion:** `RENDER` + `FUNCTION`
+
+On Add Order with an existing patient selected (the patient panel renders read-only
+via `fieldset[disabled]`):
+
+1. Locate the two dialogs PatientImageSelector owns — headings **`Select Patient
+   Photo`** and **`View Photo`** (the latter contains `.patient-photo-view-container`).
+2. For each: assert it is a **direct child of `document.body`** (portaled) and has
+   **no** `fieldset[disabled]` ancestor.
+3. Assert `querySelectorAll('button:disabled').length === 0` for each.
+4. Click `.image-display`, confirm a dialog opens, and that **Close** is enabled and
+   actually closes it.
+
+**Scope trap.** The **ID documents** section renders its *own* dialogs — including
+one also headed "Select Patient Photo" — inside `div.id-documents-section`. Those
+are a different component that this PR did NOT touch. Filter them out or the test
+grades the wrong dialogs. (As of 2026-08-06 those five ID-document dialogs are
+still unportaled with 100% of controls disabled in view mode — tracked separately.)
+
+**Related consumer gap.** `PatientImageSelector` receives `disabled={false}` on Add
+Order even though its ancestor fieldset is disabled. So the *portal* half of the fix
+works, but the *view-mode behaviour* half (`disabled → open the read-only viewer`)
+never engages there: clicking opens the **editable picker** with all controls live,
+on a panel where every other field is locked. Assert current behaviour and revisit
+when the caller is fixed.
+
+---
+
+## TC-24 — Undecodable photo fails readably AND rolls the patient back
+
+**Section:** Patient create · **Severity:** High (an orphaned patient row after a
+reported failure)
+**Acceptance criterion:** `PERSIST` (negative — nothing may persist)
+
+**Data note:** patient name fields reject **digits and underscores**, so
+`QA_AUTO_<MMDD>` cannot go in a name. Use an alphabetic marker in the name and put
+the run id in `nationalId`/`subjectNumber`.
+
+1. `POST /rest/PatientManagement` for a **new** patient with
+   `photo: "data:image/jpeg;base64,SGVsbG8gd29ybGQ="` — valid base64, not an image.
+2. Search for that patient by last name and by `nationalId`.
+
+**Success:**
+- **500** with `error` exactly:
+  `The photo could not be read as an image. Supported formats are JPEG, PNG, GIF and BMP.`
+  (a hard-coded English literal, not an i18n key; the UI shows it verbatim).
+- No `ConstraintViolationException` / "could not execute batch" text.
+- **Zero** patient rows survive. Pre-fix the patient was created and kept while the
+  caller got an error, because `persistPatientData` was itself `@Transactional` and
+  committed on return.
+
+**Run this BEFORE the happy-path upload** — it asserts a rollback, so it is
+self-cleaning when the fix works. Any surviving row IS the evidence; report it.
+
+---
+
+## TC-25 — Decodable photo still saves (guard didn't over-tighten)
+
+**Section:** Patient create · **Severity:** Medium
+**Acceptance criterion:** `ROUND-TRIP`
+
+1. `POST /rest/PatientManagement` with a genuinely decodable PNG/JPEG/GIF/BMP.
+2. `GET /rest/patient-photos/{patientId}/false` → must equal the posted data URI.
+3. `GET /rest/patient-photos/{patientId}/true` → a thumbnail must exist.
+
+**Success:** 200 + `patientId`; the photo round-trips byte-identically; a thumbnail
+is generated. Step 3 proves `createThumbnail` returned non-null, i.e. you exercised
+the *other* branch of TC-24's guard rather than skipping past it. "Which uploads
+succeed is unchanged — only the message."
+
+---
+
+## TC-26 — Patient report: specimen suffix + per-component unit/range
+
+**Section:** Reports · **Severity:** High (a component printed against another
+component's range is a misreported result)
+**Acceptance criterion:** `REPORTABLE`
+
+**Preconditions — both required, and most instances lack them:**
+- the `patientCILNSP_vreduit` report template (it is the only report that overrides
+  `appendSampleTypeToTestName()`; the others are deliberately unchanged), and
+- a test with **≥2 active result components**, each with its own UOM and its own
+  age/sex reference range.
+
+1. `GET /ReportPrint?report=patientCILNSP_vreduit&type=patient&analysisIds=<csv>`.
+2. Extract the PDF text.
+
+**Success:**
+- **item 12:** each Test cell reads `<reporting name> (<specimen>)` — e.g.
+  `Albumin (DBS)`. Note the **space** before the paren here, unlike TC-19's
+  analysis display name. Other patient reports must be **unchanged** (no suffix).
+- **item 13:** the **Reference value** and **Unit** cells each carry **one line per
+  component**, aligned 1:1 with the Result cell's lines, each resolved by
+  component + specimen + age + sex — and stretched, not clipped to one line height.
+  Pre-fix the Result cell had N lines while Unit/Reference carried a single
+  test-level value.
+- A component with `isPrimary=false` and `showOnReport=false` is **skipped** (OGC-1127).
+
+**If either precondition is missing, record GAP with the reason** — not PASS. The
+Playwright project detects both and skips with the verdict attached.

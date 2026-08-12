@@ -12,6 +12,8 @@
     "test:catalogue-scope": "playwright test -c rbac.config.ts --project=catalogue-scope",
     "test:personas-roles": "playwright test -c personas-roles.config.ts",
     "test:all-tc": "playwright test -c all-tc.config.ts",
+    "test:pr3987": "playwright test -c pr3987.config.ts",
+    "test:pr3987-catalog": "playwright test -c pr3987.config.ts --project=pr3987-catalog",
     "freshness": "node scripts/refresh-freshness.mjs"
   },
   "devDependencies": {

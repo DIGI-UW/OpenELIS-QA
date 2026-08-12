@@ -26,6 +26,10 @@
     "guards.config.ts",
     "roles.setup.ts",
     "rbac.config.ts",
-    "personas-roles.config.ts"
+    "personas-roles.config.ts",
+    "pr3987.config.ts",
+    "test-catalog-pr3987-regression.spec.ts",
+    "patient-photo-pr3987.spec.ts",
+    "fhir-specimen-terminology-pr3987.spec.ts"
   ]
 }
