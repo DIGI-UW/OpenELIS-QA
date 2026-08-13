@@ -37,6 +37,40 @@ This workaround is especially needed for the Referral external lab dropdown (BUG
 visible character counter (e.g., "0/23" stays unchanged). If the visible UI must update,
 use direct click + `computer.type()` instead.
 
+### 6.1b — Carbon `Dropdown` type-ahead: FOCUS THE TRIGGER FIRST
+
+A Carbon `Dropdown` renders **no text input** — it is not a `ComboBox`. Search still works, as
+**type-ahead on the focused trigger**: focus the trigger button, type, the matching option
+highlights, Enter selects.
+
+```ts
+const trigger = page.getByRole('combobox', { name: /shipped analyzer profile/i });
+await trigger.focus();          // <-- REQUIRED
+await trigger.click();
+await page.keyboard.type('sys', { delay: 120 });
+await expect(page.locator('[role="option"][aria-selected="true"]')).toContainText(/Sysmex/i);
+```
+
+**Why this matters:** keystrokes sent while focus is elsewhere fall through to a **global search
+shortcut**, which navigates away (e.g. to `/analyzers/types?search=sys`) and abandons an
+in-progress inline setup. Reported as "the picker has no search" in the 2026-08 analyzer run —
+**that finding was a harness artefact and had to be withdrawn.** Absence of a text input is NOT
+evidence that search is missing; drive it with focus first before making the claim.
+
+(Confirmed not to affect real users: typing into a normal text field behaves normally, the value
+survives, and stray keystrokes outside a field neither navigate nor clear the form.)
+
+### 6.1c — Wrapped list DTOs
+
+Not every list endpoint returns a bare array. `GET /rest/analyzer/analyzers` returns
+`{ "analyzers": [...] }`; calling `.find()` on the response throws. Normalize:
+
+```ts
+const res = await api(page, '/analyzer/analyzers');
+const rows = Array.isArray(res) ? res : (res.analyzers ?? res.content ?? res.items ?? []);
+```
+Check the shape once and record it in `app-map.json` rather than rediscovering it mid-run.
+
 ### 6.2 — Carbon Checkbox Avoidance (BUG-2 EXTENDED)
 
 **CRITICAL:** Calling `.click()` on ANY Carbon for React checkbox causes a 60-second browser
@@ -250,3 +284,54 @@ If all API calls from all tabs start hanging, connection pool is exhausted:
 ---
 
 ## Step 4 — Cleanup
+
+
+---
+
+## Section 9 — Interactive runs (Claude in Chrome)
+
+### 9.1 — Evidence screenshots when the control and its button are far apart
+A disabled Save at the bottom of a 44-row table proves nothing without the selection at the top in
+the same frame. Zoom the page out, position both, capture, then restore:
+
+```js
+document.documentElement.style.zoom = '0.38';   // fit ~1600px of page into the viewport
+// scroll so both the edited row and the button are on screen, screenshot, then:
+document.documentElement.style.zoom = '';
+```
+Follow the wide shot with `computer.zoom` crops of each region so the detail is legible. Pair it
+with **written repro steps** so the user can confirm by hand — an automated click is weaker
+evidence than the user reproducing it themselves, and their confirmation is the strongest
+revalidation available.
+
+### 9.2 — Sanitize values returned from `javascript_tool`
+Returning raw page state can trip the client's data guard and you lose the whole result
+(`[BLOCKED: Cookie/query string data]`). Strip long hex strings and URLs before returning, and
+return summaries rather than dumps:
+
+```js
+const clean = s => (s||'').replace(/\s+/g,' ').replace(/[0-9a-f]{8,}/gi,'#').replace(/https?:\/\/\S+/g,'#');
+```
+Also avoid `return` at the top level (REPL semantics — the last expression is the value), and don't
+`await` long sleeps across a navigation: the target detaches and the call errors.
+
+### 9.3 — Capture the server's reason behind a generic UI error
+When the banner says only "Failed to save", hook `fetch`, re-trigger, and read the body:
+
+```js
+const cap=[]; const of=window.fetch;
+window.fetch=async function(...a){ const init=a[1]||{}; const m=init.method||'GET';
+  const r=await of.apply(this,a);
+  if(m!=='GET') cap.push({m, url:(typeof a[0]==='string'?a[0]:a[0].url), status:r.status,
+                          resp:(await r.clone().text()).slice(0,400)});
+  return r; };
+```
+Restore `window.fetch` afterwards. The same hook proves a **negative**: if a "Test connection"
+button issues no request at all, that is a client-side fact independent of whether the far end is
+reachable — though see `spec-delta-run.md` Step D on deferring when the far end is unverified.
+
+### 9.4 — Session timeout mid-run
+Long interactive runs will hit the session timeout. Symptoms: a bounce to `/login`, sometimes with a
+raw `System Error: Unexpected token '<', "<!DOCTYPE "… is not valid JSON` dialog. Dismiss it, log in
+via `loginName`/`password` with the native-setter pattern, navigate back, and re-verify state before
+continuing — in-page widget state may survive but any React form state will not.

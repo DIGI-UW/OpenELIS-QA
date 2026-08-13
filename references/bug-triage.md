@@ -21,7 +21,21 @@ duplicate:
 - If an open ticket matches → reference it, don't re-file. If a *closed* ticket matches and the
   bug is back → reopen/comment rather than filing new (note the regression).
 
+**Human confirmation is the strongest method available.** If the product owner reproduces the
+failure by hand from your written steps, that outranks any automated repeat — record it as
+"confirmed by hand by \<name\>, \<date\>" and treat Gate 1 as satisfied. Always hand over exact
+repro steps (URL, the row to touch, the click, what to look at) rather than only asserting it.
+
 Only a failure that passes **both** gates becomes a new Jira Bug (Step 6 format).
+
+## Withdraw findings loudly
+
+A QA finding that turns out to be wrong must be **retracted in writing, with the evidence that
+killed it**, and kept visible in the ledger under a *Withdrawn* heading — not quietly deleted. Two
+findings were withdrawn in the 2026-08 analyzer run (one automation artefact, one over-broad
+claim); recording them is what makes the surviving findings credible. Before filing, ask of each
+finding: *did I drive this the way a user would, and did I test more than one data variant?*
+See `spec-delta-run.md` Steps C–D.
 
 ## Filing format (Step 6)
 - **Type:** Bug · **Summary:** `[QA Auto] TC-XX failed: <short description>`

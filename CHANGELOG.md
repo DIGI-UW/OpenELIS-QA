@@ -1,3 +1,37 @@
+# Changelog
+
+## 2026-08-12 — spec-delta runs, harness traps, in-app review
+
+Learned from the OGC-1057 analyzer guided-setup run (analyzers.openelis-global.org v3.2.1.11),
+where two QA findings had to be withdrawn on evidence. Those two failures drove most of this.
+
+**New**
+- `references/spec-delta-run.md` — the method for grading a story against its FRS: establish spec
+  supersession order first, scope to a slice, verify the instance actually carries the feature,
+  then the five rules that prevent false findings (second data variant; displays-vs-resolved;
+  capability-exists-elsewhere; capture server error bodies; persisted-vs-offered counts). Plus
+  walking findings with the PO, withdrawing loudly, deferring honestly, and flip-when-fixed specs.
+- `references/in-app-review-widget.md` — driving the `/__review` UAT widget (shadow DOM, story
+  switching, verdicts, page notes), the identity caveat (signed-in submissions carry the session
+  user, not a typed name), and the submit rules (every submit is a new record; no GET; no local
+  record of a prior submission — ask before re-submitting).
+- `analyzer-guided-setup.md` + `analyzer-guided-setup.spec.ts` — OGC-1057 suite, flip-when-fixed,
+  registered as `--project=analyzer-guided-setup` and added to the typecheck ratchet.
+
+**Changed**
+- `SKILL.md` — distinguishes a **suite run** from a **spec-delta run** up front and routes the
+  latter to the new reference.
+- `references/playwright-harness.md` — Carbon `Dropdown` type-ahead requires focusing the trigger
+  first (unfocused keystrokes hit a global search shortcut and abandon in-progress setup — the
+  cause of one withdrawn finding); wrapped list DTOs; new Section 9 on interactive runs (zoom-to-fit
+  evidence screenshots, sanitizing `javascript_tool` returns, hooking `fetch` for server error
+  bodies, session-timeout recovery).
+- `references/bug-triage.md` — human confirmation by the PO outranks automated repeats and
+  satisfies Gate 1; findings must be withdrawn in writing with the evidence that killed them.
+- `references/test-targets.md` — feature-presence preflight: prove the build carries the work
+  (routes, endpoints, flags, census) before recording findings, since feature work often lives on
+  its own branch instance.
+
 # openelis-test-catalog-qa — Changelog
 
 ## text-merge (2026-07-08) — QA Tracker workflow + open-questions resolved (text only)
