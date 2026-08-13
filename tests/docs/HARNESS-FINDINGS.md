@@ -183,3 +183,79 @@ is no login form). An identical cold deep-link from a standalone spec mounts the
 the difference is in this spec navigation path - nav() retries page.goto up to 3x in quick
 succession, and login() adds more navigation between attempts, which can abort the config fetch.
 Next step: settle the first goto before asserting, and stop re-navigating on a slow mount.
+
+## The probes cluster: five specs logging in on an authenticated context (2026-08-13)
+
+config-pages, label-presets, _discover, _timing and tests/ranges-discover each defined their own
+login() that went to /login and filled a username field UNCONDITIONALLY. probes.config.ts supplies
+storageState from the setup project, so the context is already authenticated and /login redirects
+to the dashboard. The username input never exists, .fill() waits out the full 120s test timeout,
+and because that runs in beforeEach, every test in the file dies before its first assertion.
+
+That is the whole probes cluster: 2 passed / 11 failed, identical on the 08-06 and 08-12 sweeps,
+never diagnosed because a beforeEach timeout reads like a page problem. The failure page snapshot
+shows the opposite - a fully rendered logged-in dashboard, side nav, version 3.2.1.11, populated
+tiles - with the harness waiting for a login form on it.
+
+    before:    2 passed / 11 failed             (~50 minutes, almost all timeouts)
+    after:    12 passed /  1 skipped / 0 failed  (4.2 minutes)
+
+Fixed in #63. Same remedy as everywhere else in this file: check the state, then act.
+
+## findTestIdByName: why createTest failed AND why guards was nondeterministic (2026-08-13)
+
+Live row shape from GET /rest/test-catalog/tests?search=... :
+
+    { testId: 1079, name: QA_AUTO_0813 TopSave(Serum), ... }
+
+Two bugs:
+
+1. The API appends (SampleType) to the name field, so an exact r.name === name match NEVER hit for
+   a test created as QA_AUTO_0813 TopSave. This is the one that bit.
+2. The id field is testId, not id. Even on a name match, String(row.id) produced the string
+   undefined - truthy, and it would have been handed downstream as a real id.
+
+STAMP is date-only (QA_AUTO_MMDD), which is what made it look intermittent. The FIRST run of a day
+creates the test, gets 201, and resolves the id from the redirect URL, so the broken lookup is
+never exercised. Any RE-RUN the same day gets HTTP 409 Conflict, no redirect, falls through to the
+lookup, and fails. The suite was not idempotent within a day. That is the guards 5-vs-7 swing.
+
+Captured directly: the 409 on POST /rest/test-catalog/tests, and the single search row carrying the
+(Serum) suffix. After the fix (#64) TCF-05 gets past creation and fails deeper on an Alerts
+checkbox - a different and genuinely testable problem that was previously unreachable.
+
+## ORDER_ENTRY_CONFIG_ITEMS=0 was a render race, not a product finding (2026-08-13)
+
+TC-CFG-03 read body.innerText immediately after the heading appeared. Carbon paints the empty table
+shell first and the footer momentarily reads 0 items. Verified by clicking through in Chrome on
+testing.openelis-global.org (1-15 of 15 items) and by a settled probe on 34.212.225.107 (1-19 of 19
+items - the instances legitimately differ). The test now waits for a row and asserts > 0 rather
+than a magic number.
+
+This nearly became a ticket. Clicking through is what killed it: the early DOM read and the
+rendered page disagreed, and only the page was telling the truth.
+
+## Repo drift runs in BOTH directions - check before you sync (2026-08-13)
+
+Assuming the working copy is always the newer side is wrong and dangerous. On 2026-08-13 it was:
+
+- MISSING 84 tracked files, including tests/helpers/api-json.ts and tests/helpers/session.ts.
+  test-catalog-critical-indicator.spec.ts imports those. Pulling the spec changes without the
+  helpers would have failed at load time and looked like a harness or product fault.
+- STALE on ten more, including auth.setup.ts (43 lines locally vs 13 in the repo after the
+  session-guard refactor) and all-tc.config.ts (the repo had 4 QC projects the working copy lacked,
+  so the local suite silently ran fewer tests).
+- AHEAD on only a handful.
+
+Separately, probes.config.ts testMatched six specs of which only two were ever committed, so from a
+clean checkout it silently resolved to a partial run - no error, just fewer tests.
+
+Before a sweep, diff the working copy against main in BOTH directions (missing and differing).
+
+## Two operational traps worth remembering
+
+- Do NOT put a backup directory inside the harness. A .presync-bak-DATE/ copy of a spec was globbed
+  by e2e.config.ts, and its relative import could not resolve from that path, so the whole config
+  failed to load and produced no results. Keep backups outside the tree.
+- pkill -f run-sweep.sh matches its OWN command line when issued from a shell whose command string
+  contains that text. It kills itself before the relaunch fires and leaves an empty log.
