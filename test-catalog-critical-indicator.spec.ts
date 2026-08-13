@@ -25,7 +25,8 @@
  * failure fails loudly rather than silently mis-testing.
  */
 
-import { test, expect, Page, APIRequestContext } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
+import { getJson } from './tests/helpers/api-json';
 import { placeLegacySerumOrder, createTestViaRest, setComponentViaRest, setNormalCriticalRangeViaRest, activateViaRest, openResultEntryByAccession } from './legacy-order-helper';
 
 const BASE = process.env.BASE || 'https://testing.openelis-global.org';
@@ -62,8 +63,10 @@ async function nav(page: Page, url: string) {
   await page.goto(url, { waitUntil: 'commit' }).catch(() => {});
   await page.waitForTimeout(800);
 }
-const getJson = (rq: APIRequestContext, url: string) =>
-  rq.get(url, { headers: { Accept: 'application/json' } }).then((r) => r.json());
+// getJson now lives in tests/helpers/api-json.ts. Same (requestContext, url) signature; it
+// additionally detects a mid-run session lapse (login HTML / 401 / 403 where JSON was expected),
+// re-authenticates once through auth.setup's login path, and retries — instead of failing with
+// "SyntaxError: Unexpected token '<'", which reads like a product bug and is not one.
 // pickCombo now lives in tests/helpers/pick-combo.ts (rewritten 2026-08-12 - see the header there).
 import { pickCombo } from './tests/helpers/pick-combo';
 

@@ -23,6 +23,8 @@
     "analyzer-guided-setup.spec.ts",
     "auth.setup.ts",
     "tests/helpers/pick-combo.ts",
+    "tests/helpers/session.ts",
+    "tests/helpers/api-json.ts",
     "test-catalog-sections-roundtrip.spec.ts",
     "guards.config.ts",
     "roles.setup.ts",
