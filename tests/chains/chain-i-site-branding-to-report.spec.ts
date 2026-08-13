@@ -106,7 +106,7 @@ test.describe.serial('Chain I — Site Branding → Report (v6.13 rewritten)', (
     if (current !== testColor) {
       markStep('I', 3, 'FAIL',
         `Read-back disagrees with write: got ${current}, expected ${testColor}`,
-        `Silent fail on PUT (BUG-8 class). Admin says "saved" but the store doesn't reflect.`);
+        `Read-back returned a DIFFERENT ROW than the PUT targeted. Verified 2026-08-10: GET returned id=2 four times running, the PUT (sent id=2) returned 200, then GET returned id=1 four times running. Multiple site_branding rows exist, so this is row selection - NOT a silent write failure. Log the id alongside the colour before drawing any conclusion.`);
       expect(current).toBe(testColor); return;
     }
     markStep('I', 3, 'PASS', `Round-trip confirmed: stored value = ${current}`);

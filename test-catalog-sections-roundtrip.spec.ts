@@ -29,6 +29,8 @@
  */
 
 import { test, expect, Page, APIRequestContext } from '@playwright/test';
+// pickCombo now lives in tests/helpers/pick-combo.ts (rewritten 2026-08-12 - see the header there).
+import { pickCombo } from './tests/helpers/pick-combo';
 
 const BASE = process.env.BASE || 'https://testing.openelis-global.org';
 const REST = `${BASE}/api/OpenELIS-Global/rest`;
@@ -40,38 +42,194 @@ const BIOCHEM = 'Biochemistry';                       // lab unit
 
 // ---------- helpers ----------
 async function login(page: Page) {
-  await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
-  await page.fill('input[name="loginName"], #loginName, input[placeholder*="ser" i]', ADMIN.user);
-  await page.fill('input[type="password"], #password', ADMIN.pass);
+  await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' }).catch(() => {});
+  // With a preloaded storageState (guards.config.ts) we're already authenticated, so /login
+  // redirects away and no username field appears — skip fast instead of hanging on fill().
+  const userField = page.locator('input[name="loginName"], #loginName, input[placeholder*="ser" i]').first();
+  if (!(await userField.isVisible({ timeout: 4000 }).catch(() => false))) return;
+  // Short timeouts + catches: the testing login page intermittently hangs ("Loginloading"); never
+  // let that stall a test for 150s — storageState already authenticates us.
+  await userField.fill(ADMIN.user, { timeout: 8000 }).catch(() => {});
+  await page.fill('input[type="password"], #password', ADMIN.pass, { timeout: 8000 }).catch(() => {});
   await page.getByRole('button', { name: /login|sign in|submit/i }).first()
-    .click().catch(() => page.keyboard.press('Enter'));
-  await page.waitForLoadState('networkidle').catch(() => {});
+    .click({ timeout: 8000 }).catch(() => page.keyboard.press('Enter').catch(() => {}));
+  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
 }
 const getJson = (rq: APIRequestContext, url: string) =>
   rq.get(url, { headers: { Accept: 'application/json' } }).then((r) => r.json());
 
-/** Create a test through the New-test form; returns its id. New tests are created Inactive. */
-async function createTest(page: Page, name: string, code: string, sampleType = 'Serum'): Promise<string> {
-  await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/new/basic-info`, { waitUntil: 'domcontentloaded' });
-  await page.getByLabel('Test name', { exact: false }).first().fill(name);
-  await page.getByLabel('Reporting name', { exact: false }).first().fill(name);
-  const codeField = page.getByLabel('Test code', { exact: false }).first();
-  await codeField.click(); await codeField.fill(code);                 // code may auto-fill from name — overwrite
-  // Lab Unit + Sample type are Carbon comboboxes rendering a native <select> or listbox:
-  await pickCombo(page, 'Lab Unit', BIOCHEM);
-  await pickCombo(page, 'Sample type', sampleType);
-  await page.getByRole('button', { name: /^Save$/ }).last().click();
-  await page.waitForURL(/\/TestCatalogEditor\/\d+\/basic-info/, { timeout: 30_000 });
-  return page.url().match(/TestCatalogEditor\/(\d+)\//)![1];
+/** Authenticated write from the PAGE context: sends the session cookie AND the X-CSRF-Token that
+ *  OpenELIS keeps in localStorage['CSRF']. The bare `request` fixture has neither the token nor
+ *  localStorage, so its POST/DELETE 403 regardless of whether the endpoint exists — masking the
+ *  real verdict (e.g. OGC-1115 deactivate). Returns the HTTP status. */
+async function apiWrite(page: Page, method: 'POST' | 'DELETE' | 'PUT', url: string): Promise<number> {
+  if (!page.url().startsWith(BASE)) await nav(page, `${BASE}/`);
+  return page.evaluate(async ({ m, u }) => {
+    const once = async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const res = await fetch(u, { method: m, headers: { Accept: 'application/json', 'X-CSRF-Token': csrf }, credentials: 'include' });
+      return res.status;
+    };
+    try { return await once(); }
+    catch { await new Promise((r) => setTimeout(r, 1500)); try { return await once(); } catch { return 0; } } // 0 = network blip
+  }, { m: method, u: url });
 }
-async function pickCombo(page: Page, label: string, optionText: string) {
-  const combo = page.getByLabel(label, { exact: false }).first();
-  await combo.click();
-  await page.getByRole('option', { name: optionText, exact: false }).first().click()
-    .catch(async () => { await combo.fill(optionText); await page.getByText(optionText, { exact: true }).first().click(); });
+
+/** What is actually on screen right now. Used to tell three states apart that otherwise look the
+ *  same from the outside: the route mounted (form), the session ended (login form), or the SPA
+ *  booted its shell without its config (empty shell — no side nav, 0 inputs, EMPTY version string).
+ *  Also doubles as the diagnostic payload logged when a form never appears. */
+async function pageState(page: Page) {
+  const d = await page.evaluate(() => {
+    const text = document.body.innerText;
+    return {
+      url: location.href,
+      textLen: text.length,
+      buttons: document.querySelectorAll('button').length,
+      inputs: document.querySelectorAll('input').length,
+      hasNav: !!document.querySelector('nav'),
+      // A healthy load shows e.g. "Version:  3.2.1.11"; a config-less boot leaves it empty.
+      version: (text.match(/Version:\s*([0-9][0-9.]*)/) || [])[1] || '',
+      hasLoginForm:
+        !!document.querySelector('input[type="password"]') ||
+        !!document.querySelector('input[name="loginName"]') ||
+        !!document.querySelector('#loginName'),
+      head: text.slice(0, 200),
+    };
+  }).catch((e) => ({ evalError: String(e).slice(0, 140) } as any));
+  const state: 'login' | 'shell' | 'booted' | 'unknown' =
+    d.evalError ? 'unknown'
+    : d.hasLoginForm ? 'login'
+    : (d.hasNav || d.inputs > 0 || !!d.version) ? 'booted'
+    : 'shell';
+  return { ...d, state };
+}
+
+/** Wait until the SPA has really booted (side nav, or any input, or a non-empty version string),
+ *  not merely until domcontentloaded. Returns whether it got there. */
+async function waitForAppBoot(page: Page, timeout = 15000): Promise<boolean> {
+  const deadline = Date.now() + timeout;
+  for (;;) {
+    const s = await pageState(page);
+    if (s.state === 'booted' || s.state === 'login') return s.state === 'booted';
+    if (Date.now() >= deadline) return false;
+    await page.waitForTimeout(500);
+  }
+}
+
+/** SPA-safe navigation: a client-side redirect during goto can throw net::ERR_ABORTED even though
+ *  the page loads fine — tolerate it and retry, so a transient abort isn't read as a failure.
+ *
+ *  2026-08-12: this used to return the moment 'domcontentloaded' fired, with no settle. Callers then
+ *  asserted (and on failure navigated AGAIN) against a shell that was still fetching its config —
+ *  and each fresh navigation aborts that fetch. Observed result: the app shell renders with no side
+ *  nav, 0 inputs and an EMPTY version string, identically on all three createTest attempts. So now
+ *  nav() settles: network-idle-ish, then wait for a real boot signal, and if the shell is still
+ *  empty do ONE plain reload and settle again (a reload lets the config fetch finish; another
+ *  goto/login round trip does not). */
+async function nav(page: Page, url: string) {
+  let navigated = false;
+  for (let i = 0; i < 3 && !navigated; i++) {
+    try { await page.goto(url, { waitUntil: 'domcontentloaded' }); navigated = true; }
+    catch (e) { if (!/ERR_ABORTED|interrupted|frame was detached|navigation/i.test(String(e))) throw e; await page.waitForTimeout(1200); }
+  }
+  if (!navigated) await page.goto(url, { waitUntil: 'commit' }).catch(() => {});
+
+  await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+  if (await waitForAppBoot(page)) return;
+
+  const before = await pageState(page);
+  if (before.state === 'login') return;            // logged out — the caller decides what to do
+  console.log('NAV_EMPTY_SHELL_RELOAD', JSON.stringify(before));
+  await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {});
+  await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+  if (!(await waitForAppBoot(page))) console.log('NAV_STILL_EMPTY_AFTER_RELOAD', JSON.stringify(await pageState(page)));
+}
+
+/** Look up a just-created test's id by its unique name via the authenticated REST list. */
+async function findTestIdByName(page: Page, name: string): Promise<string | null> {
+  const d = await getJson(page.request, `${TC}/tests?search=${encodeURIComponent(name)}&page=1&pageSize=10`).catch(() => null);
+  const row = d && Array.isArray(d.rows) ? d.rows.find((r: any) => r.name === name) : null;
+  return row ? String(row.id) : null;
+}
+
+/** Create a test through the New-test form; returns its id. New tests are created Inactive.
+ *  The testing instance drops sessions mid-run (form bounces to /login; create Save silently doesn't
+ *  persist). So retry the WHOLE create up to 3× — re-login + reload the form + re-fill + re-Save —
+ *  and after each attempt check whether the test now exists by name. Fails loudly only if all fail. */
+async function createTest(page: Page, name: string, code: string, sampleType = 'Serum'): Promise<string> {
+  const url = `${BASE}/MasterListsPage/TestCatalogEditor/new/basic-info`;
+  const nameField = () => page.getByLabel('Test name', { exact: false }).first();
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    // Maybe a prior attempt already created it (Save fired but redirect/lookup raced).
+    const pre = await findTestIdByName(page, name); if (pre) return pre;
+    await nav(page, url);
+    if (!(await nameField().isVisible({ timeout: 8000 }).catch(() => false))) {
+      // 2026-08-12: DIAGNOSE BEFORE REACTING. This used to assume "logged out" and always ran
+      // login() + nav() — more navigation on top of a still-bootstrapping SPA, which is what kept
+      // the shell empty. Only log in when a login form is actually on screen; for an empty shell the
+      // remedy is a plain reload + settle.
+      const s = await pageState(page);
+      console.log('CREATETEST_NOFORM' + attempt, JSON.stringify(s));
+      if (s.state === 'login') {
+        await login(page);
+        await nav(page, url);
+      } else {
+        await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {});
+        await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+        await waitForAppBoot(page);
+      }
+    }
+    if (!(await nameField().isVisible({ timeout: 12000 }).catch(() => false))) {
+      // Still no form after the targeted remedy. Say WHAT rendered rather than failing silently —
+      // an empty app shell and a logout look identical from the outside otherwise.
+      console.log('CREATETEST_NOFORM' + attempt + '_AFTER_REMEDY', JSON.stringify(await pageState(page)));
+      continue;
+    }
+    // Required fields: let these throw. A silently-skipped fill makes Save no-op and the failure
+    // then surfaces 3 attempts later as an unexplained "could not create".
+    await nameField().fill(name);
+    // Reporting name is not always present/required across versions — tolerated, but never silent.
+    await page.getByLabel('Reporting name', { exact: false }).first().fill(name)
+      .catch((e) => console.log('CREATETEST_REPORTING_NAME_FILL_FAILED', String(e).slice(0, 140)));
+    const codeField = page.getByLabel('Test code', { exact: false }).first();
+    await codeField.click().catch(() => {});   // focus is best-effort; the fill below is not
+    await codeField.fill(code);                // overwrite auto-fill
+    // 2026-08-12: the label is 'Sample types' (plural), and the .catch(() => {}) used to swallow a
+    // failed pick so Save then silently no-opped. Let pickCombo throw - a required field left
+    // empty is a real failure, not something to step over.
+    await pickCombo(page, 'Lab Unit', BIOCHEM);
+    await pickCombo(page, 'Sample types', sampleType);
+    // 2026-08-12: a swallowed Save click meant "nothing was submitted" was indistinguishable from
+    // "submitted and rejected". Log it and start a fresh attempt instead of polling for an id that
+    // was never requested.
+    try {
+      await page.getByRole('button', { name: /^Save$/ }).last().click();
+    } catch (e) {
+      console.log('CREATETEST_SAVE_CLICK_FAILED' + attempt, String(e).slice(0, 200));
+      continue;
+    }
+    // Resolve id (redirect target is inconsistent: /{id}/basic-info or /). Poll by URL then by name.
+    for (let i = 0; i < 8; i++) {
+      const m = page.url().match(/TestCatalogEditor\/(\d+)\//); if (m) return m[1];
+      const id = await findTestIdByName(page, name); if (id) return id;
+      await page.waitForTimeout(1200);
+    }
+    // not persisted this attempt → loop and retry the whole create
+  }
+  throw new Error(
+    `createTest: could not create "${name}" after 3 attempts. ` +
+    `lastUrl=${page.url()} ` +
+    // Do NOT assert a cause here. Historically this said "instance session
+    // instability", which is a diagnosis the helper cannot support and which
+    // sent triage down a session-expiry path when the observed symptom is that
+    // field entry / Save never completes. State the observation only.
+    `(observed: form reachable but the created test never became findable by name; ` +
+    `cause NOT established - capture the editor save request before concluding)`
+  );
 }
 async function gotoSection(page: Page, id: string, section: string) {
-  await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/${id}/${section}`, { waitUntil: 'domcontentloaded' });
+  await nav(page, `${BASE}/MasterListsPage/TestCatalogEditor/${id}/${section}`);
   await page.waitForTimeout(800);
 }
 /** Click the bottom section Save (not the top toolbar Save). */
@@ -87,13 +245,13 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
   // ---------- A. list & create ----------
   test('TCA-03: duplicate code is rejected with a field error, no create', async ({ page, request }) => {
     const before = await getJson(request, `${TC}/tests?search=&page=1&pageSize=1`).then((d) => d.total);
-    await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/new/basic-info`, { waitUntil: 'domcontentloaded' });
+    await nav(page, `${BASE}/MasterListsPage/TestCatalogEditor/new/basic-info`);
     await page.getByLabel('Test name', { exact: false }).first().fill(`${STAMP} DupCode`);
     await page.getByLabel('Reporting name', { exact: false }).first().fill(`${STAMP} DupCode`);
     const codeField = page.getByLabel('Test code', { exact: false }).first();
     await codeField.click(); await codeField.fill('Amylase-Serum');          // existing code
     await pickCombo(page, 'Lab Unit', BIOCHEM);
-    await pickCombo(page, 'Sample type', 'Serum');
+    await pickCombo(page, 'Sample types', 'Serum');
     await page.getByRole('button', { name: /^Save$/ }).last().click();
     await expect(page.getByText(/a test with this code already exists/i)).toBeVisible();
     await expect(page).toHaveURL(/\/new\/basic-info/);                       // no redirect => no create
@@ -179,6 +337,7 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
     await sectionSave(page);
 
     const comp = (await getJson(request, `${TC}/tests/${id}/sample-results`)).components[0];
+    console.log('TCCM_READBACK=' + JSON.stringify({ testId: id, resultType: comp.resultType, options: (comp.options || []).map((o: any) => o.valueName || o.value) }));
     expect(comp.resultType, 'multi-select type persists').toBe('M');
     // FIXME(OGC-1123): options do not persist for multi-select — stays empty. When fixed, this
     // becomes .toBeGreaterThan(0) and the assertion flips.
@@ -257,7 +416,7 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
     const id = await createTest(page, `${STAMP} Methods`, `${STAMP}_MET`);
     await gotoSection(page, id, 'methods');
     await page.getByRole('button', { name: /link method/i }).first().click();
-    await page.getByLabel('Select a method to link', { exact: false }).click();
+    await page.locator('#link-method-select').first().click();   // label matches 2 elements; target the combobox by id
     await page.getByRole('option', { name: /^EIA$/i }).first().click();
     await page.getByLabel('Effective Date', { exact: false }).fill('2026-07-08');
     await page.getByRole('button', { name: /link method/i }).last().click();
@@ -297,7 +456,8 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
   // ---------- G / bug guards (API — deterministic) ----------
   test('OGC-1116: created + activated test becomes orderable in /rest/test-list', async ({ page, request }) => {
     const id = await createTest(page, `${STAMP} Orderable`, `${STAMP}_ORD`);
-    await request.post(`${TC}/tests/${id}/activate`, { headers: { Accept: 'application/json' } });
+    const actStatus = await apiWrite(page, 'POST', `${TC}/tests/${id}/activate`);  // CSRF-authenticated
+    console.log('OGC1116_ACTIVATE_STATUS=' + actStatus);
     await page.waitForTimeout(1500); // allow index refresh (orderability was reindex-dependent)
     const list = await getJson(request, `${REST}/test-list`);
     const present = (list || []).some((t: any) => String(t.id) === id);
@@ -305,11 +465,18 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
     expect(present, 'activated test present in orderable list').toBe(true);
   });
 
-  test('OGC-1115: deactivate remains non-functional (FIXME when fixed)', async ({ request }) => {
-    const deact = await request.post(`${TC}/tests/380/deactivate`);
-    const del = await request.delete(`${TC}/tests/380/activate`);
-    expect(deact.status(), 'no /deactivate endpoint (bug present)').toBe(404);
-    expect([404, 405]).toContain(del.status());
+  test('OGC-1115: deactivate remains non-functional (FIXME when fixed)', async ({ page }) => {
+    // CSRF-authenticated writes (the bare request fixture 403s without the token → false 404/403).
+    const deact = await apiWrite(page, 'POST', `${TC}/tests/380/deactivate`);
+    const del = await apiWrite(page, 'DELETE', `${TC}/tests/380/activate`);
+    console.log('OGC1115_STATUS deact=' + deact + ' del=' + del);
+    // Flip-when-fixed: while the bug is present the deactivate path does NOT return 2xx (seen: 404 no
+    // route / 405 wrong verb / 403 rejected; 0 = network blip, also not success). When a working
+    // deactivate ships it returns 2xx and this flips → close OGC-1115. (2xx check, not >=400, so a
+    // transient 0 doesn't masquerade as a flip.)
+    const is2xx = (s: number) => s >= 200 && s < 300;
+    expect(is2xx(deact), `deactivate should not succeed while bug present (got ${deact})`).toBe(false);
+    expect(is2xx(del), `DELETE-activate should not succeed while bug present (got ${del})`).toBe(false);
   });
 
   test('OGC-1120: sample-type-tests 500 without param, 200 with param (robustness guard)', async ({ request }) => {

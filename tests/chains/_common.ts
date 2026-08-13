@@ -26,7 +26,7 @@
 import { Page, expect } from '@playwright/test';
 import * as zlib from 'zlib';
 
-export const BASE = process.env.BASE_URL || 'https://testing.openelis-global.org';
+export const BASE = process.env.BASE_URL || process.env.BASE || 'https://testing.openelis-global.org';
 
 // -----------------------------------------------------------------------------
 // CSRF-aware fetch
@@ -124,17 +124,19 @@ export interface ChainOrderRef {
  * (`POST /rest/SamplePatientEntry`), with the BUG-37 verify step.
  */
 export async function findOrSeedOrder(page: Page): Promise<ChainOrderRef | null> {
-  // Step a: look for an existing QA_AUTO_ patient with an open order
-  const patientSearch = await apiCall<{
-    patientSearchResults?: Array<{ nationalId?: string; patientID?: string }>;
-  }>(page, `/api/OpenELIS-Global/rest/patient-search-results?lastName=QA_AUTO`);
-
-  if (patientSearch.ok && typeof patientSearch.body === 'object' && patientSearch.body !== null) {
-    const patients = (patientSearch.body as { patientSearchResults?: Array<{ nationalId?: string; patientID?: string }> }).patientSearchResults || [];
-    if (patients.length > 0) {
-      // Pull their accessions via LogbookResults filtered by patient
-      // (this endpoint is what powers the Modify Order patient search)
-      for (const p of patients.slice(0, 5)) {
+  // --- Step a: reuse an existing QA order ------------------------------------
+  // Live constraint (verified 2026-08-05 on 34.212.225.107 v3.2.1.11): the app
+  // rejects underscores/digits in patient names ("invalid name format") and
+  // nationalId must match ^[-a-z0-9/]*$. So seeded patients carry lastName
+  // "QAAUTO" and nationalId "qa-auto-*". We still look for the legacy
+  // "QA_AUTO" prefix first so pre-existing data on older instances is reused.
+  for (const prefix of ['QA_AUTO', 'QAAUTO']) {
+    const patientSearch = await apiCall<{
+      patientSearchResults?: Array<{ nationalId?: string; patientID?: string }>;
+    }>(page, `/api/OpenELIS-Global/rest/patient-search-results?lastName=${encodeURIComponent(prefix)}`);
+    if (patientSearch.ok && typeof patientSearch.body === 'object' && patientSearch.body !== null) {
+      const patients = (patientSearch.body as { patientSearchResults?: Array<{ nationalId?: string; patientID?: string }> }).patientSearchResults || [];
+      for (const p of patients.slice(0, 8)) {
         if (!p.patientID) continue;
         const list = await apiCall<{ testResult?: Array<{ accessionNumber?: string; testId?: string; testName?: string; sampleType?: string }> }>(
           page,
@@ -151,7 +153,7 @@ export async function findOrSeedOrder(page: Page): Promise<ChainOrderRef | null>
               testName: items[0].testName || '',
               sampleType: items[0].sampleType || '',
               source: 'reused',
-              bug37: false, // assumed; the reuse path doesn't re-verify
+              bug37: false, // reuse path does not re-verify linkage
             };
           }
         }
@@ -159,12 +161,124 @@ export async function findOrSeedOrder(page: Page): Promise<ChainOrderRef | null>
     }
   }
 
-  // Step b: no reusable order; seed one fresh. Implementation parked here
-  // intentionally — Chain A's purpose is to validate the existing-data
-  // flow, not to re-implement the seed script. If no QA_AUTO_ data exists,
-  // the test fails fast with a clear message asking the operator to run
-  // the seed script (SKILL §0.6a) first.
-  return null;
+  // --- Step b: seed a fresh patient + order ----------------------------------
+  // Implemented 2026-08-05. Previously parked with `return null`, which made
+  // every one of the 12 chains bail at Step 1 on an instance with no
+  // pre-existing QA data.
+  //
+  // The recipe below is copied from the live-proven
+  // tests/docs/seed-env-results.docs.spec.ts, NOT inferred from docs (§6.5b):
+  //   * navigate to /SamplePatientEntry first — the entry-form REST calls are
+  //     route-scoped and return nothing from an unrelated page;
+  //   * sample types come from the SamplePatientEntry form response
+  //     (`sampleTypes`), because /rest/displayList/SAMPLE_TYPE_ACTIVE omits
+  //     several types on this build;
+  //   * a type's tests come from /rest/sample-type-tests?sampleType=<id>,
+  //     because test-display-beans returns nothing for some types here;
+  //   * the accession comes from GET /rest/SampleEntryGenerateScanProvider,
+  //     whose payload is {body:"<labNo>"}.
+  const log = (m: string) => {
+    // eslint-disable-next-line no-console
+    console.log(`[findOrSeedOrder] ${m}`);
+  };
+
+  await page.goto('/SamplePatientEntry', { waitUntil: 'domcontentloaded' }).catch(() => undefined);
+  await page.waitForTimeout(2500);
+
+  const entryRes = await apiCall<Record<string, unknown>>(page, '/api/OpenELIS-Global/rest/SamplePatientEntry');
+  const entry = (entryRes.ok ? entryRes.body : null) as null | {
+    sampleTypes?: Array<{ id: string; value: string }>;
+    currentDate?: string;
+    sampleOrderItems?: { providersList?: Array<{ id?: string }> };
+  };
+  if (!entry || !entry.sampleTypes || !entry.sampleTypes.length) {
+    log(`seed failed — SamplePatientEntry form returned no sampleTypes (HTTP ${entryRes.status})`);
+    return null;
+  }
+
+  // First sample type that actually has a test bound to it.
+  let sid = '', tid = '', stName = '', testName = '';
+  for (const st of entry.sampleTypes) {
+    const stt = await apiCall<{ tests?: Array<{ id: string; value?: string; name?: string }> }>(
+      page, `/api/OpenELIS-Global/rest/sample-type-tests?sampleType=${encodeURIComponent(st.id)}`
+    );
+    const tests = (stt.ok && stt.body && (stt.body as { tests?: Array<{ id: string; value?: string; name?: string }> }).tests) || [];
+    // Skip sample types whose display name exceeds 40 chars: POST /rest/SamplePatientEntry
+    // returns HTTP 500 (value too long for type character varying(40)) for those on this
+    // build. Bisected live 2026-08-06 — 39-char name OK, 46- and 47-char names 500.
+    if (tests.length && st.value.length <= 40) {
+      sid = String(st.id); tid = String(tests[0].id);
+      stName = st.value; testName = tests[0].value || tests[0].name || '';
+      break;
+    }
+  }
+  if (!sid || !tid) {
+    log(`seed failed — no sample type with a bound test (checked ${entry.sampleTypes.length})`);
+    return null;
+  }
+
+  const genRes = await apiCall<{ body?: string }>(page, '/api/OpenELIS-Global/rest/SampleEntryGenerateScanProvider');
+  const labNo = (genRes.ok && genRes.body && (genRes.body as { body?: string }).body) || '';
+  if (!labNo) {
+    log(`seed failed — accession generator returned nothing (HTTP ${genRes.status})`);
+    return null;
+  }
+
+  const d = entry.currentDate || (() => {
+    const n = new Date(); const p2 = (x: number) => String(x).padStart(2, '0');
+    return `${p2(n.getDate())}/${p2(n.getMonth() + 1)}/${n.getFullYear()}`;
+  })();
+  const q = String.fromCharCode(39);
+  const xml = `<?xml version="1.0" encoding="utf-8"?><samples><sample sampleID=${q}${sid}${q} date=${q}${d}${q} time=${q}${q} collector=${q}QA${q} quantity=${q}${q} uom=${q}${q} tests=${q}${tid}${q} testSectionMap=${q}${q} testSampleTypeMap=${q}${q} panels=${q}${q} rejected=${q}false${q} rejectReasonId=${q}${q} initialConditionIds=${q}${q} numOrderLabels=${q}1${q} numSpecimenLabels=${q}1${q}/></samples>`;
+  const nationalId = `qa-auto-chain-${Math.floor((Date.now() / 1000) % 1000000)}`;
+
+  const body = {
+    rememberSiteAndRequester: false, currentDate: d, customNotificationLogic: false,
+    patientEmailNotificationTestIds: [], patientSMSNotificationTestIds: [],
+    providerEmailNotificationTestIds: [], providerSMSNotificationTestIds: [],
+    patientUpdateStatus: 'ADD', referralItems: [], sampleXML: xml,
+    patientProperties: {
+      patientUpdateStatus: 'ADD', lastName: 'QAAUTO', firstName: 'Chain',
+      gender: 'F', birthDateForDisplay: '01/01/1990', nationalId,
+    },
+    sampleOrderItems: {
+      labNo, requestDate: d, receivedDateForDisplay: d, receivedTime: '00:00',
+      priority: 'ROUTINE', newRequesterName: 'QA Auto Clinic', referringSiteId: '',
+      providerFirstName: 'QA', providerLastName: 'Auto',
+    },
+    initialSampleConditionList: [], testSectionList: [], warning: false, useReferral: false,
+  };
+
+  const post = await apiCall<unknown>(page, '/api/OpenELIS-Global/rest/SamplePatientEntry', { method: 'POST', body });
+  if (!post.ok) {
+    log(`seed failed — SamplePatientEntry POST HTTP ${post.status}: ${JSON.stringify(post.body).slice(0, 250)}`);
+    return null;
+  }
+  await page.waitForTimeout(1500);
+
+  // Round-trip read-back on a DIFFERENT endpoint (§7.5) — doubles as the
+  // BUG-37 patient-linkage check.
+  const ps = await apiCall<{ patientSearchResults?: Array<{ patientID?: string }> }>(
+    page, `/api/OpenELIS-Global/rest/patient-search-results?labNumber=${encodeURIComponent(labNo)}`
+  );
+  const found = ((ps.ok && ps.body && (ps.body as { patientSearchResults?: Array<{ patientID?: string }> }).patientSearchResults) || [])[0];
+  const lb = await apiCall<{ testResult?: Array<{ testId?: string; testName?: string; sampleType?: string }> }>(
+    page, `/api/OpenELIS-Global/rest/LogbookResults?labNumber=${encodeURIComponent(labNo)}`
+  );
+  const row = ((lb.ok && lb.body && (lb.body as { testResult?: Array<{ testId?: string; testName?: string; sampleType?: string }> }).testResult) || [])[0];
+
+  log(`seeded ${labNo} (${(row && row.testName) || testName} / ${(row && row.sampleType) || stName}) patientPK=${(found && found.patientID) || 'NONE'}${found ? '' : ' — WARNING: no patient linkage (BUG-37 signature)'}`);
+
+  return {
+    accession: labNo,
+    patientNationalId: nationalId,
+    patientID: (found && found.patientID) || '',
+    testId: (row && row.testId) || tid,
+    testName: (row && row.testName) || testName,
+    sampleType: (row && row.sampleType) || stName,
+    source: 'seeded',
+    bug37: !found,
+  };
 }
 
 // -----------------------------------------------------------------------------
