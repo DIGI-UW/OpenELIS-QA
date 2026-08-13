@@ -7,6 +7,8 @@
     "install:browsers": "playwright install chromium",
     "typecheck": "tsc -p tsconfig.json",
     "typecheck:all": "tsc -p tsconfig.all.json",
+    "build:skill": "node scripts/build-skill.mjs",
+    "check:skill": "node scripts/build-skill.mjs --check",
     "test:rbac": "playwright test -c rbac.config.ts",
     "test:unit-scope": "playwright test -c rbac.config.ts --project=unit-scope",
     "test:catalogue-scope": "playwright test -c rbac.config.ts --project=catalogue-scope",

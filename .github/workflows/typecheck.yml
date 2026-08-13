@@ -28,6 +28,14 @@ jobs:
       - name: Install dev dependencies
         run: npm install --no-audit --no-fund
 
+      # BLOCKING: the committed .skill package must match its source. It is a
+      # build artifact that gets INSTALLED into an account and is not read from
+      # source at install time — twice on 2026-08-12 a PR edited SKILL.md /
+      # references/ and the packaged copy silently kept the old content, so the
+      # installed skill lagged the repo. Compares content hashes, not zip bytes.
+      - name: Skill package is in sync with source
+        run: npm run check:skill
+
       # BLOCKING: the maintained surface (RBAC axes, personas, chain H,
       # apiShapes, setups, configs). This is green today and must stay green.
       - name: Typecheck maintained surface
