@@ -41,16 +41,22 @@ test('TC-CFG-02: each reporting integration exposes enable + URL + queue (RENDER
   await expect(page.getByText(/URL for site/i).first()).toBeVisible();
 });
 
-test('TC-CFG-03: Order Entry Configuration page loads; document item count (FUNCTION/finding)', async ({ page }) => {
+test('TC-CFG-03: Order Entry Configuration page loads and lists its items (FUNCTION)', async ({ page }) => {
   await page.goto(`${BASE}/MasterListsPage/SampleEntryConfigurationMenu`);
   await expect(page.getByRole('heading', { name: /order entry configuration/i }).first()).toBeVisible();
-  // table scaffold present (Modify/Select + columns)
+  // 2026-08-13: this used to read body.innerText immediately and log ORDER_ENTRY_CONFIG_ITEMS=0,
+  // which was carried for a while as a possible product finding ("the page renders with zero
+  // items"). It is not. Carbon paints the empty table shell first and the footer briefly reads
+  // "0 items"; the count was being read before the data arrived. Verified by hand in Chrome on
+  // testing.openelis-global.org (1-15 of 15 items) and by a settled probe on 34.212.225.107
+  // (1-19 of 19 items — the two instances legitimately differ). Wait for a row before counting.
+  await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 20000 });
   const body = await page.locator('body').innerText();
   expect(body).toMatch(/Name/i);
   expect(body).toMatch(/Value/i);
   const m = body.match(/(\d+)\s*-\s*(\d+)\s+of\s+(\d+)\s+items/i);
   const total = m ? Number(m[3]) : -1;
   console.log(`ORDER_ENTRY_CONFIG_ITEMS=${total}`);
-  // FINDING: on testing this list is empty (0 items). Not asserting >0 — documenting the state.
-  expect(total).toBeGreaterThanOrEqual(0);
+  // The exact count is instance-specific, so assert the page is populated rather than a magic number.
+  expect(total, 'Order Entry Configuration should list at least one item').toBeGreaterThan(0);
 });

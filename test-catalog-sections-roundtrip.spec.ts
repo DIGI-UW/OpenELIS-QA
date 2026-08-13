@@ -28,8 +28,7 @@
  *   GET  /rest/test-catalog/{id}/alerts                        -> [{name,enabled,triggerType,notifyEmail,...}]  (NB: no /tests/ segment)
  */
 
-import { test, expect, Page } from '@playwright/test';
-import { getJson } from './tests/helpers/api-json';
+import { test, expect, Page, APIRequestContext } from '@playwright/test';
 // pickCombo now lives in tests/helpers/pick-combo.ts (rewritten 2026-08-12 - see the header there).
 import { pickCombo } from './tests/helpers/pick-combo';
 
@@ -56,10 +55,8 @@ async function login(page: Page) {
     .click({ timeout: 8000 }).catch(() => page.keyboard.press('Enter').catch(() => {}));
   await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
 }
-// getJson now lives in tests/helpers/api-json.ts. Same (requestContext, url) signature; it
-// additionally detects a mid-run session lapse (login HTML / 401 / 403 where JSON was expected),
-// re-authenticates once through auth.setup's login path, and retries — instead of failing with
-// "SyntaxError: Unexpected token '<'", which reads like a product bug and is not one.
+const getJson = (rq: APIRequestContext, url: string) =>
+  rq.get(url, { headers: { Accept: 'application/json' } }).then((r) => r.json());
 
 /** Authenticated write from the PAGE context: sends the session cookie AND the X-CSRF-Token that
  *  OpenELIS keeps in localStorage['CSRF']. The bare `request` fixture has neither the token nor
@@ -150,10 +147,33 @@ async function nav(page: Page, url: string) {
 }
 
 /** Look up a just-created test's id by its unique name via the authenticated REST list. */
+/** Look up a just-created test's id by its unique name via the authenticated REST list.
+ *
+ *  2026-08-13: this had TWO bugs, both confirmed against a live response, and between them they
+ *  are why `createTest` reported "could not create ... the created test never became findable by
+ *  name" and why the guards suite swung 5-7 passes on an unchanged spec.
+ *
+ *  Live row shape from GET /rest/test-catalog/tests?search=...:
+ *    { "testId": "1079", "name": "QA_AUTO_0813 TopSave(Serum)", "code": ..., "sampleTypes": [...] }
+ *
+ *  1. The API appends "(SampleType)" to `name`, so an exact `r.name === name` match NEVER hits for
+ *     a test we created as "QA_AUTO_0813 TopSave". This is the one that bit.
+ *  2. The id field is `testId`, not `id`. Even on a name match, String(row.id) yielded "undefined" —
+ *     a truthy string that would have been handed back as a real id.
+ *
+ *  Why it looked nondeterministic: STAMP is date-only (QA_AUTO_MMDD). The FIRST run of a given day
+ *  creates the test, gets 201, and resolves the id from the redirect URL, so the broken lookup is
+ *  never exercised. Any RE-RUN the same day gets HTTP 409 Conflict, no redirect, and then falls
+ *  through to this lookup — which could not match. The suite was simply not idempotent within a day.
+ */
 async function findTestIdByName(page: Page, name: string): Promise<string | null> {
   const d = await getJson(page.request, `${TC}/tests?search=${encodeURIComponent(name)}&page=1&pageSize=10`).catch(() => null);
-  const row = d && Array.isArray(d.rows) ? d.rows.find((r: any) => r.name === name) : null;
-  return row ? String(row.id) : null;
+  if (!d || !Array.isArray(d.rows)) return null;
+  const bare = (s: string) => String(s || '').replace(/\s*\([^)]*\)\s*$/, '').trim();
+  const row = d.rows.find((r: any) => r.name === name || bare(r.name) === name);
+  if (!row) return null;
+  const id = row.testId ?? row.id;
+  return id === undefined || id === null ? null : String(id);
 }
 
 /** Create a test through the New-test form; returns its id. New tests are created Inactive.
