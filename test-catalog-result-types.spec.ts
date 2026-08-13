@@ -55,11 +55,8 @@ async function login(page: Page) {
 }
 
 /** Carbon typeahead ComboBox: click to open, then click the option by visible text. */
-async function pickCombo(page: Page, label: string, optionText: string) {
-  const box = page.getByLabel(label, { exact: false }).first();
-  await box.click();
-  await page.getByRole('option', { name: optionText, exact: true }).first().click();
-}
+// pickCombo now lives in tests/helpers/pick-combo.ts (rewritten 2026-08-12 - see the header there).
+import { pickCombo } from './tests/helpers/pick-combo';
 
 /** Create a test via the unified New-test flow; returns the new testId parsed from the URL. */
 async function createTest(page: Page, name: string, code: string): Promise<string> {

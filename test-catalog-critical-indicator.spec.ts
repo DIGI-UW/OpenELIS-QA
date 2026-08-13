@@ -64,12 +64,8 @@ async function nav(page: Page, url: string) {
 }
 const getJson = (rq: APIRequestContext, url: string) =>
   rq.get(url, { headers: { Accept: 'application/json' } }).then((r) => r.json());
-async function pickCombo(page: Page, label: string, optionText: string) {
-  const combo = page.getByLabel(label, { exact: false }).first();
-  await combo.click();
-  await page.getByRole('option', { name: optionText, exact: false }).first().click()
-    .catch(async () => { await combo.fill(optionText); await page.getByText(optionText, { exact: true }).first().click(); });
-}
+// pickCombo now lives in tests/helpers/pick-combo.ts (rewritten 2026-08-12 - see the header there).
+import { pickCombo } from './tests/helpers/pick-combo';
 
 /** Create a numeric test with a single component; returns its id. */
 async function createNumericTest(page: Page, name: string, code: string): Promise<string> {

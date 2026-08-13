@@ -24,3 +24,8 @@ blob-report/
 
 # RBAC run output (reviewed baseline is committed as rbac-baseline.json)
 rbac-results/
+
+# Regression / provenance run output (machine-specific paths, not inputs)
+regression-results/
+test-results-prov/
+runlogs/

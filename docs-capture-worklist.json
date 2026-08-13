@@ -1,0 +1,217 @@
+{
+  "generated": "2026-06-22",
+  "base_url": "https://testing.openelis-global.org",
+  "count": 15,
+  "capabilities": [
+    {
+      "id": "order-entry",
+      "name": "Order & sample entry",
+      "maturity": "production",
+      "manual_page": "https://uwdigi.atlassian.net/wiki/spaces/oeg/pages/261423127",
+      "manual_status": "published",
+      "reference_mockup": "https://digi-uw.github.io/openelis-work/#/sample-collection/sample-collection-redesign",
+      "has_screenshots": false,
+      "has_video": false,
+      "needs": [
+        "screenshots",
+        "video"
+      ]
+    },
+    {
+      "id": "results-entry",
+      "name": "Results entry",
+      "maturity": "production",
+      "manual_page": "https://uwdigi.atlassian.net/wiki/spaces/oeg/pages/278626329",
+      "manual_status": "published",
+      "reference_mockup": "https://digi-uw.github.io/openelis-work/#/results-validation/results-page",
+      "has_screenshots": false,
+      "has_video": false,
+      "needs": [
+        "screenshots",
+        "video"
+      ]
+    },
+    {
+      "id": "result-validation",
+      "name": "Result validation",
+      "maturity": "production",
+      "manual_page": "https://uwdigi.atlassian.net/wiki/spaces/oeg/pages/284196875",
+      "manual_status": "published",
+      "reference_mockup": "https://digi-uw.github.io/openelis-work/#/results-validation/validation-page",
+      "has_screenshots": false,
+      "has_video": false,
+      "needs": [
+        "screenshots",
+        "video"
+      ]
+    },
+    {
+      "id": "electronic-lab-notebook",
+      "name": "Electronic lab notebook",
+      "maturity": "beta",
+      "manual_page": "https://uwdigi.atlassian.net/wiki/spaces/oeg/pages/991821864",
+      "manual_status": "published",
+      "reference_mockup": null,
+      "has_screenshots": false,
+      "has_video": false,
+      "needs": [
+        "screenshots",
+        "video"
+      ]
+    },
+    {
+      "id": "electronic-signatures",
+      "name": "Electronic signatures",
+      "maturity": "beta",
+      "manual_page": "https://uwdigi.atlassian.net/wiki/spaces/oeg/pages/1242759175",
+      "manual_status": "published",
+      "reference_mockup": null,
+      "has_screenshots": false,
+      "has_video": false,
+      "needs": [
+        "screenshots",
+        "video"
+      ]
+    },
+    {
+      "id": "patient-order-enhancements",
+      "name": "Patient & order enhancements",
+      "maturity": "beta",
+      "manual_page": "https://uwdigi.atlassian.net/wiki/spaces/oeg/pages/1189642248",
+      "manual_status": "draft",
+      "reference_mockup": "https://digi-uw.github.io/openelis-work/#/patient/patient-id-card-scanning",
+      "has_screenshots": false,
+      "has_video": false,
+      "needs": [
+        "screenshots",
+        "video"
+      ]
+    },
+    {
+      "id": "sample-storage-management",
+      "name": "Sample storage management",
+      "maturity": "production",
+      "manual_page": "https://uwdigi.atlassian.net/wiki/spaces/oeg/pages/1047658526",
+      "manual_status": "published",
+      "reference_mockup": null,
+      "has_screenshots": false,
+      "has_video": false,
+      "needs": [
+        "screenshots",
+        "video"
+      ]
+    },
+    {
+      "id": "sample-shipment-referral",
+      "name": "Sample shipment & referral",
+      "maturity": "production",
+      "manual_page": "https://uwdigi.atlassian.net/wiki/spaces/oeg/pages/1046118450",
+      "manual_status": "published",
+      "reference_mockup": "https://digi-uw.github.io/openelis-work/#/sample-collection/sample-collection-referral-addendum",
+      "has_screenshots": false,
+      "has_video": false,
+      "needs": [
+        "screenshots",
+        "video"
+      ]
+    },
+    {
+      "id": "westgard-qc",
+      "name": "Westgard QC rules & dashboard",
+      "maturity": "beta",
+      "manual_page": "https://uwdigi.atlassian.net/wiki/spaces/oeg/pages/1188429833",
+      "manual_status": "draft",
+      "reference_mockup": "https://digi-uw.github.io/openelis-work/#/quality/westgard-dashboard",
+      "has_screenshots": false,
+      "has_video": false,
+      "needs": [
+        "screenshots",
+        "video"
+      ]
+    },
+    {
+      "id": "eqa",
+      "name": "EQA / proficiency testing",
+      "maturity": "beta",
+      "manual_page": "https://uwdigi.atlassian.net/wiki/spaces/oeg/pages/1189773314",
+      "manual_status": "draft",
+      "reference_mockup": "https://digi-uw.github.io/openelis-work/#/quality/eqa-enrollment",
+      "has_screenshots": false,
+      "has_video": false,
+      "needs": [
+        "screenshots",
+        "video"
+      ]
+    },
+    {
+      "id": "nce-capa",
+      "name": "Non-conforming events (NCE) & CAPA",
+      "maturity": "beta",
+      "manual_page": "https://uwdigi.atlassian.net/wiki/spaces/oeg/pages/278888457",
+      "manual_status": "published",
+      "reference_mockup": "https://digi-uw.github.io/openelis-work/#/nce/nce-dashboard",
+      "has_screenshots": false,
+      "has_video": false,
+      "needs": [
+        "screenshots",
+        "video"
+      ]
+    },
+    {
+      "id": "analyzer-framework",
+      "name": "Analyzer integration framework",
+      "maturity": "production",
+      "manual_page": "https://uwdigi.atlassian.net/wiki/spaces/oeg/pages/1186365449",
+      "manual_status": "published",
+      "reference_mockup": "https://digi-uw.github.io/openelis-work/#/analyzer-integration/analyzer-mapping-templates",
+      "has_screenshots": false,
+      "has_video": false,
+      "needs": [
+        "screenshots",
+        "video"
+      ]
+    },
+    {
+      "id": "analyzer-file-import",
+      "name": "Analyzer file import",
+      "maturity": "production",
+      "manual_page": "https://uwdigi.atlassian.net/wiki/spaces/oeg/pages/1047265314",
+      "manual_status": "published",
+      "reference_mockup": "https://digi-uw.github.io/openelis-work/#/analyzer-integration/analyzer-file-upload",
+      "has_screenshots": false,
+      "has_video": false,
+      "needs": [
+        "screenshots",
+        "video"
+      ]
+    },
+    {
+      "id": "organizations-management",
+      "name": "Organizations management",
+      "maturity": "beta",
+      "manual_page": "https://uwdigi.atlassian.net/wiki/spaces/oeg/pages/1188790284",
+      "manual_status": "draft",
+      "reference_mockup": "https://digi-uw.github.io/openelis-work/#/admin-config/organizations-management",
+      "has_screenshots": false,
+      "has_video": false,
+      "needs": [
+        "screenshots",
+        "video"
+      ]
+    },
+    {
+      "id": "barcode-labels",
+      "name": "Barcode label management",
+      "maturity": "beta",
+      "manual_page": "https://uwdigi.atlassian.net/wiki/spaces/oeg/pages/256737330",
+      "manual_status": "published",
+      "reference_mockup": null,
+      "has_screenshots": false,
+      "has_video": false,
+      "needs": [
+        "screenshots",
+        "video"
+      ]
+    }
+  ]
+}
