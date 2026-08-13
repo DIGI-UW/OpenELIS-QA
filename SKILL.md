@@ -23,6 +23,14 @@ requested suites, log every action with screenshots/captures, produce a structur
 > version notes → `CHANGELOG.md`. Don't paste bug tables, dated findings, or per-version counts
 > back into this file — that's what rots.
 
+## Two kinds of run — pick per task
+- **Suite run** — *"does the app still work?"* Execute the catalog, grade maturity, file
+  revalidated regressions. The rest of this file describes it.
+- **Spec-delta run** — *"does what shipped match what we specified?"* Grade a story against its
+  FRS and produce a Δ ledger. Triggered by "test OGC-xxxx against the spec", "find deltas from the
+  design", "did they build what we asked for". **Follow `references/spec-delta-run.md`** — it
+  front-loads spec-supersession checks and instance verification that this file assumes away.
+
 ## Two execution substrates — pick per task
 - **Claude in Chrome** — interactive/exploratory runs, manual DEEP phases, anything needing a
   real rendered SPA and screenshots. The default for ad-hoc QA.
@@ -155,6 +163,8 @@ report that the tracker was refreshed.
 ## Reference files
 | File | When to read |
 |---|---|
+| `references/spec-delta-run.md` | **Testing a story/epic against its design spec** — the Δ-ledger method, instance verification, the five rules that prevent false findings, flip-when-fixed specs |
+| `references/in-app-review-widget.md` | When the instance ships a UAT review widget — how to drive it, identity caveats, submit rules |
 | `references/suite-catalog.md` | Step 1/3 — the suite inventory, phases, and non-admin route discovery |
 | `references/workflows.md` | Chains, Personas, Y-RECON, Partial-Feature Audit (mandatory, tiered) |
 | `references/report-template.md` | Step 5 — the maturity/acceptance-driven report structure |

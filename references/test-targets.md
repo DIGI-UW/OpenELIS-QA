@@ -17,6 +17,16 @@
 3. **Catalog** — Default global TC vs a custom/distro TC (affects analyzer LOINC matching and which result options exist).
 4. **Feature flags that gate suites** (e.g. `eqaEnabled`, study forms) — check before declaring a feature "missing."
 
+**Feature-presence preflight (do this before grading a story).** Targets move, and feature work
+often lives on a **feature-specific branch instance** — the hostname alone tells you nothing. Prove
+the build carries the work before you record a single finding:
+1. Record hostname, **resolved IP** and version string in the report header.
+2. Probe the feature's routes and REST endpoints. A 404 on the new endpoint means **wrong build** —
+   switch instances; do not report "not implemented".
+3. Check the gating flags (`app-map.json` → `flags`) and whether the admin toggle is on.
+4. Run the Data Census — a feature needing orders/results cannot be graded above RENDER on an empty
+   instance; seed (`--project=seed-data`) or say so in the report.
+
 If the target is a distro/branch you don't have suites for, that's an **UNCOVERED** finding (see `test-case-authoring.md`) — flag the distro-specific surface and ask Casey what the intended workflow is rather than guessing.
 
 ---

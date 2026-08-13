@@ -48,6 +48,15 @@ export default defineConfig({
       dependencies: ['setup'],
       use: { storageState: '.auth/user.json' },
     },
+    // --- OGC-1057 analyzer guided setup (Instrument → Verify → Connect) — --project=analyzer-guided-setup ---
+    // Flip-when-fixed: Δ-A…Δ-O assertions encode CURRENT behavior; a failure here means the fix
+    // landed and the assertion should be flipped to the spec, not relaxed. See analyzer-guided-setup.md.
+    {
+      name: 'analyzer-guided-setup',
+      testMatch: /analyzer-guided-setup\.spec\.ts/,
+      dependencies: ['setup'],
+      use: { storageState: '.auth/user.json' },
+    },
     // --- QA/QC alerts + violation counts + Levey-Jennings charts contract — --project=qc-alerts-charts ---
     {
       name: 'qc-alerts-charts',
