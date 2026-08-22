@@ -94,9 +94,17 @@ test.describe('TC-CAT-LIST — Test Catalog list view', () => {
     const filters = page.getByRole('button', { name: /^filters$/i }).first();
     await expect(filters).toBeVisible();
     await filters.click();
-    await expect(page.getByText(/domain/i).first()).toBeVisible();
-    await expect(page.getByText(/status/i).first()).toBeVisible();
-    await expect(page.getByText(/\bAMR\b/).first()).toBeVisible();
+    // Assert the flyout's own Carbon field labels, not a bare getByText.
+    // 2026-08-21: getByText(/domain/i).first() matched a HIDDEN
+    // span.cds--side-nav__link-text reading 'All domains' in the collapsed side nav, which
+    // precedes the flyout in DOM order - so .first() picked an invisible node and the assertion
+    // failed while the control was rendering perfectly. /status/i and /AMR/ only passed by luck
+    // (their first match happened to be visible). Scope to .cds--label so this asserts the
+    // filter fields themselves and cannot be hijacked by unrelated copy elsewhere on the page.
+    const fieldLabel = (re: RegExp) => page.locator('label.cds--label').filter({ hasText: re }).first();
+    await expect(fieldLabel(/^Domain$/)).toBeVisible();
+    await expect(fieldLabel(/^Status$/)).toBeVisible();
+    await expect(fieldLabel(/^AMR$/)).toBeVisible();
   });
 
   test('TC-CAT-03: search by name filters the table (FUNCTION)', async ({ page }) => {

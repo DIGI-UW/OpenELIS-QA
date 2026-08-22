@@ -25,6 +25,7 @@
 
 import { Page, expect } from '@playwright/test';
 import * as zlib from 'zlib';
+import { resolveOrderPath, seedDomainOrder } from './domain-seed';
 
 export const BASE = process.env.BASE_URL || process.env.BASE || 'https://testing.openelis-global.org';
 
@@ -124,6 +125,28 @@ export interface ChainOrderRef {
  * (`POST /rest/SamplePatientEntry`), with the BUG-37 verify step.
  */
 export async function findOrSeedOrder(page: Page): Promise<ChainOrderRef | null> {
+  // ORDER_PATH gate. Both order-entry paths are live on 3.2.2.0 and they are NOT interchangeable,
+  // so this throws rather than defaulting - a silent default would make every chain result
+  // ambiguous about which path it actually exercised. See tests/chains/domain-seed.ts.
+  if (resolveOrderPath() === 'domain') {
+    const dom = await seedDomainOrder(page, 'clinical');
+    if (!dom) return null;
+    // The domain lane keys off a lab number; the chain contract wants an accession, and on this
+    // build they are the same string (verified live: the dashboard lab number is what
+    // /order/clinical/qa?order=<value> resolves). patientPK/testId are left blank deliberately -
+    // a chain that needs them must look them up, rather than inherit a guess from here.
+    return {
+      accession: dom.labNumber,
+      patientNationalId: '',
+      patientID: '',
+      testId: '',
+      testName: '',
+      sampleType: '',
+      source: dom.source,
+      bug37: false,
+    } as ChainOrderRef;
+  }
+
   // --- Step a: reuse an existing QA order ------------------------------------
   // Live constraint (verified 2026-08-05 on 34.212.225.107 v3.2.1.11): the app
   // rejects underscores/digits in patient names ("invalid name format") and

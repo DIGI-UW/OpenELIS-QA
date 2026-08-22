@@ -22,6 +22,22 @@ BASE=https://indonesiademo.openelis-global.org npx playwright test --project=doc
 - **seed-providers** — 10 providers via `POST /rest/Provider/FhirUuid`. Body is the admin-UI shape `{ person:{ lastName, firstName, workPhone, fax, email }, active }` (an earlier 500 was from sending `primaryPhone` + a stray `providerType`). Idempotent by last+first name. ✓ verified (10 created).
 - **seed-orders** — orders across Clinical / Vector / Environmental through the 4-step wizard (`order-helpers`), `SEED_N` per domain. 30/30/30 clinical state mix (registered / results / results+validated) via `/rest/LogbookResults` + `/rest/AccessionValidation`.
 - **seed-compliance** — 5 environmental compliance standards via `POST /rest/compliance/standards`; new records land as DRAFT, then `PUT /rest/compliance/standards/{id}` with `status:ACTIVE` activates. `/active` is what the env order form reads. ✓ verified (5 active). (Standards alone have no linked tests — run **seed-compliance-tests** next.)
+- **seed-domain-catalog** — ENVIRONMENTAL + VECTOR catalog data (3 env + 2 vector tests), so the new
+  test catalog and any domain-scoped suite have non-clinical rows to work with. OGC-936 backfills every
+  test to CLINICAL as specified and OGC-951 (the Domain radio group) is Backlog, so a migrated instance
+  has `domain=ENVIRONMENTAL total:0` and `domain=VECTOR total:0`. Verified route (v3.2.2.0): sample types
+  cannot be created (`POST /rest/sample-types` and `/rest/test-catalog/sample-types` both **405**,
+  OGC-1152) and a non-clinical test needs a non-clinical sample type (`POST /rest/test-catalog/tests`
+  with a clinical specimen -> **422**), but `PUT /rest/sample-types/{id}` with a **minimal**
+  `{id,name,domain}` body works (**200**; the same PUT with the full object from its own GET returns
+  **500**). So it flips a QA-junk sample type's domain, creates tests against it, sets a primary result
+  component (activation is otherwise refused with `422 NO_PRIMARY_RESULT_TYPE`) and activates — only an
+  ACTIVE test appears in `/rest/sample-type-tests`. Idempotent (duplicate creates return 409).
+  ✓ verified on testing (ENVIRONMENTAL=3, VECTOR=2; 3 and 2 orderable tests on their sample types).
+  **Does NOT unblock the new three-lane order wizard** — those lanes read
+  `/rest/environmental-sample-types` and `/rest/vector-sample-types`, which return `[]`, are POST 405,
+  and do not derive from `sample_type.domain`. Run **before** seed-compliance-tests, which needs
+  water-quality test names (pH / Lead / Turbidity) in its candidate pool.
 - **seed-compliance-tests** — links tests to each active standard so `linkedTestCount > 0`. Structure: standard → parameter group → threshold (one test + limits). Ensures a parameter group (`POST /rest/compliance/standards/{id}/parameter-groups`) then links water-quality tests (pH, Lead, TDS, Turbidity, Color, Mercury) via `POST /rest/compliance/thresholds` with `{ group:{id}, test:{id}, parameterCode, displayName, thresholdType, minValue, maxValue, units }` (thresholdType ∈ MAXIMUM/MINIMUM/RANGE/BORDERLINE/EXACT/DESCRIPTIVE/SELECT_MAP). Idempotent (skips already-linked tests). ✓ verified (6 tests each).
 - **seed-calc** — 2 calculated values via `POST /rest/test-calculation`. Self-grounding, idempotent by stable name.
 - **seed-reflex** — 2 reflex rules via `POST /rest/reflexrule`. Self-grounding, idempotent by stable name. Run after seed-calc.
