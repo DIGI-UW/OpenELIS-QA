@@ -259,3 +259,48 @@ Before a sweep, diff the working copy against main in BOTH directions (missing a
   failed to load and produced no results. Keep backups outside the tree.
 - pkill -f run-sweep.sh matches its OWN command line when issued from a shell whose command string
   contains that text. It kills itself before the relaunch fires and leaves an empty log.
+
+---
+
+## v3.2.2.0 endpoint drift and two false-FAIL selectors (2026-08-21)
+
+### EQA prerequisite: three different endpoints, one renamed
+
+The documented EQA prerequisite path is stale on 3.2.2.0. Measured live:
+
+| Call | Result |
+|---|---|
+| `GET /rest/SampleEntryConfigurationMenu` | **404** — endpoint renamed. This is what the skill docs, Persona PF Step 4, and Chain F Step 1 all used. |
+| `GET /rest/SampleEntryConfigMenu` | 200 — `menuList[]`; `eqaEnabled` is id **138** |
+| `POST /rest/SampleEntryConfigMenu` | **405** — read path only |
+| `POST /rest/SampleEntryConfig?ID=138` | **200** — the actual save; body is the `sampleEntryConfigForm` shape |
+| `GET /rest/configuration-properties` | 200 — exposes `EQA_ENABLED` directly; cheapest way to assert the flag |
+
+The admin UI is **two-stage**: select the row radio, click **Modify**, and only then does the value control appear — and it is a **radio pair** (`radio-1` = true, `radio-2` = false), not a select and not a checkbox. A setter that only handles selects and checkboxes silently saves the unchanged value and still gets a 200.
+
+Consequences:
+
+- **Chain F Step 1 was a false FAIL** on this build — it reported that eqaEnabled was false or unconfirmable while the flag was verifiably true on two independent surfaces. Worse than a wasted run: it *masks* the real EQA state, which is the same confusion behind the OGC-518-524 cluster of cancelled tickets. Fixed by probing `configuration-properties` and `SampleEntryConfigMenu` first, and by requiring the true value to sit adjacent to the eqa key rather than anywhere in the blob.
+- **Persona PF Step 4 marks BLOCKED, not PASS**, for the same reason — so a run can look like it exercised the EQA toggle when it did not.
+- `tests/eqa-prereq.spec.ts` performs the working flip (`EQA_WANT=true|false`) with a cross-surface read-back.
+
+With the fix and the flag on, Chain F went from **1 passed / 1 failed / 5 did-not-run** to **3 passed / 1 failed / 3 did-not-run**, reaching PERSIST (EQA program created). Its Step 3 now fails on `Distribution create HTTP 400` — **not yet classified**: the harness payload shape has drifted before on admin creates (BUG-3, seed-providers), so per section 6.5b this needs the real UI request captured before it can be called a product defect.
+
+### TC-CAT-02: a broad locator plus .first() picking a hidden node
+
+`getByText(/domain/i).first()` matched a **hidden** `span.cds--side-nav__link-text` reading All domains in the collapsed side nav, which precedes the Filters flyout in DOM order. Enumerating every match after opening the flyout:
+
+```
+idx0 visible=false  span.cds--side-nav__link-text  All domains   <- what .first() grabbed
+idx1 visible=true   label.cds--label               Domain
+idx2 visible=true   span.cds--list-box__label      All domains
+idx3 visible=true   div.cds--table-header-label    Domain
+```
+
+`/status/i` and `/AMR/` passed only because their first match happened to be visible — the same latent bug, unexposed. Lesson: scope Carbon field assertions to `label.cds--label` (or the flyout container), and treat a bare `getByText(...).first()` over a common word as a bug waiting for a DOM reorder.
+
+### Env/vector order-entry lanes: empty, unwritable reference registries
+
+`/rest/environmental-sample-types`, `/rest/vector-sample-types` and the whole `/rest/vector/dictionary/*` family return `[]` and are **POST 405**. They do **not** derive from `sample_type.domain` — proven by seeding the catalog (ENVIRONMENTAL=3, VECTOR=2, both orderable) and re-running `env-flow`, which still reported PICKED empty and zero writes. Independently corroborated by Chain N Step 1 (populated env dictionaries, expected at least 4, got 0).
+
+So `env-flow` and `vector-flow` failures on this build are an **environment precondition**, not a product defect in the forms — they should report BLOCKED with that reason rather than FAIL.

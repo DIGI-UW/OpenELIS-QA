@@ -47,8 +47,19 @@ test.describe.serial('Chain F — EQA Distribution', () => {
     await page.goto(BASE);
     await page.waitForLoadState('networkidle');
 
-    // Check application-properties or SampleEntryConfiguration for eqaEnabled
+    // Check for eqaEnabled across every surface that carries it on this build.
+    //
+    // 2026-08-21 (v3.2.2.0): the original two candidates BOTH miss it now, so this step failed
+    // even with eqaEnabled verifiably true - a false FAIL that hid the real EQA state, which is
+    // exactly the confusion behind the OGC-518-524 cluster of cancelled tickets.
+    //   /rest/SampleEntryConfigurationMenu -> 404 (endpoint renamed)
+    //   /rest/SampleEntryConfigMenu        -> 200, eqaEnabled lives in menuList (id 138)
+    //   /rest/configuration-properties     -> 200, exposes EQA_ENABLED directly - cheapest check
+    // Note the save is a THIRD path: POST /rest/SampleEntryConfig?ID=<id>. See
+    // tests/eqa-prereq.spec.ts for the working flip.
     const candidates = [
+      '/api/OpenELIS-Global/rest/configuration-properties',
+      '/api/OpenELIS-Global/rest/SampleEntryConfigMenu',
       '/api/OpenELIS-Global/rest/SampleEntryConfigurationMenu',
       '/api/OpenELIS-Global/rest/properties',
     ];
@@ -56,7 +67,15 @@ test.describe.serial('Chain F — EQA Distribution', () => {
       const r = await apiCall<unknown>(page, path);
       if (!r.ok || typeof r.body !== 'object' || r.body === null) continue;
       const flat = JSON.stringify(r.body).toLowerCase();
-      if (flat.includes('eqaenabled') && (flat.includes('"value":"true"') || flat.includes('"eqaenabled":true'))) {
+      // configuration-properties spells it EQA_ENABLED; the config menu carries a per-row
+      // {"name":"eqaEnabled", ... "value":"true"} object. Accept either spelling, and require
+      // the true value to sit next to the eqa key rather than anywhere in the blob.
+      const eqaTrue =
+        flat.includes('"eqa_enabled":"true"') ||
+        flat.includes('"eqaenabled":true') ||
+        /"name":"eqaenabled"[^}]*"value":"true"/.test(flat) ||
+        /"value":"true"[^}]*"name":"eqaenabled"/.test(flat);
+      if (eqaTrue) {
         eqaEnabled = true; break;
       }
     }
