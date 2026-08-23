@@ -3,6 +3,7 @@
 //   BASE=https://indonesiademo.openelis-global.org npx playwright test --project=docs tests/docs/env-stages.docs.spec.ts
 import { test } from '@playwright/test';
 import { go, shot, saveWalkthrough } from './capture';
+import { selectSampleTypeAgnostic } from './order-helpers';
 
 test('User manual — Env order stages', async ({ page }, info) => {
   test.setTimeout(120000);
@@ -40,12 +41,11 @@ test('User manual — Env order stages', async ({ page }, info) => {
     await page.waitForTimeout(500);
   } catch {}
 
-  // Per-Sample Manifest — set the Sample Type select to an env type that has tests.
+  // Per-Sample Manifest — ask the instance which env sample type actually carries tests rather
+  // than matching /drinking water|groundwater/ (indonesiademo vocabulary).
   try {
-    await page.evaluate(() => {
-      const sel = [...document.querySelectorAll('select')].find(s => [...s.options].some(o => /drinking water|groundwater|water/i.test(o.textContent || '')));
-      if (sel) { const o = [...sel.options].find(o => /drinking water/i.test(o.textContent || '')) || [...sel.options].find(o => /groundwater/i.test(o.textContent || '')) || sel.options[1]; const s = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value')!.set!; s.call(sel, o.value); sel.dispatchEvent(new Event('change', { bubbles: true })); }
-    });
+    const est = await selectSampleTypeAgnostic(page, 'environmental', { prefer: /drinking water|groundwater|water/i });
+    console.log('ENV_STAGES_SAMPLE_TYPE=' + (est ? est.label + '/' + est.testCount : 'none'));
     await page.waitForTimeout(1200);
   } catch {}
 

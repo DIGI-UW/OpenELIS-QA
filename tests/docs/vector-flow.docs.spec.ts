@@ -3,7 +3,7 @@
 //   BASE=https://indonesiademo.openelis-global.org npx playwright test --project=docs tests/docs/vector-flow.docs.spec.ts
 import { test, expect } from '@playwright/test';
 import { go, shot, saveWalkthrough } from './capture';
-import { generateLabNumber, selectOrAddSite, setSelectByOption, checkByLabel, completeQaChecklist, clickButton, trackWrites, assertOrderPersisted, fillRequestor } from './order-helpers';
+import { generateLabNumber, selectOrAddSite, checkByLabel, completeQaChecklist, clickButton, trackWrites, assertOrderPersisted, fillRequestor, selectSampleTypeAgnostic, pickTestAgnostic, fillUnsetSelects } from './order-helpers';
 
 test('User manual — Vector order full flow (harness validation)', async ({ page }, info) => {
   test.setTimeout(150000);
@@ -13,12 +13,22 @@ test('User manual — Vector order full flow (harness validation)', async ({ pag
 
   const lab = await generateLabNumber(page);
   await selectOrAddSite(page, 'QA_AUTO Vector Site');
-  await setSelectByOption(page, /^adult mosquito$/i);
-  await page.waitForTimeout(1000);
+  // Sample Type by STRUCTURE. Lifted from indonesiademo, where the option is "Adult Mosquito";
+  // elsewhere it may be named differently or localised, so ask the instance which VECTOR sample
+  // types carry orderable tests and drive to one of those, with the old text as a hint only.
+  const st = await selectSampleTypeAgnostic(page, 'vector', { prefer: /adult\s*mosquito/i });
+  expect(st, 'this instance offers no VECTOR sample type with orderable tests (data gap, not a wizard defect)').not.toBeNull();
+  console.log('VEC_SAMPLE_TYPE=' + st!.label + ' id=' + st!.id + ' tests=' + st!.testCount + ' preferred=' + st!.viaPreference);
+  const filled = await fillUnsetSelects(page, /^sampleType/i);
+  console.log('VEC_DROPDOWNS_SET=' + JSON.stringify(filled));
   // Quantity in Pool (number input — native setter is fine for non-checkboxes).
   await page.evaluate(() => { const q = document.querySelector('input[type="number"]') as HTMLInputElement | null; if (q) { const s = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!; s.call(q, '25'); q.dispatchEvent(new Event('input', { bubbles: true })); q.dispatchEvent(new Event('change', { bubbles: true })); } });
-  // Select the test by clicking its label (Carbon checkbox).
-  await checkByLabel(page, /identifikasi spesies nyamuk/i);
+  // Select the test by its real name on THIS instance. The old literal
+  // (/identifikasi spesies nyamuk/i) is Indonesian and matches nothing elsewhere — it becomes a
+  // preference hint over the API-reported test list for the chosen sample type.
+  const picked = await pickTestAgnostic(page, st!.id, /nyamuk|mosquito|species/i);
+  expect(picked, 'no API-listed test for sample type ' + st!.id + ' could be ticked').not.toBe('');
+  console.log('VEC_PICKED=' + picked);
   await page.waitForTimeout(500);
   await fillRequestor(page);   // REQUIRED: vector needs a requester or SamplePatientEntry 400s
   await shot(page, info, 'Enter Order — completed', { fullPage: false });

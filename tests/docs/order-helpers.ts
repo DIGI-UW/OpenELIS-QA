@@ -135,12 +135,21 @@ export async function clickButton(page: Page, nameRe: RegExp, waitMs = 1800): Pr
 // options are: Water, Hemodialysis Water, Sanitation Hygiene Water, Swimming Pool Water. "Water"
 // carries English-named tests (pH, Lead, ...). Default to it; avoid any option that shows no tests.
 
-/** Set the per-sample-manifest Sample Type to an option that actually carries tests. */
+/**
+ * DEPRECATED for new specs: name-pinned and therefore instance-specific. It fails SOFT (the
+ * option is simply never selected), which reads downstream as a wizard defect rather than a
+ * data mismatch. Prefer selectSampleTypeAgnostic(). Kept for callers that target indonesiademo.
+ * Set the per-sample-manifest Sample Type to an option that actually carries tests.
+ */
 export async function selectEnvSampleType(page: Page, optionRe: RegExp = /^\s*Water\s*$/i): Promise<string | null> {
   return await setSelectByOption(page, optionRe);
 }
 
-/** Open the per-row "Tests & Panels" toggle, then tick a test by its label. Returns the test name. */
+/**
+ * DEPRECATED for new specs: prefer pickTestAgnostic(), which reads the real test names for the
+ * chosen sample type from the API instead of assuming an English/Indonesian label.
+ * Open the per-row "Tests & Panels" toggle, then tick a test by its label. Returns the test name.
+ */
 export async function pickEnvTest(page: Page, testRe: RegExp = /^pH$/): Promise<string> {
   await clickButton(page, /tests\s*&\s*panels/i, 900);
   // If a specific test regex isn't found, fall back to the first non-"lab performed sampling" test.
@@ -329,3 +338,198 @@ export async function assertSamplePersisted(page: Page, labNumber: string, restB
   expect(testCount, `${labNumber}: sample persisted but carries no tests`).toBeGreaterThan(0);
 }
 
+
+// =============================================================================
+// LOCATION / LOCALE AGNOSTIC PICKERS
+//
+// The env + vector order specs were lifted from the indonesiademo branch, so they
+// pinned option text that only exists on that instance: sample type "Water" and
+// "adult mosquito", container "1L HDPE bottle", test "Identifikasi Spesies Nyamuk"
+// (Indonesian). On any other instance those regexes match nothing — and the failure
+// is SOFT: the option is never selected, the order saves nothing, and the spec then
+// reports a product defect that is really a data mismatch. That is exactly how this
+// run first misread env/vector order entry as broken.
+//
+// These helpers choose by STRUCTURE instead of by name: ask the instance which
+// sample types its wizard offers, ask which of those actually carry orderable tests,
+// then drive the <select> to one of those. A caller may still pass a `prefer` hint,
+// but it degrades to "any workable option" rather than to nothing.
+// =============================================================================
+
+/** Domain-scoped sample types the NEW order wizards populate their dropdown from. */
+export type OrderDomain = 'environmental' | 'vector';
+
+export interface PickedSampleType {
+  id: string;
+  label: string;
+  testCount: number;
+  viaPreference: boolean;
+}
+
+/** How many orderable tests a sample type carries (0 = selecting it yields an unsavable order). */
+export async function testCountForSampleType(page: Page, sampleTypeId: string | number): Promise<number> {
+  return await page.evaluate(async (id) => {
+    try {
+      const r = await fetch('/api/OpenELIS-Global/rest/sample-type-tests?sampleType=' + id, { headers: { Accept: 'application/json' } });
+      if (!r.ok) return 0;
+      const j = await r.json();
+      return ((j && j.tests) || []).length;
+    } catch (e) { return 0; }
+  }, String(sampleTypeId));
+}
+
+/** The sample types the given domain wizard offers, newest-API-first with a catalog fallback. */
+export async function domainSampleTypes(page: Page, domain: OrderDomain): Promise<Array<{ id: string; label: string }>> {
+  return await page.evaluate(async (d) => {
+    const norm = (arr: any[]) => arr
+      .map((x: any) => ({ id: String(x.id != null ? x.id : x.value), label: String(x.value != null && isNaN(Number(x.value)) ? x.value : (x.name || x.label || x.displayValue || '')).trim() }))
+      .filter((x) => x.id && x.id !== 'undefined');
+    const get = async (u: string) => {
+      try {
+        const r = await fetch('/api/OpenELIS-Global/rest' + u, { headers: { Accept: 'application/json' } });
+        if (!r.ok) return null;
+        return await r.json();
+      } catch (e) { return null; }
+    };
+    const wizard = await get('/' + d + '-sample-types');
+    if (Array.isArray(wizard) && wizard.length) return norm(wizard);
+    const all = await get('/test-catalog/sample-types');
+    if (Array.isArray(all)) return norm(all.filter((s: any) => String(s.domain || '').toUpperCase() === (d === 'vector' ? 'VECTOR' : 'ENVIRONMENTAL')));
+    return [];
+  }, domain);
+}
+
+/**
+ * Select a sample type that ACTUALLY carries tests on this instance.
+ * `prefer` is a hint only: it wins if it matches an option with tests, otherwise the
+ * first option with tests is used. Returns null (never throws) when the instance has
+ * no workable sample type for the domain — the caller can then report a data gap
+ * rather than a broken wizard.
+ */
+export async function selectSampleTypeAgnostic(
+  page: Page,
+  domain: OrderDomain,
+  opts: { prefer?: RegExp; selectId?: string } = {},
+): Promise<PickedSampleType | null> {
+  const offered = await domainSampleTypes(page, domain);
+  const scored: Array<{ id: string; label: string; testCount: number }> = [];
+  for (const st of offered) scored.push({ ...st, testCount: await testCountForSampleType(page, st.id) });
+  const workable = scored.filter((s) => s.testCount > 0);
+  console.log('[agnostic] ' + domain + ' sample types: ' + scored.map((s) => s.label + '(' + s.id + ')=' + s.testCount).join(', '));
+  if (!workable.length) return null;
+
+  const preferred = opts.prefer ? workable.find((s) => opts.prefer!.test(s.label)) : undefined;
+  const chosen = preferred || workable[0];
+
+  const applied = await page.evaluate((args) => {
+    const wanted = args.id, label = args.label.toLowerCase();
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value')!.set!;
+    const selects = [...document.querySelectorAll('select')] as HTMLSelectElement[];
+    const byId = args.selectId ? (document.querySelector('#' + args.selectId) as HTMLSelectElement | null) : null;
+    const ordered = byId ? [byId, ...selects.filter((s) => s !== byId)] : selects;
+    for (const sel of ordered) {
+      const opt = [...sel.options].find((o) => String(o.value) === wanted)
+        || [...sel.options].find((o) => (o.textContent || '').trim().toLowerCase() === label);
+      if (!opt) continue;
+      setter.call(sel, opt.value);
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      return (opt.textContent || '').trim();
+    }
+    return null;
+  }, { id: chosen.id, label: chosen.label, selectId: opts.selectId || '' });
+
+  if (!applied) {
+    console.log('[agnostic] no <select> on the page offers sample type ' + chosen.id + ' (' + chosen.label + ')');
+    return null;
+  }
+  await page.waitForTimeout(900);
+  return { id: chosen.id, label: applied, testCount: chosen.testCount, viaPreference: !!preferred };
+}
+
+/**
+ * Tick a test that the API says belongs to this sample type, by its real name on THIS
+ * instance (so an Indonesian catalog and an English one both work). `prefer` is a hint.
+ * Returns the label actually ticked, or '' if none could be.
+ */
+export async function pickTestAgnostic(page: Page, sampleTypeId: string | number, prefer?: RegExp): Promise<string> {
+  await clickButton(page, /tests\s*&\s*panels/i, 900).catch(() => false);
+  const names: string[] = await page.evaluate(async (id) => {
+    try {
+      const r = await fetch('/api/OpenELIS-Global/rest/sample-type-tests?sampleType=' + id, { headers: { Accept: 'application/json' } });
+      if (!r.ok) return [];
+      const j = await r.json();
+      return ((j && j.tests) || []).map((t: any) => String(t.name || t.value || '').trim()).filter(Boolean);
+    } catch (e) { return []; }
+  }, String(sampleTypeId));
+  if (!names.length) { console.log('[agnostic] sample type ' + sampleTypeId + ' reports no tests'); return ''; }
+
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const order = prefer ? [...names.filter((n) => prefer.test(n)), ...names.filter((n) => !prefer.test(n))] : names;
+  for (const n of order.slice(0, 12)) {
+    const ok = await checkByLabel(page, new RegExp('^\\s*' + esc(n) + '\\s*$', 'i'));
+    if (ok) { console.log('[agnostic] ticked test ' + n); return n; }
+  }
+  console.log('[agnostic] none of ' + order.length + ' API-listed tests had a clickable label');
+  return '';
+}
+
+/**
+ * Set a <select> to its first real option. Used for dictionary-backed fields (container,
+ * collection method, trap type) whose vocabularies are instance-specific and sometimes
+ * EMPTY — returns null instead of throwing so an unseeded optional dictionary does not
+ * masquerade as a wizard defect.
+ */
+export async function setSelectFirstAvailable(page: Page, match: RegExp | string): Promise<string | null> {
+  const res = await page.evaluate((args) => {
+    const idRe = args.isId ? null : new RegExp(args.match, 'i');
+    const selects = [...document.querySelectorAll('select')] as HTMLSelectElement[];
+    const pool = args.isId
+      ? [document.querySelector('#' + args.match) as HTMLSelectElement].filter(Boolean)
+      : selects.filter((s) => idRe!.test(s.id) || idRe!.test(s.getAttribute('name') || '') || idRe!.test((s.closest('div')?.textContent || '').slice(0, 120)));
+    for (const sel of pool) {
+      const opt = [...sel.options].find((o) => {
+        const t = (o.textContent || '').trim();
+        return o.value && o.value !== '0' && t && !/^(select|choose|--|pilih)/i.test(t);
+      });
+      if (!opt) continue;
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value')!.set!;
+      setter.call(sel, opt.value);
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      return (opt.textContent || '').trim();
+    }
+    return null;
+  }, { match: typeof match === 'string' ? match : match.source, isId: typeof match === 'string' });
+  await page.waitForTimeout(300);
+  return res;
+}
+
+/**
+ * Set every <select> still sitting on a placeholder to its first real option, skipping any
+ * whose id matches `skip`. Locale-free way to satisfy the instance-specific required
+ * dropdowns on the env/vector manifest rows (container, collection method, trap type,
+ * preservation) without pinning vocabulary that differs per deployment. Returns what it set.
+ */
+export async function fillUnsetSelects(page: Page, skip: RegExp = /^sampleType/i): Promise<string[]> {
+  const out: string[] = await page.evaluate((skipSrc) => {
+    const skipRe = new RegExp(skipSrc, 'i');
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value')!.set!;
+    const done: string[] = [];
+    for (const sel of [...document.querySelectorAll('select')] as HTMLSelectElement[]) {
+      if (sel.disabled || (sel.id && skipRe.test(sel.id))) continue;
+      const cur = (sel.selectedOptions[0]?.textContent || '').trim();
+      const placeholder = !sel.value || sel.value === '0' || /^(select|choose|--|pilih)/i.test(cur) || cur === '';
+      if (!placeholder) continue;
+      const opt = [...sel.options].find((o) => {
+        const t = (o.textContent || '').trim();
+        return o.value && o.value !== '0' && t && !/^(select|choose|--|pilih)/i.test(t);
+      });
+      if (!opt) continue;
+      setter.call(sel, opt.value);
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      done.push((sel.id || sel.getAttribute('name') || 'select') + '=' + (opt.textContent || '').trim());
+    }
+    return done;
+  }, skip.source);
+  if (out.length) await page.waitForTimeout(400);
+  return out;
+}

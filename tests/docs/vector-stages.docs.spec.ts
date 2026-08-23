@@ -2,6 +2,7 @@
 //   BASE=https://indonesiademo.openelis-global.org npx playwright test --project=docs tests/docs/vector-stages.docs.spec.ts
 import { test } from '@playwright/test';
 import { go, shot, saveWalkthrough } from './capture';
+import { selectSampleTypeAgnostic } from './order-helpers';
 
 test('User manual — Vector order stages', async ({ page }, info) => {
   test.setTimeout(120000);
@@ -30,11 +31,8 @@ test('User manual — Vector order stages', async ({ page }, info) => {
     await page.waitForTimeout(800);
   } catch {}
   try { const pn = page.getByLabel(/provider name/i).first(); if (await pn.isVisible({ timeout: 1200 })) await pn.fill('Tony Stark'); } catch {}
-  try {
-    const st = page.getByLabel(/^sample type/i).first();
-    await st.selectOption({ label: 'Adult Mosquito' }).catch(async () => { await st.click({ timeout: 1500 }); const o = page.getByText(/^Adult Mosquito$/).first(); if (await o.isVisible({ timeout: 1200 })) await o.click(); });
-    await page.waitForTimeout(1000);
-  } catch {}
+  // Instance-agnostic sample type ("Adult Mosquito" only exists on indonesiademo).
+  try { await selectSampleTypeAgnostic(page, 'vector', { prefer: /adult\s*mosquito/i }); await page.waitForTimeout(1000); } catch {}
   try { await page.getByLabel(/lifecycle stage/i).first().selectOption({ index: 1 }).catch(() => {}); } catch {}
   try { await page.getByLabel(/trap type/i).first().selectOption({ index: 1 }).catch(() => {}); } catch {}
   try {
