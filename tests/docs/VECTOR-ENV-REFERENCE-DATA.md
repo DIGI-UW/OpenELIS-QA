@@ -16,7 +16,7 @@ indonesiademo and completely empty on testing** — 17 of 17 categories, zero en
 | `Env Weather` | 9 | 0 | `/rest/vector/dictionary/env-weather` |
 | `vecLifecycleStages` | 5 | 0 | `/rest/vector/dictionary/lifecycle-stages` |
 | `vecPathogens` | 9 | 0 | `/rest/vector/dictionary/pathogens` |
-| `vecTrapType` | 8 | 0 | generic categories endpoint only |
+| `vecTrapType` | 8 | 0 | generic categories endpoint only (see Trap Type below) |
 | `vecRestingContext` | 3 | 0 | generic |
 | `vecCollectionTimeOfDay` | 5 | 0 | generic |
 | `vecPathogenResult` | 4 | 0 | generic |
@@ -30,6 +30,38 @@ indonesiademo and completely empty on testing** — 17 of 17 categories, zero en
 Generic endpoint: `GET /rest/dictionary/categories/{categoryName}/entries` -> `[{code,label}]`
 (`DictionaryRestController`, roles RESULTS/ADMIN/RECEPTION/VALIDATION/PATHOLOGIST/CYTOPATHOLOGIST).
 It takes the category name verbatim, so it probes any category without needing a bespoke route.
+
+## Trap Type is NOT a dictionary lookup — do not conflate the two
+
+Two different things carry the name:
+
+* the `vecTrapType` dictionary category (8 entries on indonesiademo, 0 on testing), reachable only
+  through the generic categories endpoint — there is **no** `/rest/vector/dictionary/trap-types`
+  route (probed: 404, and absent from `VectorDictionaryRestController`);
+* the real thing the vector order form reads: **`GET /rest/admin/vector/trap-types`**, an admin
+  entity whose rows carry `{id, name, description, sampleTypeIds[]}`. The form calls it with
+  `?sampleTypeId=<n>` and shows only the traps associated with the chosen sample type.
+
+Measured:
+
+| | indonesiademo | testing |
+|---|---|---|
+| `admin/vector/trap-types` (unfiltered) | 13 rows | 3 rows |
+| ...with real `sampleTypeIds` | all 13 populated | **all 3 empty (`[]`)** |
+| `admin/vector/trap-types?sampleTypeId=81` | 5 (BG-Sentinel, CDC Light, Gravid, Ovitrap, Shannon) | n/a |
+| `vector/dictionary/lifecycle-stages?sampleTypeId=81` | 4 (Adult, Egg, Larva, Pupa) | — |
+| `admin/vector/sample-types` (organism groups) | 42 | 1 |
+
+So the **sampleTypeId-filtered mechanism works when the data is seeded** — indonesiademo proves it.
+On testing the filtered call returns `[]` for every id because the 3 trap types have no
+associations and the lifecycle category is empty. That is the same shape as OGC-1049 (Done) but
+its cause here is absent reference data, not the endpoint: do not re-report OGC-1049 from testing
+without checking `sampleTypeIds` first.
+
+One trap for the probe: sample-type ids differ per instance, so a filtered call must use an id
+from *that* instance. `?sampleTypeId=38` returns `[]` on indonesiademo simply because 38 is Water
+there. Probing with a foreign id and concluding "empty" is the same soft-failure class as pinning
+option text.
 
 Species-scoped category *lists* also exist and are suffix-filtered, not domain-filtered:
 `/rest/vector/dictionary/pathogen-categories` (`categoryName` ends with `Pathogens`) and
@@ -108,4 +140,5 @@ them; resolve by name-from-API or by structure.
 ## Reproducing the measurement
 
 `tests/docs/vector-env-dictionaries.docs.spec.ts` measures every row above against whatever `BASE`
-it runs with, so the table can be refreshed per instance instead of trusted.
+it runs with — including the admin trap-type entity and its `sampleTypeIds` associations — so the
+table can be refreshed per instance instead of trusted.

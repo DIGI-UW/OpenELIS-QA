@@ -25,6 +25,15 @@ const ROUTES: Array<[string, string]> = [
   ['pathogens', 'vecPathogens'],
 ];
 
+// Trap Type is an admin ENTITY, not a dictionary lookup: /rest/admin/vector/trap-types rows carry
+// sampleTypeIds[], and the order form filters by ?sampleTypeId=. A row with sampleTypeIds: [] can
+// never appear in the form even though the unfiltered list looks populated — measure the
+// associations, not the row count.
+const ADMIN_ROUTES: Array<[string, string]> = [
+  ['admin/vector/trap-types', 'trap types (entity)'],
+  ['admin/vector/sample-types', 'vector organism groups'],
+];
+
 // Categories with NO bespoke route — reachable only through the generic categories endpoint.
 // vecTrapType is the notable one: the vector wizard has a Trap Type select, but there is no
 // /rest/vector/dictionary/trap-types (probed: 404). Do not re-guess that slug.
@@ -64,6 +73,27 @@ test('Vector/env reference data — population census', async ({ page }) => {
   for (const c of GENERIC_ONLY) {
     rows.push(await probe(page, `cat  ${c}`, `${API}/dictionary/categories/${encodeURIComponent(c)}/entries`));
   }
+  for (const [route, label] of ADMIN_ROUTES) {
+    rows.push(await probe(page, `adm  ${label}`, `${API}/${route}`));
+  }
+  // How many trap types are actually reachable by the form, i.e. carry an association at all.
+  const assoc = await page.evaluate(async (api: string) => {
+    try {
+      const r = await fetch(api + '/admin/vector/trap-types', { headers: { Accept: 'application/json' } });
+      if (!r.ok) return { total: -1, linked: -1 };
+      const a = await r.json();
+      const arr = Array.isArray(a) ? a : [];
+      return { total: arr.length, linked: arr.filter((t: any) => (t.sampleTypeIds || []).length > 0).length };
+    } catch (e) { return { total: -1, linked: -1 }; }
+  }, API);
+  console.log(`[refdata] trap types: ${assoc.total} defined, ${assoc.linked} with sampleTypeIds associations`);
+  if (assoc.total > 0 && assoc.linked === 0) {
+    test.info().annotations.push({
+      type: 'data-gap',
+      description: `All ${assoc.total} trap types have empty sampleTypeIds, so the vector order form's ?sampleTypeId= call returns [] for every sample type. Same symptom as OGC-1049 but the cause here is missing associations, not the endpoint — indonesiademo returns 5 for sampleTypeId=81.`,
+    });
+  }
+
   // Suffix-filtered category lists. Note lifecycle-categories matches ANY name ending in "Stages",
   // so a clinical category (AIDS Stages) shows up here on an unseeded instance.
   rows.push(await probe(page, 'route pathogen-categories', `${API}/vector/dictionary/pathogen-categories`));
