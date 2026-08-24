@@ -30,7 +30,20 @@
 //   POST .../tests/{id}/activate                200 sets is_active=Y AND orderable=true. 422 =
 //                                               completeness, 409 = range-coverage gaps (re-POST
 //                                               with gapsAcknowledged to override).
-//   PUT  .../tests/{id}/basic-info              can set orderable but NOT active:true (409).
+//   PUT  .../tests/{id}/basic-info              can set orderable but NOT active:true (409). Also
+//                                               the only way to attach a lab unit after creation.
+//
+// A LAB UNIT IS NOT OPTIONAL IN PRACTICE — this is the trap this spec exists to hold shut.
+// CreateTestRequest.labUnitId is optional, and the FR-57 completeness gate checks only the name, a
+// typed PRIMARY component and dictionary options — never the test section. So a test activates
+// happily with test_section_id NULL. But the order-entry catalogue endpoint filters the sample
+// type's tests by section id, so ONE such test makes
+//     GET /rest/sample-type-tests?sampleType=<thatType>  ->  HTTP 500
+// for the whole sample type, and the order picker for it dies. Measured on 3.2.2.0: with
+// labUnitId null -> 500; the same call for legacy types whose tests carry labUnitId 56 -> 200; and
+// a NONEXISTENT sample type id -> 200 with empty lists. So always send labUnitId, and assert the
+// read-back's STATUS, not just its length — a null-guarded `|| []` silently turns this 500 into a
+// plausible-looking "0 tests" and reads as a data gap instead of a defect.
 //
 // Read-back is on DIFFERENT endpoints from the writes (harness rule 7.5): the new type must appear
 // in /rest/{environmental|vector}-sample-types (what the new order wizard reads) and the new test
@@ -79,6 +92,12 @@ for (const lane of LANES) {
         if (!r.ok) return null;
         return await r.json().catch(() => null);
       };
+      const rawGet = async (u: string) => {
+        const r = await fetch(api + u, { headers: { Accept: 'application/json' } });
+        let body: any = null;
+        try { body = await r.json(); } catch (e) { body = null; }
+        return { status: r.status, body };
+      };
       const findType = async () => {
         const sts: any[] = (await getJson('/test-catalog/sample-types')) || [];
         return sts.find((s: any) => String(s.name || '').trim() === lane.typeName) || null;
@@ -104,6 +123,12 @@ for (const lane of LANES) {
         log.push('created sample type ' + st.id + ' domain=' + st.domain);
       }
 
+      // 1b) A lab unit (test_section) is mandatory in practice — see the header note.
+      const units: any[] = (await getJson('/test-catalog/lab-units')) || [];
+      const labUnitId = units.length ? String(units[0].id) : '';
+      log.push('lab units available: ' + units.length + ' -> using labUnitId=' + (labUnitId || 'NONE'));
+      if (!labUnitId) { log.push('no lab unit to attach - a test without one 500s /sample-type-tests; aborting lane'); return { log, typeId: String(st.id), testId: '', domainSeen: String(st.domain || '') }; }
+
       // 2) Test — reuse if a previous run made it.
       const listed: any = await getJson('/test-catalog/tests?domain=' + lane.domain + '&page=1&pageSize=200');
       const rows: any[] = (listed && (listed.rows || listed.content || [])) || [];
@@ -121,6 +146,7 @@ for (const lane of LANES) {
             code: lane.testCode,
             domain: lane.domain,
             sampleTypeIds: [String(st.id)],
+            labUnitId,
             orderable: true,
           }),
         });
@@ -128,6 +154,17 @@ for (const lane of LANES) {
         log.push('POST /test-catalog/tests ' + lane.testName + ' -> HTTP ' + r.status + ' ' + txt.slice(0, 120).replace(/\s+/g, ' '));
         try { testId = String((JSON.parse(txt) || {}).testId || ''); } catch (e) { /* status already logged */ }
         if (!testId) { log.push('no testId returned - aborting lane'); return { log, typeId: String(st.id), testId: '', domainSeen: String(st.domain || '') }; }
+      }
+
+      // 2b) Repair a test from an earlier run that was created without a lab unit.
+      const bi: any = await getJson('/test-catalog/tests/' + testId + '/basic-info');
+      if (!bi || !bi.labUnitId) {
+        const rb = await fetch(api + '/test-catalog/tests/' + testId + '/basic-info', {
+          method: 'PUT', headers: H, body: JSON.stringify({ labUnitId }),
+        });
+        log.push('test had no lab unit (would 500 /sample-type-tests) - PUT basic-info labUnitId=' + labUnitId + ' -> HTTP ' + rb.status);
+      } else {
+        log.push('test lab unit already set: ' + bi.labUnitId);
       }
 
       // 3) Give the pre-seeded PRIMARY component a result type (FR-57 gate).
@@ -175,14 +212,16 @@ for (const lane of LANES) {
       log.push('activation result: ' + actBody.slice(0, 160).replace(/\s+/g, ' '));
 
       // 6) Read back on DIFFERENT endpoints than the ones written.
-      const wizardList: any[] = (await getJson('/' + lane.wizard + '-sample-types')) || [];
+      const wiz = await rawGet('/' + lane.wizard + '-sample-types');
+      const wizardList: any[] = Array.isArray(wiz.body) ? wiz.body : [];
       const inWizard = wizardList.some((s: any) => String(s.id) === String(st.id));
-      const stt: any = await getJson('/sample-type-tests?sampleType=' + st.id);
-      const testNames = (((stt && stt.tests) || []) as any[]).map((t: any) => String(t.name || t.value || ''));
-      log.push('READBACK /' + lane.wizard + '-sample-types contains ' + st.id + ': ' + inWizard + ' (n=' + wizardList.length + ')');
-      log.push('READBACK /sample-type-tests?sampleType=' + st.id + ': ' + testNames.length + ' tests [' + testNames.join(' | ') + ']');
+      // Keep the STATUS: a 500 here is a defect, and swallowing it into [] reads as a data gap.
+      const stt = await rawGet('/sample-type-tests?sampleType=' + st.id);
+      const testNames = ((((stt.body || {}) as any).tests || []) as any[]).map((t: any) => String(t.name || t.value || ''));
+      log.push('READBACK /' + lane.wizard + '-sample-types HTTP ' + wiz.status + ' contains ' + st.id + ': ' + inWizard + ' (n=' + wizardList.length + ')');
+      log.push('READBACK /sample-type-tests?sampleType=' + st.id + ' HTTP ' + stt.status + ': ' + testNames.length + ' tests [' + testNames.join(' | ') + ']');
 
-      return { log, typeId: String(st.id), testId, domainSeen: String(st.domain || ''), inWizard, testNames };
+      return { log, typeId: String(st.id), testId, domainSeen: String(st.domain || ''), inWizard, testNames, sttStatus: stt.status };
     }, { api: API, lane });
 
     for (const l of out.log) console.log('[native ' + lane.domain + '] ' + l);
@@ -191,6 +230,7 @@ for (const lane of LANES) {
     expect(out.domainSeen, 'the created sample type must carry the requested domain').toBe(lane.domain);
     expect(out.testId, 'a test must exist for this domain').not.toBe('');
     expect(out.inWizard, 'the new sample type must appear in /rest/' + lane.wizard + '-sample-types (what the wizard reads)').toBe(true);
+    expect(out.sttStatus, 'the order-entry catalogue endpoint must not error for this sample type (500 here means a linked test has no test_section)').toBe(200);
     expect(out.testNames, 'the activated test must be orderable for its own sample type').toContain(lane.testName);
 
     seeded[lane.domain] = { typeId: out.typeId, testId: out.testId, typeName: lane.typeName, testName: lane.testName };
