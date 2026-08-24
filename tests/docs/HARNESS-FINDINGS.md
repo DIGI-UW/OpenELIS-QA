@@ -301,6 +301,109 @@ idx3 visible=true   div.cds--table-header-label    Domain
 
 ### Env/vector order-entry lanes: empty, unwritable reference registries
 
+> **RETRACTED 2026-08-24.** The claim below — that these registries "do not derive from
+> `sample_type.domain`" — was wrong. The seeded sample types were **inactive**, and both registries
+> filter on domain AND active. With active rows they populate, `env-flow` and `vector-flow` both
+> pass, and orders persist. The `POST 405` on `/rest/sample-types` is real but does not mean sample
+> types cannot be created: the insert route is `POST /rest/SampleTypeCreate`. See
+> `seed-domain-catalog-native.docs.spec.ts` and the 2026-08-24 section at the end of this file.
+> The `/rest/vector/dictionary/*` emptiness is real and is a reference-data gap (OGC-1182).
+
 `/rest/environmental-sample-types`, `/rest/vector-sample-types` and the whole `/rest/vector/dictionary/*` family return `[]` and are **POST 405**. They do **not** derive from `sample_type.domain` — proven by seeding the catalog (ENVIRONMENTAL=3, VECTOR=2, both orderable) and re-running `env-flow`, which still reported PICKED empty and zero writes. Independently corroborated by Chain N Step 1 (populated env dictionaries, expected at least 4, got 0).
 
 So `env-flow` and `vector-flow` failures on this build are an **environment precondition**, not a product defect in the forms — they should report BLOCKED with that reason rather than FAIL.
+
+
+---
+
+## 2026-08-24 — order → result → validation, driven in a real browser (testing 3.2.2.0)
+
+All four chains below were driven through Chrome against the live instance, not Playwright, and
+every outcome was confirmed by an API read-back rather than by the screen. Recorded here because
+several of the mechanics are not guessable from the DOM.
+
+| lane | lab number | result | after validation |
+|---|---|---|---|
+| Clinical | `DEV01260000000000560` | Demo Glucose 90.0 (range 70–110) | Results final · Normal |
+| Vector | `DEV01260000000000558` | QA Native Vector Assay 42.50 | Results final · Normal |
+| Environmental | `DEV01260000000000559` | QA Native Env Assay 7.20 | Results final · Normal |
+| Clinical, coded | `DEV01260000000000561` | QA Urine Dipstick Protein "Positif (++)" | Results final |
+
+### What actually gates "Save & Next" on the order forms
+
+The button carries `cds--btn--disabled` and **fires no request at all** until these are satisfied.
+There is no inline error text explaining why, so a driver that only watches for validation messages
+will conclude the form is broken.
+
+1. **Sampling Site must be committed**, not merely typed. The typeahead renders result rows each
+   with a **Select** control; until one is clicked, `siteName` stays empty even though the search
+   box looks filled.
+2. **At least one of Requesting Organization or Requestor**, also committed. The form states the
+   rule itself: *"At least one of Requesting Organization or Requestor is required."*
+3. The commit affordance **changes depending on whether the record already exists**. First use
+   offers `+ Add new organization "…"` / `+ Add new requestor "…"`; once the record exists that
+   link is gone and only the result row's **Select** works. A spec that only knows how to add-new
+   passes on a clean instance and fails on every subsequent run — this bit us between the vector
+   and env runs in the same session.
+
+Sample and test selection is **optional** at Enter Order ("Tests and sample type can be specified
+later during collection"), as are Lifecycle Stage, Trap Type, Container, Collection Method and
+Weather. Orders complete without any of them.
+
+`N/M steps` in the header is a **completion counter, not a wizard position** — it sat at `2/3`
+through an entire successful run. Read the button's disabled state, not the counter.
+
+### Clinical-specific
+
+* The patient block has two tabs, **Search for Patient** and **New Patient**. Filling the search
+  fields does nothing toward creating a patient; you must switch tabs.
+* On the New Patient tab, `National ID*` and `Date of Birth*` carry the required marker, but
+  Save & Next actually unlocked on **gender** with DOB still blank.
+* `date-picker-default-id` is the id of a **wrapping div**, not the input. Setting `.value` on it
+  throws `TypeError: Illegal invocation`; reach `.querySelector('input')` inside it.
+* The search-and-select path works too: searching the national ID returns a row
+  (`Parker Peter M NID-QACHAIN-560 Local`) with a **Select**.
+
+### Results entry and validation routes
+
+* **Results Entry — `/Results`.** One search box, `#unifiedResultsSearch`, that fires on **Enter**;
+  there is no Search button. Result controls are `#unifiedResultValue-<id>-primary`. Saving flips
+  the row to *Accepted by technician*.
+* **Validation by order — `/AccessionValidation`.** `#accessionNumber` + a **Search** button, then
+  per-row `resultList0.isAccepted` / `resultList0.isRejected` checkboxes and a **Validate** button.
+* Validate performs a **full page navigation** to `/validation?type=order&accessionNumber=…`, which
+  wipes any injected JS state — a driver must re-establish itself after each validation. The
+  reliable success signal is the row disappearing from the `/AccessionValidation` queue, and then
+  reading *Results final* back on `/Results`.
+
+### Coded (dictionary) results work end to end
+
+`resultType: "D"` with `options[]` on the primary component is the whole recipe. Verified with
+"QA Urine Dipstick Protein" (test 790, sample type Urines): completeness returned
+`complete: true, missing: []`, and **activation returned 200 with no range acknowledgment** —
+dictionary tests skip the reference-range coverage gate that numeric tests hit. At Results Entry the
+control renders as a `<select>` carrying exactly the configured ladder in sort order, not a numeric
+input. Selecting an option saved and validated normally.
+
+Open question, not chased: the three numeric results all showed a **Normal** flag after validation;
+the coded one showed **no flag**, despite `normal: true` being set on the `Negative` option.
+
+### Two instrument traps that produced false readings
+
+* `GET /rest/test-catalog/tests?domain=…` returns names **decorated with the sample type** —
+  `QA Native Env Assay(QA Native Env Matrix)`. An equality match on `name` never fires, so a
+  reuse-lookup falls through to a create, which then 409s on the code. Strip a trailing
+  parenthetical and match on `code` as well.
+* A `window.fetch` monkey-patch installed to record writes **was silently replaced by the SPA**, so
+  a run that definitely saved logged zero writes. Never treat an empty client-side write log as
+  evidence of no persistence — read the record back from the server.
+
+### Defect surfaced (OGC-1120)
+
+A test can be created **and activated** with `test_section_id` NULL — `labUnitId` is optional on
+create and the FR-57 completeness gate never checks the section. One such test makes
+`GET /rest/sample-type-tests?sampleType=<itsType>` return **500** for the whole sample type, killing
+the order picker for it. A nonexistent sample-type id returns 200 with empty lists, so this is a
+null dereference, not input validation. `PUT .../basic-info {"labUnitId": …}` fixes it in place.
+Always send `labUnitId`, and assert the read-back's **HTTP status** — swallowing the 500 into an
+empty-array fallback reports it as "0 tests", which reads as a data gap rather than a server error.
