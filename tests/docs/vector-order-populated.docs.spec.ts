@@ -3,6 +3,7 @@
 //   BASE=https://indonesiademo.openelis-global.org npx playwright test --project=docs tests/docs/vector-order-populated.docs.spec.ts
 import { test } from '@playwright/test';
 import { go, shot, saveWalkthrough } from './capture';
+import { selectSampleTypeAgnostic, fillUnsetSelects } from './order-helpers';
 
 test('User manual — Vector order populated', async ({ page }, info) => {
   info.annotations.push({ type: 'capability', description: 'vector-order-populated' });
@@ -22,13 +23,11 @@ test('User manual — Vector order populated', async ({ page }, info) => {
   // Requester — Marvel demo provider name.
   try { const pn = page.getByLabel(/provider name/i).first(); if (await pn.isVisible({ timeout: 1500 })) { await pn.fill('Tony Stark', { timeout: 1500 }); } } catch {}
 
-  // Sample Type — Adult Mosquito (native select if possible, else open + click option).
+  // Sample Type — whichever VECTOR type this instance offers with orderable tests.
+  // "Adult Mosquito" is an indonesiademo label, so it is a preference hint, not a requirement.
   try {
-    const st = page.getByLabel(/^sample type/i).first();
-    await st.selectOption({ label: 'Adult Mosquito' }).catch(async () => {
-      await st.click({ timeout: 2000 }); await page.waitForTimeout(500);
-      const o = page.getByText(/^Adult Mosquito$/).first(); if (await o.isVisible({ timeout: 1500 })) await o.click({ timeout: 1500 });
-    });
+    const st = await selectSampleTypeAgnostic(page, 'vector', { prefer: /adult\s*mosquito/i });
+    console.log('VEC_POP_SAMPLE_TYPE=' + (st ? st.label + '/' + st.testCount : 'none'));
     await page.waitForTimeout(1200);
   } catch {}
 

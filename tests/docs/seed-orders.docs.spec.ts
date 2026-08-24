@@ -4,7 +4,7 @@
 //   BASE=https://indonesiademo.openelis-global.org SEED_N=2 npx playwright test --project=docs tests/docs/seed-orders.docs.spec.ts
 import { test } from '@playwright/test';
 import { go } from './capture';
-import { generateLabNumber, selectSite, setSelectByOption, checkByLabel, completeQaChecklist, clickButton, selectEnvSampleType, pickEnvTest, newPatient, selectComplianceStandard } from './order-helpers';
+import { generateLabNumber, selectSite, setSelectByOption, checkByLabel, completeQaChecklist, clickButton, newPatient, selectComplianceStandard, selectSampleTypeAgnostic, pickTestAgnostic, fillUnsetSelects } from './order-helpers';
 
 const P = '/api/OpenELIS-Global';
 const N = parseInt(process.env.SEED_N || '2', 10);
@@ -74,10 +74,13 @@ async function createVector(page: any, i: number): Promise<string> {
   await go(page, '/order/vector/enter');
   const lab = await generateLabNumber(page);
   await selectSite(page, SAMPLING[i % SAMPLING.length].split(' ')[0]);
-  await setSelectByOption(page, /^adult mosquito$/i);
+  // Instance-agnostic: pick whichever VECTOR sample type this deployment offers with tests.
+  const st = await selectSampleTypeAgnostic(page, 'vector', { prefer: /adult\s*mosquito/i });
+  if (!st) { console.log('[seed-orders] no workable VECTOR sample type - skipping vector seed'); return lab; }
+  await fillUnsetSelects(page, /^sampleType/i);
   await page.waitForTimeout(900);
   await page.evaluate(() => { const q = document.querySelector('input[type=number]') as any; if (q) { const s = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!; s.call(q, '25'); q.dispatchEvent(new Event('input', { bubbles: true })); q.dispatchEvent(new Event('change', { bubbles: true })); } });
-  await checkByLabel(page, /identifikasi spesies nyamuk/i).catch(() => {});
+  await pickTestAgnostic(page, st.id, /nyamuk|mosquito|species/i).catch(() => '');
   await finishWizard(page);
   return lab;
 }
@@ -85,8 +88,12 @@ async function createEnv(page: any, i: number): Promise<string> {
   await go(page, '/order/environmental/enter');
   const lab = await generateLabNumber(page);
   await selectSite(page, SAMPLING[i % SAMPLING.length].split(' ')[0]);
-  await selectEnvSampleType(page, /Groundwater/i).catch(() => {});
-  await pickEnvTest(page, /^pH$/).catch(() => {});
+  // Instance-agnostic: /Groundwater/ only exists on indonesiademo; prefer it, accept any
+  // ENVIRONMENTAL sample type that actually carries orderable tests.
+  const est = await selectSampleTypeAgnostic(page, 'environmental', { prefer: /groundwater|water/i });
+  if (!est) { console.log('[seed-orders] no workable ENVIRONMENTAL sample type - skipping env seed'); return lab; }
+  await fillUnsetSelects(page, /^sampleType/i);
+  await pickTestAgnostic(page, est.id, /^p\s*H$/i).catch(() => '');
   await selectComplianceStandard(page, /./).catch(() => {});
   await finishWizard(page);
   return lab;
