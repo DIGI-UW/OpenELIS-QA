@@ -130,12 +130,20 @@ for (const lane of LANES) {
       if (!labUnitId) { log.push('no lab unit to attach - a test without one 500s /sample-type-tests; aborting lane'); return { log, typeId: String(st.id), testId: '', domainSeen: String(st.domain || '') }; }
 
       // 2) Test — reuse if a previous run made it.
-      const listed: any = await getJson('/test-catalog/tests?domain=' + lane.domain + '&page=1&pageSize=200');
-      const rows: any[] = (listed && (listed.rows || listed.content || [])) || [];
-      let testId = '';
-      const hit = rows.find((t: any) => String(t.name || '').trim() === lane.testName);
-      if (hit) {
-        testId = String(hit.testId || hit.id);
+      // The list projection decorates the name with its sample type — "QA Native Env Assay(QA
+      // Native Env Matrix)" — so an equality match on `name` never fires and the reuse path silently
+      // falls through to a create that 409s on the code. Strip a trailing parenthetical, and match
+      // on `code` too.
+      const bare = (n: any) => String(n || '').replace(/\s*\([^)]*\)\s*$/, '').trim();
+      const findTest = async () => {
+        const listed: any = await getJson('/test-catalog/tests?domain=' + lane.domain + '&page=1&pageSize=200');
+        const rows: any[] = (listed && (listed.rows || listed.content || [])) || [];
+        const m = rows.find((t: any) => bare(t.name) === lane.testName
+          || String(t.code || '').toUpperCase() === lane.testCode.toUpperCase());
+        return m ? String(m.testId || m.id) : '';
+      };
+      let testId = await findTest();
+      if (testId) {
         log.push('test exists: ' + testId + ' [' + lane.testName + ']');
       } else {
         const r = await fetch(api + '/test-catalog/tests', {
@@ -153,6 +161,11 @@ for (const lane of LANES) {
         const txt = await r.text();
         log.push('POST /test-catalog/tests ' + lane.testName + ' -> HTTP ' + r.status + ' ' + txt.slice(0, 120).replace(/\s+/g, ' '));
         try { testId = String((JSON.parse(txt) || {}).testId || ''); } catch (e) { /* status already logged */ }
+        if (!testId && r.status === 409) {
+          // 409 = the code is already in use, i.e. a previous run made it. Recover by lookup.
+          testId = await findTest();
+          log.push('409 code-in-use -> recovered existing test ' + (testId || 'NOT FOUND'));
+        }
         if (!testId) { log.push('no testId returned - aborting lane'); return { log, typeId: String(st.id), testId: '', domainSeen: String(st.domain || '') }; }
       }
 
