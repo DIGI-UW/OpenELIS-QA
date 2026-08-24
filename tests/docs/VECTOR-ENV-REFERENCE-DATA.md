@@ -86,6 +86,24 @@ It is not demo-only hand entry. It is checked in:
 `testing` runs 3.2.2.0, which predates that changelog, so the categories were never created there.
 That is the whole explanation for the empty dropdowns — not missing product code.
 
+## Correction (2026-08-24): trap types are NOT part of the liquibase gap
+
+An earlier revision of this file lumped all seventeen vocabularies under "needs liquibase". That is
+wrong for trap types, and the distinction matters because one is a five-minute admin task and the
+other is a migration.
+
+* **Trap types — admin-managed, no migration needed.** `/rest/admin/vector/trap-types` is a proper
+  admin entity (`VectorTrapTypeRestController`: `GET /?groupId=`, `POST /`, `PUT /{id}`) with a
+  screen at `frontend/src/components/admin/vectorSurveillance/VectorTrapTypesPage.jsx`. Its form is
+  `{name, sampleTypeIds[], description}`, so an admin creates the trap type *and* its sample-type
+  associations. The `vecTrapType` dictionary category is a different object and is not what the
+  order form reads.
+* **Lifecycle stages — genuinely need liquibase.** They are dictionary entries in category
+  `vecLifecycleStages`, and no REST route creates a dictionary *category* (see below).
+
+Tracked as **OGC-1182** (assigned), which asks only for the dictionary-category seed and explicitly
+excludes trap types.
+
 ## Why the QA harness cannot seed it
 
 `POST /rest/Dictionary` (ADMIN) inserts a dictionary **entry**, and it requires
@@ -105,6 +123,12 @@ collection method cannot pass there no matter how it is written. `fillUnsetSelec
 shape for these fields: set whatever the instance offers, and treat "no options" as reference-data
 absence rather than a wizard defect. Both env and vector orders do persist without them
 (`POST /rest/SamplePatientEntry -> 200`).
+
+Confirmed live 2026-08-24 by driving all three domain lanes through the real UI: the env form
+renders `collectionMethod` and `weather` with only the "Select" placeholder and `container-0` with
+an empty option list, and the vector form leaves `lifecycleStage-0` and `trapType-0` empty — and
+the orders still complete and validate. These fields are optional; the cost is lost surveillance
+metadata, not a blocked workflow.
 
 ## Full indonesiademo vocabularies (the seed target)
 
