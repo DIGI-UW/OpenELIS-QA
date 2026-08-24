@@ -10,6 +10,18 @@ import { setComponentViaRest, activateViaRest } from '../../legacy-order-helper'
  * migrated instance reports domain=ENVIRONMENTAL total:0 and domain=VECTOR total:0, and any suite
  * that expects non-clinical catalog rows fails for want of data rather than for a defect.
  *
+ * SUPERSEDED (2026-08-23) — read seed-domain-catalog-native.docs.spec.ts instead for new work.
+ * Two conclusions recorded below are WRONG and are corrected there:
+ *   1. "sample types cannot be created" — they can. The 405s on POST /rest/sample-types and
+ *      POST /rest/test-catalog/sample-types are real, but the insert route is
+ *      POST /rest/SampleTypeCreate, which writes the domain through Domain.normalize(), so
+ *      ENVIRONMENTAL and VECTOR rows can be created outright rather than repurposed.
+ *   2. the SCOPE LIMIT below — /rest/environmental-sample-types and /rest/vector-sample-types DO
+ *      derive from sample_type.domain. They read [] only while the matching rows are inactive;
+ *      env-flow and vector-flow both pass on this instance once the rows are active.
+ * This file still works (it reuses whatever is already in each domain) and is kept for that, but
+ * the repurpose-by-PUT trick is no longer the recommended route in.
+ *
  * THE ROUTE IN — every line below is a live status from testing.openelis-global.org v3.2.2.0:
  *   POST /rest/sample-types                            -> 405   (OGC-1152, open)
  *   POST /rest/test-catalog/sample-types               -> 405   (no alternate create route)
@@ -24,9 +36,10 @@ import { setComponentViaRest, activateViaRest } from '../../legacy-order-helper'
  * it, give each a primary result component, then activate. Only an ACTIVE test appears in
  * /rest/sample-type-tests, which is what order forms and the compliance-tests seeder read.
  *
- * SCOPE LIMIT — this does NOT unblock the new three-lane order wizard. Those lanes read
- * /rest/environmental-sample-types and /rest/vector-sample-types, which return [] and are POST
- * 405; they do not derive from sample_type.domain. Seeding the catalog cannot fix them.
+ * SCOPE LIMIT (RETRACTED — see the note at the top) — this was recorded as "does NOT unblock the
+ * new three-lane order wizard ... those lanes do not derive from sample_type.domain". That was
+ * wrong: the seeded sample types were simply inactive, and both registries filter on domain AND
+ * active. With active rows the wizard lanes populate and orders persist.
  *
  * SAFETY — only sample types whose names are obvious QA debris (QA_/QA / Q<digits>/ZQA_) are
  * touched; never a real clinical type. Idempotent: re-running reuses whatever is already in the
