@@ -720,3 +720,128 @@ Also confirmed here: two tests ordered on one sample are two independent analyse
 statuses — the titer stayed "Not started" while the numeric went to "Results final". That contrasts
 with the multi-component case on test 446, where three result rows share one `analysisId` and one
 status.
+
+## 2026-08-25 — root causes for the three open defects
+
+### 1. Multi-select misrouting — found, and the intent behind it is sound
+
+The frontend is not at fault. `UnifiedResults.handleValueChange` keys edits by
+`worklistRowKey = analysisId + testResultComponentId` and carries an explicit FR-A′3 comment about
+updating only the edited row; `handleSave` posts the whole row, `testResultComponentId` included, to
+`POST /rest/results-entry/analysis/{analysisId}/result`.
+
+The binding happens server-side in `ResultEntryRestController.reuseExistingResultForComponent`,
+whose own Javadoc states the intent:
+
+> Idempotency guard for the per-analysis save: a payload with a BLANK resultId means "new result" to
+> the legacy save service — but if this analysis already has a persisted result for the row's
+> component … inserting again duplicates the component. Bind the item to the existing result so the
+> save UPDATES it. **Multiselect rows legitimately hold several results per component and manage
+> their own lifecycle — they are left alone.**
+
+and enforces it with an early return:
+
+```java
+if (!GenericValidator.isBlankOrNull(item.getResultId())
+        || ResultType.isMultiSelectVariant(item.getResultType())) {
+    return;
+}
+```
+
+`isMultiSelectVariant` is `"MC".contains(type)` — so **M and C both take the early return**.
+
+The reasoning is defensible: a multi-select genuinely can hold several `Result` rows per component,
+so binding it to one existing row would be wrong. **The gap is what it falls through to.**
+`reuseExistingResultForComponent` is the only thing in the save path that turns component identity
+into something the persist layer acts on, and the legacy path it defers to —
+`LogbookResultsController` — contains **no reference to component ids at all** (`getComponentId`,
+`setComponentId`, `getTestResultComponentId` all return nothing on a grep).
+
+So a multi-select save arrives with no component binding whatever, and the legacy path attaches the
+new `Result` to whichever `TestResult` row it finds — empirically the dictionary component's. That
+explains both observed shapes exactly: the value lands on the Dictionary component (coercing its
+type D→M) when that component is empty, and appends a fourth row when it already holds a value.
+
+**The comment says multiselect rows "manage their own lifecycle". Nothing in the legacy path
+actually does.** That sentence describes an intention that was never implemented downstream.
+
+Predicted, not yet observed: **Cascading multi-select (C) is affected identically.**
+
+### 2. Titer — a real backend type with no entry UI anywhere, old or new
+
+Not a legacy stub. `TypeOfTestResultServiceImpl.ResultType` declares
+`REMARK("R"), DICTIONARY("D"), TITER("T"), NUMERIC("N"), ALPHA("A"), MULTISELECT("M"), CASCADING_MULTISELECT("C")`,
+and every constant resolves its id from a `type_of_test_result` DB row at startup — a missing 'T'
+row would fail the `@PostConstruct`. `TestResultConfigurationHandler.isValidResultType` accepts T,
+and its own comment documents the storage format: *"D, M, C store dictionary IDs; **T stores titer
+values like '1:10'**"*.
+
+What is missing is only the entry control:
+
+* No `case "T"` in `PolymorphicResultCell.tsx`; a T row hits `default:` and renders a bare span.
+* `resultType === "T"` / `case "T"` appear nowhere in `frontend/src`.
+* "titer" appears nowhere in `src/main/webapp` either — **the legacy JSP UI never rendered it
+  either**, so this is not a regression from the React rewrite.
+
+**So the fix is to add the missing case, not to retire the option.** The data model, the importer
+and the catalog editor all support Titer; only result entry never has.
+
+### 3. Batch Test Reassignment — both halves confirmed in source
+
+Frontend, `BatchTestReassignmentAndCancelation.jsx`:
+
+```js
+const [sampleTypeToGetId, setSampleTypeToGetId] = useState(null);
+...
+useEffect(() => {
+  getFromOpenElisServer(`/rest/AllTestsForSampleTypeProvider?sampleTypeId=${sampleTypeToGetId}`, …);
+}, [sampleTypeToGetId]);
+```
+
+The effect runs on mount with the initial `null` and template-interpolates it, producing the literal
+string `"null"`. The same shape drives `getPendingAnalysisForTestProvider?testId=${…}`. Neither
+effect guards the unset state. Two other callers of the same endpoint
+(`AssociatedTestsSection.jsx`, `SampleTypeManagement.jsx`) at least wrap the id in
+`encodeURIComponent`, so the omission here is inconsistent as well as wrong.
+
+Backend, `AllTestsForSampleTypeProviderRestController` and
+`PendingAnalysisForTestProviderRestController`, identical shape:
+
+```java
+if (sampleTypeId == null || sampleTypeId.isEmpty()) { return 400 …; }
+try   { return ok(createJsonGroupedTestNames(sampleTypeId)); }
+catch (Exception e) { LogEvent.logDebug(e); return 500 …; }
+```
+
+`"null"` is neither null nor empty, so it clears the guard and fails downstream on id parsing. That
+matches the measured behaviour exactly: omitted → 400, `"null"` → 500, `9999` → 200 empty.
+
+Two things worth fixing alongside it: the exception is logged at **DEBUG**, which is why a 500 on
+every visit to this page has gone unnoticed; and the **400** body reads "Internal error, please
+contact Admin and file bug report", describing a client error as an internal one.
+
+### Blast radius — a catalog-wide result-type census
+
+Every one of the 588 catalogue tests was queried for its components' result types.
+
+| Result type | All tests | On the 214 active tests |
+| --- | --- | --- |
+| N numeric | 146 | 106 |
+| D dictionary | 74 | 51 |
+| R free text | 73 | 59 |
+| **T titer** | **27** | **4** |
+| M multi-select | 18 | 1 |
+| C cascading | 15 | 0 |
+| A alpha | 15 | 1 |
+| *(no type set)* | **197** | 1 |
+
+**Only 5 active tests currently declare something Results Entry cannot render**, and four of those
+are QA-created titer tests. The fifth is `321 Histopathology examination`, whose PRIMARY component
+has no result type at all — and pathology is resulted through `PathologyCaseView.jsx`, which does
+not consult `resultType`, so that is almost certainly by design rather than a defect. Worth one
+confirmation from someone who knows the pathology flow.
+
+So the honest severity read: **the Titer gap is a real dead end that a lab will hit the moment it
+configures a serology titer, but it is not breaking production tests on this instance today.** The
+197 typeless components are overwhelmingly on inactive tests and predate the editor's FR-56 rule
+that now requires an explicit type.
