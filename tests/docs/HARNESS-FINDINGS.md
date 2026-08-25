@@ -845,3 +845,34 @@ So the honest severity read: **the Titer gap is a real dead end that a lab will 
 configures a serology titer, but it is not breaking production tests on this instance today.** The
 197 typeless components are overwhelmingly on inactive tests and predate the editor's FR-56 rule
 that now requires an explicit type.
+
+### Refinement — the misroute needs a MULTI-component test
+
+Predicted from source that Cascading (C) would misroute like Multi-select (M), since
+`isMultiSelectVariant` is `"MC"`. Tested it: activated `495 QA_AUTO_0725_02879 Abx by organism C`
+(a **single**-component C test) and ran order DEV01260000000000571 through Results Entry with real
+input. It saved **correctly**:
+
+    Abx by organism C(Serum)   type C   val "HIV-1 DNA DETECTED"   multi {"0":"1332"}
+
+One row, right component, right type. So the prediction as stated was too broad, and the true
+condition is sharper:
+
+> **The misroute bites only when an M or C component sits alongside other components on the same
+> test.** With a single component there is nothing to misroute onto, so the missing component
+> binding is harmless.
+
+That is exactly consistent with the root cause — `reuseExistingResultForComponent` returning early
+means the save carries no component identity, which only matters when the analysis has more than one
+result row to choose between. On test 446 (N + D + M) the value landed on the D component; on test
+495 (C alone) it landed where it belonged.
+
+**Blast radius, corrected:** from the catalogue census, a test needs (a) two or more components and
+(b) at least one of them M or C. Test 446 is the only such test found on this instance, and it is
+QA-created. So this is a latent defect waiting on a realistic configuration — an antibiogram or a
+differential with a multi-select alongside a numeric would hit it — rather than one breaking work
+today.
+
+**State note:** test 495 was **inactive** before this check and I activated it to run the chain
+(`POST /rest/test-catalog/tests/495/activate`). It is a QA_AUTO test and I left it active, since it
+gives us the only orderable C-type test for future runs. Say if it should go back to inactive.
