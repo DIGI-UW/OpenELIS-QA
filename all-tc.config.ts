@@ -49,8 +49,10 @@ export default defineConfig({
       use: { storageState: '.auth/user.json' },
     },
     // --- OGC-1057 analyzer guided setup (Instrument → Verify → Connect) — --project=analyzer-guided-setup ---
-    // Flip-when-fixed: Δ-A…Δ-O assertions encode CURRENT behavior; a failure here means the fix
-    // landed and the assertion should be flipped to the spec, not relaxed. See analyzer-guided-setup.md.
+    // Re-baselined 2026-08-25 against v3.2.2.0. Flip-when-fixed: assertions tagged Δ-K, Δ-R, Δ-S,
+    // Δ-T, Δ-U, Δ-V encode CURRENT (wrong) behavior — a failure there means the fix landed and the
+    // assertion should be flipped to the spec, not relaxed. UNtagged assertions guard the eleven
+    // findings that 3.2.2.0 fixed, so they cannot silently regress. See analyzer-guided-setup.md.
     {
       name: 'analyzer-guided-setup',
       testMatch: /analyzer-guided-setup\.spec\.ts/,
