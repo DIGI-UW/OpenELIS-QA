@@ -876,3 +876,101 @@ today.
 **State note:** test 495 was **inactive** before this check and I activated it to run the chain
 (`POST /rest/test-catalog/tests/495/activate`). It is a QA_AUTO test and I left it active, since it
 gives us the only orderable C-type test for future runs. Say if it should go back to inactive.
+
+## 2026-08-25 — refer-out, NCE and disposition chains (order DEV01260000000000572)
+
+One order, three tests (Demo Glucose 550, QA_AUTO_0727_14692 Critical 546, Amylase 5), used to drive
+the referral, non-conformity and result-disposition paths.
+
+### DEFECT — a referral raised from Results Entry is invisible to the Reference Lab dashboard
+
+Expanding a result row exposes **Refer this test**, which reveals a Reference laboratory picker
+(National / Regional Reference Laboratory) and a Referral reason picker (11 reasons). Choosing
+*National Reference Laboratory* + *Confirmation requested* and saving works: the analysis reads back
+`referredOut: true`, `referralId: "3"`, status 15.
+
+**But the referral appears nowhere it should.**
+
+* `Results → Referred Out` (`/SampleShipment/reference-lab-results`) shows
+  *"No referrals found for the selected filters"* with the date filters empty and the days bucket on
+  **All** — nothing is being filtered out.
+* `GET /rest/reference-lab-results/referrals?view=outstanding` returns `[]`.
+  (`view` accepts only `outstanding`, `returned`, `history`; anything else is a 400.)
+* `GET /rest/reference-lab-results/metrics` returns `{"outstanding":0,"returned":0,…}`.
+* The Shipment Dashboard does not list it either.
+
+**Root cause — the write path and the read path disagree on the status vocabulary.**
+
+`ResultUtil.handleReferrals`, the refer-out path Results Entry uses, is annotated
+`@SuppressWarnings("deprecation")` and writes:
+
+```java
+referral.setStatus(ReferralStatus.SENT);
+```
+
+`SENT` is **deprecated** in `ReferralStatus` — *"@deprecated Use REQUESTED. Slated for removal once
+legacy referral flow migrates."* Meanwhile the dashboard reads:
+
+```java
+OUTSTANDING_STATUSES = Arrays.asList(REQUESTED, RECEIVED, IN_PROGRESS);
+```
+
+which does **not** include `SENT`. And `ShippingBoxServiceImpl` only picks up referrals whose status
+is `DRAFT`, so the shipment flow ignores it too.
+
+The migration is half-done rather than absent: `ReferralServiceImpl.getUncanceledOpenReferrals()`
+deliberately spans both vocabularies — `DRAFT, REQUESTED, RECEIVED, IN_PROGRESS, CREATED, SENT` —
+so some consumers do know about the legacy statuses. The new Reference Lab Results service is the
+one that does not.
+
+**Effect:** a tech refers a test out and it lands in a status no dashboard queries. Nothing warns
+them, and the referral cannot be tracked, shipped or reconciled through the UI.
+
+### Working — non-conformity raised from Results Entry, with result disposition
+
+The inline NCE form is well built. Its **CONTEXT (Auto-populated)** banner carries
+`Lab #: DEV01260000000000572 - Test Name: … , Patient: …`, and a **Linked Samples/Results** block
+confirms both links with ticks (`Sample: DEV01260000000000572-1`, `Result: Amylase(Serum)`).
+Category cascades to Type (Analysis → 13 types, General → 5, Sample → 19), Severity is a
+three-tile choice, and a **Result disposition** row offers *None / Cancel result / Retest* with the
+caption *"Applied when the NCE is submitted. Refer-out is a separate row action, not a disposition."*
+
+Two NCEs were created and both verified through `GET /rest/nce/dashboard`:
+
+| NCE | Severity | Disposition | Effect |
+| --- | --- | --- | --- |
+| NCE-2026-00001 | MINOR | None | analysis untouched |
+| NCE-2026-00002 | MAJOR | Cancel result | **Amylase removed from the worklist** |
+
+The Cancel disposition fired `POST /rest/sample-management/cancel-test` alongside
+`POST /rest/reportnonconformingevent`, and the read-back confirms the Amylase analysis is gone. Both
+NCEs carry `labOrderNumber: DEV01260000000000572`. The NCE number increments correctly
+(00001 → 00002), which is also how we proved the first submission attempt had genuinely not
+persisted.
+
+### HARNESS — the click-coordinate trap that nearly produced two false defect reports
+
+`mcp__claude-in-chrome__computer` takes coordinates in **screenshot space**, not CSS-pixel space. On
+this display the screenshot is 1372 px wide against a 1440 px viewport, so:
+
+    scale = 1372 / window.innerWidth = 0.9528
+
+Feeding `getBoundingClientRect()` values straight to the click action therefore misses low and to
+the right, by ~5% of the offset from the origin — enough to hit the wrong control or empty space.
+
+This produced a **false negative that looked exactly like a defect**: clicking "Create NCE" appeared
+to issue no network request at all, with no error and no notification, and the NCE dashboard stayed
+empty. The obvious conclusion — *"Create NCE is inert"* — was wrong. The click had simply landed
+54 px right and 22 px low of the button. Clicking the position read off a screenshot worked
+immediately.
+
+**Rules that follow:**
+
+1. Take click coordinates from a **screenshot**, or convert with
+   `Math.round(cssX * 1372 / window.innerWidth)`.
+2. Before reporting "the button does nothing", confirm the handler ran. The cheapest proof is
+   `performance.getEntriesByType('resource')` before and after — it is passive and survives the
+   SPA restoring native `fetch` over an injected recorder.
+3. A stray keystroke aimed at a mis-located control lands in whatever *is* focused. One "S" meant
+   for a category picker silently appended to Reporter Name, producing "Open ELISS". Always read
+   the field back after a keyboard selection.
