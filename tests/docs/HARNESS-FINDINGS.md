@@ -438,3 +438,137 @@ keeps in `localStorage.getItem('CSRF')` - the session cookies are HttpOnly, so `
 empty and there is no meta tag. Without the header every write returns
 `403 {status: 403, message: CSRF token missing or invalid}`. Useful when probing server-side guards
 by hand rather than through the harness.
+
+## 2026-08-25 — route census, and what walking every screen turned up
+
+Two new specs walk every reachable route and apply one shallow oracle: did it bounce to login, did
+it paint real chrome, did a server error leak into the DOM, did it raise an uncaught page error or a
+5xx. `tests/admin-route-census.spec.ts` covers the 51 routes under `/MasterListsPage`;
+`tests/app-route-census.spec.ts` covers the 76 working routes. Both run from `census.config.ts`.
+
+The point of them is not depth — it is that a screen which quietly starts rendering an empty shell
+now fails a suite instead of waiting for someone to click it.
+
+### DEFECT — Batch Test Reassignment fires two provider endpoints with a literal `null`
+
+`/MasterListsPage/batchTestReassignment` issues, on mount:
+
+    GET /rest/AllTestsForSampleTypeProvider?sampleTypeId=null   -> 500
+    GET /rest/getPendingAnalysisForTestProvider?testId=null     -> 500
+
+Characterised by hand against the same instance:
+
+| request | status |
+| --- | --- |
+| `?sampleTypeId=null` (literal string) | **500** |
+| parameter omitted entirely | 400 |
+| `?sampleTypeId=1` (valid) | 200 |
+| `?sampleTypeId=99999` (nonexistent) | 200, empty list |
+| `?testId=790` (valid) | 200 |
+
+So there are two problems stacked. The front end stringifies its unset state into the query rather
+than skipping the call, and the back end answers the string `null` with a 500 where an omitted
+parameter correctly yields 400 and an unknown id correctly yields 200. Same shape as the OGC-1120
+null-guard: an id that fails to resolve should not become a 500.
+
+**User impact is low** — the page is usable. Picking a sample type populates both dependent selects
+correctly (Serum -> 417 tests, Urines -> 10, Sputum -> 1, Fluid -> 2), and no error is surfaced.
+The cost is two 500s in the server log on every visit, which is exactly the noise that makes a real
+500 easy to miss.
+
+### Vector Identification is fully wired, and blocked on reference data
+
+`/vector/identification` renders the Vector Identification Worklist against real orders — our
+vector chain lot `DEV01260000000000558-P01` appears with its result (QA Native Vector Assay 42.50),
+25 specimens, a Split action and a Deconvolution flag. Expanding a pool and clicking **Identify**
+exposes a per-specimen panel whose controls are:
+
+| control | options |
+| --- | --- |
+| `method-{id}` | Select… / Morphological / Molecular / Morphological + Molecular |
+| `confidence-{id}` | Select… / Confirmed / Presumptive |
+| `lifecycleStage-{id}` | **none — zero option elements** |
+| `species-{id}` (combobox) | **empty menu** |
+
+Species is admin-managed (Vector Surveillance Setup -> Species, 0 rows on this instance) and
+lifecycle stage needs a liquibase seed. Both are in scope for **OGC-1182**. Until they are seeded,
+identification cannot be completed on a fresh instance.
+
+Two UI nits worth knowing while that is true:
+
+* `lifecycleStage-{id}` renders with **zero** `<option>` elements — not even the `Select…`
+  placeholder that `method` and `confidence` both carry. An empty list and an unpopulated list
+  should not look different.
+* The species combobox opens an empty `cds--list-box__menu` with **no empty-state message**. A lab
+  user gets a silent dead end rather than "no species configured — add them in Admin".
+
+### NOT a defect — the Environmental Compliance Dashboard reading all zeros
+
+`/EnvironmentalDashboard` shows Total Orders 0, Compliance Rate 0%, Sites Monitored 0 even though
+environmental orders exist. The default date range is fine (2025-08-25 to 2026-08-26, which spans
+them). The cause is our own seed data: `GET /rest/compliance/standards/active` returns 5 ACTIVE
+standards and **every one of them has zero linked tests**, which `SEED-README.md` already warns
+about ("Standards alone have no linked tests — run seed-compliance-tests next"). Recorded here so
+the next person does not spend an hour on it.
+
+### Surfaces confirmed healthy by hand
+
+* **Storage -> Sample Items** — 25 rows with real locations (`Hema Lab > Freezer 1 > Shelf 2`),
+  Dispose Sample and Storage Audit Trail panels present.
+* **QC Dashboard** — renders with zero instruments configured; tiles read 0 and the violations panel
+  says "No active violations". Correct for an instance with no analyzers, not a failure.
+
+### DEFECT (serious) — Workplan By Unit 500s on one unit and blanks the whole app
+
+Found by click-through, not by the census — the census only visits routes, and this needs one
+interaction. `/WorkPlanByTestSection` renders fine; selecting a unit issues
+
+    GET /rest/WorkPlanByTestSection?test_section_id={id}
+
+and for **unit 56 (Biochemistry)** that returns **500**. The React app then unmounts everything:
+`document.getElementById('root').children.length` goes from 1 to **0**, leaving a blank white page
+with no message and no route back except a manual reload.
+
+Ten of the eleven units in the picker answer 200, so this is data-dependent rather than a dead
+endpoint:
+
+| unit | id | status |
+| --- | --- | --- |
+| Biochemistry | 56 | **500** |
+| Hematology | 36 | 200 (24899 B) |
+| Molecular Biology | 136 | 200 (12215 B) |
+| Bacteria | 57 | 200 (2693 B) |
+| Pathology | 163 | 200 (128529 B) |
+| Immunohistochemistry | 164 | 200 (123451 B) |
+| Serology-Immunology 117, Immunology 59, Cytology 165, Serology 97, Virology 76 | | 200, empty |
+
+Repeatable on a fresh tab and via direct `fetch`. `WorkPlanByTest` and `WorkPlanByPriority` both
+answer 200, so it is specific to the by-unit path. The response body is the bare
+`{"timestamp":…,"status":500,"error":"Internal Server Error"}` — **no stack trace reaches the
+client, so the cause needs the server log.**
+
+`getAllAnalysisByTestSectionAndStatus(sectionId, statusList, true)` feeds a loop that dereferences
+`analysis.getSampleItem().getSample()`, `sample.getAccessionNumber().equals(...)` and
+`analysis.getTest().getId()` without null guards (see `WorkPlanByTestSectionController`), so a
+single malformed pending analysis in that unit is the most likely trigger — same family as
+OGC-1120. Note the REST controller for this path is **not** on the OpenELIS-Global-2 default branch
+(only ByTest / ByPanel / ByPriority are), yet the deployed 3.2.2.0 build answers it with a 500 and
+not a 404, so whatever handles it is not what a source search finds.
+
+**These are two defects and both are worth filing.** The 500 is one. The front end unmounting on a
+failed API call is the other, and it is the worse of the pair for a lab user — any future 5xx on
+this route reproduces the blank page.
+
+`tests/workplan-by-unit-crash.spec.ts` (config `workplan.config.ts`) covers both: TC-WP-UNIT-1
+walks every unit in the picker and fails on any 5xx; TC-WP-UNIT-2 **stubs** the 500 with
+`page.route` so it keeps testing the front end after the back end is fixed.
+
+### Census results, 2026-08-25
+
+`census.config.ts` runs both census specs — 127 routes, **126 passed / 1 failed**, 7.3 min. The one
+failure is the Batch Test Reassignment 500 above. All 76 non-admin working routes render clean.
+
+Worth recording: that run overlapped a live Chrome session driving the same instance as the same
+admin user, and the guard reported `pings=1 lapses-on-ping=0 re-auths=0`. **The harness session was
+not evicted.** That is one more piece of evidence against the concurrent-session-eviction theory for
+the 2026-08-23 contamination, and in favour of idle timeout.
