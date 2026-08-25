@@ -89,17 +89,39 @@ test('TC-CHAIN-0: the catalogue fixtures these chains depend on still exist', as
     expect(present(frag), `catalogue fixture "${frag}" is missing — the chains below cannot mean anything`).toBe(true);
   }
 
-  const panels = await page.request.get(`${API}/test-catalog/panels?pageSize=200`);
+  // Panels do NOT live under /test-catalog. The catalogue UI reads them from
+  // /rest/PanelCreate, which answers { existingPanelList: [ { typeOfSampleName,
+  // panels: [ { panelName, ... } ] } ] } -- grouped BY SAMPLE TYPE, with the
+  // same panel repeated under every type it spans. That shape is itself the
+  // premise of TC-CHAIN-1: QA Panel Test 20260811 appears under both Serum and
+  // Immunohistochemistry specimen. An earlier cut of this test guessed
+  // /test-catalog/panels?pageSize=200, which answers 200 with an empty body,
+  // so it failed as -the panel is missing- rather than -the URL is wrong-.
+  const panels = await page.request.get(`${API}/PanelCreate`);
   expect(panels.status()).toBe(200);
-  const panelNames = ((await panels.json()).rows ?? []).map((p: any) => String(p.name ?? ''));
-  expect(panelNames, `panel fixture "${PANEL_NAME}" is missing`).toContain(PANEL_NAME);
+  const groups = ((await panels.json()).existingPanelList ?? []) as Array<any>;
+  const panelNames = new Set<string>();
+  for (const g of groups) for (const pn of g.panels ?? []) panelNames.add(String(pn.panelName ?? ''));
+  expect([...panelNames], `panel fixture ${PANEL_NAME} is missing`).toContain(PANEL_NAME);
+
+  // and it must still span more than one sample type, or TC-CHAIN-1 proves nothing
+  const spans = groups
+    .filter((g: any) => (g.panels ?? []).some((pn: any) => pn.panelName === PANEL_NAME))
+    .map((g: any) => String(g.typeOfSampleName ?? ''));
+  expect(spans.length, `panel ${PANEL_NAME} no longer spans multiple sample types (found: ${spans.join(', ')})`).toBeGreaterThan(1);
+  expect(spans.some((n: string) => /serum/i.test(n)), `panel ${PANEL_NAME} no longer covers Serum`).toBe(true);
 });
 
 test('TC-CHAIN-1: a panel spanning sample types orders only its matching members', async ({ page }) => {
   test.setTimeout(240_000);
 
-  await page.goto('/SamplePatientEntry');
-  await page.waitForTimeout(2500);
+  // The clinical order wizard is /order/clinical/enter. /SamplePatientEntry
+  // also renders a form with an id of labNumber, but there it is the PREVIOUS
+  // Lab Number search box, never populated by Generate -- so pointing this
+  // chain at that route failed as -no lab number was generated- rather than as
+  // -wrong page-. Match coded-result-chain.docs.spec.ts, which is green.
+  await page.goto('/order/clinical/enter');
+  await page.waitForTimeout(3000);
 
   labNumber = await generateLabNumberOnForm(page);
   expect(labNumber, 'a lab number must be generated').not.toBe('');
@@ -145,8 +167,11 @@ test('TC-CHAIN-1: a panel spanning sample types orders only its matching members
   // specimen). Ordered against a Serum sample, only the Serum member applies.
   expect(names.some((n) => n.includes(PANEL_SERUM_MEMBER)),
     'the panel should contribute its Serum member').toBe(true);
-  expect(names.some((n) => /Actin Smooth Muscle/i.test(n)),
-    'the panel must NOT contribute a member belonging to another sample type').toBe(false);
+  // The other half of this behaviour -- that the panel must NOT drag its
+  // Immunohistochemistry member onto a Serum sample -- is currently BROKEN, so
+  // it lives in tests/panel-sample-type-leak.spec.ts with the rest of the RED
+  // defect regressions. Asserting it here would make this file permanently red
+  // and hide the four behaviours that do work.
 });
 
 test('TC-CHAIN-2: a reflex rule adds its child test when the threshold is crossed', async ({ page }) => {

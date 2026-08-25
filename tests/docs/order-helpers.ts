@@ -682,8 +682,15 @@ export async function openTestsAndPanels(page: Page): Promise<void> {
  * so the label is the only thing that responds — same family as rule 2.
  */
 export async function tickByExactLabel(page: Page, label: string): Promise<boolean> {
+  // VISIBLE labels only. The Tests and Panels accordion keeps a section per
+  // sample type in the DOM, so a panel offered under more than one type has a
+  // matching label in each -- including collapsed sections a user can never
+  // click. Taking the first match therefore ticks an arbitrary section and the
+  // resulting order is not what the operator would have produced. offsetParent
+  // is null for anything inside a collapsed section, which is the cheap test.
   const ok = await page.evaluate((name) => {
-    const l = [...document.querySelectorAll('label')].find((x) => ((x.textContent) || '').trim() === name);
+    const all = [...document.querySelectorAll('label')].filter((x) => ((x.textContent) || '').trim() === name);
+    const l = all.find((x) => (x as HTMLElement).offsetParent !== null) ?? all[0];
     if (l) { (l as HTMLElement).click(); return true; }
     return false;
   }, label);
