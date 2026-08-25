@@ -55,13 +55,20 @@ test.describe('TC-WP-UNIT — Workplan By Unit', () => {
 
   test('TC-WP-UNIT-2: a 5xx on the workplan query must not unmount the app', async ({ page }) => {
     // Force the failure so this test keeps its value once the 500 itself is fixed.
-    await page.route(WORKPLAN_UNIT_API, (route) =>
-      route.fulfill({
+    //
+    // Fail ONLY the query that carries a unit id. The very same endpoint, called with no
+    // test_section_id, is what populates the unit picker on mount — stubbing that too leaves the
+    // page with no picker and the test fails for the wrong reason. (Learned the hard way.)
+    await page.route(WORKPLAN_UNIT_API, (route) => {
+      const url = route.request().url();
+      const hasUnit = /[?&]test_section_id=[^&]+/.test(url);
+      if (!hasUnit) return route.continue();
+      return route.fulfill({
         status: 500,
         contentType: 'application/json',
         body: JSON.stringify({ status: 500, error: 'Internal Server Error' }),
-      }),
-    );
+      });
+    });
 
     await page.goto('/WorkPlanByTestSection?type=');
     const picker = page.locator('#select-1');
