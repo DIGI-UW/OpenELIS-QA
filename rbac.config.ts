@@ -17,7 +17,7 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,                    // §10.9 — keep the 6-connection-per-origin pool calm
   retries: 2,                    // absorb load-flake; genuine gating drift fails every attempt
-  reporter: [['list'], ['json', { outputFile: 'rbac-results/last-run.json' }]],
+  reporter: [['list'], ['json', { outputFile: 'rbac-results/last-run.json' }], ['./tests/helpers/session-guard-reporter.ts']],
   use: {
     ...devices['Desktop Chrome'],
     baseURL: BASE,

@@ -29,3 +29,4 @@ rbac-results/
 regression-results/
 test-results-prov/
 runlogs/
+.session-guard/
