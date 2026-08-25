@@ -533,3 +533,182 @@ export async function fillUnsetSelects(page: Page, skip: RegExp = /^sampleType/i
   if (out.length) await page.waitForTimeout(400);
   return out;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+ * ORDER-FORM COMMIT RULES  (harness backlog #9)
+ *
+ * Lifted out of coded-result-chain.docs.spec.ts, where they were first worked
+ * out against testing 3.2.2.0. They lived there because nothing else knew them,
+ * so every new chain spec had to rediscover them. They live here now and that
+ * spec imports them.
+ *
+ * THE THREE RULES, none of which are guessable from the DOM:
+ *
+ *   1. Save & Next carries `cds--btn--disabled` and fires NO request until the
+ *      sampling site is COMMITTED via its result row's "Select", and at least one
+ *      of Requesting Organization or Requestor is committed too. There is no
+ *      inline error explaining why it is dead.
+ *
+ *   2. The commit affordance depends on whether the record already exists. First
+ *      use offers `+ Add new organization "…"`; afterwards ONLY the row's
+ *      "Select" works. Handle both, or the spec passes once and fails on every
+ *      later run.
+ *
+ *   3. "N/M steps" is a completion counter, not a wizard position. Read the
+ *      button's disabled state, never the step text.
+ *
+ * Note this is the `/SamplePatientEntry` **Save & Next** form (ids `labNumber`,
+ * `siteName`, `providerName`, `sampleType-0`). OpenELIS also ships a second
+ * clinical order form driven by Next/Submit (ids `labNo`, `sampleId_0`,
+ * `requesterFirstName`, with a "Generate" anchor). These helpers are for the
+ * first; do not mix the id sets.
+ * ═════════════════════════════════════════════════════════════════════════════ */
+
+/** Set a form control by id through React's native setter. Plain inputs and selects only. */
+export async function setById(page: Page, id: string, value: string): Promise<boolean> {
+  return await page.evaluate((args) => {
+    const el = document.getElementById(args.id) as HTMLInputElement | HTMLSelectElement | null;
+    if (!el) return false;
+    const proto = el.tagName === 'SELECT' ? window.HTMLSelectElement.prototype : window.HTMLInputElement.prototype;
+    Object.getOwnPropertyDescriptor(proto, 'value')!.set!.call(el, args.value);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }, { id, value });
+}
+
+/** Commit a typeahead result row: click the "Select" inside the row whose text matches. */
+export async function commitRow(page: Page, re: RegExp): Promise<string | null> {
+  return await page.evaluate((src) => {
+    const rx = new RegExp(src);
+    const t = (e: Element | null) => ((e && e.textContent) || '').trim();
+    const rows = [...document.querySelectorAll('tr,li,div')]
+      .filter((e) => rx.test(t(e)) && /select/i.test(t(e)) && t(e).length < 220)
+      .sort((a, b) => t(a).length - t(b).length);
+    for (const r of rows) {
+      const b = [...r.querySelectorAll('button,a,span')].find((x) => /^select$/i.test(t(x)));
+      if (b) { (b as HTMLElement).click(); return t(r).slice(0, 60); }
+    }
+    return null;
+  }, re.source);
+}
+
+/** Click an "+ Add new …" affordance by text. Returns what it clicked, or null. */
+export async function clickAddNew(page: Page, re: RegExp): Promise<string | null> {
+  return await page.evaluate((src) => {
+    const rx = new RegExp(src, 'i');
+    const t = (e: Element | null) => ((e && e.textContent) || '').trim();
+    const el = [...document.querySelectorAll('button,a,span,div')].find((e) => rx.test(t(e)) && e.children.length <= 1);
+    if (el) { (el as HTMLElement).click(); return t(el).slice(0, 44); }
+    return null;
+  }, re.source);
+}
+
+/**
+ * Click "Generate Lab Number" until the field actually carries one. The control
+ * is an anchor, not a button, and the first click sometimes lands before the
+ * handler is bound — hence the retry rather than a single click.
+ */
+export async function generateLabNumberOnForm(page: Page, attempts = 5): Promise<string> {
+  let labNumber = '';
+  for (let i = 0; i < attempts; i++) {
+    await page.evaluate(() => {
+      const el = [...document.querySelectorAll('a,button,span,div')]
+        .find((e) => /^generate lab number$/i.test(((e.textContent) || '').trim()));
+      if (el) (el as HTMLElement).click();
+    });
+    await page.waitForTimeout(1200);
+    labNumber = await page.evaluate(() => (document.getElementById('labNumber') as HTMLInputElement | null)?.value || '');
+    if (labNumber) break;
+  }
+  return labNumber;
+}
+
+/**
+ * Rules 1 and 2: type the site and provider, then COMMIT them. Typing alone
+ * leaves Save & Next dead. Returns what was committed so a caller can assert.
+ */
+export async function commitSiteAndRequester(
+  page: Page,
+  opts: { site?: string; provider?: string } = {},
+): Promise<{ org: string | null; provider: string | null }> {
+  const site = opts.site ?? 'QA_AUTO Requesting Org';
+  const provider = opts.provider ?? 'Stark';
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  await setById(page, 'siteName', site);
+  await setById(page, 'providerName', provider);
+  await page.waitForTimeout(2200);
+
+  const org = (await commitRow(page, new RegExp(esc(site))))
+    || (await clickAddNew(page, /^\+?\s*Add new organization/));
+  await page.waitForTimeout(1600);
+
+  const prov = (await commitRow(page, new RegExp(esc(provider))))
+    || (await clickAddNew(page, /^\+?\s*Add new provider/));
+  await page.waitForTimeout(1600);
+
+  return { org, provider: prov };
+}
+
+/** Choose the sample type on the order form by visible label. Returns the label chosen. */
+export async function selectSampleTypeOnOrderForm(page: Page, prefer: RegExp): Promise<string | null> {
+  const picked = await page.evaluate((src) => {
+    const rx = new RegExp(src, 'i');
+    const sel = document.getElementById('sampleType-0') as HTMLSelectElement | null;
+    if (!sel) return null;
+    const o = [...sel.options].find((x) => rx.test((x.textContent || '').trim()));
+    if (!o) return null;
+    Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value')!.set!.call(sel, o.value);
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+    return (o.textContent || '').trim();
+  }, prefer.source);
+  await page.waitForTimeout(2200);
+  return picked;
+}
+
+/** Open the "Tests & Panels" picker. Safe to call when it is already open. */
+export async function openTestsAndPanels(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('button')]
+      .find((x) => /tests\s*&\s*panels|choose available/i.test(((x.textContent) || '').trim()));
+    if (b) (b as HTMLElement).click();
+  });
+  await page.waitForTimeout(1800);
+}
+
+/**
+ * Tick a test or panel by its exact visible label. Carbon hides the real input,
+ * so the label is the only thing that responds — same family as rule 2.
+ */
+export async function tickByExactLabel(page: Page, label: string): Promise<boolean> {
+  const ok = await page.evaluate((name) => {
+    const l = [...document.querySelectorAll('label')].find((x) => ((x.textContent) || '').trim() === name);
+    if (l) { (l as HTMLElement).click(); return true; }
+    return false;
+  }, label);
+  await page.waitForTimeout(1200);
+  return ok;
+}
+
+/** Rule 3: the gate is the button's disabled state, never the "N/M steps" text. */
+export async function saveAndNextEnabled(page: Page): Promise<boolean> {
+  return await page.evaluate(() => {
+    const b = [...document.querySelectorAll('button')]
+      .find((x) => /save\s*&\s*next/i.test(((x.textContent) || '').trim()));
+    return b ? !(b as HTMLButtonElement).disabled : false;
+  });
+}
+
+/** Walk the remaining steps by clicking whichever of Save & Next / Submit is enabled. */
+export async function clickThroughSaveAndNext(page: Page, steps = 4, waitMs = 4200): Promise<void> {
+  for (let i = 0; i < steps; i++) {
+    await page.evaluate(() => {
+      const t = (e: Element) => ((e.textContent) || '').trim();
+      const b = [...document.querySelectorAll('button')]
+        .find((x) => /save\s*&\s*next|save and next|^submit$/i.test(t(x)) && !(x as HTMLButtonElement).disabled);
+      if (b) (b as HTMLElement).click();
+    });
+    await page.waitForTimeout(waitMs);
+  }
+}

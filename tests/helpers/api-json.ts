@@ -48,6 +48,22 @@ export class SessionLapsedError extends Error {
 }
 
 /** Thrown when the response is authenticated but simply is not parseable JSON. */
+/**
+ * The endpoint answered with a server error. Distinct from NonJsonResponseError
+ * because a 5xx carrying valid JSON is the dangerous case: it parses, so without
+ * this it would be returned as data (harness backlog #11).
+ */
+export class ServerErrorResponseError extends Error {
+  constructor(url: string, status: number, head: string) {
+    super(
+      `Server error reading ${url}: HTTP ${status}. ` +
+        `The body parsed as JSON, so without this guard it would have been returned as data. ` +
+        `First 200 chars: ${head}`,
+    );
+    this.name = 'ServerErrorResponseError';
+  }
+}
+
 export class NonJsonResponseError extends Error {
   constructor(url: string, status: number, bodyPrefix: string) {
     super(
@@ -132,9 +148,75 @@ export async function getJson<T = any>(rq: APIRequestContext, url: string): Prom
 }
 
 function parseOrThrow<T>(url: string, status: number, body: string): T {
+  // Harness backlog #11: a 5xx that happens to carry a JSON body used to parse
+  // cleanly and be handed back as data. That is exactly how OGC-1120 hid: a 500
+  // from /sample-type-tests became a plausible "0 tests" and read as a data gap
+  // rather than a server error. A 5xx is never a legitimate result set, so it
+  // throws here instead of being returned.
+  //
+  // 4xx is deliberately NOT thrown: probing for a 404 is a legitimate pattern in
+  // several specs (does this record exist yet?). Callers who need to police 4xx
+  // should use getJsonWithStatus() and assert for themselves.
+  if (status >= 500) {
+    throw new ServerErrorResponseError(url, status, body.slice(0, 200));
+  }
   try {
     return JSON.parse(body) as T;
   } catch {
     throw new NonJsonResponseError(url, status, body.slice(0, 200));
   }
+}
+
+/**
+ * Read a JSON endpoint and keep the HTTP status (harness backlog #11).
+ *
+ * Use this wherever "no rows" and "the call failed" would look the same to the
+ * caller — a census, a completeness check, anything that reports a count. The
+ * session-lapse recovery is identical to getJson(); only the return shape and the
+ * 5xx handling differ, since here the caller is asking to see the status.
+ */
+export async function getJsonWithStatus<T = any>(
+  rq: APIRequestContext,
+  url: string,
+): Promise<{ status: number; ok: boolean; body: T | null; raw: string }> {
+  const origin = originOf(url);
+  const ctx = (origin && refreshed.get(origin)) || rq;
+
+  let res = await ctx.get(url, { headers: { Accept: 'application/json' } });
+  let raw = await res.text();
+  const verdict = classify(res, raw);
+
+  if (verdict.lapsed && process.env.OE_NO_REAUTH !== '1' && origin) {
+    console.log(`[session-guard] session lapse detected on GET ${url} — ${verdict.reason}`);
+    const fresh = await reauthenticate({ baseURL: origin, reason: `${verdict.reason} on GET ${url}` });
+    refreshed.set(origin, fresh);
+    res = await fresh.get(url, { headers: { Accept: 'application/json' } });
+    raw = await res.text();
+  }
+
+  const status = res.status();
+  let body: T | null = null;
+  try {
+    body = JSON.parse(raw) as T;
+  } catch {
+    body = null;
+  }
+  return { status, ok: status >= 200 && status < 300, body, raw };
+}
+
+/**
+ * Assert an endpoint answered 200 and hand back the parsed body.
+ *
+ * The one-liner most read-backs actually want: it makes the status part of the
+ * assertion rather than something the caller has to remember to check.
+ */
+export async function getJsonOk<T = any>(rq: APIRequestContext, url: string, label?: string): Promise<T> {
+  const { status, ok, body, raw } = await getJsonWithStatus<T>(rq, url);
+  if (!ok) {
+    throw new ServerErrorResponseError(label ? `${label} (${url})` : url, status, raw.slice(0, 200));
+  }
+  if (body === null) {
+    throw new NonJsonResponseError(url, status, raw.slice(0, 200));
+  }
+  return body;
 }
