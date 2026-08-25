@@ -974,3 +974,60 @@ immediately.
 3. A stray keystroke aimed at a mis-located control lands in whatever *is* focused. One "S" meant
    for a category picker silently appended to Reporter Name, producing "Open ELISS". Always read
    the field back after a keyboard selection.
+
+
+## 2026-08-25 -- the chains are now protected, and one of them was not passing
+
+### The four behaviours that work are now green and automated
+
+`tests/docs/catalog-feature-chains.docs.spec.ts` (config `chains-features.config.ts`) drives ONE
+clinical order end to end and asserts four catalogue features against the server, not the screen.
+Run of 2026-08-25 on `testing` 3.2.2.0, order `DEV01260000000000576`: **6 passed in 1.4 min.**
+
+| id | behaviour | evidence in that order |
+|---|---|---|
+| TC-CHAIN-0 | the catalogue fixtures still exist | panel 17 present, spans Serum + IHC |
+| TC-CHAIN-1 | a panel contributes its matching member | `Amylase(Serum)` ordered |
+| TC-CHAIN-2 | a reflex rule fires on threshold | Glucose `250.0` added `Demo HbA1c 250395(Serum)` |
+| TC-CHAIN-3 | a calculated value computes | Amylase `999` gave `Creatinine(Serum)` = `1998` |
+| TC-CHAIN-4 | an out-of-range value is flagged and survives validation | critical test at `200.0` |
+
+One order rather than four is deliberate: the wizard is the slowest and flakiest part of the run and
+the four features are independent of one another.
+
+**Not covered:** the refer-out / NCE / disposition chain. That path is dense in Carbon composite
+widgets that only answer to trusted clicks, so it was left out rather than half-automated. It has
+been proven by hand and is NOT protected by anything.
+
+### A defect fell out of writing the green spec
+
+Ordering panel `QA Panel Test 20260811` against a **Serum** sample also creates an analysis for
+`Actin Smooth Muscle`, whose only configured sample type is **Immunohistochemistry specimen**. The
+row comes back from `/rest/LogbookResults` as `Actin Smooth Muscle(Serum)`.
+
+So an IHC stain is now an orderable, resultable, validatable analysis sitting on a serum tube.
+
+Encoded as a RED regression: `tests/panel-sample-type-leak.spec.ts` + `panel-leak.config.ts`. Its
+two guard tests are green (the panel really does span two types; the member really is IHC-only) and
+the defect assertion is red with the offending worklist in the message.
+
+**Honest caveat, recorded so nobody builds on a wrong baseline.** An earlier hand-driven order,
+`DEV01260000000000564`, came back as `Amylase(Serum)` + `Creatinine(Serum)` with no Actin Smooth
+Muscle, and this session had it written down as a panel order. That is equally consistent with
+Amylase having been ticked directly rather than through the panel. Treat 564 as **inconclusive**,
+not as evidence that this is a recent regression.
+
+Ruled out before reporting: the tick goes through the visible label in the Serum section -- the same
+element a human clicks -- and restricting `tickByExactLabel` to visible labels changed nothing
+(orders 575 and 576 both leaked).
+
+### Three harness traps found while doing it
+
+* `/SamplePatientEntry` is not the clinical order wizard; `/order/clinical/enter` is. Both render an
+  input whose id is `labNumber`, but on the former it is the *Previous* Lab Number search box.
+* A config that sets `storageState` without a `setup` dependency silently reuses a stale cookie, and
+  a stale cookie answers **HTTP 200 with the login page**. `census.config.ts` still has this gap.
+* Panels do not live under `/test-catalog`. `/rest/PanelCreate` returns
+  `{ existingPanelList: [ { typeOfSampleName, panels: [...] } ] }`, grouped by sample type, with the
+  same panel repeated under every type it spans. The guessed URL answered 200 with an empty body,
+  so it failed as *the panel is missing* rather than *the URL is wrong*.

@@ -29,6 +29,52 @@ reached the results. Proven live: it detected the login page and re-authenticate
 **Trap:** `--reporter=line` on the CLI *replaces* the config's reporter list and silently disables
 the guard. Verified both ways in the same run.
 
+
+### 9. Order-form commit rules lifted into `order-helpers.ts` -- LANDED 2026-08-25
+Save & Next stays `cds--btn--disabled` and fires no request until the sampling site is committed via
+its result row's **Select**, and at least one of Requesting Organization or Requestor is committed.
+The affordance changes once the record exists: first use offers `+ Add new organization "…"`,
+afterwards only **Select** works — so an add-new-only spec passes once and fails forever after.
+`N/M steps` is a completion counter, not a wizard position: read the button state.
+Encoded in `coded-result-chain.docs.spec.ts`; should be lifted into `order-helpers.ts`.
+
+Now exported as `setById`, `commitRow`, `clickAddNew`, `generateLabNumberOnForm`,
+`commitSiteAndRequester`, `selectSampleTypeOnOrderForm`, `openTestsAndPanels`, `tickByExactLabel`,
+`saveAndNextEnabled`, `clickThroughSaveAndNext`. First reuse is
+`tests/docs/catalog-feature-chains.docs.spec.ts`, which drove a full order end to end without
+restating a single rule.
+
+**Two traps the lift exposed, both now encoded:**
+
+* The clinical wizard is **`/order/clinical/enter`**. `/SamplePatientEntry` also renders an input
+  whose id is `labNumber`, but there it is the *Previous* Lab Number search box, which Generate
+  never fills. Pointing a chain at the wrong route fails as *no lab number was generated* -- which
+  reads like a broken Generate button, not a wrong page.
+* `tickByExactLabel` now ticks **visible** labels only. The Tests and Panels accordion keeps a
+  section per sample type in the DOM, so a panel offered under several types has a matching label
+  in each, including collapsed sections a user can never reach. Taking the first match ticks an
+  arbitrary section.
+
+### 11. Read-backs assert STATUS, not just shape -- LANDED 2026-08-25
+A `|| []` fallback turned an HTTP 500 into a plausible "0 tests" and read as a data gap rather than
+a server error (OGC-1120). Any read-back helper should surface the status.
+
+`tests/helpers/api-json.ts` now exports `getJsonWithStatus`, `getJsonOk` and
+`ServerErrorResponseError`, and `parseOrThrow` throws on `status >= 500`. 4xx is still tolerated on
+purpose: probing for a 404 is a legitimate pattern in this suite, and turning it into a throw would
+break the endpoint-discovery specs.
+
+### 12. Every config that sets `use.storageState` needs a `setup` dependency -- LANDED 2026-08-25 (partly)
+
+`chains-features.config.ts` set `storageState` but declared no `setup` project, so it reused
+whatever cookie happened to be on disk. When that cookie was a day old, every request came back as
+the **login page with HTTP 200 and an HTML body**, and the failure surfaced as a JSON
+`SyntaxError` on an unexpected `<` -- which reads like a broken endpoint, not an expired session.
+Fixed there by declaring a `setup` project matching `auth.setup.ts` and depending on it.
+
+**`census.config.ts` still has this gap.** Its 126/1 result on 2026-08-25 is only valid because the
+auth file happened to be fresh at the time.
+
 ## Open
 
 ### 2. Give the harness its own account
@@ -72,19 +118,27 @@ zero-write log for an order that had definitely saved. Read the record back from
 * **Panel Editor** — columns Panel Name / LOINC / Tests / Domain / **Sample Types (derived)**.
 * **Lab Units** — Name / Domain / Status / Tests.
 
-### 9. Order-form commit rules belong in a shared helper
-Save & Next stays `cds--btn--disabled` and fires no request until the sampling site is committed via
-its result row's **Select**, and at least one of Requesting Organization or Requestor is committed.
-The affordance changes once the record exists: first use offers `+ Add new organization "…"`,
-afterwards only **Select** works — so an add-new-only spec passes once and fails forever after.
-`N/M steps` is a completion counter, not a wizard position: read the button state.
-Encoded in `coded-result-chain.docs.spec.ts`; should be lifted into `order-helpers.ts`.
-
 ### 10. Test names in the catalog list are decorated
 `GET /rest/test-catalog/tests?domain=…` returns `QA Native Env Assay(QA Native Env Matrix)`. An
 equality match on `name` never fires, the reuse path falls through to a create, and the create 409s
 on the code. Strip a trailing parenthetical and match on `code` as well.
 
-### 11. Assert read-back STATUS, not just shape
-A `|| []` fallback turned an HTTP 500 into a plausible "0 tests" and read as a data gap rather than
-a server error (OGC-1120). Any read-back helper should surface the status.
+
+### 13. A 200 with an HTML body is the most misleading failure shape in this suite
+
+Three separate times now it has cost real time: an expired session answers **HTTP 200** with the
+login page, so a status assertion passes and the *next* line fails on parsing or on a missing
+fixture. Item 12 is one instance; OGC-1120 was another. Any helper that expects JSON should check
+the content type, or at minimum report *this looks like the login page* rather than surfacing a raw
+`SyntaxError`.
+
+### 14. Screenshot coordinates are not CSS pixels
+
+The `claude-in-chrome` `computer` tool works in screenshot space. On the display used on 2026-08-25
+the factor was `1372 / window.innerWidth = 0.9528`, so feeding `getBoundingClientRect()` values
+missed by about 5% of the offset from the origin -- enough to land on the wrong control near the
+bottom of a long form, and enough to produce a **false defect report** (a Create NCE button that
+appeared to issue no network request) which was really a mis-aimed click. Read coordinates off a
+fresh screenshot, and confirm an action fired by comparing
+`performance.getEntriesByType('resource')` before and after, rather than by looking for a visible
+effect.
