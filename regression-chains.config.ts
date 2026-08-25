@@ -38,7 +38,7 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,              // §10.9 keep the 6-connection pool calm
   retries: 1,
-  reporter: [['list'], ['json', { outputFile: 'regression-results/chains.json' }]],
+  reporter: [['list'], ['json', { outputFile: 'regression-results/chains.json' }], ['./tests/helpers/session-guard-reporter.ts']],
   use: { ...devices['Desktop Chrome'], baseURL: BASE, headless: true, ignoreHTTPSErrors: true, trace: 'retain-on-failure' },
   projects: [
     { name: 'setup', testDir: '.', testMatch: /auth\.setup\.ts/ },

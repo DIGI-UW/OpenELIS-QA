@@ -5,6 +5,6 @@ export default defineConfig({
   timeout: 60000,
   expect: { timeout: 10000 },
   use: { ...devices['Desktop Chrome'], headless: true, ignoreHTTPSErrors: true },
-  reporter: [['line']],
+  reporter: [['line'], ['./tests/helpers/session-guard-reporter.ts']],
   workers: 1,
 });

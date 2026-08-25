@@ -13,7 +13,7 @@ export default defineConfig({
   retries: 1,
   workers: 1,           // serial — the whole point is to not overload the instance
   fullyParallel: false,
-  reporter: [['line']],
+  reporter: [['line'], ['./tests/helpers/session-guard-reporter.ts']],
   use: { ...devices['Desktop Chrome'], baseURL: BASE, headless: true, ignoreHTTPSErrors: true },
   projects: [
     { name: 'setup', testMatch: /auth\.setup\.ts/ },

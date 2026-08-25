@@ -13,7 +13,7 @@ export default defineConfig({
   // load (net::ERR_TOO_MANY_RETRIES, browser crashes, 500s) and those specs pass on retry; a genuinely
   // drifted spec fails every attempt. The JSON report's "flaky" vs "failed" then feeds the freshness board.
   retries: 2,
-  reporter: [['line']],
+  reporter: [['line'], ['./tests/helpers/session-guard-reporter.ts']],
   workers: 1,
   fullyParallel: false,
   use: { ...devices['Desktop Chrome'], baseURL: BASE, headless: true, ignoreHTTPSErrors: true },
