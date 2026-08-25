@@ -46,6 +46,11 @@
 //   SESSION_KEEPALIVE_MS   ping interval; 0 disables the keepalive (default 240000)
 //   SESSION_KEEPALIVE_PATH endpoint to ping (default /api/OpenELIS-Global/rest/user-sample-types)
 //   SESSION_LAPSE_MIN      how many lapse-signature failures before the banner (default 3)
+//
+// TRAP: `--reporter=line` on the CLI REPLACES the config's reporter list, silently disabling this
+// guard. Verified 2026-08-24: the same run printed no `[session-guard]` line with the flag and the
+// full keepalive/self-heal trace without it. Drop the flag, or pass
+// `--reporter=line,./tests/helpers/session-guard-reporter.ts`.
 import type { Reporter, TestCase, TestResult, FullConfig, FullResult } from '@playwright/test/reporter';
 import { request as playwrightRequest } from '@playwright/test';
 import fs from 'fs';
@@ -149,7 +154,12 @@ export default class SessionGuardReporter implements Reporter {
   async onEnd(result: FullResult): Promise<void> {
     if (this.timer) clearInterval(this.timer);
     const tagged = this.lapseTaggedFailures.length;
-    const contaminated = this.lapsesSeenOnPing > 0 || tagged >= this.minLapses;
+    // A lapse that the guard HEALED with nothing failing afterwards is a non-event — say so in the
+    // summary and stay quiet. Shout only when a lapse plausibly reached the results: either enough
+    // failures carry the signature, or a lapse happened in a run that also had failures.
+    const contaminated = tagged >= this.minLapses
+      || (this.lapsesSeenOnPing > 0 && this.failedTests > 0)
+      || this.reviveFailures > 0;
 
     console.log(
       `[session-guard] summary: pings=${this.pings} lapses-on-ping=${this.lapsesSeenOnPing} ` +
@@ -157,7 +167,12 @@ export default class SessionGuardReporter implements Reporter {
       `failed-tests=${this.failedTests} lapse-tagged-failures=${tagged}`,
     );
 
-    if (!contaminated) return;
+    if (!contaminated) {
+      if (this.lapsesSeenOnPing > 0) {
+        console.log(`[session-guard] ${this.lapsesSeenOnPing} lapse(s) detected and healed with no failing tests — results are trustworthy`);
+      }
+      return;
+    }
 
     const banner = [
       '',
