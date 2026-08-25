@@ -6,7 +6,11 @@ import { setComponentViaRest, activateViaRest } from '../../legacy-order-helper'
  *
  * WHY THIS EXISTS
  * OGC-936 backfills every existing test to domain CLINICAL, as specified. Nothing has ever
- * assigned a non-clinical domain, and the Domain radio group (OGC-951) is still Backlog. So a
+ * assigned a non-clinical domain. (RETRACTED 2026-08-25: this line used to add - and the Domain
+ * radio group (OGC-951) is still Backlog. OGC-951 is still Backlog in Jira, but the feature
+ * SHIPPED in v3.2.2.0: Basic Info renders an enabled Domain radio group (name=basic-info-domain,
+ * Clinical/Environmental/Vector) and the switch modal - Change test domain? - is live. Do not
+ * infer build state from ticket state.) So a
  * migrated instance reports domain=ENVIRONMENTAL total:0 and domain=VECTOR total:0, and any suite
  * that expects non-clinical catalog rows fails for want of data rather than for a defect.
  *

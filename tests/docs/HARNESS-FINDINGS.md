@@ -407,3 +407,34 @@ the order picker for it. A nonexistent sample-type id returns 200 with empty lis
 null dereference, not input validation. `PUT .../basic-info {"labUnitId": …}` fixes it in place.
 Always send `labUnitId`, and assert the read-back's **HTTP status** — swallowing the 500 into an
 empty-array fallback reports it as "0 tests", which reads as a data gap rather than a server error.
+
+## 2026-08-25 - Basic Info domain switch and the D-030 coupling
+
+Verified by driving real Chrome against testing.openelis-global.org (v3.2.2.0).
+
+**OGC-951 shipped despite being Backlog.** Basic Info renders an enabled radio group
+`name=basic-info-domain` with Clinical / Environmental / Vector, correctly pre-checked from the
+record. Changing it raises a confirmation modal: *Change test domain? Change this test s domain to
+Environmental? This affects how the test is categorized in the catalog.* with Cancel / Confirm.
+Cancel reverts the selection cleanly and leaves no visible modal. Earlier harness docs claimed the
+radio group did not exist because the ticket is Backlog - that claim is retracted. **Ticket state is
+not build state; check the build.**
+
+**D-030 is enforced on both sides.** On test 763 (QA Reval 436127, sample type Urines = CLINICAL),
+confirming a switch to ENVIRONMENTAL leaves the sample type attached and the form reports
+*This sample type s domain doesn t match the test s domain. Urines*, alongside the pre-existing
+*Test cannot be activated yet* note. **Save becomes `disabled`.** Bypassing the UI entirely with
+`PUT /rest/test-catalog/tests/763/basic-info` carrying `domain: ENVIRONMENTAL` + `sampleTypeIds: [1]`
+returns **422**, and a read-back confirms the record is still CLINICAL. So the guard is real, not
+cosmetic.
+
+**Nit worth a ticket if anyone cares:** that 422 comes back with an **empty body**. The UI already
+knows the reason from its own client-side check, but an API consumer gets a bare status with no
+problem detail. Compare the 403 on the same route without a token, which does return
+`{status, message}`.
+
+**CSRF from the browser console.** REST writes need the header `X-CSRF-Token`, whose value the SPA
+keeps in `localStorage.getItem('CSRF')` - the session cookies are HttpOnly, so `document.cookie` is
+empty and there is no meta tag. Without the header every write returns
+`403 {status: 403, message: CSRF token missing or invalid}`. Useful when probing server-side guards
+by hand rather than through the harness.

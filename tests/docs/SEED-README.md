@@ -24,7 +24,7 @@ BASE=https://indonesiademo.openelis-global.org npx playwright test --project=doc
 - **seed-compliance** — 5 environmental compliance standards via `POST /rest/compliance/standards`; new records land as DRAFT, then `PUT /rest/compliance/standards/{id}` with `status:ACTIVE` activates. `/active` is what the env order form reads. ✓ verified (5 active). (Standards alone have no linked tests — run **seed-compliance-tests** next.)
 - **seed-domain-catalog** — ENVIRONMENTAL + VECTOR catalog data (3 env + 2 vector tests), so the new
   test catalog and any domain-scoped suite have non-clinical rows to work with. OGC-936 backfills every
-  test to CLINICAL as specified and OGC-951 (the Domain radio group) is Backlog, so a migrated instance
+  test to CLINICAL as specified and OGC-951 (the Domain radio group) is Backlog *in Jira* but the radio group and its switch modal ship in v3.2.2.0 (verified 2026-08-25), so a migrated instance
   has `domain=ENVIRONMENTAL total:0` and `domain=VECTOR total:0`. Verified route (v3.2.2.0): sample types
   cannot be created (`POST /rest/sample-types` and `/rest/test-catalog/sample-types` both **405**,
   OGC-1152) and a non-clinical test needs a non-clinical sample type (`POST /rest/test-catalog/tests`
