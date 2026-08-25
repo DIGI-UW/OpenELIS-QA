@@ -1031,3 +1031,88 @@ element a human clicks -- and restricting `tickByExactLabel` to visible labels c
   `{ existingPanelList: [ { typeOfSampleName, panels: [...] } ] }`, grouped by sample type, with the
   same panel repeated under every type it spans. The guessed URL answered 200 with an empty body,
   so it failed as *the panel is missing* rather than *the URL is wrong*.
+
+
+## 2026-08-25 (later) -- the panel leak is universal, and it is a code regression
+
+### It is not a QA fixture problem. It is every panel.
+
+`GET /rest/sample-type-tests?sampleType=<id>` answers `{ tests[], panels[] }`. `tests[]` is correctly
+filtered to the sample type. Each panel carries a `testIds` list, and that list is **not** filtered.
+Measured across all 12 sample types on `testing` 3.2.2.0:
+
+**15 of 15 panel offerings leak.**
+
+| sample type | panel | foreign members |
+|---|---|---|
+| Urines | Bilan Biochimique | 21 of 22 |
+| Plasma | Bilan Biochimique | 21 of 22 |
+| Immunohistochemistry specimen | Bilan Biochimique | 20 of 22 |
+| Immunohistochemistry specimen | NFS | 18 of 20 |
+| Serum | Bilan Biochimique | 15 of 22 |
+| Whole Blood | NFS | 2 of 20 |
+| ... | ... | (9 more) |
+
+Proven end to end on a **stock** panel, not a QA fixture. Order `DEV01260000000000578`, Bilan
+Biochimique ticked against Serum, produced 14 analyses including `AMACR (p504 s)(Serum)` and
+`Actin Smooth Muscle(Serum)` -- both immunohistochemistry stains, now sitting on a serum tube.
+
+### Root cause: a filter that exists in the legacy path was dropped in the REST/React rewrite
+
+Two independent layers, either of which would cause it on its own.
+
+**1. `SampleEntryTestsForTypeProviderRestController.getTestIndexesForPanels`** (around line 276).
+It takes a `testIdOrderMap` built from the sample-type-filtered test list, and **never reads it**:
+
+```java
+for (PanelItem item : items) {
+    String derivedNameFromPanel = getDerivedNameFromPanel(item);
+    if (derivedNameFromPanel != null) {
+        String ItemId = item.getTest().getId();
+        if (ItemId != null) { indexes.append(ItemId).append(chr comma); }
+```
+
+The legacy XML provider, `SampleEntryTestsForTypeProvider` around line 246, still has the guard:
+
+```java
+Integer index = testIdOrderMap.get(derivedNameFromPanel);
+if (index != null) { indexes.append(index.toString()); }
+```
+
+A panel item absent from the sample type's test list is dropped there. The REST rewrite switched to
+emitting real test ids instead of indexes and lost the map lookup in the process. The dead parameter
+is the fingerprint.
+
+**2. `SampleTestSection.jsx` `handlePanelToggle`** (around line 299). Ticking a panel expands
+`panel.testIds` into the sample item's test list and consults `availableTests` **only for a display
+name**; a test id absent from that list is still pushed, with `name` falling back to the raw id. The
+legacy `addOrder/SampleType.jsx` around line 292 does guard, skipping when `findTestIndex(testId)`
+returns -1.
+
+**3. The backend is a faithful pass-through, not the culprit -- but it has no backstop.**
+`SampleAddService` does not expand panels at all (it uses the panel list only to stamp
+`analysis.panel`), and `SamplePatientEntryServiceImpl.populateAnalysis` never compares the test
+against the sample item's type of sample. `TypeOfSampleTestService` is autowired in
+`SampleEditServiceImpl` and never called.
+
+### What I could NOT establish
+
+Whether this is a regression against 3.2.1 or has always been true of the REST path. The source
+clone on hand is shallow (one commit), so there is no history to bisect. What the code does show is
+that the legacy path has the filter and the REST path does not, which points at the rewrite -- but
+that is an inference, not a dated finding.
+
+### Route census, re-run with the auth gap fixed
+
+`census.config.ts` now declares a `setup` dependency (harness backlog 12). Re-run: **127 passed /
+1 failed in 7.4 min.**
+
+The single failure is Batch test reassignment, and it is the *already-filed* null-in-URL pattern:
+
+```
+500 /rest/getPendingAnalysisForTestProvider?testId=null
+500 /rest/AllTestsForSampleTypeProvider?sampleTypeId=null
+```
+
+Same shape as OGC-1187 / OGC-1120 -- a React `useState(null)` interpolated into the URL, which the
+backend then answers with a 500 rather than a 400.

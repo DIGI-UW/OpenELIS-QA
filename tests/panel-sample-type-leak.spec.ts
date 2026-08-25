@@ -75,3 +75,52 @@ test('TC-PANEL-LEAK-2: ordering the panel on Serum must not create the IHC analy
   expect(names.some((n) => FOREIGN_MEMBER.test(n)),
     `order ${LAB} carries an Immunohistochemistry-only test on a Serum sample: ${names.join(' | ')}`).toBe(false);
 });
+
+
+/**
+ * The universal form of the same defect, asserted straight off the API so it needs
+ * no order and no wizard.
+ *
+ * /rest/sample-type-tests?sampleType=<id> answers { tests[], panels[] } for ONE
+ * sample type. tests[] is correctly filtered to that type. Each panel carries a
+ * testIds list, and that list is NOT filtered -- so testIds should be a subset of
+ * tests[] and is not.
+ *
+ * Measured 2026-08-25 on testing 3.2.2.0: 15 panel offerings across 12 sample
+ * types, 15 of them leaking. Worst case Bilan Biochimique offered under Urines,
+ * where 21 of its 22 members do not belong to the sample type.
+ */
+test('TC-PANEL-LEAK-3: no panel may offer a test outside the sample type it is offered under', async ({ page }) => {
+  test.setTimeout(180_000);
+  const stRes = await page.request.get(`${API}/user-sample-types`);
+  expect(stRes.status()).toBe(200);
+  const raw = await stRes.json();
+  const types = (Array.isArray(raw) ? raw : (raw.sampleTypes ?? raw.rows ?? [])) as Array<any>;
+  expect(types.length, 'no sample types came back -- check the session, not the app').toBeGreaterThan(0);
+
+  const offenders: string[] = [];
+  let offerings = 0;
+
+  for (const t of types) {
+    const id = String(t.id ?? t.value ?? '');
+    const label = String(t.value ?? t.name ?? id);
+    if (!id) continue;
+    const r = await page.request.get(`${API}/sample-type-tests?sampleType=${id}`);
+    if (r.status() !== 200) continue;
+    let body: any;
+    try { body = await r.json(); } catch { continue; }
+
+    const allowed = new Set((body.tests ?? []).map((x: any) => String(x.id)));
+    for (const p of (body.panels ?? []) as Array<any>) {
+      offerings++;
+      const members = String(p.testIds ?? '').split(',').map((x: string) => x.trim()).filter(Boolean);
+      const foreign = members.filter((x: string) => !allowed.has(x));
+      if (foreign.length) {
+        offenders.push(`${label} / ${p.panelName ?? p.name} -- ${foreign.length} of ${members.length} members foreign`);
+      }
+    }
+  }
+
+  expect(offerings, 'no panels were offered at all -- the fixture, not the defect, changed').toBeGreaterThan(0);
+  expect(offenders, `${offenders.length} of ${offerings} panel offerings leak:` + String.fromCharCode(10) + offenders.join(String.fromCharCode(10))).toEqual([]);
+});
