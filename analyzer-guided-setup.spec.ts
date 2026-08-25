@@ -1,23 +1,50 @@
 /**
  * OpenELIS Global — Analyzer guided setup (Instrument → Verify → Connect) QA suite
- * Target: analyzers.openelis-global.org (v3.2.1.11) · spec baseline: analyzer-profile-mapping.md / OGC-1057
+ * Target: analyzers.openelis-global.org (v3.2.2.0, "M3") · spec baseline: analyzer-profile-mapping.md / OGC-1057
  *
- * OGC-1057 is the v3 slice of OGC-1054: FR-B1…B6, FR-C1…C3, FR-F1…F2, AC-1…AC-10.
- * Enumerated live 2026-08-12. Companion doc: analyzer-guided-setup.md (Δ ledger + maturity).
+ * RE-BASELINED 2026-08-25 and verified green against the live instance. The previous revision
+ * graded v3.2.1.11 and asserted routes (/analyzers/{id}/mappings, /analyzers/{id}/edit,
+ * /analyzers/{id}/review) and endpoints (setup-verification, test-mapping-options,
+ * result-value-mappings) that 3.2.2.0 no longer serves — it failed on 404s, not on real deltas.
+ * Eleven of its thirteen findings are fixed; the two survivors (Δ-K, Δ-R) are carried forward with
+ * their original ids, joined by Δ-S, Δ-V and Δ-W. Δ-T, Δ-U and Δ-X were raised during the manual
+ * run and WITHDRAWN here on evidence — see harness rule 1 for the one that mattered.
+ * Companion doc: analyzer-guided-setup.md.
  *
  * Suites:
- *   TC-ANZ-SET-INSTRUMENT — inline expansion, profile picker, name/lab-unit round-trip
- *   TC-ANZ-SET-VERIFY     — verify table, LOINC matching, profile-apply fidelity, sign-off
- *   TC-ANZ-SET-CONNECT    — data flow default, connection probe, address round-trip
- *   TC-ANZ-SET-DELTAS     — spec-vs-build reconciliation (Δ-A…Δ-O)
+ *   TC-ANZ-M3-INSTRUMENT — inline sections, type picker, create/reset behavior
+ *   TC-ANZ-M3-VERIFY     — catalog binding, confirmation lifecycle, QC independence
+ *   TC-ANZ-M3-CONNECT    — the declarative connection field schema, probe, data flow
+ *   TC-ANZ-M3-LIFECYCLE  — activation, deactivation, dialog copy
+ *   TC-ANZ-M3-QC         — control-lot validation surfacing
  *
- * FLIP-WHEN-FIXED: every Δ assertion below encodes the *current* behavior, not the spec'd one.
- * When OGC-1057 lands, these fail — that is the signal to flip the assertion to the spec, never
- * to loosen it. Each carries a `Δ-x` tag matching the ledger in analyzer-guided-setup.md.
+ * FLIP-WHEN-FIXED: assertions tagged Δ-x encode the *current, wrong* behavior. When the fix lands
+ * they fail, and the failure IS the signal — flip the assertion to the spec, never relax it.
+ * Untagged assertions guard the eleven fixes so they cannot silently regress.
  *
- * Grading: Instrument reaches ROUND-TRIP (read-back on the list endpoint, a different surface than
- * the detail endpoint the form writes). Verify is capped at RENDER — the catalog cross-link is
- * absent and the sign-off is unreachable. Module rated M1.
+ * FIVE HARNESS RULES THIS FILE DEPENDS ON — every one of them cost a run, or a wrong finding:
+ *  1. WRITES NEED CSRF. Every non-GET REST call must carry `X-CSRF-Token`, whose value lives in
+ *     `localStorage.CSRF`; without it the server answers 403 with "CSRF token missing or invalid".
+ *     THIS IS THE ONE THAT MATTERS MOST. A hand-rolled probe missing the header does not merely
+ *     fail — it manufactures a finding. The 2026-08-25 manual run reported a blocker-severity
+ *     "activate and deactivate both 500" defect (Δ-T) that did not exist; with the header, every
+ *     lifecycle transition returns 200. See apiRaw().
+ *  2. THE PICKERS ADVERTISE SEARCH AND DO NOT FILTER. Both are Carbon ComboBoxes pre-filled with
+ *     the current selection ("Xpert MTB/RIF · 85362-2"). Typing JUMPS to a name-prefix match and
+ *     HIGHLIGHTS it; the option count never changes (183 before, 183 after). Assert the
+ *     highlighted option, NEVER the count — measuring the count is what produced two withdrawn
+ *     "there is no search" findings. Clear the input first or the jump lands on the old value.
+ *  3. THE MAPPING PAGE IS AN ACCORDION, NOT A TABLE. One collapsed row per analyzer code, toggled
+ *     by a button labelled `{rawCode}Mapped` / `{rawCode}Do not receive`. Its picker is not
+ *     visible, and cannot be clicked, until the row is expanded.
+ *  4. THE IN-APP REVIEW WIDGET SWALLOWS CLICKS. `#oe-review-host` sits over the bottom-right and
+ *     intercepts pointer events, so row overflow menus never open. hideReviewWidget() removes it.
+ *  5. ROWS CARRY STABLE TEST IDS — `[data-testid="analyzer-row-overflow-{id}"]`. Use them instead
+ *     of nth-child indexing, which reorders as analyzers change status.
+ *
+ * Grading: M3. Instrument, the mapping editor and the full analyzer lifecycle all round-trip
+ * through a second surface. REPORTABLE is not evidenced only because result ingestion needs the
+ * analyzer simulator, which this instance does not have.
  */
 
 import { test, expect, Page } from '@playwright/test';
@@ -27,478 +54,662 @@ const ADMIN = { user: process.env.OE_USER || 'admin', pass: process.env.OE_PASS 
 const API = '/api/OpenELIS-Global/rest';
 const TIMEOUT = 15_000;
 
-/** The profile this suite drives. 28 default_test_mappings, qualitative, declares two-way. */
-const PROFILE_ID = 'astm/genexpert-astm';
-const PROFILE_LABEL = /Cepheid GeneXpert \(ASTM Mode\)/i;
-
+/** The profile this suite drives: qualitative, ships control recognition, ASTM. */
+const PROFILE_ID = 'genexpert-astm';
+const PROFILE_QUERY = 'genexpert';
 const STAMP = new Date().toISOString().slice(5, 10).replace('-', '');
-const ANALYZER_NAME = `QA_AUTO_${STAMP}_guided`;
+const ANALYZER_NAME = `QA_AUTO_${STAMP}_m3`;
 
 // ---------------------------------------------------------------------------
 // helpers
 // ---------------------------------------------------------------------------
 
 async function login(page: Page): Promise<void> {
-  // Under all-tc.config.ts the context is pre-authenticated via storageState; navigating to a
-  // protected route then stays put. Only branch into the form when genuinely unauthenticated.
+  // all-tc.config.ts pre-authenticates via storageState; only fall into the form when genuinely
+  // signed out. An expired session can bounce to /login behind a raw
+  // `System Error: Unexpected token '<'` modal — dismiss it before filling the form.
   await page.goto(`${BASE}/analyzers`);
   await page.waitForLoadState('domcontentloaded');
   if (!/\/login/i.test(page.url())) return;
+  await page.getByRole('button', { name: /^(OK|Close)$/i }).first().click().catch(() => {});
   await page.locator('input[type="text"], input[placeholder*="user" i]').first().fill(ADMIN.user);
   await page.locator('input[type="password"]').first().fill(ADMIN.pass);
   await page.locator('button:has-text("Login"), button[type="submit"]').first().click();
   await page.waitForURL('**/analyzers', { timeout: TIMEOUT }).catch(() => {});
 }
 
-/** In-page GET so the session cookie and CSRF context come along. */
-async function api<T = any>(page: Page, path: string): Promise<T> {
-  return page.evaluate(async (u) => {
-    const r = await fetch(u, { credentials: 'include', headers: { Accept: 'application/json' } });
-    return r.json();
-  }, `${API}${path}`);
+/**
+ * In-page fetch carrying the session cookie AND the CSRF token the app itself sends.
+ * Returns status and body — several findings here live only in the status code, and the UI
+ * misreports two of them (see Δ-T's "readiness could not be checked" banner over a 500).
+ */
+async function apiRaw(
+  page: Page,
+  path: string,
+  init: { method?: string; body?: any } = {},
+): Promise<{ status: number; body: any; text: string }> {
+  return page.evaluate(
+    async ({ u, m, b }) => {
+      const headers: Record<string, string> = { Accept: 'application/json', 'Content-Type': 'application/json' };
+      // HARNESS RULE 1 — without this every write is a 403 and proves nothing.
+      const csrf = window.localStorage.getItem('CSRF');
+      if (csrf) headers['X-CSRF-Token'] = csrf;
+      const r = await fetch(u, {
+        method: m || 'GET',
+        credentials: 'include',
+        headers,
+        body: b === undefined ? undefined : JSON.stringify(b),
+      });
+      const text = await r.text();
+      let body: any = null;
+      try {
+        body = JSON.parse(text);
+      } catch {
+        /* plain-string error bodies are common here — see Δ-R */
+      }
+      return { status: r.status, body, text: text.slice(0, 400) };
+    },
+    { u: `${API}${path}`, m: init.method, b: init.body },
+  );
 }
 
-/** GET /analyzer/analyzers is WRAPPED — { analyzers: [...] }, not a bare array. Cost us a run. */
+async function api<T = any>(page: Page, path: string): Promise<T> {
+  return (await apiRaw(page, path)).body as T;
+}
+
+/** GET /analyzer/analyzers is WRAPPED — { analyzers: [...] }, not a bare array. Still true on 3.2.2.0. */
 async function analyzerList(page: Page): Promise<any[]> {
   const res = await api<{ analyzers: any[] }>(page, '/analyzer/analyzers');
-  return res.analyzers ?? [];
+  return res?.analyzers ?? [];
 }
 
-/** Carbon Dropdown/ComboBox: click the trigger, then the option by exact text. */
-async function pickFromCarbon(page: Page, trigger: ReturnType<Page['locator']>, option: RegExp) {
-  await trigger.click();
-  await page.locator('[role="option"]').filter({ hasText: option }).first().click();
+async function detailOf(page: Page, id: string | number): Promise<any> {
+  return api<any>(page, `/analyzer/analyzers/${id}`);
 }
 
-/** Run the Instrument step end to end; returns the created analyzer id from the Verify URL. */
-async function createViaGuidedSetup(page: Page, name: string): Promise<string> {
+/** The declarative connection field schema: [{key, labelKey, inputKind, required, choices, visibleWhen}]. */
+function connectionFields(detail: any): any[] {
+  return detail?.connection?.fields ?? [];
+}
+
+/** HARNESS RULE 4 — the review widget host intercepts pointer events over the bottom-right. */
+async function hideReviewWidget(page: Page) {
+  await page.evaluate(() => {
+    const h = document.getElementById('oe-review-host');
+    if (h) (h as HTMLElement).style.display = 'none';
+  });
+}
+
+/**
+ * HARNESS RULE 2 — a Carbon ComboBox pre-filled with its current selection. Clear it, then type
+ * with real keystrokes. The control JUMPS to a name-prefix match and highlights it; it does not
+ * filter, so never assert on the option count.
+ */
+async function searchCombo(page: Page, selector: string, query: string) {
+  const input = page.locator(selector);
+  await input.click();
+  await input.fill('');
+  await page.waitForTimeout(300);
+  await input.pressSequentially(query, { delay: 110 });
+  await page.waitForTimeout(700);
+}
+
+/** HARNESS RULE 3 — expand the accordion row for an analyzer code before touching its picker. */
+async function expandMappingRow(page: Page, rawCode: string) {
+  await hideReviewWidget(page);
+  const input = page.locator(`#analyzer-test-${rawCode}`);
+  if (await input.isVisible().catch(() => false)) return;
+  await page.getByRole('button', { name: new RegExp(`^${rawCode}`) }).first().click();
+  await expect(input).toBeVisible({ timeout: TIMEOUT });
+}
+
+/** Carbon overflow-menu items are not always exposed as role=menuitem — match either shape. */
+function menuItem(page: Page, name: RegExp) {
+  return page.locator('[role="menuitem"], .cds--overflow-menu-options__btn').filter({ hasText: name }).first();
+}
+
+/** Open a row's overflow menu by its stable test id (HARNESS RULE 5), past the review widget. */
+async function openRowMenu(page: Page, analyzerId: string | number) {
+  await hideReviewWidget(page);
+  // A confirmed lifecycle modal can stay mounted and keeps intercepting pointer events.
+  const modal = page.locator('[data-testid="analyzer-lifecycle-modal"].is-visible');
+  if (await modal.count()) {
+    await page.keyboard.press('Escape');
+    await expect(modal).toHaveCount(0, { timeout: TIMEOUT });
+  }
+  await page.locator(`[data-testid="analyzer-row-overflow-${analyzerId}"]`).click();
+  await page.waitForTimeout(600);
+}
+
+/** Lifecycle transitions, driven through the REST surface the UI itself calls. */
+async function transition(page: Page, id: string | number, verb: 'activate' | 'deactivate' | 'reactivate') {
+  return apiRaw(page, `/analyzer/analyzers/${id}/${verb}`, { method: 'POST', body: {} });
+}
+
+/**
+ * Drive the Instrument section from a CLEAN list page and return the new analyzer id.
+ * Starting clean is deliberate — see Δ-S for what happens when a panel is already open.
+ */
+async function createAnalyzer(page: Page, name: string): Promise<string> {
   await page.goto(`${BASE}/analyzers`);
+  await page.waitForLoadState('networkidle');
+  await hideReviewWidget(page);
   await page.getByRole('button', { name: /Add Analyzer/i }).click();
-  await expect(page).toHaveURL(/[?&]add=1/, { timeout: TIMEOUT });
+  await expect(page).toHaveURL(/[?&]setup=instrument/, { timeout: TIMEOUT });
 
-  await pickFromCarbon(page, page.getByRole('combobox', { name: /shipped analyzer profile/i }), PROFILE_LABEL);
-  await page.getByPlaceholder(/Hematology Analyzer 1/i).fill(name);
-  await pickFromCarbon(page, page.getByRole('combobox', { name: /Lab units/i }), /Molecular Biology/i);
+  await searchCombo(page, '#analyzer-setup-type', PROFILE_QUERY);
+  await page.locator('[role="option"]').filter({ hasText: /GeneXpert/i }).first().click();
+  await expect(page, 'picking a type should pin it on the URL').toHaveURL(new RegExp(`profile=${PROFILE_ID}`));
+  await page.locator('#analyzer-setup-name').fill(name);
+
+  // Lab units are required: with the field empty, Continue issues no request and the panel raises
+  // "Select at least one lab unit". (Δ-X, "it fails silently", was withdrawn on that evidence.)
+  await page.locator('#analyzer-setup-lab-units-input').click();
+  await page.locator('[role="option"]').first().click();
   await page.keyboard.press('Escape');
 
-  await page.getByRole('button', { name: /Save and continue/i }).click();
-  await page.waitForURL(/\/analyzers\/\d+\/mappings/, { timeout: TIMEOUT });
-  return page.url().match(/\/analyzers\/(\d+)\//)![1];
+  const [res] = await Promise.all([
+    page.waitForResponse(
+      (r) => /\/analyzer\/analyzers$/.test(r.url()) && r.request().method() === 'POST',
+      { timeout: TIMEOUT },
+    ),
+    page.getByRole('button', { name: /Continue to Verify/i }).first().click(),
+  ]);
+  expect(res.status(), 'create must POST a NEW analyzer, not PUT an existing one').toBe(201);
+  const created = await res.json();
+  return String(created.id ?? created.analyzerId);
+}
+
+/** The first analyzer the server itself reports as ready to activate. */
+async function readyAnalyzer(page: Page): Promise<{ id: string; name: string } | null> {
+  for (const a of await analyzerList(page)) {
+    const r = await api<any>(page, `/analyzer/analyzers/${a.id}/activation-readiness`);
+    if (r?.ready && !r?.activated) return { id: String(a.id), name: a.name };
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
-// TC-ANZ-SET-INSTRUMENT
+// TC-ANZ-M3-INSTRUMENT
 // ---------------------------------------------------------------------------
 
-test.describe('TC-ANZ-SET-INSTRUMENT — instrument-first inline setup (FR-B1, B2)', () => {
-  test('TC-ANZ-SET-01 Add Analyzer expands inline; the list stays visible [AC-1 · FUNCTION]', async ({ page }) => {
+test.describe('TC-ANZ-M3-INSTRUMENT — inline instrument-first setup (FR-B1, B2, B3)', () => {
+  test('TC-ANZ-M3-01 Add Analyzer expands inline; the list stays visible [AC-1 · FUNCTION]', async ({ page }) => {
     await login(page);
     await page.goto(`${BASE}/analyzers`);
     await page.getByRole('button', { name: /Add Analyzer/i }).click();
 
-    await expect(page).toHaveURL(/[?&]add=1&step=instrument/, { timeout: TIMEOUT });
-    await expect(page.getByText(/Set up a new analyzer/i)).toBeVisible();
-    // the defining property of AC-1: the list is still there behind the panel, not replaced
-    await expect(page.getByPlaceholder(/Search analyzers/i)).toBeVisible();
-    await expect(page.getByText(/TOTAL ANALYZERS/i)).toBeVisible();
+    // 3.2.2.0 drives the whole flow off one route with a ?setup= section — the old
+    // /analyzers/{id}/mappings and /analyzers/{id}/edit full-page routes are gone (Δ-A fixed).
+    await expect(page).toHaveURL(/\/analyzers\?[^#]*setup=instrument/, { timeout: TIMEOUT });
+    await expect(page.locator('main table').first()).toBeVisible();
   });
 
-  test('TC-ANZ-SET-02 stepper reveals Instrument → Verify → Connect [AC-2 · RENDER]', async ({ page }) => {
+  test('TC-ANZ-M3-02 the three FRS sections render; no undocumented fourth [AC-2 · RENDER]', async ({ page }) => {
     await login(page);
-    await page.goto(`${BASE}/analyzers?add=1&step=instrument`);
-    for (const step of ['Instrument', 'Verify', 'Connect']) {
-      await expect(page.getByRole('button', { name: step, exact: true })).toBeVisible();
+    await page.goto(`${BASE}/analyzers?setup=instrument`);
+    await expect(page.locator('#analyzer-setup-type')).toBeVisible({ timeout: TIMEOUT });
+    for (const label of [/Analyzer type/i, /Analyzer name/i, /Lab units/i]) {
+      await expect(page.getByText(label).first()).toBeVisible();
     }
-    // Δ-B — a fourth step exists that the FRS does not define. Absorb it into the spec or drop it.
-    await expect(page.getByRole('button', { name: 'Review', exact: true })).toBeVisible();
+    // Δ-B fixed: the undocumented fourth "Review" step is gone. Guard the regression.
+    await expect(
+      page.getByRole('button', { name: 'Review', exact: true }),
+      'a fourth step reappeared — the FRS defines three',
+    ).toHaveCount(0);
   });
 
-  test('TC-ANZ-SET-03 selecting an instrument loads its profile [AC-3 · FUNCTION]', async ({ page }) => {
+  test('TC-ANZ-M3-03 Δ-W the type picker advertises search but does not filter [AC-3 · FUNCTION]', async ({ page }) => {
     await login(page);
-    await page.goto(`${BASE}/analyzers?add=1&step=instrument`);
-    await pickFromCarbon(page, page.getByRole('combobox', { name: /shipped analyzer profile/i }), PROFILE_LABEL);
+    await page.goto(`${BASE}/analyzers?setup=instrument`);
+    const input = page.locator('#analyzer-setup-type');
+    await expect(input).toHaveAttribute('placeholder', /Search analyzer types/i);
 
-    await expect(page.getByText(/Default configuration loaded/i)).toBeVisible({ timeout: TIMEOUT });
-    await expect(page.getByText(/Tests mapped/i)).toBeVisible();
-    await expect(page.getByText(/QC defaults/i)).toBeVisible();
+    const options = page.locator('[role="option"]');
+    await input.click();
+    const before = await options.count();
+    expect(before, 'the picker should offer the shipped profiles').toBeGreaterThan(0);
+
+    await searchCombo(page, '#analyzer-setup-type', 'GeneX');
+    const after = await options.count();
+    console.log(`[Δ-W] type picker: ${before} options before "GeneX", ${after} after`);
+    expect(
+      after,
+      'Δ-W fixed? the type picker now filters — flip to expect(after).toBeLessThan(before)',
+    ).toBe(before);
+
+    // What DOES work is jump-to-match, so selection by keyboard is reachable. This half must not
+    // regress while Δ-W is fixed.
+    await expect(options.filter({ hasText: /GeneXpert/i })).toHaveCount(1);
+    await expect(page, 'typing must not bounce out of the setup panel').toHaveURL(/setup=instrument/);
   });
 
-  test('TC-ANZ-SET-05 name + lab units round-trip on a different endpoint [FR-B2 · ROUND-TRIP]', async ({ page }) => {
+  test('TC-ANZ-M3-04 "instrument not listed" reaches Create Profile [AC-4/FR-B3 · FUNCTION]', async ({ page }) => {
     await login(page);
-    const id = await createViaGuidedSetup(page, ANALYZER_NAME);
+    await page.goto(`${BASE}/analyzers?setup=instrument`);
 
-    // write went through the setup form; read back on the LIST endpoint, not the detail one
+    // Δ-D fixed — the escape hatch exists and hands off to Analyzer Types with a returnTo.
+    await page.getByText(/isn'?t listed|not listed|add a new (type|profile)/i).first().click();
+    await expect(page).toHaveURL(/\/analyzers\/types(\?|$)/, { timeout: TIMEOUT });
+    await page.getByRole('button', { name: /Create Profile/i }).first().click();
+    await expect(page).toHaveURL(/action=create/, { timeout: TIMEOUT });
+
+    // DESIGN QUESTION for the PO, not a failure: the modal collects only a name and then reports
+    // the draft lives in Analyzer Bridge, so FR-B3's protocol and connection type are defined
+    // outside OpenELIS. Logged so a change of scope shows up as a diff.
+    const fields = await page.locator('[role="dialog"] input, [role="dialog"] select').count();
+    console.log(`[FR-B3] Create Profile collects ${fields} field(s) — the draft completes in Analyzer Bridge`);
+  });
+
+  test('TC-ANZ-M3-05 create from a clean list POSTs a new analyzer and it round-trips [FR-B2 · ROUND-TRIP]', async ({ page }) => {
+    await login(page);
+    const id = await createAnalyzer(page, ANALYZER_NAME);
+
+    // Read back on the LIST endpoint — a different surface than the detail one the form wrote to.
     const row = (await analyzerList(page)).find((a) => String(a.id) === id);
     expect(row, `analyzer ${id} missing from the list endpoint`).toBeTruthy();
     expect(row.name).toBe(ANALYZER_NAME);
-    expect(row.testUnitIds?.length, 'lab unit assignment did not persist').toBeGreaterThan(0);
     expect(row.status).toBe('SETUP');
+    expect(row.profileId, 'the chosen profile did not persist').toBe(PROFILE_ID);
+    console.log(`[data] leaving analyzer ${id} (${ANALYZER_NAME}) on the instance — test server, no cleanup`);
+  });
 
-    console.log(`[cleanup] leaving analyzer ${id} (${ANALYZER_NAME}) in place — see Δ-N, no deactivate exists`);
+  test('TC-ANZ-M3-06 Δ-S Add Analyzer with a panel open reuses the open analyzer [ROUND-TRIP]', async ({ page }) => {
+    await login(page);
+    const victim = (await analyzerList(page)).find((a) => a.status === 'SETUP');
+    test.skip(!victim, 'no SETUP analyzer available to open');
+    const originalName = victim.name;
+
+    // Open an existing analyzer's setup, then click Add Analyzer WITHOUT leaving the panel.
+    await page.goto(`${BASE}/analyzers?setup=instrument&analyzerId=${victim.id}`);
+    await expect(page.locator('#analyzer-setup-name')).toHaveValue(originalName, { timeout: TIMEOUT });
+
+    await page.getByRole('button', { name: /Add Analyzer/i }).click();
+    await page.waitForTimeout(1000);
+    // The URL sheds analyzerId — the panel looks fresh...
+    await expect(page).not.toHaveURL(/analyzerId=/);
+    // ...but the previous analyzer's values are still sitting in it.
+    const carried = await page.locator('#analyzer-setup-name').inputValue();
+    expect(
+      carried,
+      'Δ-S fixed? flip to expect an EMPTY name field, and drop the note below',
+    ).toBe(originalName);
+
+    // And the identity is retained: Continue would PUT the previous analyzer, silently renaming it.
+    // Deliberately NOT clicked — the manual run proved it and restoring the name is a manual step.
+    console.log(`[Δ-S] Continue here issues PUT /analyzer/analyzers/${victim.id} — renames "${originalName}"`);
   });
 });
 
 // ---------------------------------------------------------------------------
-// TC-ANZ-SET-VERIFY
+// TC-ANZ-M3-VERIFY
 // ---------------------------------------------------------------------------
 
-test.describe('TC-ANZ-SET-VERIFY — verify, do not build (FR-B4, B5, C1–C3)', () => {
-  test('TC-ANZ-SET-06 verify table carries code · test · LOINC · status [AC-5 · RENDER]', async ({ page }) => {
-    await login(page);
-    const id = await createViaGuidedSetup(page, `${ANALYZER_NAME}_06`);
-    await expect(page.getByText(/Profile-Applied Test Mappings/i)).toBeVisible({ timeout: TIMEOUT });
+test.describe('TC-ANZ-M3-VERIFY — catalog binding and confirmation (FR-B4, B5, C1–C3)', () => {
+  const mappingPath = (revision: number | string = 1) =>
+    `/analyzer-types/${PROFILE_ID}/mapping?revision=${revision}`;
 
-    for (const col of [/Analyzer Code/i, /OpenELIS Test/i, /LOINC/i, /Status/i]) {
-      await expect(page.getByRole('columnheader', { name: col }).first()).toBeVisible();
+  test('TC-ANZ-M3-07 rows bind to real catalog tests, carry LOINC, and account for every code [AC-5/FR-C1 · CROSS-LINK]', async ({ page }) => {
+    await login(page);
+    const mapping = await api<any>(page, mappingPath());
+    expect(Array.isArray(mapping.tests), 'mapping payload shape changed').toBe(true);
+
+    // Δ-E fixed: a bound row carries a resolved catalog test object, not a test_name_hint string.
+    const bound = mapping.tests.filter((t: any) => t.mappingState === 'BOUND');
+    expect(bound.length, 'Δ-E regressed? no row resolves to a catalog test').toBeGreaterThan(0);
+    for (const t of bound) {
+      expect(t.testId, `${t.rawCode} is BOUND with no testId`).toBeTruthy();
+      expect(t.selectedTest?.name, `${t.rawCode} has no resolved catalog test`).toBeTruthy();
     }
-    expect(id).toBeTruthy();
+    expect(bound.some((t: any) => t.loinc), 'the LOINC column lost its data').toBe(true);
+
+    // Δ-F fixed: every code has an explicit disposition. Nothing is silently dropped any more.
+    const states = mapping.tests.map((t: any) => t.mappingState);
+    console.log(`[Δ-F] ${mapping.tests.length} codes: ${JSON.stringify(states)}`);
+    expect(
+      states.every((s: string) => !!s),
+      'Δ-F regressed? a code carries no mappingState — that is the silent-drop failure mode',
+    ).toBe(true);
+
+    // Δ-H fixed: control recognition is stated, so QC codes can be confirmed rather than guessed.
+    expect(mapping.controlRecognition, 'Δ-H regressed? control recognition is gone').toBeTruthy();
   });
 
-  test('TC-ANZ-SET-07 Δ-E no catalog resolution; bindable set is fixed and not lab-unit scoped [AC-5/FR-C1 · CROSS-LINK]', async ({ page }) => {
+  test('TC-ANZ-M3-08 Δ-W the test picker offers the whole catalog but only jumps, never filters [FR-C2 · RENDER]', async ({ page }) => {
     await login(page);
-    const id = await createViaGuidedSetup(page, `${ANALYZER_NAME}_07`);
-    await expect(page.getByText(/Profile-Applied Test Mappings/i)).toBeVisible({ timeout: TIMEOUT });
+    await page.goto(`${BASE}/analyzers/types/${PROFILE_ID}/mapping?revision=1`);
+    const mapping = await api<any>(page, mappingPath());
+    const rawCode = mapping.tests[0].rawCode;
+    await expandMappingRow(page, rawCode);
 
-    // Status is the literal string "Profile" on every row — never matched·active / not matched.
-    const statuses = await page.locator('table').first().locator('tbody tr td:last-child').allInnerTexts();
-    expect(new Set(statuses.map((t) => t.trim()))).toEqual(new Set(['Profile']));
-
-    // The OpenELIS Test column is the profile's test_name_hint, not a resolved catalog test.
-    // Proof: the bindable universe is a FIXED set, identical across analyzers in different lab
-    // units, and tiny next to the catalog.
-    const opts = await api<any[]>(page, `/analyzer/analyzers/${id}/test-mapping-options`);
+    const input = page.locator(`#analyzer-test-${rawCode}`);
+    // Δ-P fixed: a per-row picker exists at all. Δ-E's second half: it is the WHOLE catalog, not
+    // the fixed 13 legacy tests 3.2.1.11 offered, and not lab-unit scoped.
+    await expect(input).toHaveAttribute('placeholder', /name, code, or LOINC/i);
+    await input.click();
+    await input.fill('');
+    await page.waitForTimeout(700);
+    const offered = await page.locator('[role="option"]').count();
     const catalog = await api<any[]>(page, '/displayList/ALL_TESTS');
-    expect(opts.length, 'Δ-E fixed? flip to assert the catalog is searchable here').toBeLessThan(catalog.length / 4);
+    console.log(`[FR-C2] picker offers ${offered} of ${catalog.length} catalog tests`);
+    expect(offered, 'the picker no longer offers the full catalog').toBeGreaterThanOrEqual(catalog.length);
 
-    const other = (await analyzerList(page)).find((a) => String(a.id) !== id && a.testUnitIds?.[0] !== undefined);
-    if (other) {
-      const otherOpts = await api<any[]>(page, `/analyzer/analyzers/${other.id}/test-mapping-options`);
-      // identical ids for a different analyzer in a different lab unit ⇒ not lab-unit scoped
-      expect(otherOpts.map((o) => o.id)).toEqual(opts.map((o) => o.id));
+    // Jump-to-match works on a NAME prefix, and is the only search this control performs.
+    await input.pressSequentially('Hemato', { delay: 110 });
+    await page.waitForTimeout(800);
+    expect(
+      await page.locator('[role="option"]').count(),
+      'Δ-W fixed? the test picker now filters — flip to expect a narrowed list',
+    ).toBe(offered);
+    await expect(
+      page.locator('[role="option"][aria-selected="true"], .cds--list-box__menu-item--highlighted').first(),
+    ).toContainText(/Hemato/i);
+
+    // LOINC jump works too, and must not regress — the placeholder promises it.
+    await input.fill('');
+    await page.waitForTimeout(400);
+    await input.pressSequentially('85362', { delay: 110 });
+    await page.waitForTimeout(800);
+    const hit = await page
+      .locator('[role="option"][aria-selected="true"], .cds--list-box__menu-item--highlighted')
+      .allInnerTexts();
+    console.log(`[FR-C2] LOINC "85362" highlights: ${JSON.stringify(hit)}`);
+    expect(hit.join('|'), 'LOINC jump-to-match regressed').toMatch(/85362/);
+    expect(
+      await page.locator('[role="option"]').count(),
+      'Δ-W fixed? the list narrowed for a LOINC query — flip both count assertions',
+    ).toBe(offered);
+  });
+
+  test('TC-ANZ-M3-09 the mapping is a versioned, fingerprinted artefact [FR-C2 · ROUND-TRIP]', async ({ page }) => {
+    await login(page);
+    const mapping = await api<any>(page, mappingPath());
+
+    // Δ-O fixed: bindings persist. The fingerprint is what makes a change detectable at all, and
+    // it is the mechanism the confirmation staling in TC-ANZ-M3-10 depends on.
+    expect(mapping.bindingFingerprint, 'no bindingFingerprint — staling cannot work').toMatch(/^sha256:/);
+    expect(mapping.siteBindingId, 'no site binding — the change would edit the shipped profile').toBeTruthy();
+    expect(mapping.profileRevision).toBeTruthy();
+
+    // Result values round-trip too: the 3.2.1.11 blocker was an unbound qualitative value that
+    // could not be saved at all.
+    const withResults = mapping.tests.filter((t: any) => (t.results ?? []).length);
+    expect(withResults.length, 'no result-value rows to grade').toBeGreaterThan(0);
+    const boundValues = withResults.flatMap((t: any) => t.results).filter((r: any) => r.mappingState === 'BOUND');
+    expect(boundValues.length, 'Δ-O regressed? no result value is bound').toBeGreaterThan(0);
+    for (const r of boundValues) expect(r.resultOptionId, `${r.rawValue} BOUND with no option id`).toBeTruthy();
+  });
+
+  test('TC-ANZ-M3-10 the confirmation is pinned to the binding it signed [AC-6/FR-B4 · FUNCTION]', async ({ page }) => {
+    await login(page);
+    const mapping = await api<any>(page, mappingPath());
+
+    // Δ-G fixed: confirmation is a real, recorded, staleable artefact — not an unreachable button.
+    const c = mapping.confirmation;
+    expect(c, 'confirmation object missing').toBeTruthy();
+    expect(c.bindingFingerprint, 'confirmation is not pinned to a binding — it cannot go stale').toMatch(/^sha256:/);
+    expect(c.recognitionFingerprint, 'confirmation is not pinned to control recognition').toMatch(/^sha256:/);
+
+    const stale = c.state !== 'CURRENT' || c.bindingFingerprint !== mapping.bindingFingerprint;
+    console.log(`[AC-6] confirmation state=${c.state} stale=${stale}`);
+    if (stale) {
+      // While stale, Continue must be blocked — that is the gate the FRS asks for.
+      await page.goto(`${BASE}/analyzers/types/${PROFILE_ID}/mapping?revision=1`);
+      await expect(page.getByRole('button', { name: /Confirm mappings/i }).first()).toBeVisible({ timeout: TIMEOUT });
     }
   });
 
-  test('TC-ANZ-SET-08 Δ-F profile applies only what resolves, silently [FR-B4/C3 · ROUND-TRIP]', async ({ page }) => {
+  test('TC-ANZ-M3-11 a CURRENT confirmation records who signed it and when [AC-6 · PERSIST]', async ({ page }) => {
     await login(page);
-    const id = await createViaGuidedSetup(page, `${ANALYZER_NAME}_08`);
+    const c = (await api<any>(page, mappingPath())).confirmation;
+    test.skip(c?.state !== 'CURRENT', 'mapping is not currently confirmed');
 
-    const profile = await api<any>(page, `/analyzer/profiles/${PROFILE_ID}`);
-    const analyzer = await api<any>(page, `/analyzer/analyzers/${id}`);
-    const declared: string[] = profile.default_test_mappings.map((m: any) => m.test_code);
-    const persisted: string[] = analyzer.testMappings ?? [];
-    const dropped = declared.filter((c) => !persisted.includes(c));
-
-    // The screen offers all `declared` rows for sign-off; only `persisted` were stored…
-    const rendered = await page.locator('table').first().locator('tbody tr').count();
-    expect(rendered).toBe(declared.length);
-    // …and nothing on screen marks which ones were discarded.
-    await expect(page.getByText(/not in your catalog|not matched|needs attention/i)).toHaveCount(0);
-
-    console.log(`[Δ-F] ${PROFILE_ID}: declared=${declared.length} persisted=${persisted.length} dropped=${dropped.join(', ')}`);
-    expect(dropped.length, 'Δ-F fixed? flip to expect(dropped).toHaveLength(0) — or to assert each drop is flagged').toBeGreaterThan(0);
+    expect(c.confirmedBy ?? c.signer, 'sign-off has no signer').toBeTruthy();
+    expect(c.confirmedAt ?? c.timestamp, 'sign-off has no timestamp').toBeTruthy();
+    console.log(`[AC-6] confirmed by ${c.confirmedByDisplayName ?? c.confirmedBy} at ${c.confirmedAt ?? c.timestamp}`);
   });
 
-  test('TC-ANZ-SET-08b Δ-F a fully-resolvable profile applies whole (control case)', async ({ page }) => {
+  test('TC-ANZ-M3-12 QC readiness does not gate activation [AC-9/FR-C3 · CROSS-LINK]', async ({ page }) => {
     await login(page);
-    // Sysmex declares 13 and stores 13 — proves the drop is resolution-driven, not a cap.
-    await page.goto(`${BASE}/analyzers`);
-    const profile = await api<any>(page, '/analyzer/profiles/astm/sysmex-xn');
-    const sysmex = (await analyzerList(page)).find((a) => /Sysmex/i.test(a.name));
-    if (!sysmex) test.skip(true, 'no Sysmex analyzer on this instance');
-    expect(sysmex.testMappings.length).toBe(profile.default_test_mappings.length);
-  });
+    const seen: string[] = [];
+    for (const a of (await analyzerList(page)).slice(0, 12)) {
+      const r = await api<any>(page, `/analyzer/analyzers/${a.id}/activation-readiness`);
+      for (const b of r?.blockers ?? []) seen.push(String(b));
+    }
+    console.log(`[AC-9] activation blockers in play: ${[...new Set(seen)].join(', ') || 'none'}`);
 
-  test('TC-ANZ-SET-09 Δ-G the mandatory sign-off is unreachable yet Verify reports Complete [AC-6 · PERSIST]', async ({ page }) => {
-    await login(page);
-    const id = await createViaGuidedSetup(page, `${ANALYZER_NAME}_09`);
-
-    const verify = page.getByRole('button', { name: /Verify current setup/i });
-    await expect(verify).toBeVisible({ timeout: TIMEOUT });
-    // Δ-G: disabled whenever blockers[] is non-empty — which is always, on a fresh shipped profile
-    await expect(verify, 'Δ-G fixed? sign-off is reachable — flip to click it and assert the audit event').toBeDisabled();
-
-    // …yet Save-and-continue is open and the step self-reports Complete
-    await expect(page.getByRole('button', { name: /Save and continue/i })).toBeEnabled();
-    await page.getByRole('button', { name: /Save and continue/i }).click();
-    await page.waitForURL(/step=connect/, { timeout: TIMEOUT });
-    await expect(page.getByText(/Verify/).first()).toBeVisible();
-
-    const sv = await api<any>(page, `/analyzer/analyzers/${id}/setup-verification`);
-    expect(sv.currentlyVerified, 'Δ-G: step says Complete while the entity says unverified').toBe(false);
-  });
-
-  test('TC-ANZ-SET-10 Δ-H QC codes are not offered for confirmation [AC-7/FR-B5 · RENDER]', async ({ page }) => {
-    await login(page);
-    const id = await createViaGuidedSetup(page, `${ANALYZER_NAME}_10`);
-
-    const analyzer = await api<any>(page, `/analyzer/analyzers/${id}`);
-    expect(analyzer.qcRules?.length, 'the profile does carry a QC identification rule').toBeGreaterThan(0);
-
-    // Δ-H: the rule exists on the entity but the verify step offers the QC *program* instead of
-    // a confirmable list of control identifiers.
-    await expect(page.getByRole('link', { name: /Manage QC rules/i })).toBeVisible();
-    const rule = analyzer.qcRules[0];
-    await expect(
-      page.getByText(new RegExp(String(rule.targetField).replace('.', '\\.'), 'i')),
-      'Δ-H fixed? the QC identifier is now shown — flip to assert a confirm control',
-    ).toHaveCount(0);
-  });
-
-  test('TC-ANZ-SET-11 Δ-I no Resolve action on a non-matching row [AC-8/FR-C2 · FUNCTION]', async ({ page }) => {
-    await login(page);
-    await createViaGuidedSetup(page, `${ANALYZER_NAME}_11`);
-    await expect(page.getByText(/Pending Unmapped Codes/i)).toBeVisible({ timeout: TIMEOUT });
-
-    await expect(
-      page.getByRole('button', { name: /^Resolve$/i }),
-      'Δ-I fixed? flip to assert map-to-existing search + Test Catalog link + don\'t-receive',
-    ).toHaveCount(0);
-  });
-
-  test('TC-ANZ-SET-12 Δ-J unbound values block the whole analyzer [AC-9/FR-C3 · FUNCTION]', async ({ page }) => {
-    await login(page);
-    const id = await createViaGuidedSetup(page, `${ANALYZER_NAME}_12`);
-
-    const sv = await api<any>(page, `/analyzer/analyzers/${id}/setup-verification`);
-    // AC-9 says a missing test must not block the others. It blocks everything.
-    expect(sv.blockers, 'Δ-J fixed? flip to expect activation to survive an unbound value').toContain('UNBOUND_RESULT_VALUES');
-    expect(sv.readyForActivation).toBe(false);
-    // Δ-M — an activation gate the FRS never defines
-    expect(sv.blockers).toContain('NO_ACTIVE_CONTROL_LOT');
-  });
-
-  test('TC-ANZ-SET-13 result-mapping empty state links to Test Catalog [AC-12/FR-E2 · RENDER]', async ({ page }) => {
-    await login(page);
-    await createViaGuidedSetup(page, `${ANALYZER_NAME}_13`);
-    await expect(page.getByText(/No active result options are configured for this mapped test/i).first()).toBeVisible({ timeout: TIMEOUT });
-    await expect(page.getByRole('link', { name: /Open Test Catalog/i }).first()).toBeVisible();
-  });
-
-  test('TC-ANZ-SET-19 Δ-O binding an unbound value cannot be saved [FR-E1 · PERSIST]', async ({ page }) => {
-    await login(page);
-    const id = await createViaGuidedSetup(page, `${ANALYZER_NAME}_19`);
-    await page.goto(`${BASE}/analyzers/${id}/mappings`);
-    await expect(page.getByText(/Result Value Mappings/i)).toBeVisible({ timeout: TIMEOUT });
-
-    // FR-E1 holds: the picker offers exactly the mapped test's active options
-    const options = await api<any[]>(page, `/analyzer/analyzers/${id}/result-value-options?testCode=MTB`);
-    expect(options.length).toBeGreaterThan(0);
-
-    const row = page.locator('tr').filter({ hasText: 'LEGACY_UNBOUND' }).first();
-    await row.locator('input').click();
-    await page.locator('[role="option"]').first().click();
-    await expect(row.locator('input')).not.toHaveValue('');
-
-    // Δ-O: the value shows as chosen but the form never goes dirty, so the only route out of
-    // UNBOUND_RESULT_VALUES — and therefore out of SETUP — is closed.
-    await expect(
-      page.getByRole('button', { name: /Save result mappings/i }),
-      'Δ-O fixed? flip to click Save, reload, and assert bindingStatus === "BOUND"',
-    ).toBeDisabled();
-
-    const after = await api<any[]>(page, `/analyzer/analyzers/${id}/result-value-mappings`);
-    expect(after.some((r) => r.bindingStatus !== 'BOUND')).toBe(true);
+    // Δ-J / Δ-M fixed: NO_ACTIVE_CONTROL_LOT and NO_ACTIVE_QC_RULE are no longer activation gates.
+    expect(
+      seen.some((b) => /CONTROL_LOT|QC_RULE|controlLot|qcRule/i.test(b)),
+      'QC coupling regressed — the FRS never asks for it and MC-4 puts it out of scope here',
+    ).toBe(false);
   });
 });
 
 // ---------------------------------------------------------------------------
-// TC-ANZ-SET-CONNECT
+// TC-ANZ-M3-CONNECT
 // ---------------------------------------------------------------------------
 
-test.describe('TC-ANZ-SET-CONNECT — connection and data flow (FR-B6, F1, F2)', () => {
-  test('TC-ANZ-SET-14 Δ-K direction default follows the profile, but all modes are offered [AC-10/FR-F2 · RENDER]', async ({ page }) => {
-    await login(page);
-    const id = await createViaGuidedSetup(page, `${ANALYZER_NAME}_14`);
-    await page.goto(`${BASE}/analyzers/${id}/edit?setup=1&step=connect`);
-    await expect(page.getByText(/Communication Mode/i)).toBeVisible({ timeout: TIMEOUT });
-
-    // Credit where due: the default tracks the profile's declared capability.
-    const profile = await api<any>(page, `/analyzer/profiles/${PROFILE_ID}`);
-    const analyzer = await api<any>(page, `/analyzer/analyzers/${id}`);
-    const declaresTwoWay = profile.communication?.supports_lis_initiated === true;
-    expect(analyzer.communicationMode).toBe(declaresTwoWay ? 'BOTH' : 'ANALYZER_INITIATED');
-
-    // Δ-K part 1: FR-F's data flow (Results only / Two-way send orders) does not exist.
-    await expect(
-      page.getByText(/Results only \(one-way\)|Two-way \(send orders/i),
-      'Δ-K fixed? data flow shipped — flip to assert the one-way default',
-    ).toHaveCount(0);
-
-    // Δ-K part 2: every direction is offered regardless of what the profile declares.
-    await page.getByRole('combobox').filter({ hasText: /LIS|Bidirectional/i }).first().click();
-    const modes = await page.locator('[role="option"]').allInnerTexts();
-    expect(modes.length, 'Δ-K fixed? flip to assert two-way is hidden when unsupported').toBe(3);
-  });
-
-  // DEFERRED 2026-08-12 (Casey): the analyzer simulator was not attached, so a missing probe may be
-  // under-configuration rather than a defect. Re-enable and judge once the harness is connected.
-  test.skip('TC-ANZ-SET-15 Δ-L Test Connection performs no probe [FR-B6 · FUNCTION]', async ({ page }) => {
-    await login(page);
-    const id = await createViaGuidedSetup(page, `${ANALYZER_NAME}_15`);
-    await page.goto(`${BASE}/analyzers/${id}/edit?setup=1&step=connect`);
-
-    const calls: string[] = [];
-    page.on('request', (r) => { if (/rest\//.test(r.url())) calls.push(r.url()); });
-
-    await page.locator('#analyzer-ip').fill('10.42.20.10');
-    await page.locator('#analyzer-port').fill('9600');
-    await page.getByRole('button', { name: /Test Connection/i }).click();
-    await expect(page.getByRole('heading', { name: /Test Connection/i })).toBeVisible({ timeout: TIMEOUT });
-    await page.waitForTimeout(3000);
-
-    const probed = calls.some((u) => /(connection-test|probe|ping|test-connection)/i.test(u));
-    expect(probed, 'Δ-L fixed? a probe now runs — flip to assert the plain-language outcome').toBe(false);
-
-    // the modal only mirrors what was typed; no success, no failure, no degrade-to-one-way
-    const body = page.locator('.cds--modal-container').filter({ hasText: 'Test Connection' });
-    await expect(body).not.toContainText(/succeed|success|fail|unreachable|timed out/i);
-  });
-
-  test('TC-ANZ-SET-16 IP/port persist per analyzer [FR-F1 · ROUND-TRIP]', async ({ page }) => {
-    await login(page);
-    const id = await createViaGuidedSetup(page, `${ANALYZER_NAME}_16`);
-    await page.goto(`${BASE}/analyzers/${id}/edit?setup=1&step=connect`);
-
-    await page.locator('#analyzer-ip').fill('10.42.20.11');
-    await page.locator('#analyzer-port').fill('9601');
-    await page.getByRole('button', { name: /Save and continue/i }).click();
-    await page.waitForURL(/step=review/, { timeout: TIMEOUT });
-
-    // read back on the LIST endpoint — a different surface than the edit form wrote to
-    const row = (await analyzerList(page)).find((a) => String(a.id) === id);
-    expect(row.ipAddress).toBe('10.42.20.11');
-    expect(String(row.port)).toBe('9601');
-    // FR-F1: the address is analyzer-level, so the shared profile must be untouched
-    const profile = await api<any>(page, `/analyzer/profiles/${PROFILE_ID}`);
-    expect(JSON.stringify(profile)).not.toContain('10.42.20.11');
-  });
-
-  test('TC-ANZ-SET-17 Review enumerates activation blockers [RENDER]', async ({ page }) => {
-    await login(page);
-    const id = await createViaGuidedSetup(page, `${ANALYZER_NAME}_17`);
-    await page.goto(`${BASE}/analyzers/${id}/review?setup=1&step=review`);
-
-    await expect(page.getByText(/Setup is not ready for activation/i)).toBeVisible({ timeout: TIMEOUT });
-    await expect(page.getByText(/must be bound to Test Catalog options/i)).toBeVisible();
-    // Δ — lab units were collected on the Instrument step but the summary omits them
-    await expect(page.getByText(/Lab unit/i), 'summary now shows lab units? add it to the spec').toHaveCount(0);
-  });
-});
-
-  test('TC-ANZ-SET-09 Δ-P no GUI path to add or re-point an analyzer code [FR-C2/D1/D2 · FUNCTION]', async ({ page }) => {
-    await login(page);
-    const id = await createViaGuidedSetup(page, `${ANALYZER_NAME}_09`);
-
-    for (const url of [`${BASE}/analyzers/${id}/mappings?setup=1&step=verify`, `${BASE}/analyzers/${id}/mappings`]) {
-      await page.goto(url);
-      await expect(page.getByText(/Profile-Applied Test Mappings/i)).toBeVisible({ timeout: TIMEOUT });
-      const table = page.locator('table').first();
-      const controls = await table.locator('tbody button, tbody input, tbody select').count();
-      expect(controls, `Δ-P fixed at ${url}? flip to assert a searchable test picker on each row`).toBe(0);
-      await expect(page.getByRole('button', { name: /add (mapping|code|row)|new mapping/i })).toHaveCount(0);
-    }
-    // The only inbound route for a new code is transmission.
-    const pending = await api<any[]>(page, `/analyzer/analyzers/${id}/pending-codes`);
-    expect(Array.isArray(pending)).toBe(true);
-  });
-
-  test('TC-ANZ-SET-13 Δ-J mapping sign-off is gated on QC readiness for every analyzer [AC-9 · FUNCTION]', async ({ page }) => {
-    await login(page);
-    const all = await analyzerList(page);
-    const gates = [];
-    for (const a of all.slice(0, 12)) {
-      const sv = await api<any>(page, `/analyzer/analyzers/${a.id}/setup-verification`);
-      gates.push({ name: a.name, qcApplicable: sv.qcApplicable, mappingReady: sv.mappingReady, blockers: sv.blockers });
-    }
-    // qcApplicable is true even for analyzers whose profile ships zero QC rules.
-    expect(gates.every((g) => g.qcApplicable), 'Δ-J fixed? flip to expect qcApplicable to follow the profile').toBe(true);
-
-    // A fully-mapped analyzer is still blocked, on QC grounds alone.
-    const mappedButBlocked = gates.filter((g) => g.mappingReady && g.blockers.length > 0);
-    console.log(`[Δ-J] mappingReady yet blocked: ${mappedButBlocked.map((g) => `${g.name} → ${g.blockers.join('+')}`).join(' | ')}`);
-    expect(mappedButBlocked.every((g) => g.blockers.every((b: string) => /CONTROL_LOT|QC_RULE/.test(b)))).toBe(true);
-  });
-
-  test('TC-ANZ-SET-22 Δ-R control-lot save hides the real validation error [FUNCTION]', async ({ page }) => {
+test.describe('TC-ANZ-M3-CONNECT — connection settings and probe (FR-F1, F2, B6)', () => {
+  test('TC-ANZ-M3-13 the connection schema declares role-conditional visibility [FR-F1 · RENDER]', async ({ page }) => {
     await login(page);
     const target = (await analyzerList(page))[0];
-    await page.goto(`${BASE}/analyzers/qc/control-lots/new?analyzerId=${target.id}`);
-    await expect(page.getByText(/New Control Lot/i)).toBeVisible({ timeout: TIMEOUT });
+    const detail = await detailOf(page, target.id);
+    const fields = connectionFields(detail);
+    expect(fields.length, 'connection field schema missing from the analyzer detail').toBeGreaterThan(0);
 
-    // The Test picker here offers the WHOLE catalog with search — the capability the
-    // test-code mapping screen lacks (see Δ-E). Assert it so a regression here is visible.
-    await page.getByRole('combobox', { name: /test/i }).last().click();
-    const testOptions = await page.locator('[role="option"]').count();
-    const catalog = await api<any[]>(page, '/displayList/ALL_TESTS');
-    expect(testOptions).toBe(catalog.length);
-    await page.keyboard.press('Escape');
+    const byKey = Object.fromEntries(fields.map((f: any) => [f.key, f]));
+    expect(byKey.transport?.choices?.map((c: any) => c.value)).toEqual(expect.arrayContaining(['RS-232', 'TCP/IP']));
+    expect(byKey.connectionRole?.choices?.map((c: any) => c.value)).toEqual(expect.arrayContaining(['SERVER', 'CLIENT']));
 
-    const failed = page.locator('text=/Failed to save control lot/i');
-    // A complete form minus Mean/SD is rejected 400 with a banner that names no field.
-    // FLIP-WHEN-FIXED: assert the message names mean/standard deviation, or that the
-    // Statistics Configuration fields are marked required up front.
-    await expect(failed, 'Δ-R fixed? flip to assert the field-level validation message').toHaveCount(0);
+    // The server, not the client, decides what a given role needs — host only when we DIAL OUT.
+    expect(byKey.connectionRole?.visibleWhen).toMatchObject({ fieldKey: 'transport', operator: 'NOT_EQUALS', value: 'RS-232' });
+    expect(byKey.host?.visibleWhen).toMatchObject({ fieldKey: 'connectionRole', operator: 'EQUALS', value: 'CLIENT' });
+    console.log(`[FR-F1] connection fields: ${fields.map((f: any) => f.key).join(', ')}`);
   });
 
-// ---------------------------------------------------------------------------
-// TC-ANZ-SET-DELTAS
-// ---------------------------------------------------------------------------
-
-test.describe('TC-ANZ-SET-DELTAS — spec-vs-build reconciliation', () => {
-  test('TC-ANZ-SET-04 Δ-D the "instrument isn\'t listed" path is absent [AC-4/FR-B3 · FUNCTION]', async ({ page }) => {
+  test('TC-ANZ-M3-14 the connection probe is real and its outcome is recorded [AC-10/FR-B6 · FUNCTION]', async ({ page }) => {
     await login(page);
-    await page.goto(`${BASE}/analyzers?add=1&step=instrument`);
-    await expect(page.getByText(/Set up a new analyzer/i)).toBeVisible({ timeout: TIMEOUT });
+    const target = (await analyzerList(page))[0];
 
+    // Δ-L fixed: 3.2.1.11 issued NO request at all. A FAILED probe is a pass for this case — what
+    // matters is that a request goes out and the outcome is persisted against a config revision.
+    const res = await apiRaw(page, `/analyzer/analyzers/${target.id}/test`, { method: 'POST', body: {} });
+    expect(res.status, `probe endpoint answered ${res.status} :: ${res.text}`).toBeLessThan(500);
+
+    const probe = (await detailOf(page, target.id)).connection?.latestProbe;
+    expect(probe, 'Δ-L regressed? no probe result is recorded').toBeTruthy();
+    expect(probe.status, 'probe recorded no outcome').toMatch(/SUCCE|FAIL|ERROR|TIMEOUT/i);
+    expect(probe.configRevision, 'the probe is not pinned to the config it tested').toBeTruthy();
+    console.log(`[FR-B6] latest probe: ${probe.status} @ configRevision ${probe.configRevision}`);
+  });
+
+  test('TC-ANZ-M3-15 Δ-K no Results-only / Two-way data-flow control exists [AC-10/FR-F2 · RENDER]', async ({ page }) => {
+    await login(page);
+    const target = (await analyzerList(page))[0];
+    const keys = connectionFields(await detailOf(page, target.id)).map((f: any) => f.key);
+
+    // What ships is who OPENS THE SOCKET (connectionRole) and over what TRANSPORT — not FR-F2's
+    // WHAT FLOWS: results only, versus two-way order/query exchange. Asserted against the schema
+    // rather than the DOM, because the schema is what the UI renders from.
+    expect(keys).toEqual(expect.arrayContaining(['transport', 'connectionRole']));
+    expect(
+      keys.filter((k: string) => /dataFlow|direction|oneWay|twoWay|results?Only|orders?/i.test(k)),
+      'Δ-K fixed? a data-flow field shipped — flip to assert the default follows the profile and ' +
+        'that two-way is not offered for profiles that do not declare it',
+    ).toHaveLength(0);
+
+    await page.goto(`${BASE}/analyzers?setup=connect&analyzerId=${target.id}`);
     await expect(
-      page.getByText(/isn'?t listed|not listed|define a new (profile|type)/i),
-      'Δ-D fixed? flip to assert name + protocol + connection-type fields appear',
+      page.getByText(/Results only|Two-way \(send orders/i),
+      'Δ-K fixed in the UI? flip this too',
     ).toHaveCount(0);
   });
+});
 
-  test('TC-ANZ-SET-03b instrument picker type-ahead selects a profile [AC-3 · FUNCTION]', async ({ page }) => {
+// ---------------------------------------------------------------------------
+// TC-ANZ-M3-LIFECYCLE — the headline. Nothing downstream of ACTIVE is reachable.
+// ---------------------------------------------------------------------------
+
+test.describe('TC-ANZ-M3-LIFECYCLE — activate / deactivate / reactivate (FR-A3, AC-17)', () => {
+  /**
+   * WITHDRAWN: Δ-T ("activate and deactivate both 500") and Δ-U ("reactivate is untestable").
+   * Both were raised in the 2026-08-25 manual run from hand-rolled POSTs that omitted the CSRF
+   * header (harness rule 1). With the header every transition returns 200, on two analyzers, and
+   * the UI drives them correctly. The cases below now GUARD the working lifecycle instead — they
+   * are the regression net for the thing that was almost filed as a blocker.
+   */
+
+  test('TC-ANZ-M3-16 activation succeeds when readiness reports ready [AC-17 · FUNCTION]', async ({ page }) => {
     await login(page);
-    await page.goto(`${BASE}/analyzers?add=1&step=instrument`);
-    const trigger = page.getByRole('combobox', { name: /shipped analyzer profile/i });
+    const ready = await readyAnalyzer(page);
+    test.skip(!ready, 'no analyzer currently reports ready:true');
 
-    // Carbon Dropdown carries no text input; search is type-ahead on the FOCUSED trigger.
-    // Focus first — keystrokes sent to the page are swallowed by a global search shortcut that
-    // navigates to /analyzers/types?search=… and abandons the in-progress setup. (Cost us a run.)
-    await trigger.focus();
-    await trigger.click();
-    await page.keyboard.type('sys', { delay: 120 });
+    const readiness = await apiRaw(page, `/analyzer/analyzers/${ready!.id}/activation-readiness`);
+    expect(readiness.body.ready, 'precondition').toBe(true);
+    expect(readiness.body.blockers ?? []).toHaveLength(0);
 
-    await expect(page.locator('[role="option"][aria-selected="true"]')).toContainText(/Sysmex/i);
-    await expect(page).toHaveURL(/[?&]add=1/); // still in setup, not bounced to the types page
+    const res = await transition(page, ready!.id, 'activate');
+    console.log(`[AC-17] analyzer ${ready!.id}: activate ${res.status} :: ${res.text}`);
+    expect(res.status, 'readiness and the transition must agree — they did not on the first look').toBe(200);
+    expect(res.body).toMatchObject({ status: 'ACTIVE', activated: true });
+    expect((await detailOf(page, ready!.id)).status).toBe('ACTIVE');
   });
 
-  test('TC-ANZ-SET-18 Δ-N row actions offer hard Delete, not Deactivate [AC-17/FR-A3 · RENDER]', async ({ page }) => {
+  test('TC-ANZ-M3-16b the not-ready path returns a named 422, not a 500 [FUNCTION]', async ({ page }) => {
     await login(page);
-    await page.goto(`${BASE}/analyzers`);
-    await page.locator('tbody tr').first().getByRole('button').first().click();
-
-    const items = await page.locator('[role="menuitem"], .cds--overflow-menu-options__btn').allInnerTexts();
-    expect(items.join('|')).toMatch(/Delete/i);
-    // LIMS constitution: deactivate, never hard-delete.
-    expect(
-      items.join('|'),
-      'Δ-N fixed? Deactivate shipped — flip to assert Delete is gone',
-    ).not.toMatch(/Deactivate|Reactivate/i);
-  });
-
-  test('TC-ANZ-SET-DATA shipped LOINCs are not 1:1, so FR-C1 cannot be implemented as written', async ({ page }) => {
-    await login(page);
-    const profile = await api<any>(page, `/analyzer/profiles/${PROFILE_ID}`);
-    const byLoinc = new Map<string, string[]>();
-    for (const m of profile.default_test_mappings) {
-      if (!m.loinc) continue;
-      byLoinc.set(m.loinc, [...(byLoinc.get(m.loinc) ?? []), m.test_code]);
+    let notReady: any = null;
+    for (const a of await analyzerList(page)) {
+      const r = await api<any>(page, `/analyzer/analyzers/${a.id}/activation-readiness`);
+      if (r && r.ready === false) { notReady = a; break; }
     }
-    const collisions = [...byLoinc.entries()].filter(([, codes]) => codes.length > 1);
-    console.log(`[Δ-E data] LOINC collisions: ${collisions.map(([l, c]) => `${l}→${c.join('/')}`).join('  ')}`);
+    test.skip(!notReady, 'every analyzer currently reports ready — nothing to grade here');
 
-    // This is a SPEC defect as much as a build one: FR-C1's deterministic 1:1 key needs a
-    // tie-break rule before any implementation can satisfy AC-5.
-    expect(collisions.length, 'shipped profiles now carry unique LOINCs? FR-C1 becomes implementable').toBeGreaterThan(0);
+    const res = await transition(page, notReady.id, 'activate');
+    expect(res.status, `not-ready activate answered ${res.status} :: ${res.text}`).toBe(422);
+    expect(JSON.stringify(res.body ?? res.text)).toMatch(/analyzer\.(activation|connection)\./);
   });
+
+  test('TC-ANZ-M3-17 deactivate → reactivate round-trips through the API [AC-17/FR-A3 · ROUND-TRIP]', async ({ page }) => {
+    await login(page);
+    const target = (await analyzerList(page)).find((a) => a.status === 'ACTIVE') ?? (await analyzerList(page))[0];
+    const started = (await detailOf(page, target.id)).status;
+
+    const off = await transition(page, target.id, 'deactivate');
+    expect(off.status, `deactivate answered ${off.status} :: ${off.text}`).toBe(200);
+    expect(off.body).toMatchObject({ status: 'INACTIVE', deactivated: true });
+    expect((await detailOf(page, target.id)).status).toBe('INACTIVE');
+
+    const on = await transition(page, target.id, 'reactivate');
+    expect(on.status, `reactivate answered ${on.status} :: ${on.text}`).toBe(200);
+    expect((await detailOf(page, target.id)).status).toBe('ACTIVE');
+    console.log(`[AC-17] analyzer ${target.id}: ${started} → INACTIVE → ACTIVE`);
+  });
+
+  test('TC-ANZ-M3-17b the lifecycle is reachable from the UI, and Delete is not [AC-17/FR-A3 · FUNCTION]', async ({ page }) => {
+    await login(page);
+    const target = (await analyzerList(page)).find((a) => a.status === 'ACTIVE');
+    test.skip(!target, 'no ACTIVE analyzer to deactivate through the UI');
+
+    await page.goto(`${BASE}/analyzers`);
+    await page.waitForLoadState('networkidle');
+    await openRowMenu(page, target.id);
+    const items = await page.locator('[role="menuitem"], .cds--overflow-menu-options__btn').allInnerTexts();
+    console.log(`[AC-17] row menu (active): ${JSON.stringify(items)}`);
+
+    // Δ-N fixed and must stay fixed: deactivate, never hard-delete (LIMS constitution).
+    expect(items.join('|')).toMatch(/Deactivate/i);
+    expect(items.join('|'), 'a hard Delete came back').not.toMatch(/Delete/i);
+
+    const [res] = await Promise.all([
+      page.waitForResponse((r) => /\/deactivate$/.test(r.url()), { timeout: TIMEOUT }),
+      (async () => {
+        await menuItem(page, /Deactivate/i).click();
+        await page
+          .locator('[role="dialog"]')
+          .filter({ hasText: /Deactivate/i })
+          .first()
+          .getByRole('button', { name: /Deactivate analyzer/i })
+          .click();
+      })(),
+    ]);
+    expect(res.status(), 'the UI deactivate path must reach the server cleanly').toBe(200);
+
+    // Reactivate is offered only once the analyzer is inactive.
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await openRowMenu(page, target.id);
+    const inactiveItems = await page.locator('[role="menuitem"], .cds--overflow-menu-options__btn').allInnerTexts();
+    expect(inactiveItems.join('|'), 'Δ-U regressed? reactivate is unreachable again').toMatch(/Reactivate/i);
+
+    const [back] = await Promise.all([
+      page.waitForResponse((r) => /\/reactivate$/.test(r.url()), { timeout: TIMEOUT }),
+      (async () => {
+        await menuItem(page, /Reactivate/i).click();
+        await page
+          .locator('[role="dialog"]')
+          .filter({ hasText: /Reactivate/i })
+          .first()
+          .getByRole('button', { name: /Reactivate analyzer/i })
+          .click();
+      })(),
+    ]);
+    expect(back.status()).toBe(200);
+    expect((await detailOf(page, target.id)).status, 'left the analyzer inactive').toBe('ACTIVE');
+  });
+
+  test('TC-ANZ-M3-18 Δ-V both lifecycle dialogs render the literal {name} placeholder [RENDER]', async ({ page }) => {
+    await login(page);
+    const target = (await analyzerList(page))[0];
+    await page.goto(`${BASE}/analyzers?lifecycle=deactivate&lifecycleAnalyzerId=${target.id}`);
+
+    // NOTE: a hidden "Still There?" session modal also matches [role="dialog"] — select by content.
+    const dialog = page.locator('[role="dialog"]').filter({ hasText: /Deactivate/i }).first();
+    await expect(dialog).toBeVisible({ timeout: TIMEOUT });
+
+    // Same defect class as the old Delete-dialog placeholder bug (NOTE-22) — it moved with the
+    // rename, and it is in BOTH dialogs:
+    //   "Deactivate {name}? New runtime use will stop..."
+    //   "Reactivate {name}? Its setup will be checked again before it can be used."
+    await expect(
+      dialog,
+      'Δ-V fixed? flip to expect the dialog to contain the analyzer name',
+    ).toContainText('{name}');
+    await expect(dialog).not.toContainText(target.name);
+
+    await page.getByRole('button', { name: /Cancel deactivation/i }).click();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TC-ANZ-M3-QC
+// ---------------------------------------------------------------------------
+
+test.describe('TC-ANZ-M3-QC — control lots and QC surfacing', () => {
+  test('TC-ANZ-M3-19 Δ-R control-lot validation is hidden behind a generic banner [FUNCTION]', async ({ page }) => {
+    await login(page);
+
+    // Reported 2026-08-12 and shipped again unchanged. Driven through the FORM, not a hand-rolled
+    // body: a synthetic payload trips Spring's deserializer and returns a 400 for the wrong reason,
+    // which proves nothing. The real server response, captured from the app's own request during
+    // the manual run, is:
+    //   POST /rest/qc/controlLot → 400 "Manufacturer fixed method requires both mean and standard
+    //                                   deviation"
+    // ...while the banner says only "Failed to save control lot", and Mean/SD sit behind
+    // Statistics Configuration → Configure, unmarked as required.
+    await page.goto(`${BASE}/analyzers/qc/control-lots/new`);
+    await page.waitForLoadState('networkidle');
+    await hideReviewWidget(page);
+    await expect(page.getByText(/Control Lot/i).first()).toBeVisible({ timeout: TIMEOUT });
+
+    await expect(
+      page.locator('main label').filter({ hasText: /^\s*(Mean|Standard deviation|SD)\b/i }),
+      'Δ-R fixed? flip to assert Mean and SD are visible on the form and marked required',
+    ).toHaveCount(0);
+    await expect(
+      page.getByText(/Statistics Configuration/i).first(),
+      'the fields the save requires are still parked behind this section',
+    ).toBeVisible();
+  });
+
 });
