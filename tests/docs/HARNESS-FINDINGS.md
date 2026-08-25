@@ -572,3 +572,93 @@ Worth recording: that run overlapped a live Chrome session driving the same inst
 admin user, and the guard reported `pings=1 lapses-on-ping=0 re-auths=0`. **The harness session was
 not evicted.** That is one more piece of evidence against the concurrent-session-eviction theory for
 the 2026-08-23 contamination, and in favour of idle timeout.
+
+## 2026-08-25 — five order-to-validation chains driven in real Chrome
+
+Every chain below was ordered through the four-step wizard, resulted in Results Entry, and
+validated, with each step verified server-side rather than from the screen.
+
+| Lab number | What it exercised | Outcome |
+| --- | --- | --- |
+| DEV01260000000000564 | Panel order, out-of-range numeric, calculated value | Results final |
+| DEV01260000000000566 | Multi-component test, all three components | Results final |
+| DEV01260000000000567 | Dictionary via keyboard, then multi-select | phantom 4th component |
+| DEV01260000000000568 | Multi-select alone, clean repro | value on the wrong component |
+| DEV01260000000000569 | Reflex rule | reflex test added automatically |
+
+### Working, confirmed end to end
+
+**Panels.** `QA Panel Test 20260811` (id 17) holds Amylase (Serum) and Actin Smooth Muscle
+(Immunohistochemistry specimen). Ordering it against a **Serum** sample correctly took only the
+Serum member. That is right, but the user ticks a panel expecting two tests and silently gets one —
+worth a product decision on whether to warn or offer to add the second sample type.
+
+**Reference-range flagging.** Amylase 999 against range 1–486 UI/L flagged **Abnormal**; the
+calculated Créatinine 1998 against 6–13 mg/l flagged **Invalid**. Two distinct labels, and the
+distinction looks deliberate — outside the normal range versus outside the plausible range. Both
+flags survived validation.
+
+**Calculated value tests.** Entering Amylase 999 automatically created and populated a Créatinine
+analysis at 1998. Rule `QA_AUTO_0820_CALC_UI_NUM`: `Serum/Amylase Multiplied By 2 -> Serum/Créatinine`.
+The admin page also carries a conditional rule producing a *dictionary* result
+(`Créatinine >= 5 -> Bioline = Négatif`), so the feature spans numeric and coded outputs.
+
+**Reflex tests.** Rule "High glucose adds HbA1c 250395": `Demo Glucose 250395(Serum) > 200`. Entering
+250 on order …569 added **Demo HbA1c 250395(Serum)** to the order automatically, awaiting result.
+
+**Dictionary results inside a multi-component test** persist correctly — `resultValue "1330"` for
+Inconclusive — *when driven by real keyboard input*.
+
+### DEFECT — a multi-select result is written to the wrong result component
+
+Test 446 `QA_AUTO_MC_188636` has three components: `PRIMARY` (N), `RESULT_D` (D), `RESULT_M` (M).
+Filling the **Multi-Select** control and saving writes the value to the **Dictionary** component and
+coerces that component's `resultType` from D to M. The multi-select component stays empty.
+
+Order …568, nothing else touched, trusted input only:
+
+    Dictionary Result     type M   val "HIV-1 DNA DETECTED"   <-- wrong component, type coerced
+    Numeric Result        type N   val ""
+    Multi-Select Result   type M   val ""                     <-- what was actually filled
+
+Order …567, where the dictionary already held "1330": the save did **not** overwrite it, it appended
+a **fourth** row. A three-component test then reported four results, one a phantom
+"Dictionary Result" carrying the multi-select's value. Both shapes validate to "Results final"
+through the normal path with no warning.
+
+Covered by `tests/multicomponent-result-routing.spec.ts` (config `multicomponent.config.ts`).
+
+### Method note — an instrument trap that nearly produced a false report
+
+A first pass set these controls from the console with `nativeSetter + dispatchEvent('change')`.
+**React never sees those writes.** The dictionary component read back empty and looked like a
+second defect — "coded results silently discarded". It is not one: driven by real keyboard input the
+same control persists correctly. The Carbon **MultiSelect** is stricter still and ignores synthetic
+`click`, `mousedown` and `mouseup` entirely; only a real pointer or keyboard event selects an option.
+
+Practical rule for this app: **a synthetic event is enough to read state and to drive plain inputs,
+selects and checkboxes, but never enough to prove a Carbon composite control works.** Anything
+asserted about MultiSelect, ComboBox or the date pickers has to come from real input.
+
+Two more instrument notes from the same session:
+
+* The Carbon date picker (`collectionDate_0`) rejects programmatic value writes outright — the field
+  stays empty. The wizard accepts the order without it, so it is not blocking.
+* The Lab Number field has no Generate **button**; Generate is an `<a>` that calls
+  `GET /rest/SampleEntryGenerateScanProvider`. A button-only query misses it.
+
+### Not a defect, checked and cleared
+
+* **Multi-select menu clipped by the table.** The menu opens inside `.cds--data-table-content`,
+  which is `overflow: auto`, so on the last row only ~33 px of a 120 px menu shows. Scrolling the
+  table reveals it — annoying, not unreachable.
+* **Multi-select option labels invisible.** The control renders **64 px** wide where the numeric and
+  dictionary controls in the same table are **176 px**. Option labels are 132 px with
+  `overflow:hidden; white-space:nowrap`, so the menu shows three unlabelled checkboxes. Cosmetic in
+  the sense that the values are selectable, serious in that a user cannot tell what they are ticking.
+* **Calculated Value admin page looked blank.** Rule names live in `<input value>`, which does not
+  appear in `innerText`. All five rules are named and active.
+* **One save flips every component to "Accepted by technician".** The three components share one
+  `analysisId` (542), and status belongs to the analysis, so this is by design — but it does mean a
+  multi-component analysis can reach "Results final" with some components never resulted, and
+  nothing warns. Worth a product decision rather than a bug.
