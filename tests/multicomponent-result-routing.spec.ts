@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
  * WHAT WAS FOUND (2026-08-25, testing.openelis-global.org v3.2.2.0, real Chrome)
  * Test 446 `QA_AUTO_MC_188636` has three result components:
  *
- *     PRIMARY   Numeric Result       resultType N
+ *     RESULT_N  Numeric Result       resultType N   (isPrimary)
  *     RESULT_D  Dictionary Result    resultType D
  *     RESULT_M  Multi-Select Result  resultType M
  *
@@ -65,10 +65,17 @@ test.describe('TC-MC-ROUTE — multi-component result routing', () => {
       `/api/OpenELIS-Global/rest/test-catalog/tests/${TEST_ID}/sample-results`,
     );
     expect(res.status()).toBe(200);
-    const body = await res.text();
-    for (const code of ['PRIMARY', 'RESULT_D', 'RESULT_M']) {
-      expect(body, `test ${TEST_ID} should still carry a ${code} component`).toContain(code);
-    }
+    const body = await res.json();
+    const components = (body.components ?? []) as Array<{ resultType?: string }>;
+
+    // Assert on resultType rather than the component code. An earlier draft matched on the literal
+    // code 'PRIMARY' — the editor UI shows that word, but the API calls the primary component
+    // RESULT_N, so the assertion failed for the wrong reason.
+    const types = components.map((c) => c.resultType).sort();
+    expect(
+      types,
+      `test ${TEST_ID} should carry exactly one numeric, one dictionary and one multi-select component`,
+    ).toEqual(['D', 'M', 'N']);
   });
 
   /**
