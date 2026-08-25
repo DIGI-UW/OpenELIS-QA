@@ -662,3 +662,61 @@ Two more instrument notes from the same session:
   `analysisId` (542), and status belongs to the analysis, so this is by design — but it does mean a
   multi-component analysis can reach "Results final" with some components never resulted, and
   nothing warns. Worth a product decision rather than a bug.
+
+## 2026-08-25 — result type coverage, and a type that cannot be resulted
+
+Chain DEV01260000000000570 ordered two tests on one Serum sample: 548
+`QA_AUTO_0727_02754 TiterRT` (component TITER1, **resultType T**) and 546
+`QA_AUTO_0727_14692 Critical` (component VAL, resultType N, normal 5–100, critical 2/150,
+valid 0–300).
+
+### DEFECT — a Titer test can be configured and ordered but never resulted
+
+The Titer row in Results Entry renders **no control at all**. Its Result cell contains exactly:
+
+    <span class="unifiedValueAccent"><span></span></span>
+
+No input, no select, no Carbon widget, and no Save in the Actions column. The row stays
+"Not started" with no way to advance it, while the numeric test on the same sample resulted and
+validated normally. Confirmed on a fresh load, and tests 547 and 538 carry the same `TITER1:T`
+shape.
+
+**Root cause, from source.** `frontend/src/components/resultPage/unified/PolymorphicResultCell.tsx`
+switches on `row.resultType`:
+
+| case | control |
+| --- | --- |
+| `D` | `Select` |
+| `M` | `ResultMultiSelect` |
+| `C` | `CascadingMultiSelect` |
+| `N` | `TextInput` (number) |
+| `R`, `A` | `TextArea` |
+| `default:` | `<span>{row.resultValue \|\| ""}</span>` |
+
+**There is no `case "T"`.** Titer falls to `default` and renders a bare span. Searching
+`frontend/src` for `resultType === "T"` or `case "T"` returns nothing; the word "Titer" appears only
+in `admin/testCatalog/sections/SampleResultsSection.jsx` — the editor that offers it.
+
+**The editor does offer it, as a first-class choice.** `SampleResultsSection.jsx` defines
+`PRIMARY_RESULT_TYPES = ["N","D","R"]` and `ADVANCED_RESULT_TYPES = ["M","C","T","A"]`, rendered as
+radio tiles. The Titer tile is enabled and described: *"A dilution ratio such as 1:10 or 1:20
+(common in serology)."* So the catalog offers **seven** result types and Results Entry can render
+**six**.
+
+Serology titers are a real clinical need, so this is not a theoretical gap — a lab that configures
+one gets a test that is orderable, appears on the worklist, and dead-ends.
+
+Covered by `tests/result-type-coverage.spec.ts` (config `rtype.config.ts`), written against the
+renderable set rather than against "T", so an eighth type added without a case trips it too.
+
+### Working — critical flagging
+
+Entering **200.0** against normal 5–100 with critical high 150 flagged **Critical** after
+validation. Worth knowing about the timing: the Flag column is **empty while the result sits at
+"Accepted by technician"** and only populates at "Results final". The same held on order …564
+(Abnormal, Invalid). So an empty Flag column before validation is not a missing flag.
+
+Also confirmed here: two tests ordered on one sample are two independent analyses with independent
+statuses — the titer stayed "Not started" while the numeric went to "Results final". That contrasts
+with the multi-component case on test 446, where three result rows share one `analysisId` and one
+status.
