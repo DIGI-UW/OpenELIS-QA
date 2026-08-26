@@ -328,8 +328,43 @@ export async function navigateWithDiscovery(page: Page, candidates: string[]): P
  * @param user Username
  * @param pass Password
  */
+/**
+ * Log in, UNLESS the context is already authenticated.
+ *
+ * Why the guard exists. Several suites were written before the configs supplied
+ * use.storageState, so they call this from beforeEach. On an already
+ * authenticated context /LoginPage does NOT render a form -- it redirects to
+ * /api/OpenELIS-Global/Home, verified 2026-08-26 -- so the old unconditional
+ * page.fill on the loginName input waited for an element that never appears and
+ * burned the whole test timeout inside the hook.
+ *
+ * The damage was not one test. In the all-tc run of 2026-08-25 it took out every
+ * test in four describe blocks -- results-entry, results-by-unit,
+ * results-by-status and results-by-range, 60 failures -- and each reported as
+ * -Test timeout of 180000ms exceeded while running beforeEach hook-, which reads
+ * like four broken product areas rather than one broken helper.
+ *
+ * So: probe for the form first. If it is not there we are already in, and the
+ * correct behaviour is to do nothing.
+ */
 export async function login(page: Page, user: string, pass: string): Promise<void> {
   await page.goto(`${BASE}/LoginPage`);
+
+  const formIsThere = await page
+    .locator('input[name="loginName"]')
+    .waitFor({ state: 'visible', timeout: 8000 })
+    .then(() => true)
+    .catch(() => false);
+
+  if (!formIsThere) {
+    // Already authenticated. Confirm it rather than assume, so a genuinely
+    // broken login page still fails loudly instead of silently passing.
+    if (/Home|Dashboard|SamplePatientEntry/i.test(page.url())) return;
+    throw new Error(
+      `login: no login form and no authenticated landing page -- landed on ${page.url()}`,
+    );
+  }
+
   await page.fill('input[name="loginName"]', user);
   await page.fill('input[name="userPass"]', pass);
   await page.getByRole('button', { name: /submit|login|save|next|accept/i }).click();
