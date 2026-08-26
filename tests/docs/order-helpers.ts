@@ -6,14 +6,51 @@
 //    (clicking the hidden <input> hangs ~60s). Label click fires onChange correctly.
 import { Page, expect } from '@playwright/test';
 
+
+/**
+ * TRUSTED CLICKS.
+ *
+ * A click made from inside the page -- element.click() in page.evaluate, or a
+ * dispatched MouseEvent -- carries isTrusted: false. Measured 2026-08-26 on the
+ * same button:
+ *
+ *   element.click() in evaluate ....... isTrusted false
+ *   dispatchEvent(new MouseEvent) ..... isTrusted false
+ *   locator.click() ................... isTrusted TRUE
+ *   page.mouse.click() ................ isTrusted TRUE
+ *
+ * Playwright clicks go through the DevTools protocol, BELOW the page, so they
+ * are indistinguishable from a person. Anything originating in the page is not,
+ * and Chrome refuses user-activation-gated behaviour for it: credential
+ * autofill, clipboard, file pickers, popups. Carbon composites ignore it too --
+ * MultiSelect never saw our synthetic clicks at all.
+ *
+ * The selection logic in these helpers is proven, so rather than rewrite it as
+ * locators, we keep the in-page search, MARK the element it chose, and then let
+ * Playwright click that mark. Same element, trusted event.
+ */
+const QA_MARK = 'data-qa-trusted-click';
+
+async function clickMarked(page: Page, timeout = 10_000): Promise<boolean> {
+  const target = page.locator(`[${QA_MARK}]`).first();
+  const clicked = await target
+    .click({ timeout })
+    .then(() => true)
+    .catch(() => false);
+  await page.evaluate((attr) => {
+    document.querySelectorAll(`[${attr}]`).forEach((e) => e.removeAttribute(attr));
+  }, QA_MARK);
+  return clicked;
+}
 /** Click "Generate Lab Number" via an in-page DOM click (a Playwright role-click doesn't fire it). */
 export async function generateLabNumber(page: Page): Promise<string> {
   for (let i = 0; i < 5; i++) {
     await page.evaluate(() => {
       const el = [...document.querySelectorAll('a,button,span,div')]
         .find(e => /^generate lab number$/i.test((e.textContent || '').trim()));
-      if (el) (el as HTMLElement).click();
+      if (el) el.setAttribute('data-qa-trusted-click', '1');
     });
+    await clickMarked(page);
     await page.waitForTimeout(1500);
     const v = await page.evaluate(() => {
       const i = document.querySelector('input[placeholder*="generate lab number" i]') as HTMLInputElement | null;
@@ -187,8 +224,9 @@ export async function selectComplianceStandard(page: Page, optionRe: RegExp): Pr
     await page.evaluate(() => {
       const hdr = [...document.querySelectorAll('*')].find(e => /applicable compliance standards/i.test(e.textContent || '') && e.children.length < 8);
       const box = (hdr?.closest('div') || document).querySelector('[role="combobox"], .cds--list-box__field, .cds--combo-box input, input[placeholder*="standard" i]') as HTMLElement | null;
-      if (box) box.click();
+      if (box) box.setAttribute('data-qa-trusted-click', '1');
     });
+    await clickMarked(page, 2500);
     await page.waitForTimeout(700);
     const opt = page.locator('[role="option"]').filter({ hasText: optionRe }).first();
     if (await opt.isVisible({ timeout: 1500 })) { await opt.click({ timeout: 1500 }); await page.waitForTimeout(400); return true; }
@@ -579,7 +617,7 @@ export async function setById(page: Page, id: string, value: string): Promise<bo
 
 /** Commit a typeahead result row: click the "Select" inside the row whose text matches. */
 export async function commitRow(page: Page, re: RegExp): Promise<string | null> {
-  return await page.evaluate((src) => {
+  const hit = await page.evaluate((src) => {
     const rx = new RegExp(src);
     const t = (e: Element | null) => ((e && e.textContent) || '').trim();
     const rows = [...document.querySelectorAll('tr,li,div')]
@@ -587,21 +625,25 @@ export async function commitRow(page: Page, re: RegExp): Promise<string | null> 
       .sort((a, b) => t(a).length - t(b).length);
     for (const r of rows) {
       const b = [...r.querySelectorAll('button,a,span')].find((x) => /^select$/i.test(t(x)));
-      if (b) { (b as HTMLElement).click(); return t(r).slice(0, 60); }
+      if (b) { b.setAttribute('data-qa-trusted-click', '1'); return t(r).slice(0, 60); }
     }
     return null;
   }, re.source);
+  if (hit) await clickMarked(page);
+  return hit;
 }
 
 /** Click an "+ Add new …" affordance by text. Returns what it clicked, or null. */
 export async function clickAddNew(page: Page, re: RegExp): Promise<string | null> {
-  return await page.evaluate((src) => {
+  const hit = await page.evaluate((src) => {
     const rx = new RegExp(src, 'i');
     const t = (e: Element | null) => ((e && e.textContent) || '').trim();
     const el = [...document.querySelectorAll('button,a,span,div')].find((e) => rx.test(t(e)) && e.children.length <= 1);
-    if (el) { (el as HTMLElement).click(); return t(el).slice(0, 44); }
+    if (el) { el.setAttribute('data-qa-trusted-click', '1'); return t(el).slice(0, 44); }
     return null;
   }, re.source);
+  if (hit) await clickMarked(page);
+  return hit;
 }
 
 /**
@@ -615,8 +657,9 @@ export async function generateLabNumberOnForm(page: Page, attempts = 5): Promise
     await page.evaluate(() => {
       const el = [...document.querySelectorAll('a,button,span,div')]
         .find((e) => /^generate lab number$/i.test(((e.textContent) || '').trim()));
-      if (el) (el as HTMLElement).click();
+      if (el) el.setAttribute('data-qa-trusted-click', '1');
     });
+    await clickMarked(page);
     await page.waitForTimeout(1200);
     labNumber = await page.evaluate(() => (document.getElementById('labNumber') as HTMLInputElement | null)?.value || '');
     if (labNumber) break;
@@ -672,8 +715,9 @@ export async function openTestsAndPanels(page: Page): Promise<void> {
   await page.evaluate(() => {
     const b = [...document.querySelectorAll('button')]
       .find((x) => /tests\s*&\s*panels|choose available/i.test(((x.textContent) || '').trim()));
-    if (b) (b as HTMLElement).click();
+    if (b) b.setAttribute('data-qa-trusted-click', '1');
   });
+  await clickMarked(page);
   await page.waitForTimeout(1800);
 }
 
@@ -691,9 +735,10 @@ export async function tickByExactLabel(page: Page, label: string): Promise<boole
   const ok = await page.evaluate((name) => {
     const all = [...document.querySelectorAll('label')].filter((x) => ((x.textContent) || '').trim() === name);
     const l = all.find((x) => (x as HTMLElement).offsetParent !== null) ?? all[0];
-    if (l) { (l as HTMLElement).click(); return true; }
+    if (l) { l.setAttribute('data-qa-trusted-click', '1'); return true; }
     return false;
   }, label);
+  if (ok) await clickMarked(page);
   await page.waitForTimeout(1200);
   return ok;
 }
@@ -714,8 +759,9 @@ export async function clickThroughSaveAndNext(page: Page, steps = 4, waitMs = 42
       const t = (e: Element) => ((e.textContent) || '').trim();
       const b = [...document.querySelectorAll('button')]
         .find((x) => /save\s*&\s*next|save and next|^submit$/i.test(t(x)) && !(x as HTMLButtonElement).disabled);
-      if (b) (b as HTMLElement).click();
+      if (b) b.setAttribute('data-qa-trusted-click', '1');
     });
+    await clickMarked(page);
     await page.waitForTimeout(waitMs);
   }
 }
