@@ -5,6 +5,7 @@ import {
   TIMEOUT,
   login,
   navigateWithDiscovery,
+  discoverAccessionWithResults,
   getDateRange,
 } from '../helpers/test-helpers';
 
@@ -27,8 +28,8 @@ import {
  *   /RangeSearch            — fallback
  *
  * API endpoints:
- *   GET /rest/ResultsByRange?from=<n>&to=<n>
- *   GET /rest/AccessionResults?accessionNumber=<n>
+ *   GET /rest/LogbookResults?labNumber=<from>&upperRangeAccessionNumber=<to>&doRange=true
+ *   GET /rest/LogbookResults?labNumber=<n>&doRange=false
  *
  * Suite IDs: TC-RBR-01 through TC-RBR-10
  * Total Test Count: 10 TCs
@@ -38,11 +39,23 @@ import {
  *           (confirmed in Phase 6 BF-DEEP). Tests track this for resolution.
  */
 
+// Route note, verified live 2026-08-26 on testing 3.2.2.0.
+//
+// The Results area was rewritten. The paths this suite used to try -
+// /ResultsByRange, /ResultsByStatus, /ResultsByAccession, /RangeSearch and
+// friends - have never existed in the codebase; a grep of OpenELIS-Global-2
+// finds them nowhere. They answered HTTP 200 with a Spring problem-detail body,
+// so the old navigateWithDiscovery accepted them and the suite failed one line
+// later on -body must not contain 404-, reading as a broken screen.
+//
+// The real legacy paths are /RangeResults and /StatusResults. On top of that,
+// site information flag resultsEntryUnifiedRoute is TRUE on this instance, so
+// every legacy results path 302s to the unified worklist at /Results. Both are
+// listed here so the suite works whichever way the flag is set.
 const RBR_URLS = [
-  '/ResultsByRange',
-  '/ResultsByAccession',
-  '/RangeSearch',
-  '/results/range',
+  '/RangeResults',
+  '/Results',
+  '/result?type=range&doRange=true',
 ];
 
 async function goToResultsByRange(page: any): Promise<boolean> {
@@ -193,19 +206,24 @@ test.describe('Suite BF-DEEP — Results By Range API & Cross-Module (TC-RBR-06�
      */
     await page.goto(`${BASE}`);
 
-    const result = await page.evaluate(async () => {
+    // The old fixture accession 26CPHL00008V returns zero rows on this instance
+    // -- the data is gone, not the API. Discover a real one instead, and skip
+    // honestly if the lab has no resulted work at all.
+    const acc = await discoverAccessionWithResults(page);
+    test.skip(!acc, 'no resulted work on this instance to cross-check against');
+    const result = await page.evaluate(async (acc: string) => {
       const csrf = localStorage.getItem('CSRF') || '';
       const candidates = [
-        '/api/OpenELIS-Global/rest/ResultsByRange?from=26CPHL00008A&to=26CPHL00008Z',
-        '/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=26CPHL00008V',
-        '/api/OpenELIS-Global/rest/resultsByRange?startAccession=26CPHL00008A&endAccession=26CPHL00008Z',
+        '/api/OpenELIS-Global/rest/LogbookResults?labNumber=26CPHL00008A&upperRangeAccessionNumber=26CPHL00008Z&doRange=true&finished=false',
+        `/api/OpenELIS-Global/rest/LogbookResults?doRange=false&finished=false&labNumber=${acc}`,
+        '/api/OpenELIS-Global/rest/LogbookResults?labNumber=26CPHL00008A&upperRangeAccessionNumber=26CPHL00008Z&doRange=true&finished=true',
       ];
       for (const url of candidates) {
         const res = await fetch(url, { headers: { 'X-CSRF-Token': csrf } });
         if (res.status !== 404) return { status: res.status, url };
       }
       return { status: 404, url: 'none' };
-    });
+    }, acc as string);
 
     console.log(`TC-RBR-06: ${result.url} → HTTP ${result.status}`);
     expect(result.status, 'ResultsByRange API must not 5xx').not.toBeGreaterThanOrEqual(500);
@@ -254,9 +272,14 @@ test.describe('Suite BF-DEEP — Results By Range API & Cross-Module (TC-RBR-06�
      */
     await page.goto(`${BASE}`);
 
-    const result = await page.evaluate(async () => {
+    // The old fixture accession 26CPHL00008V returns zero rows on this instance
+    // -- the data is gone, not the API. Discover a real one instead, and skip
+    // honestly if the lab has no resulted work at all.
+    const acc = await discoverAccessionWithResults(page);
+    test.skip(!acc, 'no resulted work on this instance to cross-check against');
+    const result = await page.evaluate(async (acc: string) => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const res = await fetch('/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=26CPHL00008V', {
+      const res = await fetch(`/api/OpenELIS-Global/rest/LogbookResults?doRange=false&finished=false&labNumber=${acc}`, {
         headers: { 'X-CSRF-Token': csrf },
       });
       if (!res.ok) return { status: res.status, labNo: null };
@@ -265,12 +288,12 @@ test.describe('Suite BF-DEEP — Results By Range API & Cross-Module (TC-RBR-06�
         status: res.status,
         labNo: data.labNo || data.accessionNumber || null,
       };
-    });
+    }, acc as string);
 
     console.log(`TC-RBR-09: AccessionResults → HTTP ${result.status}, labNo="${result.labNo}"`);
     expect(result.status).toBe(200);
     if (result.labNo) {
-      expect(result.labNo, 'labNo must reference the queried accession').toContain('26CPHL00008');
+      expect(result.labNo, 'labNo must reference the queried accession').toContain(acc as string);
     }
   });
 

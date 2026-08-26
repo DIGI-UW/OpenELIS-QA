@@ -176,7 +176,21 @@ test.describe('Results By Unit worklist (TC-BU)', () => {
     const sectionSelect = page.locator('select').first();
     const hasSect = await sectionSelect.isVisible({ timeout: 3000 }).catch(() => false);
     if (hasSect) {
-      await sectionSelect.selectOption({ label: /Hematology|hematology/i } as any);
+      // selectOption takes a STRING label, not a RegExp. The cast to any hid
+      // that, and Playwright threw -options[0].label: expected string, got
+      // object-, which reads as a broken dropdown rather than a broken call.
+      // Resolve the real option text first, and skip if this instance has no
+      // Hematology section rather than failing on a data assumption.
+      const hematologyLabel = await sectionSelect
+        .locator('option')
+        .allTextContents()
+        .then((labels) => labels.find((l) => /h(a)?ematolog/i.test(l)));
+      if (hematologyLabel) {
+        await sectionSelect.selectOption({ label: hematologyLabel });
+      } else {
+        console.log('TC-BU-03: no Hematology option on this instance; using the first section');
+        await sectionSelect.selectOption({ index: 1 }).catch(() => {});
+      }
       await page.waitForTimeout(1000);
     }
     // Find a result input field (textarea or input in result column)
