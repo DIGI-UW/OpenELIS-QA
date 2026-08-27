@@ -1234,3 +1234,50 @@ the product got better.** Now stamped per run.
 `/rest/qa/overview/summary`, which is NOT. The two surfaces ship independently, so the neighbour
 probe could never protect this test and it failed with a bare 404 that read as a broken endpoint.
 QC-2 now guards on its own dependency.
+
+
+## 2026-08-27 (later) -- the analyzer suite re-baselined, and a flip I got wrong
+
+**10 passed / 10 failed, then 18 passed / 3 failed / 1 skipped.**
+
+### Three of the ten were never regressions
+
+`mappingPath()` defaulted to `revision=1`. That is the SHIPPED PROFILE, not the site binding:
+4 tests, **0 BOUND**, no `bindingFingerprint`, a stub confirmation. The live binding is at
+**revision 4** -- 4 tests all BOUND, a real fingerprint, a confirmation carrying `confirmedBy` and
+`confirmedAt`. So TC-07, TC-09 and TC-10 reported *Δ-E regressed? no row resolves to a catalog
+test*, *fingerprint undefined* and *confirmation not pinned* while the product was fine. The spec
+now asks the analyzer which revision it is on.
+
+TC-14 probed `analyzerList[0]` rather than an analyzer that actually has a connection block.
+
+### Four deltas flipped -- these are genuinely fixed
+
+Δ-S (Add Analyzer opens clean instead of carrying the previous analyzer forward, which used to make
+Continue silently rename a real instrument), Δ-K (a data-flow field shipped), Δ-V (the lifecycle
+dialogs interpolate the name instead of rendering literal `{name}`), and Δ-W **for the test picker
+only** -- it narrows on input for both name and LOINC queries.
+
+### The flip I got wrong
+
+I also flipped Δ-W for the **type** picker, reading its run failure as *the fix landed*. Probing the
+live control disproved it: the menu opens with 7 options and typing `GeneX` leaves 7. **It does not
+filter.** Reverted, with the evidence recorded in the spec.
+
+Two lessons, both already familiar from this week:
+
+* Two controls that share a defect id do not share a fix. The test picker filters; the type picker
+  does not.
+* **A failing flip-when-fixed assertion is a question, not an answer.** It says *something changed*,
+  and the only honest next step is to go and look. I flipped four correctly and one wrongly, and the
+  only thing separating them was whether I had checked the live control.
+
+### Still open, and not to be reported as defects yet
+
+* **TC-03** -- the before/after option count is unstable inside a full run even after settling,
+  while a standalone probe reads a stable 7 to 7. Something earlier in the file perturbs the list.
+* **TC-05** -- the GeneXpert option is in the DOM but cannot be clicked in the create flow;
+  reachability, not absence.
+* **TC-14** -- the probe POST answers under 500 but `connection.latestProbe` stays null on an
+  analyzer that HAS a connection. **This is the one that might be a real Δ-L regression.** It needs
+  the same treatment the revision bug got before anyone trusts it.

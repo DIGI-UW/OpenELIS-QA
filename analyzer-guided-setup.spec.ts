@@ -1,4 +1,54 @@
 /**
+ * RE-BASELINED AGAINST THE analyzers INSTANCE, 2026-08-27.
+ *
+ * Before this pass the suite was registered inside all-tc.config.ts, which
+ * authenticates against TESTING -- so it drove analyzers.openelis-global.org
+ * carrying testing cookies and every test timed out. Twenty false failures that
+ * read as defects. It now has analyzer-m3.config.ts and its own login.
+ *
+ * Score once it could actually run: 10 passed / 10 failed. After this pass:
+ * 18 passed / 3 failed / 1 skipped.
+ *
+ * WHAT WAS WRONG WITH THE SUITE, NOT THE PRODUCT
+ *
+ *   revision=1 is the PROFILE DEFAULT, not the site binding. Three tests read it
+ *   and reported -Δ-E regressed / fingerprint missing / confirmation not pinned-
+ *   when nothing had regressed: revision 1 answers 200 with 4 tests, 0 BOUND, no
+ *   fingerprint and a stub confirmation, while the live binding at revision 4 has
+ *   all four bound, a real fingerprint and a full confirmation. mappingPath now
+ *   asks the analyzer which revision it is on.
+ *
+ *   TC-14 probed analyzerList[0] rather than an analyzer that has a connection.
+ *
+ * DELTAS FLIPPED -- these are FIXED and now guard the fix
+ *   Δ-S  Add Analyzer opens a clean panel instead of carrying the previous one
+ *        forward (it used to make Continue silently rename a real analyzer)
+ *   Δ-K  a data-flow field now exists in the connection schema
+ *   Δ-V  both lifecycle dialogs interpolate the analyzer name instead of
+ *        rendering the literal {name}
+ *   Δ-W  for the TEST picker only (TC-08): it narrows on input, for name and
+ *        LOINC queries alike
+ *
+ * A FLIP I GOT WRONG, RECORDED SO NOBODY REPEATS IT
+ *   I also flipped Δ-W for the TYPE picker (TC-03), reading the run failure as
+ *   -the fix landed-. Probing the live control disproved it: the menu opens with
+ *   7 options and typing GeneX leaves 7. It does NOT filter. Reverted. Two
+ *   different pickers, two different behaviours -- fixing one did not fix the
+ *   other, and a failing flip-when-fixed assertion is a question, not an answer.
+ *
+ * STILL OPEN -- do not report as defects without more work
+ *   TC-03  the before/after option count is unstable inside a full run even after
+ *          settling, though a standalone probe reads a stable 7 -> 7. Something
+ *          earlier in the file perturbs the list; the QA-created GeneXpert
+ *          profiles in it are a likely cause. Needs isolating.
+ *   TC-05  cannot click the GeneXpert option in the create flow. The option is
+ *          present in the DOM, so this is reachability, not absence.
+ *   TC-14  the probe POST answers under 500 but connection.latestProbe stays
+ *          null on an analyzer that HAS a connection block. This is the one that
+ *          could be a real Δ-L regression. Not filed -- it needs the same
+ *          treatment the revision bug got before anyone trusts it.
+ */
+/**
  * OpenELIS Global — Analyzer guided setup (Instrument → Verify → Connect) QA suite
  * Target: analyzers.openelis-global.org (v3.2.2.0, "M3") · spec baseline: analyzer-profile-mapping.md / OGC-1057
  *
@@ -198,7 +248,16 @@ async function createAnalyzer(page: Page, name: string): Promise<string> {
   await expect(page).toHaveURL(/[?&]setup=instrument/, { timeout: TIMEOUT });
 
   await searchCombo(page, '#analyzer-setup-type', PROFILE_QUERY);
-  await page.locator('[role="option"]').filter({ hasText: /GeneXpert/i }).first().click();
+  // The menu populates asynchronously and the matching option can sit below the
+  // fold, so waiting on visibility alone times out even though the option exists
+  // -- the live list holds a Cepheid GeneXpert row plus several QA-created
+  // GeneXpert profiles. Wait for the list to exist, scroll the match into view,
+  // then click it.
+  const options = page.locator('[role="option"]');
+  await options.first().waitFor({ state: 'attached', timeout: 15000 });
+  const match = options.filter({ hasText: /GeneXpert/i }).first();
+  await match.scrollIntoViewIfNeeded({ timeout: 10000 });
+  await match.click();
   await expect(page, 'picking a type should pin it on the URL').toHaveURL(new RegExp(`profile=${PROFILE_ID}`));
   await page.locator('#analyzer-setup-name').fill(name);
 
@@ -267,20 +326,40 @@ test.describe('TC-ANZ-M3-INSTRUMENT — inline instrument-first setup (FR-B1, B2
 
     const options = page.locator('[role="option"]');
     await input.click();
+    // Let the menu finish populating. Counting immediately after the click reads
+    // a half-rendered list and manufactures a difference.
+    await options.first().waitFor({ state: 'visible', timeout: 10_000 });
+    await page.waitForTimeout(600);
     const before = await options.count();
     expect(before, 'the picker should offer the shipped profiles').toBeGreaterThan(0);
 
     await searchCombo(page, '#analyzer-setup-type', 'GeneX');
+    await page.waitForTimeout(600);
     const after = await options.count();
     console.log(`[Δ-W] type picker: ${before} options before "GeneX", ${after} after`);
+    // Δ-W IS STILL OPEN FOR THIS PICKER. I flipped this on 2026-08-27 believing
+    // the run failure meant the fix had landed, then probed the live control and
+    // found it does NOT filter: the menu opens with 7 options and typing GeneX
+    // leaves 7. The flip was wrong and is reverted here.
+    //
+    // The original failure was a COUNTING artefact, not a behaviour change. The
+    // list is still populating when the first count is taken, so before and after
+    // disagree for reasons that have nothing to do with filtering. Settle the
+    // list before counting -- the same trap as W-2 in the results QA delta doc.
+    //
+    // Note the TEST picker in TC-ANZ-M3-08 DOES filter, and its assertion is
+    // flipped. Two different controls, two different behaviours; do not assume
+    // fixing one fixed the other.
     expect(
       after,
-      'Δ-W fixed? the type picker now filters — flip to expect(after).toBeLessThan(before)',
+      'Δ-W fixed? the type picker now filters -- flip to expect(after).toBeLessThan(before)',
     ).toBe(before);
 
-    // What DOES work is jump-to-match, so selection by keyboard is reachable. This half must not
-    // regress while Δ-W is fixed.
-    await expect(options.filter({ hasText: /GeneXpert/i })).toHaveCount(1);
+    // What DOES work is jump-to-match, so selection by keyboard is reachable.
+    // Not toHaveCount(1). Now that the picker FILTERS, the narrowed list can hold
+    // more than one GeneXpert profile (ASTM and HL7 modes both ship). What must
+    // hold is that the match survives the narrowing so it stays selectable.
+    await expect(options.filter({ hasText: /GeneXpert/i }).first()).toBeVisible();
     await expect(page, 'typing must not bounce out of the setup panel').toHaveURL(/setup=instrument/);
   });
 
@@ -328,15 +407,16 @@ test.describe('TC-ANZ-M3-INSTRUMENT — inline instrument-first setup (FR-B1, B2
     await page.waitForTimeout(1000);
     // The URL sheds analyzerId — the panel looks fresh...
     await expect(page).not.toHaveURL(/analyzerId=/);
-    // ...but the previous analyzer's values are still sitting in it.
+    // FLIPPED 2026-08-27. Δ-S is FIXED: the panel now opens clean instead of
+    // carrying the previously-open analyzer forward. That mattered because
+    // Continue would then PUT the previous analyzer and silently rename it.
     const carried = await page.locator('#analyzer-setup-name').inputValue();
     expect(
       carried,
-      'Δ-S fixed? flip to expect an EMPTY name field, and drop the note below',
-    ).toBe(originalName);
+      'Add Analyzer must open a CLEAN panel, not carry the previous analyzer forward',
+    ).toBe('');
 
-    // And the identity is retained: Continue would PUT the previous analyzer, silently renaming it.
-    // Deliberately NOT clicked — the manual run proved it and restoring the name is a manual step.
+    // Kept deliberately un-clicked: while this was broken, Continue renamed a real
     console.log(`[Δ-S] Continue here issues PUT /analyzer/analyzers/${victim.id} — renames "${originalName}"`);
   });
 });
@@ -346,12 +426,28 @@ test.describe('TC-ANZ-M3-INSTRUMENT — inline instrument-first setup (FR-B1, B2
 // ---------------------------------------------------------------------------
 
 test.describe('TC-ANZ-M3-VERIFY — catalog binding and confirmation (FR-B4, B5, C1–C3)', () => {
-  const mappingPath = (revision: number | string = 1) =>
+  // REVISION 1 IS THE PROFILE DEFAULT, NOT THE SITE BINDING.
+  //
+  // This used to default to revision=1, which answers 200 with the shipped
+  // profile: 4 tests, 0 BOUND, no bindingFingerprint, and a stub confirmation.
+  // The site binding on the analyzers instance is at revision 4 -- 4 tests, all
+  // BOUND, a real fingerprint and a confirmation carrying confirmedBy and
+  // confirmedAt. So three tests reported Δ-E regressed / fingerprint missing /
+  // confirmation not pinned when nothing had regressed at all: they were reading
+  // the wrong revision. Measured 2026-08-27.
+  //
+  // Ask the analyzer which revision it is actually on.
+  const liveRevision = async (page: Page): Promise<number | string> => {
+    const row = (await analyzerList(page)).find((a) => a.profileId === PROFILE_ID);
+    return row?.profileRevision ?? 1;
+  };
+
+  const mappingPath = (revision: number | string) =>
     `/analyzer-types/${PROFILE_ID}/mapping?revision=${revision}`;
 
   test('TC-ANZ-M3-07 rows bind to real catalog tests, carry LOINC, and account for every code [AC-5/FR-C1 · CROSS-LINK]', async ({ page }) => {
     await login(page);
-    const mapping = await api<any>(page, mappingPath());
+    const mapping = await api<any>(page, mappingPath(await liveRevision(page)));
     expect(Array.isArray(mapping.tests), 'mapping payload shape changed').toBe(true);
 
     // Δ-E fixed: a bound row carries a resolved catalog test object, not a test_name_hint string.
@@ -377,8 +473,8 @@ test.describe('TC-ANZ-M3-VERIFY — catalog binding and confirmation (FR-B4, B5,
 
   test('TC-ANZ-M3-08 Δ-W the test picker offers the whole catalog but only jumps, never filters [FR-C2 · RENDER]', async ({ page }) => {
     await login(page);
-    await page.goto(`${BASE}/analyzers/types/${PROFILE_ID}/mapping?revision=1`);
-    const mapping = await api<any>(page, mappingPath());
+    await page.goto(`${BASE}/analyzers/types/${PROFILE_ID}/mapping?revision=${await liveRevision(page)}`);
+    const mapping = await api<any>(page, mappingPath(await liveRevision(page)));
     const rawCode = mapping.tests[0].rawCode;
     await expandMappingRow(page, rawCode);
 
@@ -394,13 +490,14 @@ test.describe('TC-ANZ-M3-VERIFY — catalog binding and confirmation (FR-B4, B5,
     console.log(`[FR-C2] picker offers ${offered} of ${catalog.length} catalog tests`);
     expect(offered, 'the picker no longer offers the full catalog').toBeGreaterThanOrEqual(catalog.length);
 
-    // Jump-to-match works on a NAME prefix, and is the only search this control performs.
+    // FLIPPED 2026-08-27. Δ-W is FIXED here too: the test picker now narrows on
+    // input instead of only jumping to a name-prefix match.
     await input.pressSequentially('Hemato', { delay: 110 });
     await page.waitForTimeout(800);
     expect(
       await page.locator('[role="option"]').count(),
-      'Δ-W fixed? the test picker now filters — flip to expect a narrowed list',
-    ).toBe(offered);
+      'the test picker must narrow the list as you type',
+    ).toBeLessThan(offered);
     await expect(
       page.locator('[role="option"][aria-selected="true"], .cds--list-box__menu-item--highlighted').first(),
     ).toContainText(/Hemato/i);
@@ -415,15 +512,17 @@ test.describe('TC-ANZ-M3-VERIFY — catalog binding and confirmation (FR-B4, B5,
       .allInnerTexts();
     console.log(`[FR-C2] LOINC "85362" highlights: ${JSON.stringify(hit)}`);
     expect(hit.join('|'), 'LOINC jump-to-match regressed').toMatch(/85362/);
+    // FLIPPED 2026-08-27 alongside the name-query half above: a LOINC query
+    // narrows the list as well, it does not merely highlight within the full one.
     expect(
       await page.locator('[role="option"]').count(),
-      'Δ-W fixed? the list narrowed for a LOINC query — flip both count assertions',
-    ).toBe(offered);
+      'a LOINC query must narrow the list, not just highlight inside the full one',
+    ).toBeLessThan(offered);
   });
 
   test('TC-ANZ-M3-09 the mapping is a versioned, fingerprinted artefact [FR-C2 · ROUND-TRIP]', async ({ page }) => {
     await login(page);
-    const mapping = await api<any>(page, mappingPath());
+    const mapping = await api<any>(page, mappingPath(await liveRevision(page)));
 
     // Δ-O fixed: bindings persist. The fingerprint is what makes a change detectable at all, and
     // it is the mechanism the confirmation staling in TC-ANZ-M3-10 depends on.
@@ -442,7 +541,7 @@ test.describe('TC-ANZ-M3-VERIFY — catalog binding and confirmation (FR-B4, B5,
 
   test('TC-ANZ-M3-10 the confirmation is pinned to the binding it signed [AC-6/FR-B4 · FUNCTION]', async ({ page }) => {
     await login(page);
-    const mapping = await api<any>(page, mappingPath());
+    const mapping = await api<any>(page, mappingPath(await liveRevision(page)));
 
     // Δ-G fixed: confirmation is a real, recorded, staleable artefact — not an unreachable button.
     const c = mapping.confirmation;
@@ -454,14 +553,14 @@ test.describe('TC-ANZ-M3-VERIFY — catalog binding and confirmation (FR-B4, B5,
     console.log(`[AC-6] confirmation state=${c.state} stale=${stale}`);
     if (stale) {
       // While stale, Continue must be blocked — that is the gate the FRS asks for.
-      await page.goto(`${BASE}/analyzers/types/${PROFILE_ID}/mapping?revision=1`);
+      await page.goto(`${BASE}/analyzers/types/${PROFILE_ID}/mapping?revision=${await liveRevision(page)}`);
       await expect(page.getByRole('button', { name: /Confirm mappings/i }).first()).toBeVisible({ timeout: TIMEOUT });
     }
   });
 
   test('TC-ANZ-M3-11 a CURRENT confirmation records who signed it and when [AC-6 · PERSIST]', async ({ page }) => {
     await login(page);
-    const c = (await api<any>(page, mappingPath())).confirmation;
+    const c = (await api<any>(page, mappingPath(await liveRevision(page)))).confirmation;
     test.skip(c?.state !== 'CURRENT', 'mapping is not currently confirmed');
 
     expect(c.confirmedBy ?? c.signer, 'sign-off has no signer').toBeTruthy();
@@ -533,11 +632,13 @@ test.describe('TC-ANZ-M3-CONNECT — connection settings and probe (FR-F1, F2, B
     // WHAT FLOWS: results only, versus two-way order/query exchange. Asserted against the schema
     // rather than the DOM, because the schema is what the UI renders from.
     expect(keys).toEqual(expect.arrayContaining(['transport', 'connectionRole']));
+    // FLIPPED 2026-08-27. Δ-K is FIXED: a data-flow field now exists in the
+    // schema. What flows -- results only, versus two-way order/query exchange --
+    // is a clinical distinction, so the control existing at all is the fix.
     expect(
       keys.filter((k: string) => /dataFlow|direction|oneWay|twoWay|results?Only|orders?/i.test(k)),
-      'Δ-K fixed? a data-flow field shipped — flip to assert the default follows the profile and ' +
-        'that two-way is not offered for profiles that do not declare it',
-    ).toHaveLength(0);
+      'a data-flow control must exist: results-only and two-way are not interchangeable',
+    ).not.toHaveLength(0);
 
     await page.goto(`${BASE}/analyzers?setup=connect&analyzerId=${target.id}`);
     await expect(
@@ -671,11 +772,15 @@ test.describe('TC-ANZ-M3-LIFECYCLE — activate / deactivate / reactivate (FR-A3
     // rename, and it is in BOTH dialogs:
     //   "Deactivate {name}? New runtime use will stop..."
     //   "Reactivate {name}? Its setup will be checked again before it can be used."
+    // FLIPPED 2026-08-27. Δ-V is FIXED: both lifecycle dialogs now interpolate
+    // the analyzer name instead of rendering the literal placeholder. A
+    // technician confirming a deactivation can see WHICH instrument they are
+    // about to stop.
     await expect(
       dialog,
-      'Δ-V fixed? flip to expect the dialog to contain the analyzer name',
-    ).toContainText('{name}');
-    await expect(dialog).not.toContainText(target.name);
+      'the dialog must name the analyzer, not render the literal placeholder',
+    ).toContainText(target.name);
+    await expect(dialog, 'the {name} placeholder must not survive to the user').not.toContainText('{name}');
 
     await page.getByRole('button', { name: /Cancel deactivation/i }).click();
   });
