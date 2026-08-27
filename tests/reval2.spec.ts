@@ -8,7 +8,9 @@
  *        GET /sample-types/51            -> name: Water
  *        GET /test-catalog/sample-types  -> name: Q335406594_CREATE  (same id)
  *      Re-checked independently the same day: still divergent. Passes the
- *      2-of-3 revalidation bar. NOT YET FILED as of this commit.
+ *      2-of-3 revalidation bar. FILED as OGC-1190 (mozzy) on 2026-08-26.
+ *      Root cause: rename writes localization; the Test Catalog list reads
+ *      type_of_sample.description, which the frontend round-trips stale.
  *
  *   B  PUT /sample-types/51 500 on its own GET payload ... NOT REPRODUCING
  *        full payload 200, minimal payload 200, all four legs.
