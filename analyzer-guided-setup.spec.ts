@@ -380,7 +380,7 @@ test.describe('TC-ANZ-M3-INSTRUMENT — inline instrument-first setup (FR-B1, B2
     await searchCombo(page, '#analyzer-setup-type', PROFILE_QUERY);
     await page.waitForTimeout(600);
     const after = await options.count();
-    console.log(`[Δ-W] type picker: ${before} options before "GeneX", ${after} after`);
+    console.log(`[Δ-W] type picker: ${before} options before ${PROFILE_QUERY}, ${after} after`);
     // Δ-W IS STILL OPEN FOR THIS PICKER. I flipped this on 2026-08-27 believing
     // the run failure meant the fix had landed, then probed the live control and
     // found it does NOT filter: the menu opens with 7 options and typing GeneX
@@ -399,8 +399,22 @@ test.describe('TC-ANZ-M3-INSTRUMENT — inline instrument-first setup (FR-B1, B2
     // returns nothing at all. Assert the narrowing, and assert the match
     // survives it, which together catch both a regression to no-filtering and a
     // regression to filtering everything away.
-    expect(after, 'the type picker must narrow the list as you type').toBeLessThan(before);
-    expect(after, 'a manufacturer-prefix query must still match something').toBeGreaterThan(0);
+    // MEASURED 2026-08-27, and this is the open question on this suite.
+    //
+    // The menu holds 13 profiles. Typing empties it COMPLETELY -- 13 to 0 -- for
+    // GeneX and for Cepheid alike, and Cepheid is the literal start of the label
+    // -Cepheid GeneXpert (ASTM Mode) - Cepheid - ASTM - revision 4-. So this is
+    // not prefix-versus-substring: any input appears to empty the list.
+    //
+    // If that holds up in a browser, the type picker search is unusable and it is
+    // a real defect. It has NOT been click-through confirmed yet, so it is not
+    // filed -- the same discipline that stopped OGC-1190 shipping with the wrong
+    // root cause. Confirm in Chrome first.
+    //
+    // The assertion states the requirement, so it stays red until this is
+    // resolved one way or the other.
+    expect(after, 'the type picker must narrow the list, not empty it').toBeGreaterThan(0);
+    expect(after, 'the type picker must actually filter').toBeLessThan(before);
 
     // What DOES work is jump-to-match, so selection by keyboard is reachable.
     // Not toHaveCount(1). Now that the picker FILTERS, the narrowed list can hold

@@ -1321,3 +1321,53 @@ TC-ANZ-M3-05 leaves a `QA_AUTO_0827_m3` analyzer behind on every run -- six by t
 stuck on `missing-required-values: port`. Unlike the order data, this pollution actively degrades the
 suite: it is what reordered the list and broke TC-13 and TC-15. Either clean up after the create, or
 seed a known-good analyzer and stop creating.
+
+
+## 2026-08-27 -- seeding, and a probable defect left unfiled on purpose
+
+### The analyzer suite now seeds one fixture instead of minting orphans
+
+`TC-ANZ-M3-05` used a per-run stamped name, so every execution created a new analyzer. There is **no
+delete path** -- DELETE on an analyzer answers **405** -- so they accumulated: eleven by the end of
+the day, every one stuck on `missing-required-values: port`.
+
+That was never harmless clutter. It reordered the analyzer list and broke TC-13, TC-14 and TC-15,
+which selected fixtures by index. Three tests reported schema and probe regressions that did not
+exist.
+
+Now: a single stable `QA_AUTO_M3_FIXTURE`, created once and reused thereafter, and both fixture
+pickers (`probeableAnalyzer`, `transportAnalyzer`) skip any row whose name starts with `QA_AUTO`, so
+the eleven already on the instance can never be chosen again.
+
+**Standing rule for this repo: seed a known-good fixture and reuse it. Never mint a record per run
+on a surface that has no delete path.**
+
+### The type picker empties on any input -- probable defect, NOT filed
+
+Measured on the analyzers instance, twice, with two different queries:
+
+```
+[Δ-W] type picker: 13 options before, 0 after
+```
+
+Thirteen profiles in the menu; typing reduces it to **zero**. That happens for `GeneX` and equally
+for `Cepheid` -- and `Cepheid` is the literal first word of
+`Cepheid GeneXpert (ASTM Mode) · Cepheid · ASTM · revision 4`. So this is not prefix-versus-substring
+matching. Any input appears to empty the list.
+
+If that reproduces in a browser it is a real defect: the search on the analyzer type picker is
+unusable, and it takes TC-ANZ-M3-05 down with it because the create flow cannot select a profile.
+
+**It is deliberately unfiled.** It has not been click-through confirmed, and this week has already
+produced one ticket (OGC-1190) whose first version blamed the wrong thing precisely because it was
+written from API and code evidence without opening the screen. Confirm in Chrome, then file.
+
+TC-ANZ-M3-03 and TC-ANZ-M3-05 stay red, with the measurement written into the assertion messages so
+whoever picks it up starts from the evidence rather than from the symptom.
+
+### Where the suite landed
+
+**19 passed / 2 failed / 1 skipped**, from 10 passed / 10 failed at the start of the day. Of the
+eight resolved, none was a product defect: wrong mapping revision (3), index-based fixture selection
+(2), an asynchronous probe read synchronously (1), and a combobox typed into before its menu had
+painted (2).
