@@ -106,7 +106,21 @@ const TIMEOUT = 15_000;
 
 /** The profile this suite drives: qualitative, ships control recognition, ASTM. */
 const PROFILE_ID = 'genexpert-astm';
-const PROFILE_QUERY = 'genexpert';
+/**
+ * The type picker filters by PREFIX on the whole label, not by substring.
+ *
+ * Measured 2026-08-27: the menu holds 13 profiles, and typing GeneX narrows it
+ * to ZERO -- because the label is -Cepheid GeneXpert (ASTM Mode) - Cepheid -
+ * ASTM - revision 4- and the match is anchored at the start. An operator who
+ * types the instrument model they can see on screen gets an empty list.
+ *
+ * Worth raising with the PO as a usability question -- it is not what -Search
+ * analyzer types- leads a user to expect -- but it is a deliberate-looking
+ * behaviour, not a crash, so it is recorded here rather than filed.
+ *
+ * The query is therefore anchored on the manufacturer.
+ */
+const PROFILE_QUERY = 'Cepheid';
 const STAMP = new Date().toISOString().slice(5, 10).replace('-', '');
 /**
  * ONE stable fixture, not a new analyzer every run.
@@ -209,13 +223,29 @@ async function hideReviewWidget(page: Page) {
  * with real keystrokes. The control JUMPS to a name-prefix match and highlights it; it does not
  * filter, so never assert on the option count.
  */
+/**
+ * Open the combobox and WAIT FOR ITS MENU before typing.
+ *
+ * Carbon renders the option list on open, not on keystroke. Typing into a
+ * combobox whose menu has not painted yet leaves the caller waiting on a
+ * [role=option] that never arrives -- which is how TC-ANZ-M3-05 burned three
+ * minutes and TC-ANZ-M3-03 counted zero options, while a standalone probe of
+ * the same control saw seven every time. The difference was purely ordering.
+ */
 async function searchCombo(page: Page, selector: string, query: string) {
   const input = page.locator(selector);
   await input.click();
+  await page
+    .locator('[role="option"]')
+    .first()
+    .waitFor({ state: 'attached', timeout: 15_000 })
+    .catch(() => {
+      /* an empty menu is a real state; let the caller assert on it */
+    });
   await input.fill('');
   await page.waitForTimeout(300);
   await input.pressSequentially(query, { delay: 110 });
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(900);
 }
 
 /** HARNESS RULE 3 — expand the accordion row for an analyzer code before touching its picker. */
@@ -347,7 +377,7 @@ test.describe('TC-ANZ-M3-INSTRUMENT — inline instrument-first setup (FR-B1, B2
     const before = await options.count();
     expect(before, 'the picker should offer the shipped profiles').toBeGreaterThan(0);
 
-    await searchCombo(page, '#analyzer-setup-type', 'GeneX');
+    await searchCombo(page, '#analyzer-setup-type', PROFILE_QUERY);
     await page.waitForTimeout(600);
     const after = await options.count();
     console.log(`[Δ-W] type picker: ${before} options before "GeneX", ${after} after`);
@@ -364,10 +394,13 @@ test.describe('TC-ANZ-M3-INSTRUMENT — inline instrument-first setup (FR-B1, B2
     // Note the TEST picker in TC-ANZ-M3-08 DOES filter, and its assertion is
     // flipped. Two different controls, two different behaviours; do not assume
     // fixing one fixed the other.
-    expect(
-      after,
-      'Δ-W fixed? the type picker now filters -- flip to expect(after).toBeLessThan(before)',
-    ).toBe(before);
+    // Δ-W IS FIXED, with a caveat. The picker filters -- 13 options narrow on
+    // input -- but it anchors at the START of the label, so a mid-label query
+    // returns nothing at all. Assert the narrowing, and assert the match
+    // survives it, which together catch both a regression to no-filtering and a
+    // regression to filtering everything away.
+    expect(after, 'the type picker must narrow the list as you type').toBeLessThan(before);
+    expect(after, 'a manufacturer-prefix query must still match something').toBeGreaterThan(0);
 
     // What DOES work is jump-to-match, so selection by keyboard is reachable.
     // Not toHaveCount(1). Now that the picker FILTERS, the narrowed list can hold
