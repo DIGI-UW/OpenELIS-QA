@@ -1321,3 +1321,89 @@ TC-ANZ-M3-05 leaves a `QA_AUTO_0827_m3` analyzer behind on every run -- six by t
 stuck on `missing-required-values: port`. Unlike the order data, this pollution actively degrades the
 suite: it is what reordered the list and broke TC-13 and TC-15. Either clean up after the create, or
 seed a known-good analyzer and stop creating.
+
+## 2026-08-27 (later still) — the Δ-W type-picker revert was itself wrong
+
+The entry above reverted the Δ-W flip for the **type** picker on this evidence: *"the menu opens
+with 7 options and typing `GeneX` leaves 7. It does not filter."*
+
+**That reading is wrong, and the query is why.** The seed publishes site-derived **GeneXpert**
+duplicates of its own — `M2 GeneXpert mapping …` ×3, plus whatever earlier QA runs forked. So a
+GeneXpert-shaped query legitimately matches almost every row in the list. `GeneX` cannot
+distinguish *"the control does not filter"* from *"the control filters, and nearly everything
+matches"*.
+
+A probe typing several queries into the same control in one session (`probe-typepicker.spec.ts`)
+settles it:
+
+```
+[probe] baseline 9 options
+[probe] "GeneX":  9 → 5   (rows whose text contains "GeneX": 5)
+[probe] "Fluo":   9 → 1   (rows whose text contains "Fluo": 1)
+[probe] "Thermo": 9 → 1   (rows whose text contains "Thermo": 1)
+[probe] "zzz":    9 → 0   (rows whose text contains "zzz": 0)
+```
+
+Every query returns exactly the rows that match it. **The type picker filters, correctly, on a
+plain substring.** Δ-W is fixed for both controls, and `TC-ANZ-M3-03` asserts it with `Fluo` —
+with a comment saying why that word and not `GeneX`.
+
+### The lesson is not the one I drew last time
+
+Last time I wrote *"a failing flip-when-fixed assertion is a question, not an answer"* and treated
+"go and look at the live control" as the fix. That was right as far as it went, and it still let a
+wrong conclusion through, because the looking was done with a query that could not discriminate.
+
+The sharper rule:
+
+> **When a count is the evidence, check what the count would be if the hypothesis were false.**
+> `GeneX` on this seed matches 5 of 9 rows. "No filtering" predicts 9; "filtering" predicts 5. The
+> observed 7-of-7 at the time matched *neither* cleanly — which was the signal to change the query,
+> not to conclude.
+
+A discriminating query is one where the two hypotheses predict visibly different numbers. `Fluo`
+predicts 9 vs 1. `zzz` predicts 9 vs 0. Either would have answered it in one keystroke.
+
+### Also settled in the same pass
+
+* **`POST /analyzer/analyzers/{id}/test` is gone — it is `/test-connection`.** The old assertion was
+  `expect(status).toBeLessThan(500)`, which a **404 satisfies**, so TC-14 had been passing without
+  ever reaching the probe. That is what the "might be a real Δ-L regression" note above was seeing:
+  not a regression, a moved endpoint hidden by a loose bound. Now asserts 2xx explicitly, targets an
+  analyzer that has a connection block, and polls, because the probe is asynchronous.
+  **A loose bound on a status code is how a moved endpoint hides.**
+* **`duplicate` takes `sourceRevision` in the BODY**, not `?revision=`. With it in the query string
+  the server answers `400 "Source revision must be at least 1"` — and the new Δ-AA case
+  `test.skip()`'d on that, so the most important new case in the suite was quietly not running.
+  Guard clauses that skip on a 4xx hide contract drift; assert the success instead.
+* **`searchCombo` used `fill('')`.** Harmless while the picker did not filter — the menu stayed
+  fully populated. Now that it does filter, `fill('')` fires Carbon's clear, which **closes** the
+  listbox; the following keystrokes filter a menu that is not mounted and `[role="option"]` counts
+  0. Select-all-then-type replaces the value in place and leaves the menu open.
+* **The held-results banner steals focus on mount.** It is a Carbon `ActionableNotification` with
+  `hideCloseButton`, and it is only present when an analyzer is actually holding results — so it
+  comes and goes with the seed and reads as flake. Escape dismisses it.
+* **Profile `displayName` must be unique; analyzer names need not be.** `STAMP` is date-only, so the
+  second run of the day answered `400 "displayName already exists"` and TC-ANZ-M3-20 failed as if
+  Duplicate were broken. Anything naming a PROFILE now uses a per-run token.
+
+### Recorded, deliberately NOT filed: one 500 on activate
+
+TC-ANZ-M3-16 failed once during a full run: `activation-readiness` said `ready:true`, and
+`POST /activate` on analyzer 2 answered **500** `{"error":"Internal Server Error"}` — **with the
+CSRF header present**, so it is not the 2026-08-25 artefact.
+
+It is not filed, because it does not survive the revalidation protocol:
+
+* It did not reproduce. The same case passed in three other full runs the same afternoon.
+* Analyzer 2 was `ACTIVE` with `activated:true` minutes later.
+* The leading hypothesis — *"`activate` on an INACTIVE analyzer 500s, because `reactivate` is the
+  right verb"* — is **disproved**. A controlled probe on a test analyzer returns
+  `deactivate 200 → readiness {INACTIVE, ready:true, activated:false} → activate 200 → reactivate 200`.
+* The instance reseeds every 20–40 minutes and reassigns analyzer ids, so a row being replaced
+  under an in-flight request is a live alternative explanation.
+
+**This is the third time this exact shape has come up, and twice it has been wrong.** The case now
+re-reads readiness immediately before the call and skips on drift, and its failure message says to
+run the protocol before filing. If someone gets it to reproduce on demand, that is a real finding —
+but one observation under load is not it.
