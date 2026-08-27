@@ -26,7 +26,16 @@ export default defineConfig({
       // filename prefix, and the load-sensitive order→result E2E specs (those run alone via e2e.config).
       testIgnore:
         // the two results delta suites run in their own projects below
-        /(\.docs\.spec\.ts|test-catalog-(critical-indicator|titer-runtime|sections-roundtrip)\.spec\.ts|results-(r1-spec-delta|page-deep-delta)\.spec\.ts)/,
+        /(\.docs\.spec\.ts|test-catalog-(critical-indicator|titer-runtime|sections-roundtrip)\.spec\.ts|results-(r1-spec-delta|page-deep-delta)\.spec\.ts|unified-results\.spec\.ts)/,
+      dependencies: ['setup'],
+      use: { storageState: '.auth/user.json' },
+    },
+    // --- unified /Results worklist surface -- --project=unified-results ---
+    // Replaces the six retired legacy-submenu tests in results-entry.spec.ts.
+    // Skips itself when resultsEntryUnifiedRoute is off.
+    {
+      name: 'unified-results',
+      testMatch: /unified-results[.]spec[.]ts/,
       dependencies: ['setup'],
       use: { storageState: '.auth/user.json' },
     },
