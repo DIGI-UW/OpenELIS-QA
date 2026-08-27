@@ -33,13 +33,23 @@
 import { test as setup } from '@playwright/test';
 import { runSeed, formatSummary } from './helpers/seed-factory';
 
-const BASE = process.env.BASE_URL || 'https://testing.openelis-global.org';
+// TARGET COMES FROM THE CONFIG, NOT FROM HERE.
+//
+// This file used to hold its own default -- process.env.BASE_URL, falling back
+// to testing -- while regression-seed.config.ts sets baseURL from process.env
+// BASE, defaulting to an IP. TWO different env var names and two different
+// defaults, in a file that WRITES DATA: running the seeder against the config
+// target would still have seeded testing, silently. Caught by preflight PF-2 on
+// 2026-08-27.
+//
+// Navigating relatively makes the config the single source of truth, so the
+// two can no longer disagree about which instance gets written to.
 
 setup('bulk seed (Phase E1)', async ({ page }) => {
   // Establish session — auth.setup.ts has already cached this in
   // .auth/user.json; here we just navigate so the page has the CSRF
   // token in localStorage before the factory's fetch calls.
-  await page.goto(`${BASE}`);
+  await page.goto('/');
   await page.waitForLoadState('networkidle');
 
   if (page.url().includes('login') || page.url().includes('Login')) {
