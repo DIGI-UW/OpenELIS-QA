@@ -592,7 +592,8 @@ test.describe('TC-ANZ-M3-VERIFY — catalog binding and confirmation (FR-B4, B5,
 test.describe('TC-ANZ-M3-CONNECT — connection settings and probe (FR-F1, F2, B6)', () => {
   test('TC-ANZ-M3-13 the connection schema declares role-conditional visibility [FR-F1 · RENDER]', async ({ page }) => {
     await login(page);
-    const target = (await analyzerList(page))[0];
+    const target = (await transportAnalyzer(page))!;
+    test.skip(!target, 'no transport-based analyzer here; this instance schema is file-drop');
     const detail = await detailOf(page, target.id);
     const fields = connectionFields(detail);
     expect(fields.length, 'connection field schema missing from the analyzer detail').toBeGreaterThan(0);
@@ -609,7 +610,8 @@ test.describe('TC-ANZ-M3-CONNECT — connection settings and probe (FR-F1, F2, B
 
   test('TC-ANZ-M3-14 the connection probe is real and its outcome is recorded [AC-10/FR-B6 · FUNCTION]', async ({ page }) => {
     await login(page);
-    const target = (await analyzerList(page))[0];
+    const target = (await probeableAnalyzer(page))!;
+    test.skip(!target, 'no analyzer on this instance is ready enough to probe');
 
     // Δ-L fixed: 3.2.1.11 issued NO request at all. A FAILED probe is a pass for this case — what
     // matters is that a request goes out and the outcome is persisted against a config revision.
@@ -625,7 +627,8 @@ test.describe('TC-ANZ-M3-CONNECT — connection settings and probe (FR-F1, F2, B
 
   test('TC-ANZ-M3-15 Δ-K no Results-only / Two-way data-flow control exists [AC-10/FR-F2 · RENDER]', async ({ page }) => {
     await login(page);
-    const target = (await analyzerList(page))[0];
+    const target = (await transportAnalyzer(page))!;
+    test.skip(!target, 'no transport-based analyzer here; this instance schema is file-drop');
     const keys = connectionFields(await detailOf(page, target.id)).map((f: any) => f.key);
 
     // What ships is who OPENS THE SOCKET (connectionRole) and over what TRANSPORT — not FR-F2's
@@ -818,3 +821,42 @@ test.describe('TC-ANZ-M3-QC — control lots and QC surfacing', () => {
   });
 
 });
+
+/**
+ * READINESS, not merely the presence of a connection block.
+ *
+ * Every analyzer here carries a connection object, so filtering on that alone
+ * still picks one of the QA_AUTO rows TC-ANZ-M3-05 leaves behind, each blocked
+ * on missing-required-values: port. Probing an unready analyzer records nothing,
+ * which TC-ANZ-M3-14 then reported as Delta-L regressed.
+ *
+ * Delta-L IS FIXED. Measured 2026-08-27 by reading every analyzer: id 2 holds a
+ * SUCCEEDED probe, ids 4 and 6 hold FAILED ones, each pinned to a
+ * configRevision. A FAILED probe is a pass for that test -- what matters is that
+ * the outcome is persisted at all.
+ */
+async function probeableAnalyzer(page: Page): Promise<any | null> {
+  for (const a of await analyzerList(page)) {
+    const d = await detailOf(page, a.id);
+    if (d && d.connection && d.connection.readiness && d.connection.readiness.ready === true) return a;
+  }
+  return null;
+}
+
+/**
+ * An analyzer whose connection schema is TRANSPORT-based (serial / TCP).
+ *
+ * The schema is declarative PER PROFILE, so a FILE-protocol instrument
+ * legitimately has dataFlow / directory / filePattern and no transport at all.
+ * Asserting transport against analyzerList[0] fails whenever the first row is a
+ * file-drop analyzer -- which it became once TC-ANZ-M3-05 started leaving
+ * QA_AUTO rows behind. A fixture-ordering failure dressed as a schema
+ * regression.
+ */
+async function transportAnalyzer(page: Page): Promise<any | null> {
+  for (const a of await analyzerList(page)) {
+    const d = await detailOf(page, a.id);
+    if (connectionFields(d).some((f: any) => f.key === 'transport')) return a;
+  }
+  return null;
+}
