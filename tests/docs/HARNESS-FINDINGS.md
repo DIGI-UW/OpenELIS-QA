@@ -1281,3 +1281,43 @@ Two lessons, both already familiar from this week:
 * **TC-14** -- the probe POST answers under 500 but `connection.latestProbe` stays null on an
   analyzer that HAS a connection. **This is the one that might be a real Δ-L regression.** It needs
   the same treatment the revision bug got before anyone trusts it.
+
+
+## 2026-08-27 (final) -- the analyzer suite closed out at 19/2
+
+**10 passed / 10 failed at the start of the day. 19 passed / 2 failed / 1 skipped now.**
+Not one of the eight resolved failures was a product defect.
+
+| test | what it reported | what was actually true |
+|---|---|---|
+| TC-07/09/10 | Δ-E regressed, fingerprint missing, confirmation not pinned | the spec asked for `revision=1`, the PROFILE DEFAULT. The site binding is revision 4 |
+| TC-13/15 | the connection schema lost `transport` and `connectionRole` | it picked `analyzerList[0]`, which had become a FILE-protocol analyzer whose schema legitimately has `dataFlow` / `directory` / `filePattern` |
+| TC-14 | **Δ-L regressed, no probe result recorded** | the probe is ASYNCHRONOUS. The POST enqueues and returns; `latestProbe` is not written until the attempt completes. Reading immediately gets null |
+
+TC-14 is worth dwelling on: it survived two rounds of fixing before the real cause showed up. First it
+picked an analyzer with no connection block; then one that had a connection but was blocked on
+`missing-required-values: port`; and only then did the asynchrony surface. Each round produced a
+plausible-looking fix and a still-red test. **A failing assertion can have more than one cause
+stacked behind it, and fixing the first does not make the second appear -- it just changes the
+excuse.** It now polls for up to 24s and reports `FAILED @ configRevision 1`, which is a pass: what
+FR-B6 asks is that a request goes out and the outcome is persisted, not that the instrument answers.
+
+### Fixture selection is now by capability, never by index
+
+`probeableAnalyzer()` requires `connection.readiness.ready === true`; `transportAnalyzer()` requires
+a `transport` field in the declarative schema. Both skip with an honest reason when the instance has
+no such analyzer. Index-based fixture selection is what let TC-ANZ-M3-05's leftovers reorder the
+list and break three unrelated tests.
+
+### Two left open, and neither is a defect claim
+
+* **TC-03** -- the before/after option count is unstable inside a full run while a standalone probe
+  reads a stable 7 to 7. Δ-W stays UNFLIPPED for the type picker: the live control does not filter.
+* **TC-05** -- the GeneXpert option is present in the DOM but cannot be clicked in the create flow.
+
+### Housekeeping worth doing
+
+TC-ANZ-M3-05 leaves a `QA_AUTO_0827_m3` analyzer behind on every run -- six by the end of today, all
+stuck on `missing-required-values: port`. Unlike the order data, this pollution actively degrades the
+suite: it is what reordered the list and broke TC-13 and TC-15. Either clean up after the create, or
+seed a known-good analyzer and stop creating.

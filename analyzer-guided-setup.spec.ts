@@ -618,8 +618,16 @@ test.describe('TC-ANZ-M3-CONNECT — connection settings and probe (FR-F1, F2, B
     const res = await apiRaw(page, `/analyzer/analyzers/${target.id}/test`, { method: 'POST', body: {} });
     expect(res.status, `probe endpoint answered ${res.status} :: ${res.text}`).toBeLessThan(500);
 
-    const probe = (await detailOf(page, target.id)).connection?.latestProbe;
-    expect(probe, 'Δ-L regressed? no probe result is recorded').toBeTruthy();
+    // THE PROBE IS ASYNCHRONOUS. The POST enqueues it and returns; latestProbe is
+    // not written until the attempt completes. Reading straight after the POST
+    // gets null, which this test reported as -Δ-L regressed?- for two runs while
+    // the feature was working. Poll instead.
+    let probe: any = null;
+    for (let i = 0; i < 12 && !probe; i++) {
+      probe = (await detailOf(page, target.id)).connection?.latestProbe;
+      if (!probe) await page.waitForTimeout(2000);
+    }
+    expect(probe, 'Δ-L regressed? no probe result recorded within 24s of the request').toBeTruthy();
     expect(probe.status, 'probe recorded no outcome').toMatch(/SUCCE|FAIL|ERROR|TIMEOUT/i);
     expect(probe.configRevision, 'the probe is not pinned to the config it tested').toBeTruthy();
     console.log(`[FR-B6] latest probe: ${probe.status} @ configRevision ${probe.configRevision}`);
