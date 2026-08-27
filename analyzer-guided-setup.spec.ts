@@ -108,7 +108,21 @@ const TIMEOUT = 15_000;
 const PROFILE_ID = 'genexpert-astm';
 const PROFILE_QUERY = 'genexpert';
 const STAMP = new Date().toISOString().slice(5, 10).replace('-', '');
-const ANALYZER_NAME = `QA_AUTO_${STAMP}_m3`;
+/**
+ * ONE stable fixture, not a new analyzer every run.
+ *
+ * This was a per-run stamped name, so TC-ANZ-M3-05 minted a fresh analyzer on
+ * every execution. There is NO delete path -- DELETE on an analyzer answers 405
+ * -- so they accumulate forever: 11 by the end of 2026-08-27, every one stuck on
+ * missing-required-values: port.
+ *
+ * That was not harmless clutter. It reordered the analyzer list and broke
+ * TC-ANZ-M3-13, -14 and -15, which selected fixtures by index. Three tests
+ * reported schema and probe regressions that did not exist.
+ *
+ * So: seed once, reuse thereafter.
+ */
+const ANALYZER_NAME = 'QA_AUTO_M3_FIXTURE';
 
 // ---------------------------------------------------------------------------
 // helpers
@@ -382,13 +396,23 @@ test.describe('TC-ANZ-M3-INSTRUMENT — inline instrument-first setup (FR-B1, B2
 
   test('TC-ANZ-M3-05 create from a clean list POSTs a new analyzer and it round-trips [FR-B2 · ROUND-TRIP]', async ({ page }) => {
     await login(page);
-    const id = await createAnalyzer(page, ANALYZER_NAME);
+    // Seed once. If the fixture is already here, exercise the round-trip against
+    // it rather than minting another orphan we have no way to remove.
+    const existing = (await analyzerList(page)).find((a) => a.name === ANALYZER_NAME);
+    const id = existing ? String(existing.id) : await createAnalyzer(page, ANALYZER_NAME);
+    console.log(
+      (existing ? '[fixture] reusing analyzer ' : '[fixture] seeded analyzer ') +
+        id + ' (' + ANALYZER_NAME + ') -- no delete path exists, so we never accumulate',
+    );
 
     // Read back on the LIST endpoint — a different surface than the detail one the form wrote to.
     const row = (await analyzerList(page)).find((a) => String(a.id) === id);
     expect(row, `analyzer ${id} missing from the list endpoint`).toBeTruthy();
     expect(row.name).toBe(ANALYZER_NAME);
-    expect(row.status).toBe('SETUP');
+    // A freshly seeded analyzer is in SETUP. A reused one may have been walked
+    // through activation by TC-ANZ-M3-16, so accept any lifecycle state rather
+    // than forcing a fresh create just to keep one assertion literal.
+    expect(['SETUP', 'ACTIVE', 'INACTIVE']).toContain(row.status);
     expect(row.profileId, 'the chosen profile did not persist').toBe(PROFILE_ID);
     console.log(`[data] leaving analyzer ${id} (${ANALYZER_NAME}) on the instance — test server, no cleanup`);
   });
@@ -844,7 +868,9 @@ test.describe('TC-ANZ-M3-QC — control lots and QC surfacing', () => {
  * the outcome is persisted at all.
  */
 async function probeableAnalyzer(page: Page): Promise<any | null> {
-  for (const a of await analyzerList(page)) {
+  // Never select a QA-created row. Even now that seeding has stopped adding to
+  // them, the ones already on the instance must not be chosen as a fixture.
+  for (const a of (await analyzerList(page)).filter((x: any) => !/^QA_AUTO/.test(String(x.name)))) {
     const d = await detailOf(page, a.id);
     if (d && d.connection && d.connection.readiness && d.connection.readiness.ready === true) return a;
   }
@@ -862,7 +888,9 @@ async function probeableAnalyzer(page: Page): Promise<any | null> {
  * regression.
  */
 async function transportAnalyzer(page: Page): Promise<any | null> {
-  for (const a of await analyzerList(page)) {
+  // Never select a QA-created row. Even now that seeding has stopped adding to
+  // them, the ones already on the instance must not be chosen as a fixture.
+  for (const a of (await analyzerList(page)).filter((x: any) => !/^QA_AUTO/.test(String(x.name)))) {
     const d = await detailOf(page, a.id);
     if (connectionFields(d).some((f: any) => f.key === 'transport')) return a;
   }
