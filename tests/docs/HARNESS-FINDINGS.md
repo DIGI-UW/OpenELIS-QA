@@ -1116,3 +1116,70 @@ The single failure is Batch test reassignment, and it is the *already-filed* nul
 
 Same shape as OGC-1187 / OGC-1120 -- a React `useState(null)` interpolated into the URL, which the
 backend then answers with a 500 rather than a 400.
+
+
+## 2026-08-26 -- the Results area, re-pointed at the rewrite
+
+### Result
+
+The whole results area is green: **48 passed / 3 skipped / 0 failed**, from 60 failures.
+Not one of the 60 was a product defect. Every one was harness or spec rot.
+
+| stage | failing | what was removed |
+|---|---|---|
+| baseline | 60 | -- |
+| `login()` guard | 13 | self-login hung on an already-authenticated context |
+| routes + endpoints | 5 | specs aimed at a Results area that had been rewritten |
+| `testSectionId` | 3 | `?type=<name>` is bound but is not the section filter |
+| retire + replace | **0** | six tests drove a submenu that no longer exists |
+
+### The live build has moved past the FRS -- read the page, not the spec
+
+The FRS and the v4 mockup describe a general search box placeholdered *Search or scan barcode --
+lab number, subject ID, test name...*, a **Date From / Date To** pair and a **Load Results** button,
+and state that no element ids exist.
+
+The live page (testing 3.2.2.0, read 2026-08-26) has none of that shape. It has:
+
+| control | id | label / placeholder |
+|---|---|---|
+| lab-number search | `unifiedResultsSearch` | *Search by lab number* (both) |
+| lab unit | `unifiedResultsLabUnit` | *Lab Unit* |
+| test date | `unifiedResultsDate` | *Test date* (one date, not a range) |
+
+No **Load Results** button -- it loads on change. **Stable ids exist**, contrary to the spec, and
+they are far better hooks than Carbon class names. There is no domain filter: domain derives from
+the Lab Unit (FR-M1).
+
+Verified behaviours, all now asserted in `tests/unified-results.spec.ts`:
+
+* a bare `/Results` renders **0 rows** -- it does not dump the whole lab
+* a lab number + Enter loads that order and deep-links `?accessionNumber=`
+* a Lab Unit loads its worklist and deep-links `?testSectionId=`, chips `All (100) /
+  Not started (95) / Accepted by technician (5)`, and the non-All chips sum to All
+* 11 columns: (toggle), Sample / Patient, Test, Method, Analyzer, Sample, Reference Range, Result,
+  Status, Flag, Actions
+
+### Two suites had never executed
+
+`results-r1-spec-delta.spec.ts` (5 tests) and `results-page-deep-delta.spec.ts` (8) were written on
+2026-08-13 next to `qa-spec-delta-OGC-1020-R1-20260813.md`, but lived in a folder that is not a git
+repo, on a machine with no Playwright browsers -- so they had only ever been parsed and `--list`ed.
+Ported here and run for the first time: **11 passed, 1 skipped, 0 failed.** They confirm Δ-1, Δ-3,
+Δ-4, Δ-6, Δ-10, Δ-10b, Δ-11 and Δ-12 are fixed and guarded, keep Δ-8/Δ-9 red for the open
+OGC-1130/1131 multi-component deviations, and skip Δ-13 because e-signature is off.
+
+### One open question for the PO, not asserted
+
+An unknown lab number returns **0 rows and no message of any kind** -- no notification, no empty
+state. That is not obviously wrong: Δ-1 asked that a FAILED load be distinguishable from an empty
+one, and this load genuinely is empty. But a mistyped lab number is indistinguishable from a lab
+number with no pending work. The spec is silent. Flagged rather than asserted, so nobody encodes a
+guess as a requirement.
+
+### `analyzer-guided-setup` cannot ride in the `testing` run
+
+It defaults to `BASE=analyzers.openelis-global.org` while `auth.setup.ts` writes a storageState for
+`testing`, so it drives the analyzers instance with the wrong instance cookies and every test times
+out waiting for a page that never authenticates. That is **20 of the 27** failures in the
+2026-08-26 `all-tc` run, and none of them are defects. It needs its own auth setup or its own run.
