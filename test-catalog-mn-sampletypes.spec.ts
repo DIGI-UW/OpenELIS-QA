@@ -93,8 +93,16 @@ test.describe('Test Catalog — sample-type many-to-many (Phase 1, OGC-1145)', (
     const bi = (await api(page, `/test-catalog/tests/${id}/basic-info`)).body;
     const flip = await api(page, `/test-catalog/tests/${id}/basic-info`, 'PUT', { ...bi, domain: 'ENVIRONMENTAL' });
     expect(flip.status, 'domain flip with no matching-domain sample type is guarded').toBe(422);
-    // control: a non-domain edit on the same test still saves
-    const desc = await api(page, `/test-catalog/tests/${id}/basic-info`, 'PUT', { ...bi, description: 'mn3-control' });
+    // control: a non-domain edit on the same test still saves.
+    //
+    // The description MUST be unique per run. It used to be the literal
+    // -mn3-control-, which was fine while a duplicate description answered 500
+    // and nobody looked twice. OGC-1180 fixed that to a proper 409, so from the
+    // second run onwards this control collided with its own earlier run and
+    // reported -a non-domain Basic Info edit still persists- -- i.e. the suite
+    // failed because the product got BETTER. Stamp it.
+    const controlDesc = `mn3-control-${Date.now().toString().slice(-8)}`;
+    const desc = await api(page, `/test-catalog/tests/${id}/basic-info`, 'PUT', { ...bi, description: controlDesc });
     expect(desc.status, 'a non-domain Basic Info edit still persists').toBe(200);
   });
 });

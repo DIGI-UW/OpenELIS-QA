@@ -26,7 +26,7 @@ export default defineConfig({
       // filename prefix, and the load-sensitive order→result E2E specs (those run alone via e2e.config).
       testIgnore:
         // the two results delta suites run in their own projects below
-        /(\.docs\.spec\.ts|test-catalog-(critical-indicator|titer-runtime|sections-roundtrip)\.spec\.ts|results-(r1-spec-delta|page-deep-delta)\.spec\.ts|unified-results\.spec\.ts)/,
+        /(\.docs\.spec\.ts|test-catalog-(critical-indicator|titer-runtime|sections-roundtrip)\.spec\.ts|results-(r1-spec-delta|page-deep-delta)\.spec\.ts|unified-results\.spec\.ts|analyzer-guided-setup\.spec\.ts|analyzer-auth\.setup\.ts)/,
       dependencies: ['setup'],
       use: { storageState: '.auth/user.json' },
     },
@@ -83,12 +83,9 @@ export default defineConfig({
     // Δ-T, Δ-U, Δ-V encode CURRENT (wrong) behavior — a failure there means the fix landed and the
     // assertion should be flipped to the spec, not relaxed. UNtagged assertions guard the eleven
     // findings that 3.2.2.0 fixed, so they cannot silently regress. See analyzer-guided-setup.md.
-    {
-      name: 'analyzer-guided-setup',
-      testMatch: /analyzer-guided-setup\.spec\.ts/,
-      dependencies: ['setup'],
-      use: { storageState: '.auth/user.json' },
-    },
+    // analyzer-guided-setup lives in analyzer-m3.config.ts -- it targets a
+    // DIFFERENT instance (analyzers.openelis-global.org) and needs its own login.
+    // Registering it here made it run with testing cookies: 20 false failures.
     // --- QA/QC alerts + violation counts + Levey-Jennings charts contract — --project=qc-alerts-charts ---
     {
       name: 'qc-alerts-charts',

@@ -73,6 +73,18 @@ test.describe('QA/QC module — REST contract + cross-consistency [pngdemo]', ()
 
   test('QC-2: QA overview mirrors the QC dashboard totals (CROSS-CONSISTENCY)', async ({ page }, info) => {
     const ov = await getJson(page, `${REST}/qa/overview/summary`);
+
+    // The two surfaces ship INDEPENDENTLY. The describe-level guard probes
+    // /rest/qc/dashboard/summary, which is present on testing 3.2.2.0 -- but
+    // /rest/qa/overview is not, so this test alone failed with a bare 404 and
+    // read as a broken endpoint rather than as a module that is not deployed
+    // here. Guard on THIS test own dependency, not on its neighbour.
+    test.skip(
+      ov.status === 404 || ov.status === 0,
+      `QA overview surface not deployed on this target (GET /rest/qa/overview/summary -> ${ov.status}); 
+the /rest/qc surface IS present, so the describe-level guard cannot catch this one.`,
+    );
+
     expect(ov.status, 'GET /rest/qa/overview/summary -> 200').toBe(200);
     const body = (ov.body || {}) as Record<string, any>;
     for (const k of ['qc', 'eqa', 'week', 'activity']) {
