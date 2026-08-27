@@ -308,13 +308,30 @@ export async function navigateToAdminItem(page: Page, itemName: string): Promise
  * @param candidates Array of URL paths to try
  * @returns true if successfully navigated to a valid candidate, false otherwise
  */
+/**
+ * Try each candidate path and report whether one of them ACTUALLY rendered.
+ *
+ * The status check alone is not enough. On 2026-08-26 this returned true for
+ * /ResultsByRange, a path that has never existed in this codebase: the response
+ * carried HTTP 200 while the BODY was a Spring problem detail with an embedded
+ * 404. The caller then failed one assertion later on -body must not contain
+ * 404-, which reads as a broken screen rather than as a route that was never
+ * there. So sniff the body as well as the status.
+ */
 export async function navigateWithDiscovery(page: Page, candidates: string[]): Promise<boolean> {
   for (const url of candidates) {
     try {
       const response = await page.goto(`${BASE}${url}`, { waitUntil: 'networkidle' });
-      if (response?.status() === 200 && !page.url().includes('Login')) {
-        return true;
-      }
+      if (response?.status() !== 200) continue;
+      if (page.url().includes('Login')) continue;
+
+      const body = await page.locator('body').innerText().catch(() => '');
+      const isErrorDocument =
+        body.includes('NoHandlerFoundException') ||
+        body.includes('problemDetail');
+      if (isErrorDocument) continue;
+
+      return true;
     } catch (e) {
       // Try next candidate
     }
@@ -328,8 +345,43 @@ export async function navigateWithDiscovery(page: Page, candidates: string[]): P
  * @param user Username
  * @param pass Password
  */
+/**
+ * Log in, UNLESS the context is already authenticated.
+ *
+ * Why the guard exists. Several suites were written before the configs supplied
+ * use.storageState, so they call this from beforeEach. On an already
+ * authenticated context /LoginPage does NOT render a form -- it redirects to
+ * /api/OpenELIS-Global/Home, verified 2026-08-26 -- so the old unconditional
+ * page.fill on the loginName input waited for an element that never appears and
+ * burned the whole test timeout inside the hook.
+ *
+ * The damage was not one test. In the all-tc run of 2026-08-25 it took out every
+ * test in four describe blocks -- results-entry, results-by-unit,
+ * results-by-status and results-by-range, 60 failures -- and each reported as
+ * -Test timeout of 180000ms exceeded while running beforeEach hook-, which reads
+ * like four broken product areas rather than one broken helper.
+ *
+ * So: probe for the form first. If it is not there we are already in, and the
+ * correct behaviour is to do nothing.
+ */
 export async function login(page: Page, user: string, pass: string): Promise<void> {
   await page.goto(`${BASE}/LoginPage`);
+
+  const formIsThere = await page
+    .locator('input[name="loginName"]')
+    .waitFor({ state: 'visible', timeout: 8000 })
+    .then(() => true)
+    .catch(() => false);
+
+  if (!formIsThere) {
+    // Already authenticated. Confirm it rather than assume, so a genuinely
+    // broken login page still fails loudly instead of silently passing.
+    if (/Home|Dashboard|SamplePatientEntry/i.test(page.url())) return;
+    throw new Error(
+      `login: no login form and no authenticated landing page -- landed on ${page.url()}`,
+    );
+  }
+
   await page.fill('input[name="loginName"]', user);
   await page.fill('input[name="userPass"]', pass);
   await page.getByRole('button', { name: /submit|login|save|next|accept/i }).click();
@@ -403,4 +455,56 @@ export async function clickButton(page: Page, labels: string[]): Promise<boolean
     }
   }
   return false;
+}
+
+/**
+ * Find a lab number on THIS instance that actually has result rows.
+ *
+ * Several suites hard-coded 26CPHL00008V as a baseline order. On 2026-08-26
+ * that accession returns HTTP 200 with zero rows -- the data is gone. A test
+ * built on it fails as -cross-module lookup returned nothing-, which reads as a
+ * broken API when the API is fine and the fixture simply no longer exists.
+ *
+ * Discovering one at runtime removes the fixture dependency entirely. Returns
+ * null when the instance genuinely has no resulted work, so callers can skip
+ * with an honest reason instead of asserting against an empty lab.
+ */
+export async function discoverAccessionWithResults(page: Page): Promise<string | null> {
+  const sections = await page
+    .request.get(`${BASE}/api/OpenELIS-Global/rest/user-test-sections/RESULTS`)
+    .then((r) => (r.status() === 200 ? r.json() : []))
+    .catch(() => []);
+
+  for (const section of (Array.isArray(sections) ? sections : []).slice(0, 12)) {
+    const id = String((section as any).id ?? (section as any).value ?? '');
+    if (!id) continue;
+    const res = await page
+      .request.get(
+        `${BASE}/api/OpenELIS-Global/rest/LogbookResults?testSectionId=${id}&doRange=false&finished=false`,
+      )
+      .catch(() => null);
+    if (!res || res.status() !== 200) continue;
+    const body: any = await res.json().catch(() => ({}));
+    const rows = (body.testResult ?? []) as Array<any>;
+    const hit = rows.find((r) => r.accessionNumber || r.labNo || r.labNumber);
+    if (hit) return String(hit.accessionNumber ?? hit.labNo ?? hit.labNumber);
+  }
+  return null;
+}
+
+/**
+ * Map a section name a spec WANTS onto what this instance actually calls it.
+ *
+ * The suites were written against sections named Chemistry and Bacteriology.
+ * This instance offers Biochemistry and Bacteria. Asserting the spec-side name
+ * fails as -section returned no tests-, when the section is simply named
+ * something else. Returns null if nothing matches, so the caller can skip.
+ */
+export async function resolveSectionName(page: Page, want: RegExp): Promise<string | null> {
+  const sections = await page
+    .request.get(`${BASE}/api/OpenELIS-Global/rest/user-test-sections/RESULTS`)
+    .then((r) => (r.status() === 200 ? r.json() : []))
+    .catch(() => []);
+  const names = (Array.isArray(sections) ? sections : []).map((x: any) => String(x.value ?? x.name ?? ''));
+  return names.find((n) => want.test(n)) ?? null;
 }

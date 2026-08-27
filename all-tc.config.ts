@@ -24,7 +24,37 @@ export default defineConfig({
       testMatch: /(test-catalog-.*|results-.*)\.spec\.ts/,
       // Contract-tier only: exclude the docs-capture specs that share the test-catalog-*/results-*
       // filename prefix, and the load-sensitive order→result E2E specs (those run alone via e2e.config).
-      testIgnore: /(\.docs\.spec\.ts|test-catalog-(critical-indicator|titer-runtime|sections-roundtrip)\.spec\.ts)/,
+      testIgnore:
+        // the two results delta suites run in their own projects below
+        /(\.docs\.spec\.ts|test-catalog-(critical-indicator|titer-runtime|sections-roundtrip)\.spec\.ts|results-(r1-spec-delta|page-deep-delta)\.spec\.ts|unified-results\.spec\.ts|analyzer-guided-setup\.spec\.ts|analyzer-auth\.setup\.ts)/,
+      dependencies: ['setup'],
+      use: { storageState: '.auth/user.json' },
+    },
+    // --- unified /Results worklist surface -- --project=unified-results ---
+    // Replaces the six retired legacy-submenu tests in results-entry.spec.ts.
+    // Skips itself when resultsEntryUnifiedRoute is off.
+    {
+      name: 'unified-results',
+      testMatch: /unified-results[.]spec[.]ts/,
+      dependencies: ['setup'],
+      use: { storageState: '.auth/user.json' },
+    },
+    // --- OGC-1020 R1 spec-delta guards -- --project=results-r1-delta ---
+    // Written 2026-08-13 alongside qa-spec-delta-OGC-1020-R1-20260813.md and never once
+    // executed: the device VM that authored them had no Playwright browsers. Ported into
+    // the repo 2026-08-26 for their first real run.
+    {
+      name: 'results-r1-delta',
+      testMatch: /results-r1-spec-delta[.]spec[.]ts/,
+      retries: 0, // these assert deterministic behaviour; a retry would only mask drift
+      dependencies: ['setup'],
+      use: { storageState: '.auth/user.json' },
+    },
+    // --- Deep deltas across the whole /Results page -- --project=results-deep-delta ---
+    {
+      name: 'results-deep-delta',
+      testMatch: /results-page-deep-delta[.]spec[.]ts/,
+      retries: 0,
       dependencies: ['setup'],
       use: { storageState: '.auth/user.json' },
     },
@@ -53,12 +83,9 @@ export default defineConfig({
     // Δ-T, Δ-U, Δ-V encode CURRENT (wrong) behavior — a failure there means the fix landed and the
     // assertion should be flipped to the spec, not relaxed. UNtagged assertions guard the eleven
     // findings that 3.2.2.0 fixed, so they cannot silently regress. See analyzer-guided-setup.md.
-    {
-      name: 'analyzer-guided-setup',
-      testMatch: /analyzer-guided-setup\.spec\.ts/,
-      dependencies: ['setup'],
-      use: { storageState: '.auth/user.json' },
-    },
+    // analyzer-guided-setup lives in analyzer-m3.config.ts -- it targets a
+    // DIFFERENT instance (analyzers.openelis-global.org) and needs its own login.
+    // Registering it here made it run with testing cookies: 20 false failures.
     // --- QA/QC alerts + violation counts + Levey-Jennings charts contract — --project=qc-alerts-charts ---
     {
       name: 'qc-alerts-charts',

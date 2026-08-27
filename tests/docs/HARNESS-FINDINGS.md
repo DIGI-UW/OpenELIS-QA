@@ -1116,3 +1116,121 @@ The single failure is Batch test reassignment, and it is the *already-filed* nul
 
 Same shape as OGC-1187 / OGC-1120 -- a React `useState(null)` interpolated into the URL, which the
 backend then answers with a 500 rather than a 400.
+
+
+## 2026-08-26 -- the Results area, re-pointed at the rewrite
+
+### Result
+
+The whole results area is green: **48 passed / 3 skipped / 0 failed**, from 60 failures.
+Not one of the 60 was a product defect. Every one was harness or spec rot.
+
+| stage | failing | what was removed |
+|---|---|---|
+| baseline | 60 | -- |
+| `login()` guard | 13 | self-login hung on an already-authenticated context |
+| routes + endpoints | 5 | specs aimed at a Results area that had been rewritten |
+| `testSectionId` | 3 | `?type=<name>` is bound but is not the section filter |
+| retire + replace | **0** | six tests drove a submenu that no longer exists |
+
+### The live build has moved past the FRS -- read the page, not the spec
+
+The FRS and the v4 mockup describe a general search box placeholdered *Search or scan barcode --
+lab number, subject ID, test name...*, a **Date From / Date To** pair and a **Load Results** button,
+and state that no element ids exist.
+
+The live page (testing 3.2.2.0, read 2026-08-26) has none of that shape. It has:
+
+| control | id | label / placeholder |
+|---|---|---|
+| lab-number search | `unifiedResultsSearch` | *Search by lab number* (both) |
+| lab unit | `unifiedResultsLabUnit` | *Lab Unit* |
+| test date | `unifiedResultsDate` | *Test date* (one date, not a range) |
+
+No **Load Results** button -- it loads on change. **Stable ids exist**, contrary to the spec, and
+they are far better hooks than Carbon class names. There is no domain filter: domain derives from
+the Lab Unit (FR-M1).
+
+Verified behaviours, all now asserted in `tests/unified-results.spec.ts`:
+
+* a bare `/Results` renders **0 rows** -- it does not dump the whole lab
+* a lab number + Enter loads that order and deep-links `?accessionNumber=`
+* a Lab Unit loads its worklist and deep-links `?testSectionId=`, chips `All (100) /
+  Not started (95) / Accepted by technician (5)`, and the non-All chips sum to All
+* 11 columns: (toggle), Sample / Patient, Test, Method, Analyzer, Sample, Reference Range, Result,
+  Status, Flag, Actions
+
+### Two suites had never executed
+
+`results-r1-spec-delta.spec.ts` (5 tests) and `results-page-deep-delta.spec.ts` (8) were written on
+2026-08-13 next to `qa-spec-delta-OGC-1020-R1-20260813.md`, but lived in a folder that is not a git
+repo, on a machine with no Playwright browsers -- so they had only ever been parsed and `--list`ed.
+Ported here and run for the first time: **11 passed, 1 skipped, 0 failed.** They confirm Δ-1, Δ-3,
+Δ-4, Δ-6, Δ-10, Δ-10b, Δ-11 and Δ-12 are fixed and guarded, keep Δ-8/Δ-9 red for the open
+OGC-1130/1131 multi-component deviations, and skip Δ-13 because e-signature is off.
+
+### One open question for the PO, not asserted
+
+An unknown lab number returns **0 rows and no message of any kind** -- no notification, no empty
+state. That is not obviously wrong: Δ-1 asked that a FAILED load be distinguishable from an empty
+one, and this load genuinely is empty. But a mistyped lab number is indistinguishable from a lab
+number with no pending work. The spec is silent. Flagged rather than asserted, so nobody encodes a
+guess as a requirement.
+
+### `analyzer-guided-setup` cannot ride in the `testing` run
+
+It defaults to `BASE=analyzers.openelis-global.org` while `auth.setup.ts` writes a storageState for
+`testing`, so it drives the analyzers instance with the wrong instance cookies and every test times
+out waiting for a page that never authenticates. That is **20 of the 27** failures in the
+2026-08-26 `all-tc` run, and none of them are defects. It needs its own auth setup or its own run.
+
+
+## 2026-08-27 -- the last three singletons, and the analyzer suite finally runs
+
+### analyzer-guided-setup was never running at all
+
+It defaults to `BASE = analyzers.openelis-global.org`, but it was registered as a project inside
+`all-tc.config.ts`, whose `auth.setup` authenticates against **testing** and writes
+`.auth/user.json`. So it drove the analyzers instance carrying testing cookies, never
+authenticated, and every test timed out waiting for a page that never rendered. **20 of the 27
+failures in the 2026-08-26 all-tc run, none of them defects.**
+
+Now split out into `analyzer-m3.config.ts` with its own `analyzer-auth.setup.ts` writing a separate
+`.auth/analyzers.json`, so the two instances cannot clobber each other. First real run:
+**10 passed / 10 failed / 2 skipped in 13.2 min.**
+
+Of the 10 failures, **five are flip-when-fixed signals -- the good outcome**, each saying so in its
+own assertion message:
+
+| id | signal |
+|---|---|
+| Δ-W (TC-03) | the type picker now FILTERS -- flip to `expect(after).toBeLessThan(before)` |
+| Δ-S (TC-06) | Add Analyzer no longer reuses the open analyzer -- flip to expect an empty name |
+| Δ-K (TC-15) | a data-flow field shipped -- flip to assert the default follows the profile |
+| Δ-V (TC-18) | the lifecycle dialogs no longer render the literal `{name}` placeholder |
+| Δ-E (TC-07) | inverse: reported as a possible REGRESSION, -no row resolves to a catalog test- |
+
+The other five are two timeouts (TC-05, TC-08), two `toMatch` TypeErrors (TC-09, TC-10 -- an
+assertion given a non-string, i.e. a harness bug not a product one) and Δ-L (TC-14, -no probe
+result is recorded-). **None of these have been triaged yet** and none should be reported as
+defects until they are.
+
+### The three singletons
+
+**`test-catalog-editor-regressions` BLOCKER-1 -- NOT REPRODUCIBLE.** It failed in the full run with
+`POST /test-catalog/tests -> 500` where it expects 201. Run in isolation it PASSES, and reval2 got
+201 on four consecutive legs including a fresh context. So the 500 is order-dependent inside a long
+run, not a standing defect. Not filed. If it recurs, the thing to capture is what ran immediately
+before it.
+
+**`test-catalog-mn-sampletypes` MN-3 -- SPEC BUG, fixed here.** Its control step PUT the literal
+description `mn3-control` and expected 200; it got **409**. The description was not stamped, so from
+the second run onwards it collided with its own earlier run. It only started failing because
+OGC-1180 changed a duplicate description from a 500 to a proper 409 -- **the suite failed because
+the product got better.** Now stamped per run.
+
+**`qc-dashboard` QC-2 -- GUARD BUG, fixed here.** The describe-level skip probes
+`/rest/qc/dashboard/summary`, which IS present on testing 3.2.2.0. QC-2 asserts
+`/rest/qa/overview/summary`, which is NOT. The two surfaces ship independently, so the neighbour
+probe could never protect this test and it failed with a bare 404 that read as a broken endpoint.
+QC-2 now guards on its own dependency.

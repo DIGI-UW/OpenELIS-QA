@@ -75,6 +75,39 @@ Fixed there by declaring a `setup` project matching `auth.setup.ts` and dependin
 **`census.config.ts` still has this gap.** Its 126/1 result on 2026-08-25 is only valid because the
 auth file happened to be fresh at the time.
 
+### 15. The suite now tests itself -- LANDED 2026-08-27
+
+`preflight.spec.ts` + `preflight.config.ts`. No network, no browser, no auth: it reads the repo and
+grades the harness against the mistakes that have actually cost runs. Finishes in ~0.2s. Run it
+BEFORE a long suite.
+
+| check | what it catches |
+|---|---|
+| PF-1 | a config that sets `storageState` with no `setup` dependency |
+| PF-2 | a spec whose default BASE names a different host than the config running it |
+| PF-3 | a `testMatch` that matches no file -- zero tests, exit 0, a green run that tested nothing |
+| PF-4 | informational: specs no config will ever run (160 of 221 today) |
+
+It found three real problems on its first run, none of which anyone had noticed:
+
+* `multicomponent`, `rtype` and `workplan` configs all set `storageState` with no setup project --
+  the same gap as item 12, in three more places. Fixed.
+* `seed-data.setup.ts` read `process.env.BASE_URL` defaulting to **testing**, while
+  `regression-seed.config.ts` sets `baseURL` from `process.env.BASE` defaulting to an **IP**. Two
+  env var names, two defaults, in a file that WRITES DATA -- pointing the seeder at the config
+  target would still have seeded testing, silently. Now navigates relatively so the config is the
+  single source of truth.
+* `personas-roles.config.ts` appeared to match nothing -- a false alarm from the preflight itself,
+  which only counted `.spec.ts` and `.setup.ts` and so could not see `.guard.ts`. Fixed in the
+  preflight.
+
+**Writing the detector was itself instructive.** Its first cut accused 17 configs that were all
+fine, because it looked for `.setup.ts` while the tree spells the same regex three ways --
+`auth[.]setup[.]ts`, `auth\.setup\.ts`, and plain. Its second cut accused four QC suites of
+cross-instance running, because it took the first URL in the file and those specs name their
+capture instance in a header COMMENT. Both are the same lesson the suite keeps teaching: a detector
+that has not been checked against known-good input is a finding generator, not a test.
+
 ## Open
 
 ### 2. Give the harness its own account

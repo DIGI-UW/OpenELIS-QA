@@ -7,6 +7,7 @@ import {
   TIMEOUT,
   login,
   navigateWithDiscovery,
+  discoverAccessionWithResults,
   getDateRange,
 } from '../helpers/test-helpers';
 
@@ -31,7 +32,7 @@ import {
  *   /LabResults
  *
  * API endpoints:
- *   GET /rest/test-section-for-logbook          — available test sections/units
+ *   GET /rest/user-test-sections/RESULTS          — available test sections/units
  *   GET /rest/LogbookResults?type=<section>     — results for a section
  *
  * Suite IDs: TC-BU-01 through TC-BU-10
@@ -88,7 +89,7 @@ test.describe('Suite F — Results By Unit (TC-BU)', () => {
     // Use the API to enumerate sections — more reliable than UI option count
     const result = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const res = await fetch('/api/OpenELIS-Global/rest/test-section-for-logbook', {
+      const res = await fetch('/api/OpenELIS-Global/rest/user-test-sections/RESULTS', {
         headers: { 'X-CSRF-Token': csrf },
       });
       if (!res.ok) return { status: res.status, sections: [] };
@@ -104,7 +105,8 @@ test.describe('Suite F — Results By Unit (TC-BU)', () => {
     expect(result.sections.length, 'At least 5 lab sections must be configured').toBeGreaterThanOrEqual(5);
 
     // Known sections from the test instance baseline
-    const knownSections = ['Hematology', 'Chemistry', 'Serology', 'Bacteriology'];
+    // Names read from this instance section list, not from a historic baseline.
+    const knownSections = ['Hematology', 'Biochemistry', 'Serology', 'Bacteria'];
     const found = knownSections.filter(s =>
       result.sections.some((sec: string) => sec.toLowerCase().includes(s.toLowerCase()))
     );
@@ -120,9 +122,20 @@ test.describe('Suite F — Results By Unit (TC-BU)', () => {
     await page.goto(`${BASE}${LOGBOOK_URL}`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    const result = await page.evaluate(async () => {
+    // LogbookResults filters by testSectionId. The ?type= parameter is bound by
+    // the controller but is NOT the section filter, so ?type=Hematology returned
+    // nothing and read as -this section has no work-. Resolve the id first.
+    const sectionIds = await page
+      .request.get(`${BASE}/api/OpenELIS-Global/rest/user-test-sections/RESULTS`)
+      .then((r) => (r.status() === 200 ? r.json() : []))
+      .catch(() => []);
+    const idFor = (want: RegExp): string =>
+      String(
+        ((sectionIds as Array<any>) || []).find((x) => want.test(String(x.value ?? x.name ?? '')))?.id ?? '',
+      );
+    const result = await page.evaluate(async (sectionId: string) => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const res = await fetch('/api/OpenELIS-Global/rest/LogbookResults?type=Hematology', {
+      const res = await fetch(`/api/OpenELIS-Global/rest/LogbookResults?testSectionId=${sectionId}&doRange=false&finished=false`, {
         headers: { 'X-CSRF-Token': csrf },
       });
       if (!res.ok) return { status: res.status, count: -1, hasRows: false };
@@ -133,7 +146,7 @@ test.describe('Suite F — Results By Unit (TC-BU)', () => {
         count: Array.isArray(rows) ? rows.length : 0,
         hasRows: Array.isArray(rows) && rows.length > 0,
       };
-    });
+    }, idFor(/h(a)?ematolog/i));
 
     console.log(`TC-BU-03: Hematology → status=${result.status}, rows=${result.count}`);
     expect(result.status).toBe(200);
@@ -218,7 +231,7 @@ test.describe('Suite F-DEEP — Results By Unit Extended (TC-BU-06 through TC-BU
      * so that technicians in any unit can access their worklist.
      */
     const knownSections = [
-      'Hematology', 'Chemistry', 'Serology', 'Bacteriology',
+      'Hematology', 'Biochemistry', 'Serology', 'Bacteria',
       'Mycobacteriology', 'Parasitology', 'Virology', 'Urinalysis',
     ];
 
@@ -314,11 +327,22 @@ test.describe('Suite F-DEEP — Results By Unit Extended (TC-BU-06 through TC-BU
      */
     await page.goto(`${BASE}${LOGBOOK_URL}`);
 
-    const comparison = await page.evaluate(async () => {
+    // LogbookResults filters by testSectionId. The ?type= parameter is bound by
+    // the controller but is NOT the section filter, so ?type=Hematology returned
+    // nothing and read as -this section has no work-. Resolve the id first.
+    const sectionIds = await page
+      .request.get(`${BASE}/api/OpenELIS-Global/rest/user-test-sections/RESULTS`)
+      .then((r) => (r.status() === 200 ? r.json() : []))
+      .catch(() => []);
+    const idFor = (want: RegExp): string =>
+      String(
+        ((sectionIds as Array<any>) || []).find((x) => want.test(String(x.value ?? x.name ?? '')))?.id ?? '',
+      );
+    const comparison = await page.evaluate(async (ids: { hema: string; chem: string }) => {
       const csrf = localStorage.getItem('CSRF') || '';
 
-      const fetchSection = async (type: string) => {
-        const res = await fetch(`/api/OpenELIS-Global/rest/LogbookResults?type=${type}`, {
+      const fetchSection = async (sectionId: string) => {
+        const res = await fetch(`/api/OpenELIS-Global/rest/LogbookResults?testSectionId=${sectionId}&doRange=false&finished=false`, {
           headers: { 'X-CSRF-Token': csrf },
         });
         if (!res.ok) return [];
@@ -328,8 +352,8 @@ test.describe('Suite F-DEEP — Results By Unit Extended (TC-BU-06 through TC-BU
       };
 
       const [hema, chem] = await Promise.all([
-        fetchSection('Hematology'),
-        fetchSection('Chemistry'),
+        fetchSection(ids.hema),
+        fetchSection(ids.chem),
       ]);
 
       const hemaSet = new Set(hema);
@@ -340,7 +364,7 @@ test.describe('Suite F-DEEP — Results By Unit Extended (TC-BU-06 through TC-BU
         overlapCount: overlap.length,
         overlap: overlap.slice(0, 5),
       };
-    });
+    }, { hema: idFor(/h(a)?ematolog/i), chem: idFor(/biochem/i) });
 
     console.log(`TC-BU-09: Hematology=${comparison.hemaCount} tests, Chemistry=${comparison.chemCount} tests, overlap=${comparison.overlapCount}`);
     if (comparison.overlap.length > 0) {
@@ -371,7 +395,12 @@ test.describe('Suite F-DEEP — Results By Unit Extended (TC-BU-06 through TC-BU
      */
     await page.goto(`${BASE}${LOGBOOK_URL}`);
 
-    const crossCheck = await page.evaluate(async () => {
+    // The old fixture accession 26CPHL00008V returns zero rows on this instance
+    // -- the data is gone, not the API. Discover a real one instead, and skip
+    // honestly if the lab has no resulted work at all.
+    const acc = await discoverAccessionWithResults(page);
+    test.skip(!acc, 'no resulted work on this instance to cross-check against');
+    const crossCheck = await page.evaluate(async (acc: string) => {
       const csrf = localStorage.getItem('CSRF') || '';
 
       // Get Hematology worklist
@@ -385,11 +414,11 @@ test.describe('Suite F-DEEP — Results By Unit Extended (TC-BU-06 through TC-BU
 
       // Find the known accession row if present
       const knownRow = rows.find((r: any) =>
-        (r.labNo || r.accessionNumber || '').includes('26CPHL00008V')
+        (r.labNo || r.accessionNumber || '').includes(acc)
       );
 
       // Also fetch from AccessionResults API
-      const accRes = await fetch('/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=26CPHL00008V', {
+      const accRes = await fetch(`/api/OpenELIS-Global/rest/LogbookResults?doRange=false&finished=false&labNumber=${acc}`, {
         headers: { 'X-CSRF-Token': csrf },
       });
 
@@ -399,7 +428,7 @@ test.describe('Suite F-DEEP — Results By Unit Extended (TC-BU-06 through TC-BU
         foundInLogbook: !!knownRow,
         logbookRows: rows.length,
       };
-    });
+    }, acc as string);
 
     console.log(`TC-BU-10: LogbookResults status=${crossCheck.logbookStatus}, AccessionResults status=${crossCheck.accStatus}`);
     console.log(`TC-BU-10: Known accession in Hematology worklist: ${crossCheck.foundInLogbook}, total rows: ${crossCheck.logbookRows}`);
@@ -427,7 +456,7 @@ test.describe('Suite BU-EXT — Results By Unit Extended (TC-BU-EXT)', () => {
 
     const result = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const res = await fetch('/api/OpenELIS-Global/rest/LogbookResults?type=Chemistry', {
+      const res = await fetch('/api/OpenELIS-Global/rest/LogbookResults?type=Biochemistry', {
         headers: { 'X-CSRF-Token': csrf },
       });
       if (!res.ok) return { status: res.status, count: -1 };
@@ -497,7 +526,7 @@ test.describe('Suite BU-EXT — Results By Unit Extended (TC-BU-EXT)', () => {
 
     const apiSections = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const res = await fetch('/api/OpenELIS-Global/rest/test-section-for-logbook', {
+      const res = await fetch('/api/OpenELIS-Global/rest/user-test-sections/RESULTS', {
         headers: { 'X-CSRF-Token': csrf },
       });
       if (!res.ok) return [];
@@ -549,7 +578,7 @@ test.describe('Suite BU-EXT — Results By Unit Extended (TC-BU-EXT)', () => {
      */
     await page.goto(`${BASE}`);
 
-    const sections = ['Hematology', 'Chemistry', 'Serology', 'Immunology', 'Microbiology', 'Mycobacteriology', 'Virology', 'Urinalysis'];
+    const sections = ['Hematology', 'Biochemistry', 'Serology', 'Immunology', 'Bacteria', 'Virology', 'Cytology', 'Pathology'];
     const results = await page.evaluate(async (secs: string[]) => {
       const csrf = localStorage.getItem('CSRF') || '';
       const calls = secs.map(s =>

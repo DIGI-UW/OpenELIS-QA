@@ -5,6 +5,7 @@ import {
   TIMEOUT,
   login,
   navigateWithDiscovery,
+  discoverAccessionWithResults,
   getDateRange,
 } from '../helpers/test-helpers';
 
@@ -28,7 +29,7 @@ import {
  *   /WorkPlanByStatus        — fallback
  *
  * API endpoints:
- *   GET /rest/test-section-for-logbook  — test section list
+ *   GET /rest/user-test-sections/RESULTS  — test section list
  *   GET /rest/LogbookResults?type=<section>&status=<s>
  *
  * Suite IDs: TC-RBS-01 through TC-RBS-10
@@ -39,11 +40,23 @@ import {
  *   - Status dropdown contains 200+ test types
  */
 
+// Route note, verified live 2026-08-26 on testing 3.2.2.0.
+//
+// The Results area was rewritten. The paths this suite used to try -
+// /ResultsByRange, /ResultsByStatus, /ResultsByAccession, /RangeSearch and
+// friends - have never existed in the codebase; a grep of OpenELIS-Global-2
+// finds them nowhere. They answered HTTP 200 with a Spring problem-detail body,
+// so the old navigateWithDiscovery accepted them and the suite failed one line
+// later on -body must not contain 404-, reading as a broken screen.
+//
+// The real legacy paths are /RangeResults and /StatusResults. On top of that,
+// site information flag resultsEntryUnifiedRoute is TRUE on this instance, so
+// every legacy results path 302s to the unified worklist at /Results. Both are
+// listed here so the suite works whichever way the flag is set.
 const RBS_URLS = [
-  '/ResultsByStatus',
-  '/ResultStatus',
-  '/WorkPlanByStatus',
-  '/results/status',
+  '/StatusResults',
+  '/Results',
+  '/result?type=date&doRange=false',
 ];
 
 async function goToResultsByStatus(page: any): Promise<boolean> {
@@ -177,7 +190,7 @@ test.describe('Suite BG-DEEP — Results By Status API & Validation (TC-RBS-06�
 
     const result = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const res = await fetch('/api/OpenELIS-Global/rest/test-section-for-logbook', {
+      const res = await fetch('/api/OpenELIS-Global/rest/user-test-sections/RESULTS', {
         headers: { 'X-CSRF-Token': csrf },
       });
       if (!res.ok) return { status: res.status, count: -1 };
@@ -261,6 +274,12 @@ test.describe('Suite BG-DEEP — Results By Status API & Validation (TC-RBS-06�
      */
     await page.goto(`${BASE}`);
 
+    // The old fixture accession 26CPHL00008V returns zero rows on this instance
+    // -- the data is gone, not the API. Discover a real one instead, and skip
+    // honestly if the lab has no resulted work at all.
+    const acc = await discoverAccessionWithResults(page);
+    test.skip(!acc, 'no resulted work on this instance to cross-check against');
+
     const [logbook, accession] = await Promise.all([
       page.evaluate(async () => {
         const csrf = localStorage.getItem('CSRF') || '';
@@ -272,13 +291,14 @@ test.describe('Suite BG-DEEP — Results By Status API & Validation (TC-RBS-06�
         const rows = data.logbookResults ?? data.results ?? data ?? [];
         return { status: res.status, count: rows.length };
       }),
-      page.evaluate(async () => {
+      page.evaluate(async (labNumber: string) => {
         const csrf = localStorage.getItem('CSRF') || '';
-        const res = await fetch('/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=26CPHL00008V', {
-          headers: { 'X-CSRF-Token': csrf },
-        });
+        const res = await fetch(
+          `/api/OpenELIS-Global/rest/LogbookResults?doRange=false&finished=false&labNumber=${labNumber}`,
+          { headers: { 'X-CSRF-Token': csrf } },
+        );
         return { status: res.status, ok: res.ok };
-      }),
+      }, acc as string),
     ]);
 
     console.log(`TC-RBS-10: LogbookResults HTTP=${logbook.status} rows=${logbook.count}, AccessionResults HTTP=${accession.status}`);
