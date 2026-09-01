@@ -1371,3 +1371,55 @@ whoever picks it up starts from the evidence rather than from the symptom.
 eight resolved, none was a product defect: wrong mapping revision (3), index-based fixture selection
 (2), an asynchronous probe read synchronously (1), and a combobox typed into before its menu had
 painted (2).
+
+
+## 2026-09-01 — the type picker, settled: substring, case-insensitive, and it does not empty the menu
+
+Three readings of the same control were live at once, and one of them (`54f311b`) was queued to be
+filed as a product defect:
+
+| reading | verdict |
+|---|---|
+| "typing `GeneX` leaves 7 of 7 — it does not filter" | **wrong** — non-discriminating query |
+| "it filters by **PREFIX** — anchor the query on the manufacturer" | **wrong** — it is a substring match |
+| "the search **empties the menu 13→0** — probable defect" | **does not reproduce** |
+| "it filters on a plain substring" | **confirmed** |
+
+Measured with `probe-typepicker.spec.ts`, on the same control, first at 4 options and then at 13
+after forking nine profiles to recreate the exact condition of the 13→0 reading:
+
+```
+[shape] "Bruker": 13 → 1   (substring 1, prefix 1)
+[shape] "Fluoro": 13 → 1   (substring 1, prefix 0)   ← mid-string; prefix is disproved here
+[shape] "Cycler": 13 → 1   (substring 1, prefix 0)
+[shape] "Fisher": 13 → 1   (substring 1, prefix 0)
+[shape] "zzz":    13 → 0
+
+[case]  "Bruker" → 1  | "bruker" → 1        case-INSENSITIVE
+[case]  "GeneXpert" → 2 | "genexpert" → 2   case-INSENSITIVE
+[case]  "Cepheid" → 11 | "cepheid" → 11     case-INSENSITIVE
+
+[method] fill("")     baseline 13 → 1
+[method] select-all   baseline 13 → 1
+```
+
+**The control is a case-insensitive substring filter over the full option label, and it works.**
+`"Fluoro"` is the load-bearing query: it sits mid-string in *Bruker FluoroCycler XT*, so a
+prefix-anchored filter must return 0 and a substring filter must return 1. It returns 1.
+
+### Why "13→0" is not filed
+
+Every variable that could produce it was varied and none did: option count (4 and 13), typing
+method (`fill('')` and select-all), case, and query shape. The `fill('')` hazard is real — it fires
+Carbon's clear, which closes the listbox — but on this build the menu reopened and filtered anyway.
+Absent a reproduction, this is a harness-ordering artefact of the kind the 0ca45ac notes already
+describe ("something earlier in the file perturbs the list"), not a defect. **Do not file it.**
+
+### The rule this keeps re-teaching
+
+> When a count is the evidence, pick a query where the competing hypotheses predict *different*
+> numbers, and say what each predicts before you look.
+
+`GeneX` on a GeneXpert-heavy seed predicts ~everything under both hypotheses — it can never settle
+anything. `Fluoro` predicts 0 vs 1. That is the whole difference between three rounds of argument
+and one run.
