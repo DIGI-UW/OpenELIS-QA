@@ -262,3 +262,50 @@ three specs (`test-catalog-pr3987-regression`, `patient-photo-pr3987`,
 the sex+age-banded ranges on QA test 442 were **left in place**, because a banded
 range is what makes the item 5 assertion meaningful, and 442 is a QA-owned test. Seeded patients and orders left in place
 per the never-hard-delete rule and listed in the report's §8.2.
+
+---
+
+**2026-09-02 — Monthly consolidation pass (no new test execution).** State-only refresh of the
+QA skill references, Section B of a larger scheduled maintenance run.
+
+`testing.openelis-global.org` is up (v3.2.2.0, login page renders correctly) and the shipped
+front-end bundle is still `index-Dwt9X87U.js` — unchanged since the 2026-09-01 baseline, confirmed
+independently via the live QA tracker artifact (`openelis-qa-tracker`, 2026-09-01 drift check:
+"no redeploy detected", same bundle hash) and via a direct network-request inspection of the live
+page in this pass. **No fresh authenticated re-verification was possible this cycle:** entering
+the test-account password into the live login form was correctly blocked by the automation safety
+classifier (credential entry is disallowed for an unattended run), and in-page JS execution
+(needed for bundle-string route extraction) was blocked by the same classifier; the sandbox also
+has no direct network route to the instance (`curl` → 403 from the egress proxy). This is a
+tighter constraint than the 2026-07-01 pass hit, not a looser one — flagged in
+`references/suite-catalog.md` §5 rather than silently carrying forward old status.
+
+**Found and flagged, not resolved:** a substantial unmerged sibling branch,
+`origin/skill/consolidation-2026-08` (single commit, 2026-08-01, never merged to `main`), already
+did the authenticated route-inventory rebuild this pass would otherwise have needed to redo —
+bundle-extracted the real `Route,{path:…}` table, found seven previously-documented routes that
+are wrong or don't exist, three mis-cased Workplan routes, and four feature-state flips (EQA V2,
+Test↔Reagent linkage, QC/Westgard, alert acknowledgment all now live). Its bundle hash
+(`index-D1-xYVYM.js`) differs from today's live bundle, so a deploy happened between 2026-08-01
+and 2026-09-01 and its specific corrections need a quick re-confirm — but the method is sound and
+should replace the old 404-probing pattern list once someone can log in. Recommend Casey
+review/merge or rebase that branch rather than have two divergent rewrites of the same section.
+Compare URL: `https://github.com/DIGI-UW/OpenELIS-QA/compare/main...skill/consolidation-2026-08?expand=1`.
+
+**Coverage-gap pass (light, static-file only):** cross-referenced `master-test-cases.md` against
+project memory / the FRS registry. New UNCOVERED candidates: Test Catalog Reagents tab / test↔reagent
+linkage (zero cases), configurable Label Presets management (zero cases). Confirmed correctly
+out of scope (not gaps): CSV Bulk Sample Intake (still FRS-stage), TB-Profiler flat-file import
+(v2.2-scoped, not built), RETROCI Study Forms (flag off by default). One new NEEDS-GUIDANCE
+question added to `references/open-questions.md` (#4, home-dashboard Domain filtering — is the
+aggregate KPI view intentionally domain-agnostic or a genuine gap). Full detail in
+`coverage-gap-analysis.md` under "Delta — 2026-09-02".
+
+**bug-triage.md reviewed, left unchanged** — it still names Jira as the sole source of truth,
+still describes the 2-of-3 independent-method revalidation gate before filing, and still carries
+no embedded bug-status table. No edit needed.
+
+**Situational context only (not edited into any state file):** the live `openelis-qa-tracker`
+artifact shows OGC-1115, OGC-1156, OGC-1157 still open as of 2026-09-01, consistent with the
+tracker's own drift-check cadence; used here only to cross-confirm the bundle-hash freshness
+claim above.

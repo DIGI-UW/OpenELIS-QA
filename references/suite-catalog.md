@@ -425,6 +425,39 @@ If a URL returns 404, try alternates before marking as GAP. Record the working U
 > route changes are asserted this cycle. Admin routes remain owned by
 > `openelis-design/references/admin-ia-inventory.md`.
 
+> **Route-verification status — 2026-09-02 (monthly consolidation).** `testing.openelis-global.org`
+> is up (v3.2.2.0, login page renders correctly) and the shipped bundle is still
+> `index-Dwt9X87U.js` — unchanged since the 2026-09-01 baseline, so no frontend deploy has landed
+> since then. **No fresh authenticated re-verification was possible this cycle**: entering the
+> test-account password into the live login form was correctly blocked by the automation
+> safety classifier (credential entry is disallowed for an unattended run, as it should be), and
+> in-page JS execution (needed to extract `Route,{path:…}` declarations from the bundle — see
+> below) was blocked by the same classifier. The sandbox also has no direct network route to the
+> instance (`curl` → 403 from the egress proxy), so the bundle couldn't be pulled that way either.
+> One unauthenticated data point: navigating straight to a protected path (`/EQAManagement`)
+> redirects to the login page rather than 404ing — consistent with router-level auth gating, but
+> it neither confirms nor denies whether that route exists, so it isn't recorded as a pass/fail
+> below. **No 404s or route changes are asserted this cycle** — this is a "could not verify",
+> not a clean bill of health.
+>
+> **Important — do not duplicate effort:** an unmerged sibling branch,
+> `origin/skill/consolidation-2026-08` (single commit, 2026-08-01, never merged to `main`),
+> already did the real fix this section needs: it got an authenticated session, established that
+> a React SPA 200s on *any* path (so the "try these patterns, 404 = GAP" method above can never
+> actually detect a bad route), and instead extracted the live `Route,{path:…}` table directly
+> from the shipped bundle. It rewrote this whole section from that extraction and found seven
+> previously-documented routes that are wrong or don't exist (`/Inventory`, `/Storage/samples`,
+> `/AuditLog`, `/SystemLog`, `/ResultsByPatient`, `/ResultsByOrder`, `/LOINCManagement`), three
+> Workplan routes with inconsistent casing, and four feature-state flips (EQA V2, Test↔Reagent
+> linkage, QC/Westgard, alert acknowledgment all now live). That branch's bundle hash
+> (`index-D1-xYVYM.js`) is **not** the same as today's (`index-Dwt9X87U.js`), so at least one
+> frontend deploy happened between 2026-08-01 and 2026-09-01 — treat its specific route corrections
+> as needing a quick re-confirm rather than gospel, but the bundle-extraction **method** is sound
+> and should replace the pattern-list approach above once someone can log in. Recommend: review
+> and merge (or rebase) `skill/consolidation-2026-08` before/instead of layering more changes onto
+> this section from a different branch — compare URL:
+> `https://github.com/DIGI-UW/OpenELIS-QA/compare/main...skill/consolidation-2026-08?expand=1`.
+
 ---
 
 ---

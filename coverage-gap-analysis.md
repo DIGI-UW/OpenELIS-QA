@@ -312,3 +312,37 @@ boxes (`/SampleShipment` → `/boxes`).
 Domain filtering (not built — see openelis-design current-state-gotchas). New admin config pages
 (Test Notification, Menu Config, Application Properties) are admin-route coverage — deferred to
 `openelis-design/admin-ia-inventory.md`, not maintained here.
+
+---
+
+## Delta — 2026-09-02 (monthly consolidation, static-catalog pass only — no live-app access this cycle)
+
+Same access constraints as this cycle's `suite-catalog.md` note (login blocked by the automation
+safety classifier, in-page JS blocked, no sandbox network route): everything below comes from
+grepping `master-test-cases.md` / `suite-catalog.md` against project memory and the FRS registry,
+**not** a fresh live-menu walk. Treat as candidates to confirm, same as the 2026-07-01 pass.
+
+**Do not duplicate — merge/rebase this first.** `origin/skill/consolidation-2026-08` (unmerged
+since 2026-08-01) already ran a live-authenticated, router-derived delta against this same file —
+it is materially more confident than anything below (it had a real session; this pass didn't) and
+covers `/PatientMerge`, `/GenericSample/Import`, `/FreezerMonitoring`, `/Storage` hierarchy
+deactivation, and EQA V2 enrollment lifecycle. Don't re-author those from this entry. One thing
+for whoever reconciles the branches: that branch's `references/open-questions.md` diff adds new
+rows numbered 3–7, but **main's `open-questions.md` already has a #3** (Add Order patient photo
+editability, landed 2026-08-06, after that branch's commit) — the row numbers will collide on
+merge and need renumbering, not a straight patch apply.
+
+### UNCOVERED — found this pass, not already listed in the 2026-08-01 delta above
+
+| Area | Why it matters | Confidence |
+|---|---|---|
+| Test Catalog **Reagents tab** / test↔reagent linkage (`/rest/test-catalog/{testId}/reagents`) | Per project notes this linkage shipped recently (was spec-only before). `master-test-cases.md` has zero cases for it — the only "reagent" hits are the unrelated Inventory item-type field (REAGENT/RDT/CARTRIDGE/HIV_KIT/SYPHILIS_KIT). | high — grep-confirmed zero coverage |
+| **Configurable Label Presets** (`/MasterListsPage/labelPresets`, OGC-285) | Per project notes this is live as of 3.2.1.10/11; this instance is 3.2.2.0. Zero mentions in `master-test-cases.md` or `suite-catalog.md`. Test Catalog's Labels tab consumes these presets, so a broken preset silently breaks label printing. | high — grep-confirmed zero coverage |
+| **Report Print Queue** (Epic OGC-1031 + stories OGC-1032–1043) | Zero mentions in the catalog. Build status not independently confirmed this pass (per the "Jira Done ≠ shipped" rule, don't assume it's live) — **confirm it's actually deployed on testing before authoring**, don't file as a hard gap yet. | low — build status unconfirmed |
+
+### Correctly out of scope this pass (not gaps — noted so nobody re-derives the same question)
+
+- **CSV Bulk Sample Intake** (OGC-1138 epic) — still FRS-stage per project notes, not built; no case expected yet.
+- **TB-Profiler flat-file import** (OGC-318, `tb_molecular_result`/WGS_TBPROFILER) — v2.2-scoped, not built; zero catalog hits, expected.
+- **RETROCI Study Forms** — gated behind `useRetroCIStudyForms`, off by default; zero catalog hits, expected while the flag is off.
+
