@@ -194,8 +194,8 @@ async function assignTestToUnit(page: Page, unitId: string, testName: string): P
   await page.getByRole('button', { name: 'Assign tests' }).click();
   await page.getByPlaceholder('Search tests...').fill(testName);
   await expect.poll(async () => page.locator('input[type="checkbox"]').count(), { timeout: 10000 }).toBeLessThan(5);
-  await page.locator('input[type="checkbox"]').first().check();
-  await page.getByRole('button', { name: /^Assign 1 test$/ }).click();
+  await page.locator('label.cds--checkbox-label').first().click();
+  await page.getByRole('button', { name: /Assign 1 test$/ }).click();
   await expect
     .poll(async () => (await api(page, `/lab-units-management/${unitId}/tests`)).body?.length, { timeout: 25000 })
     .toBeGreaterThan(0);
@@ -204,11 +204,13 @@ async function assignTestToUnit(page: Page, unitId: string, testName: string): P
 /** Drives the Reassign dialog to send everything in a unit to a named destination. */
 async function reassignAllTo(page: Page, unitId: string, destination: string): Promise<void> {
   await page.goto(`${BASE}${LIST_ROUTE}/${unitId}/assigned-tests`);
-  await page.locator('table thead input[type="checkbox"]').first().check();
-  await page.getByRole('button', { name: /^Reassign selected \(\d+\)/ }).click();
+  await page.locator('.cds--structured-list-thead label.cds--checkbox-label').first().click();
+    // Carbon updates the counter asynchronously; clicking Reassign before it enables is a no-op.
+    await expect(page.getByRole('button', { name: /Reassign selected/ })).toBeEnabled();
+  await page.getByRole('button', { name: /Reassign selected \(\d+\)/ }).click();
   await expect(page.getByText('Reassign Tests')).toBeVisible();
   await page.locator('select').last().selectOption({ label: destination });
-  await page.getByRole('button', { name: /^Reassign \d+ tests?$/ }).click();
+  await page.getByRole('button', { name: /Reassign \d+ tests?$/ }).click();
 }
 
 /** Flips the Basic Info Active toggle to a target state and saves. No-op if already there. */
@@ -221,6 +223,13 @@ async function setUnitActive(page: Page, unitId: string, active: boolean): Promi
   await page.waitForTimeout(2000);
 }
 
+test.beforeEach(async ({ page }) => {
+  // Land on a real origin before any helper touches localStorage/CSRF. Without this the
+  // page is still about:blank and page.evaluate throws a SecurityError on localStorage.
+  await page.goto(`${BASE}${LIST_ROUTE}`);
+  await page.waitForFunction(() => !!localStorage.getItem('CSRF'), null, { timeout: 15000 });
+});
+
 test.describe('Lab Unit Management — write paths (OGC-189, PR #4121)', () => {
   test('LU-W-1: the Add form offers only the fields it can actually persist, and refuses to submit an empty name', async ({ page }) => {
     await openAddForm(page);
@@ -229,7 +238,7 @@ test.describe('Lab Unit Management — write paths (OGC-189, PR #4121)', () => {
     // Description — which is why a created unit landing Inactive is not a misleading control.
     await expect(page.getByText('Name (English)')).toBeVisible();
     await expect(page.getByText('Name (Francais)')).toBeVisible();
-    await expect(page.getByText('Domain', { exact: false }).first()).toBeVisible();
+    await expect(page.getByRole('radio', { name: 'Clinical' })).toBeVisible();
     await expect(
       page.getByText('Active', { exact: true }),
       'the Add form must not offer an Active toggle it cannot honour (create ignores isActive)',
@@ -368,7 +377,7 @@ test.describe('Lab Unit Management — write paths (OGC-189, PR #4121)', () => {
       'the move semantics are stated up front, not discovered afterwards',
     ).toBeVisible();
 
-    const commit = page.getByRole('button', { name: /^Assign \d+ tests?$/ });
+    const commit = page.getByRole('button', { name: /Assign \d+ tests?$/ });
     await expect(commit, 'nothing is assignable until something is selected').toBeDisabled();
     await expect(commit).toHaveText(/Assign 0 tests/);
 

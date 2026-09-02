@@ -177,8 +177,8 @@ test.describe('Lab unit visibility — choosers vs viewers (OGC-189)', () => {
       await page.getByRole('button', { name: 'Assign tests' }).click();
       await page.getByPlaceholder('Search tests...').fill(PROBE_TEST);
       await expect.poll(async () => page.locator('input[type="checkbox"]').count(), { timeout: 10000 }).toBeLessThan(5);
-      await page.locator('input[type="checkbox"]').first().check();
-      await page.getByRole('button', { name: /^Assign 1 test$/ }).click();
+      await page.locator('label.cds--checkbox-label').first().click();
+      await page.getByRole('button', { name: /Assign 1 test$/ }).click();
       await expect
         .poll(async () => (await api(page, `/lab-units-management/${fixture!.id}/tests`)).body?.length, { timeout: 25000 })
         .toBe(1);
@@ -239,10 +239,12 @@ test.describe('Lab unit visibility — choosers vs viewers (OGC-189)', () => {
       const held = (await api(page, `/lab-units-management/${fixture!.id}/tests`)).body as any[];
       if (originalUnit && held?.length) {
         await page.goto(`${BASE}${LIST_ROUTE}/${fixture!.id}/assigned-tests`);
-        await page.locator('table thead input[type="checkbox"]').first().check();
-        await page.getByRole('button', { name: /^Reassign selected \(\d+\)/ }).click();
+        await page.locator('.cds--structured-list-thead label.cds--checkbox-label').first().click();
+    // Carbon updates the counter asynchronously; clicking Reassign before it enables is a no-op.
+    await expect(page.getByRole('button', { name: /Reassign selected/ })).toBeEnabled();
+        await page.getByRole('button', { name: /Reassign selected \(\d+\)/ }).click();
         await page.locator('select').last().selectOption({ label: originalUnit });
-        await page.getByRole('button', { name: /^Reassign \d+ tests?$/ }).click();
+        await page.getByRole('button', { name: /Reassign \d+ tests?$/ }).click();
         await page.waitForTimeout(3000);
       }
     }
