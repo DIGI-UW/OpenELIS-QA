@@ -1,5 +1,52 @@
 # Changelog
 
+## 2026-09-02 — Edit Order + Lab Unit Management suites, and the Carbon selector traps
+
+Five new suites (PR #88) and their first real execution (PR #89). Every failure on that first
+run was a harness bug; the product findings all reproduced as written. The traps below are
+Carbon-wide, not specific to these screens.
+
+**New**
+- `tests/modify-order-field-binding.spec.ts` + `modify-order.config.ts` — Edit Order renders a
+  form that misrepresents the order it just loaded, in both directions. MO-7 covers the serious
+  one: because Lab Number renders empty and looks required, clicking *Generate* beside it
+  silently reassigns the specimen's accession number, and the confirmation screen then offers
+  the OLD number to print (OGC-1191). MO-6 is deliberately a PASSING test — an ordinary save
+  corrupts nothing — so the ticket cannot drift into claiming data loss that does not happen.
+- `test-catalog-lab-unit-management-ui.spec.ts` — the page-interaction pass the API-tier spec
+  gap-queued in its own header.
+- `test-catalog-lab-unit-management-write.spec.ts` — Add, Basic Info save, Active toggle, Assign
+  dialog, committed Reassign, Display Order save. LU-W-3 is a confirmed defect: the 20-character
+  name cap is enforced on Add and not on Edit, at either layer.
+- `test-catalog-orderability-semantics.spec.ts` — pins the `active` (orderable at all, including
+  as a reflex) vs `orderable` (appears in the manual picker) split. TO-3 is a positive control so
+  the exclusion in TO-2 cannot pass vacuously against an empty endpoint.
+- `test-catalog-lab-unit-visibility.spec.ts` — choosers vs viewers. The status filter is applied
+  to exactly the wrong half today: the test's lab unit chooser offers all inactive units while
+  the /Results viewer hides them. G-3 is the grandfathered-select data-loss guard.
+
+**Changed**
+- `references/playwright-harness.md` — five new Carbon traps from the first run: **6.2a** the
+  checkbox "60s hang" is an actionability wait against a 1x1 hidden input, so click the label
+  (this supersedes 6.2's mark-as-BLOCKED advice); **6.2b** Assigned Tests and Display Order are
+  StructuredLists with no `<table>` at all; **6.2c** danger buttons carry a hidden "danger" in
+  their accessible name, so never anchor those name patterns with `^`; **6.2d** dialog selects
+  populate after a fetch; **6.2e** DatePicker duplicates its id onto the wrapper div, making
+  `#id` a strict-mode violation whose `.first()` is not an input. Plus **6.6** — navigate before
+  any helper reads `localStorage`, which caused 15 of the 20 first-run failures on its own.
+- `probe-typepicker.config.ts` — PF-1 fix: it set `storageState` with no setup project, the
+  exact stale-cookie trap preflight exists to catch. Preflight now 4/4.
+- Seeding: the lab unit suites reuse one fixed-name fixture (`QA_AUTO_LU_FIX`) created once,
+  rather than minting `QAprobe######` per run — which is where most of the accumulated lab units
+  on `testing` came from.
+
+**Lesson**
+Typecheck and preflight were both green, and every assertion had been dry-run by hand against
+live data, and 20 of 45 tests still failed on first contact with a browser. Static gates and
+hand-measured values are not the same thing as executing the suite; do not call a suite
+validated until it has driven a browser.
+
+
 ## 2026-08-12 — spec-delta runs, harness traps, in-app review
 
 Learned from the OGC-1057 analyzer guided-setup run (analyzers.openelis-global.org v3.2.1.11),
