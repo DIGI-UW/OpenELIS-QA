@@ -189,6 +189,14 @@ async function formState(page: Page): Promise<any> {
   });
 }
 
+test.beforeEach(async ({ page }) => {
+  // Land on a real origin before fetchOrder/findEditableOrder run. Without this the page is
+  // still about:blank, the relative fetch has no origin, and every test fails identically
+  // with "the instance holds at least one order ... Received: null".
+  await page.goto(`${BASE}/SampleEdit`);
+  await page.waitForFunction(() => !!localStorage.getItem('CSRF'), null, { timeout: 15000 });
+});
+
 test.describe('Modify Order — field binding and save gate (FLIP-WHEN-FIXED)', () => {
   test('MO-1: [DEFECT] the required Lab Number field renders empty although the order number is loaded and shown above it', async ({ page }) => {
     const order = await findEditableOrder(page);
@@ -222,7 +230,7 @@ test.describe('Modify Order — field binding and save gate (FLIP-WHEN-FIXED)', 
 
     // WHEN FIXED: expect(...).toHaveValue(order.nextVisitDate)
     await expect(
-      page.locator('#order_nextVisitDate'),
+      page.locator('input#order_nextVisitDate'),
       'DEFECT: a populated next-visit date is not rendered into its field',
     ).toHaveValue('');
   });
@@ -232,8 +240,8 @@ test.describe('Modify Order — field binding and save gate (FLIP-WHEN-FIXED)', 
     test.skip(!!order.receivedDate, 'located order already has a received date; nothing to fabricate');
     await openOrderStep(page, order.accessionNumber);
 
-    // WHEN FIXED: expect(page.locator('#order_receivedDate')).toHaveValue('')
-    const rendered = await page.locator('#order_receivedDate').inputValue();
+    // WHEN FIXED: expect(page.locator('input#order_receivedDate')).toHaveValue('')
+    const rendered = await page.locator('input#order_receivedDate').inputValue();
     expect(
       rendered,
       'DEFECT: an unset received date is shown as a real date, inviting the user to save a value that was never recorded',

@@ -280,7 +280,7 @@ test.describe('Lab Unit Management — page interaction (OGC-189, PR #4121)', ()
       .getByRole('button', { name: 'Edit' }).click();
     await page.getByText('Assigned Tests', { exact: true }).first().click();
 
-    const reassign = page.getByRole('button', { name: /^Reassign selected/ });
+    const reassign = page.getByRole('button', { name: /Reassign selected/ });
     await expect(reassign, 'with nothing selected the reassign action is unavailable').toBeDisabled();
     await expect(reassign).toHaveText(/\(0\)/);
 
@@ -288,7 +288,9 @@ test.describe('Lab Unit Management — page interaction (OGC-189, PR #4121)', ()
     const assignedCount = Number(assignedText.match(/(\d+)/)![1]);
     expect(assignedCount, 'Hematology has assigned tests to work with').toBeGreaterThan(0);
 
-    await page.locator('table thead input[type="checkbox"]').first().check();
+    await page.locator('.cds--structured-list-thead label.cds--checkbox-label').first().click();
+    // Carbon updates the counter asynchronously; clicking Reassign before it enables is a no-op.
+    await expect(page.getByRole('button', { name: /Reassign selected/ })).toBeEnabled();
     await expect(
       reassign,
       'select-all selects every assigned test, and the counter says so',
@@ -304,11 +306,13 @@ test.describe('Lab Unit Management — page interaction (OGC-189, PR #4121)', ()
       .getByRole('button', { name: 'Edit' }).click();
     await page.getByText('Assigned Tests', { exact: true }).first().click();
 
-    await page.locator('table thead input[type="checkbox"]').first().check();
-    await page.getByRole('button', { name: /^Reassign selected/ }).click();
+    await page.locator('.cds--structured-list-thead label.cds--checkbox-label').first().click();
+    // Carbon updates the counter asynchronously; clicking Reassign before it enables is a no-op.
+    await expect(page.getByRole('button', { name: /Reassign selected/ })).toBeEnabled();
+    await page.getByRole('button', { name: /Reassign selected/ }).click();
 
     await expect(page.getByText('Reassign Tests')).toBeVisible();
-    const commit = page.getByRole('button', { name: /^Reassign \d+ tests?$/ });
+    const commit = page.getByRole('button', { name: /Reassign \d+ tests?$/ });
     await expect(
       commit,
       'the commit button stays disabled until a destination is chosen — a bulk move must not be one stray click away',
@@ -326,9 +330,16 @@ test.describe('Lab Unit Management — page interaction (OGC-189, PR #4121)', ()
     await page.locator('table tbody tr').filter({ hasText: 'Hematology' }).first()
       .getByRole('button', { name: 'Edit' }).click();
     await page.getByText('Assigned Tests', { exact: true }).first().click();
-    await page.locator('table thead input[type="checkbox"]').first().check();
-    await page.getByRole('button', { name: /^Reassign selected/ }).click();
+    await page.locator('.cds--structured-list-thead label.cds--checkbox-label').first().click();
+    // Carbon updates the counter asynchronously; clicking Reassign before it enables is a no-op.
+    await expect(page.getByRole('button', { name: /Reassign selected/ })).toBeEnabled();
+    await page.getByRole('button', { name: /Reassign selected/ }).click();
 
+    // The dialog renders with only the placeholder and fills in the lab units after a
+    // fetch; reading immediately returns a list of one.
+    await expect
+      .poll(async () => page.locator('select').last().locator('option').count(), { timeout: 15000 })
+      .toBeGreaterThan(1);
     const options = await page
       .locator('select')
       .last()
@@ -365,9 +376,16 @@ test.describe('Lab Unit Management — page interaction (OGC-189, PR #4121)', ()
     await page.locator('table tbody tr').filter({ hasText: 'Hematology' }).first()
       .getByRole('button', { name: 'Edit' }).click();
     await page.getByText('Assigned Tests', { exact: true }).first().click();
-    await page.locator('table thead input[type="checkbox"]').first().check();
-    await page.getByRole('button', { name: /^Reassign selected/ }).click();
+    await page.locator('.cds--structured-list-thead label.cds--checkbox-label').first().click();
+    // Carbon updates the counter asynchronously; clicking Reassign before it enables is a no-op.
+    await expect(page.getByRole('button', { name: /Reassign selected/ })).toBeEnabled();
+    await page.getByRole('button', { name: /Reassign selected/ }).click();
 
+    // The dialog renders with only the placeholder and fills in the lab units after a
+    // fetch; reading immediately returns a list of one.
+    await expect
+      .poll(async () => page.locator('select').last().locator('option').count(), { timeout: 15000 })
+      .toBeGreaterThan(1);
     const options = await page
       .locator('select')
       .last()
@@ -412,7 +430,7 @@ test.describe('Lab Unit Management — page interaction (OGC-189, PR #4121)', ()
     ).toHaveValue(String(total));
 
     // The ordering table marks which row is the unit being edited.
-    await expect(page.locator('table tbody tr').filter({ hasText: 'Current' }).first()).toBeVisible();
+    await expect(page.getByText('Current', { exact: true }).first()).toBeVisible();
 
     // Restore the field and leave without saving — this spec does not reorder the live menus.
     await position.fill(original);
