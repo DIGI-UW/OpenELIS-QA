@@ -1,5 +1,5 @@
 {
-  "_comment": "BLOCKING typecheck surface. Everything listed here compiles clean today and CI keeps it that way. This is a ratchet: when you fix the type errors in another spec, ADD IT HERE in the same PR. Use `npm run typecheck:all` to see the remaining backlog. Do not widen this to the whole repo until that backlog is zero \u2014 a gate that is red on arrival gets ignored.",
+  "_comment": "BLOCKING typecheck surface. Everything listed here compiles clean today and CI keeps it that way. This is a ratchet: when you fix the type errors in another spec, ADD IT HERE in the same PR. Use `npm run typecheck:all` to see the remaining backlog. Do not widen this to the whole repo until that backlog is zero — a gate that is red on arrival gets ignored.",
   "compilerOptions": {
     "target": "ES2021",
     "module": "nodenext",
@@ -19,6 +19,7 @@
     "fhir-specimen-terminology-pr3987.spec.ts",
     "guards.config.ts",
     "helpers/apiShapes.ts",
+    "modify-order.config.ts",
     "patient-photo-pr3987.spec.ts",
     "personas-roles.config.ts",
     "pr3987.config.ts",
@@ -27,6 +28,10 @@
     "rbac.config.ts",
     "roles.setup.ts",
     "test-catalog-critical-indicator.spec.ts",
+    "test-catalog-lab-unit-management-ui.spec.ts",
+    "test-catalog-lab-unit-management-write.spec.ts",
+    "test-catalog-lab-unit-visibility.spec.ts",
+    "test-catalog-orderability-semantics.spec.ts",
     "test-catalog-pr3987-regression.spec.ts",
     "test-catalog-result-types.spec.ts",
     "test-catalog-sections-roundtrip.spec.ts",
@@ -36,6 +41,7 @@
     "tests/helpers/api-json.ts",
     "tests/helpers/pick-combo.ts",
     "tests/helpers/session.ts",
+    "tests/modify-order-field-binding.spec.ts",
     "tests/personas/persona-pa-receptionist.spec.ts",
     "tests/personas/persona-pb-bench-tech.spec.ts",
     "tests/personas/persona-pc-validating-biologist.spec.ts",
