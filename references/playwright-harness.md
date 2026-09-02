@@ -79,7 +79,98 @@ tab hang. This affects ALL checkboxes across the React SPA, not just Referral dr
 **Workarounds:**
 - **Results page:** DOM workaround works — `cb.checked = true; cb.dispatchEvent(new Event('change', {bubbles:true}))` sets the DOM state and persists on Save.
 - **Validation page:** DOM workaround sets `checked` but React state does NOT update — server POST omits the value. Mark checkbox interaction tests as BLOCKED.
-- **General rule:** Never use `.click()` on Carbon checkboxes. Use DOM manipulation where possible, mark as BLOCKED where DOM workaround doesn't propagate to React state.
+- **General rule (SUPERSEDED BY 6.2a):** the hang is an actionability wait against a 1x1 hidden input, not a Carbon defect. Click `label.cds--checkbox-label` instead and the interaction works — see 6.2a before marking anything BLOCKED.
+
+### 6.2a — Carbon checkbox: click the LABEL, not the input (RESOLVES 6.2)
+
+6.2 says never `.click()` a Carbon checkbox because of a 60-second hang. That is the right
+observation with the wrong conclusion, and the cause is measurable:
+
+```js
+document.querySelector('.cds--structured-list-thead input[type=checkbox]')
+  .getBoundingClientRect()          // { width: 1, height: 1 }  <- position:absolute, hidden
+document.querySelector('.cds--structured-list-thead label.cds--checkbox-label')
+  .getBoundingClientRect()          // { width: 20, height: 20 } <- the real hit target
+```
+
+Carbon hides the real `<input>` at 1x1 px and draws the box with the `<label>`. Playwright's
+`.check()` and `.click()` run an actionability wait against that 1x1 input, never satisfy it,
+and block until the test timeout — the "60-second hang" and a 180s Playwright timeout are the
+same phenomenon seen through different clocks.
+
+**Click the label.** It is what a human clicks, it is trusted, and it toggles React state
+immediately:
+
+```ts
+// WRONG — waits on a 1x1 hidden input until the test times out
+await page.locator('.cds--structured-list-thead input[type="checkbox"]').first().check();
+
+// RIGHT
+await page.locator('.cds--structured-list-thead label.cds--checkbox-label').first().click();
+```
+
+This supersedes the "mark as BLOCKED" advice for checkbox interaction wherever a label is
+rendered. Verified 2026-09-02 driving Lab Unit Management select-all over 37 rows.
+
+### 6.2b — Assigned Tests and Display Order are StructuredLists, not `<table>`
+
+Not every Carbon list is a table. Lab Unit Management's **Assigned Tests** and **Display
+Order** screens render `cds--structured-list`, and `document.querySelector('table')` on them
+returns `null`. A `table thead input[type=checkbox]` locator matches nothing and fails with a
+bare "element(s) not found" that reads like a product bug.
+
+| Container | Select-all | Rows |
+| --- | --- | --- |
+| `<table>` (lab unit LIST page) | `table thead input[type=checkbox]` | `table tbody tr` |
+| StructuredList (Assigned Tests, Display Order) | `.cds--structured-list-thead ...` | `.cds--structured-list-tbody .cds--structured-list-row` |
+
+Check which one you are on before writing the locator — `!!document.querySelector('table')`
+answers it in one probe. Where the assertion is about a value rather than a row, prefer
+`getByText(...)` so the container stops mattering at all.
+
+### 6.2c — Danger buttons carry a hidden "danger" in their accessible name
+
+Carbon prefixes `kind="danger"` buttons with visually-hidden text. The Reassign dialog's
+commit button reads "Reassign 37 tests" on screen but its accessible name is:
+
+```
+danger Reassign 37 tests
+```
+
+So `getByRole('button', { name: /^Reassign \d+ tests?$/ })` never matches. **Do not anchor
+`getByRole` name patterns with `^`** on any danger-kind button; anchor the end if you need
+precision (`/Reassign \d+ tests?$/`). Confirmed on the Reassign Tests dialog 2026-09-02.
+
+### 6.2d — Dialog selects populate after an async fetch
+
+The Reassign dialog mounts with only its `Select destination...` placeholder and fills the lab
+units in after a request returns. Reading options on the tick the modal opens gives a list of
+one, which then fails an "options are offered" assertion in a way that looks like a product
+defect. Poll before reading:
+
+```ts
+await expect
+  .poll(async () => page.locator('select').last().locator('option').count(), { timeout: 15000 })
+  .toBeGreaterThan(1);
+```
+
+`selectOption()` auto-waits for the option and does not need this; only direct reads of the
+option list do.
+
+### 6.2e — DatePicker duplicates its id onto the wrapper `<div>`
+
+Carbon's DatePicker puts the SAME id on the wrapper and the field:
+
+```
+DIV.cds--form-item          id=order_receivedDate
+INPUT.cds--date-picker__input  id=order_receivedDate
+```
+
+`locator('#order_receivedDate')` is therefore a strict-mode violation ("resolved to 2
+elements"), and `.first()` picks the DIV — `inputValue()` then fails with "Node is not an
+`<input>`". Scope the selector to the element type: `locator('input#order_receivedDate')`.
+Note `document.querySelector('#id')` returns the DIV too, so a value read by hand in the
+console can disagree with what the page shows unless you scope it the same way.
 
 ### 6.3 — React SPA Routing (Sidebar Navigation)
 
@@ -96,6 +187,33 @@ await page.click('text=Add/Edit Patient');
 ```
 
 Admin pages at `/MasterListsPage/*` routes generally work with direct URL navigation.
+
+### 6.6 — Navigate before any helper reads `localStorage`
+
+Helpers that read the CSRF token (`page.evaluate(() => localStorage.getItem('CSRF'))`) throw
+if the page has never navigated:
+
+```
+SecurityError: Failed to read the 'localStorage' property from 'Window':
+Access is denied for this document.
+```
+
+A `baseURL` in the config does NOT navigate anything — the page starts on `about:blank`, which
+has no accessible storage and no origin for a relative `fetch()`. A spec whose first statement
+calls an API helper fails before it touches the product, and the failure text names the
+assertion rather than the cause: an entire suite reporting `Received: null` from a fixture
+lookup is this, not missing data.
+
+Every spec that uses an API helper needs a `beforeEach` that lands on a real origin first:
+
+```ts
+test.beforeEach(async ({ page }) => {
+  await page.goto(`${BASE}${SOME_ROUTE}`);
+  await page.waitForFunction(() => !!localStorage.getItem('CSRF'), null, { timeout: 15000 });
+});
+```
+
+This accounted for 15 of the 20 failures on the first run of the 2026-09-02 suites.
 
 ### 6.4 — Dual Authentication Systems
 
@@ -192,7 +310,11 @@ When generating or updating Playwright test specs (`openelis-e2e.spec.ts`), foll
 - Always `await page.waitForSelector()` after navigation to confirm page loaded
 
 ### 10.2 — Carbon Component Interaction
-- **NEVER** use `.click()` on Carbon checkboxes (causes 60s hang)
+- Carbon checkboxes: click `label.cds--checkbox-label`, never the 1x1 hidden input (the "60s hang" is an actionability wait — see 6.2a)
+- Check whether a list is a `<table>` or a `cds--structured-list` before writing row locators (6.2b)
+- Never anchor a `getByRole` name with `^` on a danger button — the accessible name starts with a hidden "danger" (6.2c)
+- Scope duplicated ids to the element type: `input#order_receivedDate` (6.2e)
+- Navigate before any helper reads `localStorage` (6.6)
 - Use native setter pattern for React-controlled inputs (see Section 6.1)
 - For visible UI updates (e.g., char counters), prefer `computer.type()` over native setter
 - Use `page.evaluate()` for DOM manipulation when Playwright actions don't trigger React
