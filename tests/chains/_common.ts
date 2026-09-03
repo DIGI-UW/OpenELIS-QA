@@ -15,15 +15,31 @@
  *   - markStep()          structured step logger that prints
  *                         "[Chain A · Step N · PASS] description"
  *
- * NOTE on §11.5 Blocking-Bug Etiquette: when a step hits a known
- * destructive bug (BUG-31 Carbon Accept checkbox, BUG-38 NCE POST), use
- * `markStep('BLOCKED', ...)` and `return null` from the step function so
- * the chain marks PARTIAL and continues. Never throw — the parent chain's
- * `test.step()` wrapper needs to keep running so later steps can still
- * surface their own findings.
+ * NOTE on §11.5 Blocking-Bug Etiquette (REVISED 2026-09-03, see OGC-1192):
+ * markStep is no longer a passive logger. Prior to this change its entire
+ * body was a console.log, so `markStep(..., 'FAIL', ...)` followed by an
+ * early `return` produced a GREEN test. Chain N Step 4 sat in exactly that
+ * shape for months: its create POST returned 400, the handler recorded GAP,
+ * returned, and the chain reported healthy while its only write path had
+ * never once executed. That is how OGC-1192 (environmental orders invisible
+ * to every dashboard) reached production unnoticed.
+ *
+ * The status argument now has consequences:
+ *   FAIL           -> fails the test immediately, with the description as the
+ *                     assertion message. No caller needs a follow-up expect().
+ *   GAP / BLOCKED  -> annotates and SKIPS the test. A skip is honest: it is
+ *                     visibly not-run in the report, and it can never be
+ *                     mistaken for a pass.
+ *   PASS / PARTIAL -> logged only, as before.
+ *
+ * Because GAP and BLOCKED now throw Playwright's skip signal, any `return`
+ * that followed one is unreachable and harmless; leave it or delete it.
+ * Do NOT reach for GAP to get past a failing assertion — that is the exact
+ * habit this change exists to stop. GAP means "this build genuinely does not
+ * have the feature under test"; anything else is a FAIL.
  */
 
-import { Page, expect } from '@playwright/test';
+import { Page, expect, test } from '@playwright/test';
 import * as zlib from 'zlib';
 import { resolveOrderPath, seedDomainOrder } from './domain-seed';
 
@@ -360,8 +376,43 @@ export type StepStatus = 'PASS' | 'FAIL' | 'BLOCKED' | 'PARTIAL' | 'GAP';
 
 export function markStep(chain: string, n: number, status: StepStatus, description: string, detail?: string): void {
   const tag = `[Chain ${chain} · Step ${n} · ${status}]`;
+  const message = detail ? `${description} — ${detail}` : description;
   // eslint-disable-next-line no-console
-  console.log(detail ? `${tag} ${description} — ${detail}` : `${tag} ${description}`);
+  console.log(`${tag} ${message}`);
+
+  // Annotate first, so the reason survives into the HTML report even when the
+  // call below ends the test.
+  if (status === 'FAIL' || status === 'GAP' || status === 'BLOCKED') {
+    try {
+      test.info().annotations.push({
+        type: status.toLowerCase(),
+        description: `Chain ${chain} Step ${n}: ${message}`,
+      });
+    } catch {
+      // markStep called outside a running test (e.g. from a fixture or a
+      // bare helper). Logging above is all we can honestly do.
+    }
+  }
+
+  if (status === 'FAIL') {
+    // The description IS the failure message; callers no longer need to
+    // follow this with their own expect().
+    expect(false, `${tag} ${message}`).toBeTruthy();
+  }
+
+  if (status === 'GAP' || status === 'BLOCKED') {
+    // Skip, never silently pass. See the revised §11.5 note at the top.
+    //
+    // ESCAPE HATCH: STRICT_STEPS=0 restores the old log-only behaviour for
+    // GAP/BLOCKED (FAIL always fails). This exists because the change touches
+    // ~115 GAP call sites at once and the first full run after it should be
+    // watched. Note the failure mode is asymmetric and safe: a wrongly-skipped
+    // step is VISIBLY not-run, whereas the old behaviour was invisibly
+    // not-run. Do not leave STRICT_STEPS=0 set in CI.
+    if (process.env.STRICT_STEPS !== '0') {
+      test.skip(true, `${tag} ${message}`);
+    }
+  }
 }
 
 // =============================================================================

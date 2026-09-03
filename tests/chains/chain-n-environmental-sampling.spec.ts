@@ -50,8 +50,16 @@ import {
   VE_ENV_SAMPLE_TYPES,
   VE_ENV_COMPLIANCE,
 } from './_common';
+import { buildEnvOrderPayload, ddMMyyyy } from './env-order-payload';
 
 interface ListProbe { name: string; path: string; n: number; ok: boolean; status: number; }
+
+/** GET -> {status:true, body:"DEV…"} — how the wizard's "Generate Lab Number" gets an accession. */
+const ACCESSION_GENERATOR = '/api/OpenELIS-Global/rest/SampleEntryGenerateScanProvider';
+const ORDER_DASHBOARD = '/api/OpenELIS-Global/rest/order/dashboard';
+
+interface DashboardOrder { labNumber?: string }
+interface DashboardPage { orders?: DashboardOrder[]; totalCount?: number }
 
 async function probeList(page: import('@playwright/test').Page, name: string, path: string): Promise<ListProbe> {
   const r = await apiCall<unknown[]>(page, path);
@@ -61,6 +69,7 @@ async function probeList(page: import('@playwright/test').Page, name: string, pa
 
 test.describe.serial('Chain N — Environmental Sampling (deep round-trip)', () => {
   let domainPresent = true;
+  let createdAccession: string | null = null;
 
   test.beforeAll(() => {
     // eslint-disable-next-line no-console
@@ -144,71 +153,76 @@ test.describe.serial('Chain N — Environmental Sampling (deep round-trip)', () 
   });
 
   // ---------------------------------------------------------------------------
-  // Step 4 — Create -> read-back + OGC-1048 collection-date persistence (ROUND-TRIP)
+  // Step 4 — Create -> read-back (ROUND-TRIP)
+  //
+  // REWRITTEN 2026-09-03 (OGC-1192). The previous version posted a
+  // hand-written "best-effort minimal envelope" that omitted the requester,
+  // so every run got HTTP 400, recorded GAP, and returned. This chain's only
+  // write path had never executed. The payload now comes from
+  // env-order-payload.ts — captured from a real browser save and verified by
+  // replay. If the create fails now, that is a REAL defect, not a fixture gap.
   // ---------------------------------------------------------------------------
-  test('Step 4 — Env order create -> read-back, OGC-1048 date watch (ROUND-TRIP)', async ({ page }) => {
+  test('Step 4 — Env order create -> read-back (ROUND-TRIP)', async ({ page }) => {
     if (!domainPresent) { markStep('N', 4, 'GAP', 'Skipped — env domain absent (see Step 1)'); return; }
     await page.goto(BASE);
 
-    // Best-effort environmental SamplePatientEntry envelope. The full payload
-    // wasn't captured byte-for-byte (output filter), so a body-shape rejection
-    // is recorded as GAP (endpoint confirmed) rather than failing the chain.
-    const today = new Date();
-    const dd = String(today.getDate()).padStart(2, '0');
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const collectionDate = `${dd}/${mm}/${today.getFullYear()}`;
-    const createPayload = {
-      sampleOrderItems: { collectionDate, receivedDateForDisplay: collectionDate, requesterSampleID: '' },
-      // env-specific fields ride here; minimal envelope only — see capture note.
-      patientUpdateStatus: 'NO_ACTION',
-      currentDate: collectionDate,
-    };
-    const post = await apiCall<{ accessionNumber?: string }>(page, VE_CREATE, { method: 'POST', body: createPayload });
+    const gen = await apiCall<{ status?: boolean; body?: string }>(page, ACCESSION_GENERATOR);
+    const labNo = (gen.body && typeof gen.body === 'object')
+      ? (gen.body as { body?: string }).body
+      : undefined;
+    if (!gen.ok || !labNo) {
+      markStep('N', 4, 'FAIL',
+        `Could not generate an accession (HTTP ${gen.status})`,
+        `GET ${ACCESSION_GENERATOR} should return {status:true, body:"DEV…"}`);
+      return;
+    }
+
+    const date = ddMMyyyy();
+    const payload = buildEnvOrderPayload({ labNo, date });
+    const post = await apiCall(page, VE_CREATE, { method: 'POST', body: payload });
 
     if (!post.ok) {
-      markStep('N', 4, 'GAP',
-        `Env order create returned HTTP ${post.status} — full SamplePatientEntry env payload needs pinning`,
-        `Endpoint confirmed: POST ${VE_CREATE} (then GET /rest/order/search). Capture the exact body from the env "Save & Next" action and expand createPayload (Sampling Site, Collection Method, per-sample manifest rows, Tests & Panels).`);
-      test.info().annotations.push({ type: 'gap', description: `env create body shape (HTTP ${post.status})` });
-      return;
-    }
-
-    // Landing check: read the new order back via the legacy SampleEdit model.
-    const acc = (post.body && typeof post.body === 'object')
-      ? (post.body as { accessionNumber?: string }).accessionNumber
-      : undefined;
-    if (!acc) {
-      markStep('N', 4, 'GAP', 'Create returned 2xx but no accession in response — cannot read back',
-        'Inspect the create response shape to extract the new accession.');
-      test.info().annotations.push({ type: 'gap', description: 'no accession returned on create' });
-      return;
-    }
-    const readback = await apiCall<{ sampleXML?: string; currentDate?: string }>(
-      page, `/api/OpenELIS-Global/rest/SampleEdit?labNumber=${encodeURIComponent(acc)}`);
-    const hasSamples = readback.ok && typeof readback.body === 'object' && readback.body !== null
-      && typeof (readback.body as { sampleXML?: string }).sampleXML === 'string'
-      && (readback.body as { sampleXML: string }).sampleXML.length > 0;
-
-    if (hasSamples) {
-      // OGC-1048 watch: assert the collection date survived the save unchanged.
-      const xml = (readback.body as { sampleXML: string }).sampleXML;
-      const datePersisted = xml.includes(collectionDate) || /collectionDate/i.test(xml);
-      if (datePersisted) {
-        markStep('N', 4, 'PASS', `Env order ${acc} created and read back with samples; collection date persisted (OGC-1048 appears FIXED)`);
-        expect(hasSamples).toBeTruthy();
-      } else {
-        markStep('N', 4, 'GAP',
-          `OGC-1048 watch: env order ${acc} created but collection date not found on read-back`,
-          'Default collection date not bound to form state — known OGC-1048. When fixed, date persists and this becomes PASS.');
-        test.info().annotations.push({ type: 'known-bug', description: 'OGC-1048 collection date not persisted' });
-        expect(hasSamples).toBeTruthy();
-      }
-    } else {
+      // No GAP escape hatch here on purpose. The payload is known-good, so a
+      // non-2xx is a regression in the create path itself.
       markStep('N', 4, 'FAIL',
-        `Env order ${acc} create 2xx but read-back returned no samples (HTTP ${readback.status})`,
-        'Order did not land.');
-      expect(hasSamples, 'env order read-back carries samples').toBeTruthy();
+        `Env order create returned HTTP ${post.status} with the verified payload`,
+        `POST ${VE_CREATE} for ${labNo}. Body shape confirmed working on v3.2.2.0 2026-09-03; if the contract changed, re-capture per the header of env-order-payload.ts.`);
+      return;
     }
+
+    createdAccession = labNo;
+
+    // Landing check: the sample must be readable back. NOTE: SampleEdit is the
+    // endpoint that 500s on patientless samples (OGC-1192 §2), so this leg
+    // doubles as the regression watch for that bug.
+    const readback = await apiCall<{ sampleXML?: string; noSampleFound?: boolean }>(
+      page, `/api/OpenELIS-Global/rest/SampleEdit?accessionNumber=${encodeURIComponent(labNo)}`);
+
+    if (readback.status >= 500) {
+      markStep('N', 4, 'FAIL',
+        `Env order ${labNo} created (200) but SampleEdit read-back returned HTTP ${readback.status}`,
+        'OGC-1192 §2: patientless samples crash patient-joining code. A nonexistent accession returns 200 + noSampleFound:true, so this 500 is specific to "exists but has no patient". When OGC-1192 is fixed this becomes a pass.');
+      return;
+    }
+
+    const body = (readback.body && typeof readback.body === 'object') ? readback.body as Record<string, unknown> : {};
+    if (body.noSampleFound === true) {
+      markStep('N', 4, 'FAIL',
+        `Env order ${labNo} created (200) but SampleEdit reports noSampleFound`,
+        'The create claimed success and the row did not land.');
+      return;
+    }
+
+    const hasSamples = typeof body.sampleXML === 'string' && (body.sampleXML as string).length > 0;
+    if (!hasSamples) {
+      markStep('N', 4, 'FAIL',
+        `Env order ${labNo} read back without a sampleXML payload (HTTP ${readback.status})`,
+        'Order did not land with its manifest.');
+      return;
+    }
+
+    markStep('N', 4, 'PASS', `Env order ${labNo} created and read back with its manifest intact`);
+    expect(hasSamples).toBeTruthy();
   });
 
   // ---------------------------------------------------------------------------
@@ -225,5 +239,45 @@ test.describe.serial('Chain N — Environmental Sampling (deep round-trip)', () 
       markStep('N', 5, 'BLOCKED', `LogbookResults HTTP ${lb.status}`);
       test.info().annotations.push({ type: 'blocked', description: 'results surface unreachable' });
     }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Step 6 — The order we just created is VISIBLE on the dashboard (OGC-1192)
+  //
+  // NEW 2026-09-03. Before this, nothing in the entire repo asserted
+  // /rest/order/dashboard — `grep -rn "order/dashboard"` returned zero hits in
+  // any domain. app-route-census visits /order/environmental but only checks
+  // that the page paints chrome and raises no 5xx, which an empty "No orders
+  // found" table passes. That is the oracle gap that let OGC-1192 through.
+  // ---------------------------------------------------------------------------
+  test('Step 6 — Created env order is visible on the dashboard (OGC-1192)', async ({ page }) => {
+    if (!domainPresent) { markStep('N', 6, 'GAP', 'Skipped — env domain absent (see Step 1)'); return; }
+    if (!createdAccession) {
+      markStep('N', 6, 'FAIL', 'No accession from Step 4 to look for — Step 4 must pass before visibility can be judged');
+      return;
+    }
+    await page.goto(BASE);
+
+    const envList = await apiCall<DashboardPage>(page, `${ORDER_DASHBOARD}?page=1&pageSize=100&workflowType=environmental`);
+    const allList = await apiCall<DashboardPage>(page, `${ORDER_DASHBOARD}?page=1&pageSize=100`);
+
+    const envBody = (envList.body && typeof envList.body === 'object') ? envList.body as DashboardPage : { orders: [], totalCount: 0 };
+    const allBody = (allList.body && typeof allList.body === 'object') ? allList.body as DashboardPage : { orders: [], totalCount: 0 };
+    const inEnv = (envBody.orders ?? []).some(o => o.labNumber === createdAccession);
+    const inAll = (allBody.orders ?? []).some(o => o.labNumber === createdAccession);
+
+    if (inEnv) {
+      markStep('N', 6, 'PASS',
+        `${createdAccession} appears on the environmental dashboard (envTotal=${envBody.totalCount})`);
+      expect(inEnv).toBeTruthy();
+      return;
+    }
+
+    markStep('N', 6, 'FAIL',
+      `${createdAccession} saved with HTTP 200 but does not appear on the environmental dashboard`,
+      `OGC-1192 §1. envTotal=${envBody.totalCount}, unfilteredTotal=${allBody.totalCount}, presentInUnfiltered=${inAll}. ` +
+      'Absent from the unfiltered list too means this is not a workflowType filter problem — the row never enters the ' +
+      'dashboard result set. Likely the query joins through patient, which excludes every patientless (i.e. every ' +
+      'environmental) sample. When OGC-1192 is fixed this flips to PASS.');
   });
 });
