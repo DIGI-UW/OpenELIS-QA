@@ -1,0 +1,150 @@
+name: nightly
+
+# Why this exists (2026-09-03, OGC-1192 post-mortem):
+#
+# Until now NOTHING in CI ran a single test. The only workflow was `typecheck`.
+# That meant the harness had no mechanism that could tell anyone something had
+# broken — a suite could be entirely red for months and nobody would know until
+# a person ran it by hand. OGC-1192 (environmental orders invisible to every
+# dashboard) is what that costs.
+#
+# This job runs the suites unattended against a live instance and records the
+# result. It is deliberately NON-BLOCKING on test outcome for now: the target is
+# a shared test server whose data and uptime we do not control, so a red run is
+# a signal to read, not a build to break. What it must never do is run and be
+# ignored — hence the step summary and the artifact.
+#
+# Promote a suite to blocking once it has been stable for a couple of weeks.
+
+on:
+  schedule:
+    # 07:00 UTC daily — early morning UTC, before the working day in Kampala
+    # (UTC+3) and overnight for Seattle, so results are waiting either way.
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Instance to run against'
+        required: false
+        default: 'https://testing.openelis-global.org'
+      suite:
+        description: 'Which suites to run'
+        required: false
+        default: 'core'
+        type: choice
+        options: [core, chains, ogc1192, all]
+
+concurrency:
+  # Never let two nightly runs hit the same instance at once — they seed data.
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      BASE: ${{ github.event.inputs.base_url || 'https://testing.openelis-global.org' }}
+      BASE_URL: ${{ github.event.inputs.base_url || 'https://testing.openelis-global.org' }}
+      SUITE: ${{ github.event.inputs.suite || 'core' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # NB: `npm ci` is deliberately not used — package-lock.json is gitignored.
+      - name: Install dev dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Fail fast and legibly if the instance is down, rather than producing 40
+      # authentication failures that all look like test defects.
+      - name: Target is reachable
+        run: |
+          CODE=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 30 "$BASE/" || echo 000)
+          echo "GET $BASE/ -> $CODE"
+          if [ "$CODE" = "000" ]; then
+            echo "::error::$BASE is unreachable — aborting before the suites run."
+            exit 1
+          fi
+
+      - name: Run suites
+        id: run
+        continue-on-error: true
+        run: |
+          set +e
+          mkdir -p nightly-out
+          STATUS=0
+          run_cfg () {
+            local name="$1" cfg="$2"
+            echo "::group::$name"
+            npx playwright test --config="$cfg" --reporter=line > "nightly-out/$name.txt" 2>&1
+            local rc=$?
+            [ $rc -ne 0 ] && STATUS=1
+            tail -25 "nightly-out/$name.txt"
+            echo "::endgroup::"
+            echo "$name rc=$rc" >> nightly-out/rc.txt
+          }
+
+          case "$SUITE" in
+            ogc1192) run_cfg ogc1192 ogc1192.config.ts ;;
+            chains)  run_cfg chains regression-chains.config.ts ;;
+            all)
+              run_cfg ogc1192 ogc1192.config.ts
+              run_cfg chains regression-chains.config.ts
+              run_cfg rbac rbac.config.ts
+              run_cfg all-tc all-tc.config.ts
+              ;;
+            *)  # core
+              run_cfg ogc1192 ogc1192.config.ts
+              run_cfg chains regression-chains.config.ts
+              ;;
+          esac
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo "# Nightly run"
+            echo ""
+            echo "Target: \`$BASE\`  ·  Suite: \`$SUITE\`"
+            echo ""
+            echo "| Suite | passed | failed | skipped | exit |"
+            echo "|---|---|---|---|---|"
+            for f in nightly-out/*.txt; do
+              [ -e "$f" ] || continue
+              n=$(basename "$f" .txt)
+              p=$(grep -oE '[0-9]+ passed' "$f" | tail -1 | grep -oE '[0-9]+' || echo 0)
+              x=$(grep -oE '[0-9]+ failed' "$f" | tail -1 | grep -oE '[0-9]+' || echo 0)
+              s=$(grep -oE '[0-9]+ skipped' "$f" | tail -1 | grep -oE '[0-9]+' || echo 0)
+              rc=$(grep "^$n rc=" nightly-out/rc.txt | tail -1 | cut -d= -f2)
+              echo "| $n | ${p:-0} | ${x:-0} | ${s:-0} | ${rc:-?} |"
+            done
+            echo ""
+            echo "**Skipped is not passed.** A step that skipped did not run — if a"
+            echo "count here is climbing, something is quietly excusing itself. See"
+            echo "Section 12 of \`references/playwright-harness.md\`."
+            echo ""
+            if [ "${{ steps.run.outputs.status }}" = "1" ]; then
+              echo "> One or more suites reported failures. This job is non-blocking by"
+              echo "> design — read the artifact, do not ignore it."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-${{ github.run_number }}
+          path: |
+            nightly-out/
+            test-results/
+            regression-results/
+          retention-days: 14
+          if-no-files-found: warn

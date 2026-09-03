@@ -41,6 +41,16 @@ jobs:
       - name: Typecheck maintained surface
         run: npm run typecheck
 
+      # BLOCKING: no NEW test may be added that asserts nothing. A test which
+      # reaches its end without an assertion cannot fail, so it cannot report
+      # anything — it just inflates the pass count. A repo scan on 2026-09-03
+      # found 296 of these already present (and 36 tests that can print the
+      # word "FAIL" and still pass), which is why this is a baseline gate
+      # rather than a hard switch: the existing backlog is recorded in
+      # .assert-baseline.json and can only shrink. Also blocks focused tests.
+      - name: No new assertion-free tests
+        run: npm run lint:assert
+
       # NON-BLOCKING: the rest of the repo. ~166 errors as of 2026-07-31,
       # mostly missing type imports in older specs. Reported so the number is
       # visible and can only go down; widen tsconfig.json's include as files
