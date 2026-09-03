@@ -542,6 +542,50 @@ of reading the frontend would have given: `rememberSiteAndRequester` is **requir
 that one boolean yields a 500, not a 400), and the ~45 empty-string/empty-array keys in
 `sampleOrderItems` are load-bearing for the binder.
 
+### 12.6 — The three gates, and what each one is for
+
+Added with the OGC-1192 remediation. Fail-by-default: anything not demonstrably
+green should be visible as not-green.
+
+| Gate | Command | Blocking? | Catches |
+|---|---|---|---|
+| assertion gate | `npm run lint:assert` | **yes**, on PR | a new test that asserts nothing; any focused test |
+| nightly run | `.github/workflows/nightly.yml` | no (reported) | the suites actually breaking against a live instance |
+| `markStep` semantics | built in (12.1) | **yes**, at runtime | a step self-excusing past a failure |
+
+**The assertion gate is a baseline, not a switch.** The 2026-09-03 scan found
+**296** pre-existing assertion-free tests across 111 files (93 of them in the
+legacy `openelis-e2e.spec.ts`). Turning the rule on hard would have made `main`
+unmergeable, and a gate people route around is worth less than no gate. So
+`.assert-baseline.json` records the backlog per file, and CI fails only when a
+file's count goes **up** or a new file appears. Fix a file, run
+`npm run lint:baseline`, commit the smaller number.
+
+Do not raise the baseline to make a build pass. That is the same move as
+reaching for GAP, one level up.
+
+**Why the nightly run is non-blocking.** It runs against a shared instance whose
+data and uptime we do not control, so a red run is a signal to read rather than
+a build to break. The risk is that a permanently-red non-blocking job becomes
+wallpaper — so promote a suite to blocking once it has been stable for a couple
+of weeks, and treat a climbing **skipped** count as a failure signal in its own
+right. Skipped is not passed; a step that skipped did not run.
+
+### 12.7 — Shapes that pass while proving nothing (the 2026-09-03 census)
+
+Search for these before trusting any suite. Counts are from the scan that
+followed OGC-1192.
+
+| Shape | Count | Why it passes |
+|---|---|---|
+| test block with zero `expect()` | 296 | nothing can fail |
+| `console.log(ok ? 'TC-X: PASS' : 'TC-X: FAIL')` | 36 | a self-reported verdict is not an assertion — and it prints "FAIL" while the runner says green |
+| `console.log('SKIP: …'); return;` | 57 | early return with no skip marker; shows as a pass, not even amber |
+| `.catch(() => false)` | 1119 | turns "this errored" into "this is absent", which then feeds a conditional that quietly does nothing |
+
+The first is now gated. The rest are open work — see the OGC-1192 remediation
+notes. When you touch a file containing any of them, fix what you touch.
+
 ### 12.5 — Controls are what make a bug assertion mean anything
 
 `SampleEdit` returning 500 for a patientless sample only means something next to the two
