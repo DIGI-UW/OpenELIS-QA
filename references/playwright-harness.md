@@ -459,6 +459,101 @@ via `loginName`/`password` with the native-setter pattern, navigate back, and re
 continuing — in-page widget state may survive but any React form state will not.
 ---
 
+## Section 12 — Oracle design: what makes a test able to fail (OGC-1192 post-mortem)
+
+Added 2026-09-03 after OGC-1192 — "environmental orders are invisible to every dashboard once
+saved" — reached production despite the repo carrying a dedicated environmental chain. The bug
+was not missed for lack of coverage. It was missed because the coverage **could not fail**.
+Read this section before writing any new chain step.
+
+### 12.1 — `markStep` is no longer a logger (BEHAVIOUR CHANGE)
+
+Until 2026-09-03 the entire body of `markStep()` was a `console.log`. `FAIL`, `GAP` and
+`BLOCKED` were decorative. That meant this extremely common shape was a **green test**:
+
+```ts
+if (!post.ok) {
+  markStep('N', 4, 'GAP', `create returned HTTP ${post.status}`);
+  return;                       // <- test ends here, reported as PASSED
+}
+```
+
+Chain N Step 4 sat in exactly that shape for months. Its create POST returned 400 on every
+run because the hand-written payload omitted the requester, so the chain's only write path
+never executed once — and the chain reported healthy the whole time.
+
+`markStep` now has consequences:
+
+| status | effect |
+| --- | --- |
+| `FAIL` | fails the test immediately, description becomes the assertion message |
+| `GAP` / `BLOCKED` | annotates **and skips** — visibly not-run, never a pass |
+| `PASS` / `PARTIAL` | logged only, as before |
+
+Callers no longer need a follow-up `expect()` after `markStep(..., 'FAIL', ...)`, and any
+`return` after a GAP/BLOCKED is now unreachable (harmless — leave or delete).
+
+`STRICT_STEPS=0` restores log-only behaviour for GAP/BLOCKED if a run goes sideways. FAIL
+always fails. Do not leave it set in CI.
+
+**The rule this encodes:** `GAP` means *this build genuinely does not have the feature under
+test*. It does not mean *the call failed and I would rather not deal with it*. A 4xx from an
+endpoint that exists is a FAIL. If you find yourself reaching for GAP to get past a failing
+assertion, you are writing the next OGC-1192.
+
+### 12.2 — "The page rendered" is not an oracle
+
+`app-route-census` visits `/order/environmental` and asserts: didn't bounce to login, painted
+some chrome, no error-text markers, no uncaught page errors, no 5xx. An environmental
+dashboard reading **"No orders found — 0–0 of 0 items"** passes all five, because it paints a
+heading and a table.
+
+Route censuses are cheap smoke tests and worth keeping, but they answer *did this route
+render*, never *did it render the right thing*. Do not count a census as coverage of a
+screen's data. Before OGC-1192, `grep -rn "order/dashboard"` returned **zero** hits across the
+whole repo — no test in any domain had ever asserted what a dashboard contains.
+
+### 12.3 — Every write path needs a round-trip, and the round-trip needs a landing check
+
+A create that is never read back is not tested. Chain N now: generates an accession →
+POSTs the verified payload → reads the sample back → asserts it appears on the dashboard
+(Step 6). Three separate failure surfaces, each with its own message.
+
+When writing a create step, ask what would happen if the POST silently did nothing. If the
+answer is "the test still passes", the step is decorative.
+
+### 12.4 — Capture payloads, do not compose them
+
+Chain N's old payload carried its own confession: *"the full payload wasn't captured
+byte-for-byte (output filter), so a body-shape rejection is recorded as GAP."* A guessed
+payload plus a self-excusing error branch is indistinguishable from no test at all.
+
+The working method (see the header of `tests/chains/env-order-payload.ts`):
+
+1. Drive the real UI to a successful save with `window.fetch` patched to record the outgoing
+   request body verbatim.
+2. Replay the captured body with a fresh identifier. If it does not 200, it was tied to
+   one-shot form state — fix that before proceeding.
+3. Bisect: delete key groups, re-post each variant, and record what the server actually
+   requires. This both shrinks the fixture and documents the contract.
+
+For the environmental order this took 6574 bytes down to 3177 and surfaced two facts no amount
+of reading the frontend would have given: `rememberSiteAndRequester` is **required** (omitting
+that one boolean yields a 500, not a 400), and the ~45 empty-string/empty-array keys in
+`sampleOrderItems` are load-bearing for the binder.
+
+### 12.5 — Controls are what make a bug assertion mean anything
+
+`SampleEdit` returning 500 for a patientless sample only means something next to the two
+controls: a nonexistent accession returns `200 + noSampleFound: true`, and a sample with a
+patient returns `200 + payload`. Those controls are permanent truths in the OGC-1192 suite,
+not flip-when-fixed cases — and the suite says so, because if a control breaks, the bug
+assertion beside it proves nothing.
+
+Pair every "this is broken" assertion with the measurement that isolates the variable.
+
+---
+
 ## Section 11 — PR #3987 findings (live-validated 2026-08-06, testing v3.2.1.11)
 
 Authored while regression-testing DIGI-UW/OpenELIS-Global-2#3987. Everything here
