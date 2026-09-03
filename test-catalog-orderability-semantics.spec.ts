@@ -231,6 +231,12 @@ test.describe('Orderability semantics — active vs orderable', () => {
     await page.waitForFunction(() => !!localStorage.getItem('CSRF'), null, { timeout: 15000 });
 
     const filter = page.locator('#unifiedResultsLabUnit');
+    // Wait for the control before deciding to skip. waitForFunction(CSRF) resolves before React
+    // has finished rendering, so an immediate count() made this GUARDRAIL skip ITSELF on some
+    // runs — and a skipped test reads as green, so the guardrail silently was not checked.
+    // Observed 2026-09-02: TO-5 skipped on every run until this was fixed; G-2/G-4 skipped
+    // intermittently. Only skip when the route is genuinely off.
+    await filter.waitFor({ state: 'attached', timeout: 15000 }).catch(() => {});
     test.skip((await filter.count()) === 0, 'unified results route is off on this instance');
 
     const offered = await filter.locator('option').evaluateAll((os) =>
