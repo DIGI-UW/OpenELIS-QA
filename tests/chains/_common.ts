@@ -42,6 +42,7 @@
 import { Page, expect, test } from '@playwright/test';
 import * as zlib from 'zlib';
 import { resolveOrderPath, seedDomainOrder } from './domain-seed';
+import { isDeclaredGap, gapsAreStrict } from './known-gaps';
 
 export const BASE = process.env.BASE_URL || process.env.BASE || 'https://testing.openelis-global.org';
 
@@ -401,16 +402,27 @@ export function markStep(chain: string, n: number, status: StepStatus, descripti
   }
 
   if (status === 'GAP' || status === 'BLOCKED') {
-    // Skip, never silently pass. See the revised §11.5 note at the top.
+    // Fail-by-default. A gap is only allowed to skip if it was DECLARED in
+    // advance in known-gaps.ts, where a human wrote down why this build cannot
+    // run the step and what would retire the entry. Everything else fails.
     //
-    // ESCAPE HATCH: STRICT_STEPS=0 restores the old log-only behaviour for
-    // GAP/BLOCKED (FAIL always fails). This exists because the change touches
-    // ~115 GAP call sites at once and the first full run after it should be
-    // watched. Note the failure mode is asymmetric and safe: a wrongly-skipped
-    // step is VISIBLY not-run, whereas the old behaviour was invisibly
-    // not-run. Do not leave STRICT_STEPS=0 set in CI.
-    if (process.env.STRICT_STEPS !== '0') {
-      test.skip(true, `${tag} ${message}`);
+    // Strict mode is currently opt-in (GAPS_STRICT=1, set by the nightly job)
+    // because you cannot honestly declare gaps you have never seen fire, and
+    // this repo had no unattended runs before 2026-09-03. See known-gaps.ts.
+    const declared = isDeclaredGap(chain, n);
+    if (declared) {
+      test.skip(true,
+        `${tag} ${message} — DECLARED GAP${declared.ticket ? ` (${declared.ticket})` : ''}: ${declared.reason}`);
+    } else if (gapsAreStrict()) {
+      expect(false,
+        `${tag} ${message}\n\nUndeclared gap. A step may only excuse itself if the reason is ` +
+        `written down in tests/chains/known-gaps.ts (key "${chain}:${n}"). If this build genuinely ` +
+        `lacks the feature, declare it there with a ticket and a retirement condition. If the call ` +
+        `simply failed, this is a FAIL — fix it, do not declare it.`,
+      ).toBeTruthy();
+    } else {
+      // Pre-strict: skip, never silently pass.
+      test.skip(true, `${tag} ${message} — UNDECLARED gap (would fail under GAPS_STRICT=1)`);
     }
   }
 }

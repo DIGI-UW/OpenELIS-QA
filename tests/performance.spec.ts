@@ -43,10 +43,12 @@ test.describe('Performance Smoke (TC-PERF)', () => {
     }
 
     console.log(`TC-PERF-02: Step transitions: ${timings.map(t => `${t}ms`).join(', ')}`);
-    const maxTime = Math.max(...timings, 0);
-    console.log(maxTime < 5000
-      ? `TC-PERF-02: PASS — max transition ${maxTime}ms`
-      : `TC-PERF-02: FAIL — slow transition ${maxTime}ms`);
+    // No transitions measured means the wizard never offered a Next button —
+    // that is a different failure from a slow one, so report it as such rather
+    // than passing on Math.max([], 0) === 0.
+    expect(timings.length, 'the Add Order wizard offered no Next button, so no transition could be timed').toBeGreaterThan(0);
+    const maxTime = Math.max(...timings);
+    expect(maxTime, `slowest wizard step transition was ${maxTime}ms (budget 5000ms)`).toBeLessThan(5000);
   });
 
   test('TC-PERF-03: Results By Order search latency', async ({ page }) => {
@@ -182,10 +184,17 @@ test.describe('Data Integrity and Cross-Module Consistency (TC-DI)', () => {
     const orderHasHGB = /HGB|Haemoglobin|Hemoglobin/i.test(orderText);
 
     console.log(`TC-DI-01: Results: Sebby=${resultHasSebby} HGB=${resultHasHGB} | Order: Sebby=${orderHasSebby} HGB=${orderHasHGB}`);
-    const consistent = (resultHasSebby === orderHasSebby) && (resultHasHGB === orderHasHGB);
-    console.log(consistent
-      ? 'TC-DI-01: PASS — data consistent across Results and Order Search'
-      : 'TC-DI-01: FAIL — inconsistency detected between modules');
+
+    // ACC is instance-specific fixture data. If neither module can see it at
+    // all there is nothing to compare, and asserting consistency between two
+    // empty pages would pass vacuously — so skip rather than fake agreement.
+    const fixturePresent = resultHasSebby || orderHasSebby || resultHasHGB || orderHasHGB;
+    test.skip(!fixturePresent, `fixture accession ${ACC} is not present in either module on this instance`);
+
+    // The actual claim: the SAME accession must show the SAME patient and the
+    // SAME test in both modules.
+    expect(orderHasSebby, `patient visible in Results (${resultHasSebby}) but not Order Search (${orderHasSebby}) for ${ACC}`).toBe(resultHasSebby);
+    expect(orderHasHGB, `test visible in Results (${resultHasHGB}) but not Order Search (${orderHasHGB}) for ${ACC}`).toBe(resultHasHGB);
   });
 
   test('TC-DI-03: Result value round-trip (decimal precision)', async ({ page }) => {

@@ -154,10 +154,9 @@ test.describe('LOINC and Dictionary CRUD (TC-LOINC)', () => {
 
   test('TC-LOINC-02: Search for HGB LOINC code (718-7)', async ({ page }) => {
     const url = await goToLoincScreen(page);
-    if (!url) {
-      console.log('TC-LOINC-02: SKIP — LOINC screen not accessible');
-      return;
-    }
+    // A genuine absence: this build does not expose the LOINC screen. Skip is
+    // visible in the report; an early `return` here used to read as a pass.
+    test.skip(!url, 'LOINC screen not accessible on this build');
 
     const searchField = page.locator('input[type="search"], input[type="text"]').first();
     if (await searchField.isVisible({ timeout: 2000 }).catch(() => false)) {
@@ -167,9 +166,7 @@ test.describe('LOINC and Dictionary CRUD (TC-LOINC)', () => {
     }
 
     const has7187 = await page.getByText(/718-7|hemoglobin/i).isVisible({ timeout: 5000 }).catch(() => false);
-    console.log(has7187
-      ? 'TC-LOINC-02: PASS — 718-7 found in LOINC list'
-      : 'TC-LOINC-02: FAIL — 718-7 not returned in LOINC search');
+    expect(has7187, 'LOINC search for 718-7 returned neither the code nor "hemoglobin"').toBeTruthy();
   });
 
   test('TC-LOINC-03: LOINC mapping visible on HGB test record', async ({ page }) => {
@@ -264,16 +261,12 @@ test.describe('LOINC and Dictionary CRUD (TC-LOINC)', () => {
   test('TC-LOINC-06: Edit and deactivate dictionary entry', async ({ page }) => {
     // Use the QA entry from TC-ADMIN-06 if it was created; otherwise find any safe entry
     const res = await page.goto(`${BASE}/MasterListsPage/Dictionary`).catch(() => null);
-    if (!res || page.url().includes('LoginPage')) {
-      console.log('TC-LOINC-06: SKIP — dictionary not accessible');
-      return;
-    }
+    test.skip(!res || page.url().includes('LoginPage'), 'dictionary screen not accessible');
 
     const qaEntry = page.getByText(/QA_AUTO_RejReason/i).first();
-    if (!(await qaEntry.isVisible({ timeout: 3000 }).catch(() => false))) {
-      console.log('TC-LOINC-06: SKIP — QA dictionary entry from TC-ADMIN-06 not found (run that test first)');
-      return;
-    }
+    const haveFixture = await qaEntry.isVisible({ timeout: 3000 }).catch(() => false);
+    // Ordering dependency, not a defect: TC-ADMIN-06 seeds this entry.
+    test.skip(!haveFixture, 'QA_AUTO_RejReason not present — run TC-ADMIN-06 first to seed it');
 
     // Click edit on this entry
     const row = page.locator('tr', { has: page.getByText(/QA_AUTO_RejReason/i) }).first();
@@ -290,6 +283,7 @@ test.describe('LOINC and Dictionary CRUD (TC-LOINC)', () => {
       }
 
       const edited = await page.getByText(/QA_EDITED_ENTRY/i).isVisible({ timeout: 3000 }).catch(() => false);
+      expect(edited, 'dictionary edit did not persist after save (BUG-8 class)').toBeTruthy();
       console.log(edited
         ? 'TC-LOINC-06 edit: PASS'
         : 'TC-LOINC-06 edit: FAIL — edit not persisted (BUG-8 class?)');
@@ -312,17 +306,19 @@ test.describe('Audit Log and System Configuration (TC-SYS)', () => {
   const SYS_CONFIG_URLS = ['/SystemConfiguration', '/MasterListsPage/SystemConfig', '/AdminModule'];
 
   test('TC-SYS-01: Audit log screen accessible', async ({ page }) => {
+    let found = false;
     for (const u of AUDIT_URLS) {
       const res = await page.goto(`${BASE}${u}`).catch(() => null);
       if (res && res.ok() && !page.url().includes('LoginPage')) {
         const text = await page.textContent('body') ?? '';
         if (/log|audit|action|event/i.test(text)) {
           console.log(`TC-SYS-01: PASS — audit log at ${page.url()}`);
-          return;
+          found = true;
+          break;
         }
       }
     }
-    console.log('TC-SYS-01: GAP — audit log screen not found at known URLs');
+    expect(found, `no audit log screen at any of: ${AUDIT_URLS.join(', ')}`).toBeTruthy();
   });
 
   test('TC-SYS-02: Audit log shows recent admin actions', async ({ page }) => {
@@ -334,10 +330,7 @@ test.describe('Audit Log and System Configuration (TC-SYS)', () => {
         break;
       }
     }
-    if (!auditUrl) {
-      console.log('TC-SYS-02: SKIP — audit log not accessible');
-      return;
-    }
+    test.skip(!auditUrl, 'audit log not accessible on this build');
 
     // Apply today's date filter if available
     const today = new Date();
@@ -350,9 +343,7 @@ test.describe('Audit Log and System Configuration (TC-SYS)', () => {
     }
 
     const hasAdminEntry = await page.getByText(/admin/i).isVisible({ timeout: 3000 }).catch(() => false);
-    console.log(hasAdminEntry
-      ? 'TC-SYS-02: PASS — admin entries found in audit log'
-      : 'TC-SYS-02: FAIL — no admin entries in audit log (may be filtered or log is empty)');
+    expect(hasAdminEntry, 'audit log showed no admin entries — either the log is empty or the date filter excluded everything').toBeTruthy();
   });
 
   test('TC-SYS-03: System configuration screen accessible', async ({ page }) => {
@@ -623,9 +614,9 @@ test.describe('Session Management (TC-SESS)', () => {
     await page.goBack();
     await page.waitForTimeout(1500);
     const backOnLogin = page.url().includes('Login') || !page.url().includes('Accession');
-    console.log(backOnLogin
-      ? 'TC-SESS-02 back button: PASS — session fully cleared'
-      : 'TC-SESS-02 back button: FAIL — protected page accessible via back button');
+    // Security assertion — a protected page reachable via Back after logout is
+    // a real finding, not a note.
+    expect(backOnLogin, `protected page still reachable via the back button after logout (${page.url()})`).toBeTruthy();
   });
 
   test('TC-SESS-03: Stale URL redirects to login', async ({ page }) => {

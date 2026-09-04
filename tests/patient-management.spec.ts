@@ -154,10 +154,7 @@ test.describe('Patient Management (TC-PAT)', () => {
         break;
       }
     }
-    if (!landed) {
-      console.log('TC-PAT-05: GAP — no Add Patient URL accessible');
-      return;
-    }
+    test.skip(!landed, `no Add Patient screen at any of: ${addPatientUrls.join(', ')}`);
 
     // Fill demographics
     const lastNameField = page.getByRole('textbox', { name: /last.*name/i }).first();
@@ -182,7 +179,7 @@ test.describe('Patient Management (TC-PAT)', () => {
     }
 
     const savedOk = await page.getByText(/QA_Patient|QA_PAT_0324/i).isVisible({ timeout: 5000 }).catch(() => false);
-    console.log(savedOk ? 'TC-PAT-05: PASS — new patient created' : 'TC-PAT-05: FAIL — patient not persisted after save');
+    expect(savedOk, 'new patient did not persist after save — neither the name nor the national ID appeared').toBeTruthy();
   });
 });
 
