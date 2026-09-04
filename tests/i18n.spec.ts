@@ -35,9 +35,7 @@ test.describe('Localization and i18n (TC-I18N)', () => {
       // Try looking for FR / EN text links
       const enLink = page.getByText(/^EN$|^FR$|^English|^Français/i).first();
       const hasTextLink = await enLink.isVisible({ timeout: 3000 }).catch(() => false);
-      console.log(hasTextLink
-        ? 'TC-I18N-01: PASS — language text link found'
-        : 'TC-I18N-01: GAP — no language switcher found on page');
+      expect(hasTextLink, 'no language switcher: neither a selector widget nor an EN/FR text link was found').toBeTruthy();
     } else {
       console.log('TC-I18N-01: PASS — language selector widget found');
     }
@@ -62,12 +60,10 @@ test.describe('Localization and i18n (TC-I18N)', () => {
         await page.waitForTimeout(2000);
         const bodyText2 = await page.textContent('body') ?? '';
         const hasFrench2 = /résultat|commande|patient|accueil|tableau/i.test(bodyText2);
-        console.log(hasFrench2
-          ? 'TC-I18N-02: PASS — French labels visible after clicking FR link'
-          : 'TC-I18N-02: FAIL — FR link clicked but no French labels appeared');
+        expect(hasFrench2, 'FR link was clicked but no French labels appeared').toBeTruthy();
         return;
       }
-      console.log('TC-I18N-02: GAP — could not switch to French via URL param or link');
+      expect(false, 'could not switch to French: the locale URL param did nothing and no FR link exists').toBeTruthy();
       return;
     }
 
@@ -87,11 +83,8 @@ test.describe('Localization and i18n (TC-I18N)', () => {
     const hasEnglish = /result|order|patient|dashboard|validation/i.test(bodyText);
     const hasResidualFr = /résultat|commande|accueil|tableau/i.test(bodyText);
 
-    console.log(hasEnglish && !hasResidualFr
-      ? 'TC-I18N-03: PASS — clean switch back to English'
-      : hasEnglish && hasResidualFr
-        ? 'TC-I18N-03: FAIL — residual French labels after switch to English'
-        : 'TC-I18N-03: FAIL — neither language fully rendered');
+    expect(hasEnglish, 'switching back to ?lang=en rendered no recognisable English labels').toBeTruthy();
+    expect(hasResidualFr, 'French labels survived the switch back to English — the locale change is partial').toBeFalsy();
   });
 
   test('TC-I18N-04: Date format respects locale', async ({ page }) => {
