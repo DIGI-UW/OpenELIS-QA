@@ -589,13 +589,47 @@ failures, declare the legitimate ones, then flip the default on and make the PR
 gate strict too. Populating the register by guesswork first would recreate the
 original problem: excuses written by someone who never saw the step run.
 
-### 12.7 — The three gates, and what each one is for
+### 12.9 — A spec no config runs is not coverage
+
+Added 2026-09-04, after the audit that followed OGC-1192.
+
+Quarantining `openelis-e2e.spec.ts` in #94 was the right call for the wrong
+reason: it was treated as one dead file. It was not. Asking Playwright itself
+which files each config resolves — `playwright test --config X --list`, not
+static parsing, because several configs build `testMatch` dynamically — showed
+**46 spec files, 866 tests, unreachable by any config**. That was the bulk of
+the module coverage: order-entry, validation, patient-management, reports,
+workplan, dashboard, pathology, inventory, referral-workflow, reflex-testing,
+session-security, storage, non-conforming, fhir-integration, i18n,
+accessibility, performance, eqa, plus the four root `gap-suites-*` files.
+
+They looked like coverage in a directory listing and executed never.
+
+Two changes:
+
+- **`modules.config.ts`** adopts them. It sweeps `tests/*.spec.ts` by
+  EXCLUSION — everything except the files another config owns — so a newly
+  added module suite is picked up with no edit. An include list would rot into
+  the same bug.
+- **`scripts/check-orphans.mjs`** is the gate, blocking on PR. It also reports
+  files reachable from more than one config; that is not an error (deliberate
+  tiering, e.g. `guards` and `all-tc` sharing a spec) but it is worth seeing.
+
+**Cautionary note for whoever reads the first module-sweep results.** These
+suites have not run in a long time and were never gated, so expect a large
+fraction to fail on first contact. That is information, not a regression. Also
+note that seven of them had 35 self-reported verdicts converted into real
+assertions in #94 — that work was done while the files were still unreachable,
+so its first real execution is also its first verification.
+
+### 12.7 — The gates, and what each one is for
 
 Added with the OGC-1192 remediation. Fail-by-default: anything not demonstrably
 green should be visible as not-green.
 
 | Gate | Command | Blocking? | Catches |
 |---|---|---|---|
+| orphan gate | `npm run check:orphans` | **yes**, on PR | a spec file no config can run |
 | assertion gate | `npm run lint:assert` | **yes**, on PR | a new test that asserts nothing; any focused test |
 | nightly run | `.github/workflows/nightly.yml` | no (reported) | the suites actually breaking against a live instance |
 | `markStep` semantics | built in (12.1) | **yes**, at runtime | a step self-excusing past a failure |

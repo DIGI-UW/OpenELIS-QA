@@ -19,7 +19,9 @@
     "freshness": "node scripts/refresh-freshness.mjs",
     "lint": "eslint --no-warn-ignored \"tests/**/*.spec.ts\" \"*.spec.ts\"",
     "lint:assert": "node scripts/lint-assert-gate.mjs",
-    "lint:baseline": "node scripts/lint-assert-gate.mjs --update"
+    "lint:baseline": "node scripts/lint-assert-gate.mjs --update",
+    "check:orphans": "node scripts/check-orphans.mjs",
+    "test:modules": "playwright test -c modules.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

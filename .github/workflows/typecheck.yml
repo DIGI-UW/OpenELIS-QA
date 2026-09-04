@@ -51,6 +51,15 @@ jobs:
       - name: No new assertion-free tests
         run: npm run lint:assert
 
+      # BLOCKING: every spec file must be runnable by at least one config. An
+      # audit on 2026-09-04 found 46 spec files (866 tests — the bulk of the
+      # module coverage) that no config could run; they had been dead a long
+      # time and nothing said so. modules.config.ts adopted them; this gate
+      # stops the situation recurring. Asks Playwright which files each config
+      # resolves rather than parsing testMatch by hand.
+      - name: Every spec is reachable by a config
+        run: npm run check:orphans
+
       # NON-BLOCKING: the rest of the repo. ~166 errors as of 2026-07-31,
       # mostly missing type imports in older specs. Reported so the number is
       # visible and can only go down; widen tsconfig.json's include as files

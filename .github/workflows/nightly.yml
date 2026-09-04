@@ -21,6 +21,10 @@ on:
     # 07:00 UTC daily — early morning UTC, before the working day in Kampala
     # (UTC+3) and overnight for Seattle, so results are waiting either way.
     - cron: '0 7 * * *'
+    # Weekly module sweep. modules.config.ts is ~866 tests that had not run in
+    # any tier before 2026-09-04; it is far too long for the daily job, so it
+    # gets its own slot and its own sharded matrix below.
+    - cron: '0 6 * * 0'
   workflow_dispatch:
     inputs:
       base_url:
@@ -32,7 +36,7 @@ on:
         required: false
         default: 'core'
         type: choice
-        options: [core, chains, ogc1192, all]
+        options: [core, chains, ogc1192, modules, all]
       order_path:
         description: 'Which order-entry path the chain seeder uses'
         required: false
@@ -48,11 +52,11 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 180
     env:
       BASE: ${{ github.event.inputs.base_url || 'https://testing.openelis-global.org' }}
       BASE_URL: ${{ github.event.inputs.base_url || 'https://testing.openelis-global.org' }}
-      SUITE: ${{ github.event.inputs.suite || 'core' }}
+      SUITE: ${{ github.event.inputs.suite || (github.event.schedule == '0 6 * * 0' && 'modules' || 'core') }}
       # Fail-by-default for chain steps. An undeclared GAP/BLOCKED fails here
       # instead of skipping, so this run surfaces the TRUE list of gaps rather
       # than letting steps excuse themselves. The job is non-blocking, so it is
@@ -118,6 +122,22 @@ jobs:
               run_cfg chains regression-chains.config.ts
               run_cfg rbac rbac.config.ts
               run_cfg all-tc all-tc.config.ts
+              run_cfg modules modules.config.ts
+              ;;
+            modules)
+              # Sharded so wall-clock stays sane without raising workers: each
+              # shard runs workers=1, so the instance sees one connection per
+              # shard, well under the 6-connection pool (harness ref §10.9).
+              for i in 1 2 3 4; do
+                echo "::group::modules shard $i/4"
+                npx playwright test --config=modules.config.ts --reporter=line --shard=$i/4 \
+                  > "nightly-out/modules-$i.txt" 2>&1
+                rc=$?
+                [ $rc -ne 0 ] && STATUS=1
+                tail -20 "nightly-out/modules-$i.txt"
+                echo "::endgroup::"
+                echo "modules-$i rc=$rc" >> nightly-out/rc.txt
+              done
               ;;
             *)  # core
               run_cfg ogc1192 ogc1192.config.ts
