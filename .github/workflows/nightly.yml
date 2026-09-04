@@ -33,6 +33,12 @@ on:
         default: 'core'
         type: choice
         options: [core, chains, ogc1192, all]
+      order_path:
+        description: 'Which order-entry path the chain seeder uses'
+        required: false
+        default: 'domain'
+        type: choice
+        options: [domain, legacy]
 
 concurrency:
   # Never let two nightly runs hit the same instance at once — they seed data.
@@ -54,6 +60,13 @@ jobs:
       # tests/chains/known-gaps.ts from what this reports, then make the PR gate
       # strict too. See known-gaps.ts.
       GAPS_STRICT: '1'
+      # REQUIRED by the chain seeder. Two order-entry paths are live on 3.2.2.0
+      # and tests/chains/domain-seed.ts deliberately refuses to guess between
+      # them — an unset ORDER_PATH throws, which is what the first scheduled run
+      # (2026-09-04) hit on 11 of 13 chains. That guard is right; the omission
+      # was in this workflow. 'domain' is the future normative path and the one
+      # whose clinical lane works end to end; dispatch with 'legacy' to compare.
+      ORDER_PATH: ${{ github.event.inputs.order_path || 'domain' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -120,7 +133,7 @@ jobs:
           {
             echo "# Nightly run"
             echo ""
-            echo "Target: \`$BASE\`  ·  Suite: \`$SUITE\`"
+            echo "Target: \`$BASE\`  ·  Suite: \`$SUITE\`  ·  Order path: \`$ORDER_PATH\`"
             echo ""
             echo "| Suite | passed | failed | skipped | exit |"
             echo "|---|---|---|---|---|"
