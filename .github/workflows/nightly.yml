@@ -21,6 +21,10 @@ on:
     # 07:00 UTC daily — early morning UTC, before the working day in Kampala
     # (UTC+3) and overnight for Seattle, so results are waiting either way.
     - cron: '0 7 * * *'
+    # Weekly module sweep. modules.config.ts is ~866 tests that had not run in
+    # any tier before 2026-09-04; it is far too long for the daily job, so it
+    # gets its own slot and its own sharded matrix below.
+    - cron: '0 6 * * 0'
   workflow_dispatch:
     inputs:
       base_url:
@@ -32,7 +36,7 @@ on:
         required: false
         default: 'core'
         type: choice
-        options: [core, chains, ogc1192, all]
+        options: [core, chains, ogc1192, modules, all]
       order_path:
         description: 'Which order-entry path the chain seeder uses'
         required: false
@@ -47,12 +51,17 @@ concurrency:
 
 jobs:
   run:
+    # The module sweep has its own job below, because it needs a real parallel
+    # shard matrix rather than a loop.
+    if: >-
+      github.event.inputs.suite != 'modules' &&
+      github.event.schedule != '0 6 * * 0'
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     env:
       BASE: ${{ github.event.inputs.base_url || 'https://testing.openelis-global.org' }}
       BASE_URL: ${{ github.event.inputs.base_url || 'https://testing.openelis-global.org' }}
-      SUITE: ${{ github.event.inputs.suite || 'core' }}
+      SUITE: ${{ github.event.inputs.suite || (github.event.schedule == '0 6 * * 0' && 'modules' || 'core') }}
       # Fail-by-default for chain steps. An undeclared GAP/BLOCKED fails here
       # instead of skipping, so this run surfaces the TRUE list of gaps rather
       # than letting steps excuse themselves. The job is non-blocking, so it is
@@ -118,6 +127,7 @@ jobs:
               run_cfg chains regression-chains.config.ts
               run_cfg rbac rbac.config.ts
               run_cfg all-tc all-tc.config.ts
+              run_cfg modules modules.config.ts
               ;;
             *)  # core
               run_cfg ogc1192 ogc1192.config.ts
@@ -172,5 +182,91 @@ jobs:
             nightly-out/
             test-results/
             regression-results/
+          retention-days: 14
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------------------
+  # Module sweep — the 46 suites adopted in #96 (866 tests).
+  #
+  # A real matrix, not a loop. Sharding only shortens wall-clock if the shards
+  # run as PARALLEL JOBS; four --shard invocations inside one job do exactly the
+  # same total work, one after another. Each runner keeps workers=1, so the
+  # instance sees four concurrent connections at most — under the 6-connection
+  # pool (harness reference §10.9).
+  # ---------------------------------------------------------------------------
+  modules:
+    if: >-
+      github.event.inputs.suite == 'modules' ||
+      github.event.inputs.suite == 'all' ||
+      github.event.schedule == '0 6 * * 0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      BASE: ${{ github.event.inputs.base_url || 'https://testing.openelis-global.org' }}
+      BASE_URL: ${{ github.event.inputs.base_url || 'https://testing.openelis-global.org' }}
+      GAPS_STRICT: '1'
+      ORDER_PATH: ${{ github.event.inputs.order_path || 'domain' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dev dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Target is reachable
+        run: |
+          CODE=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 30 "$BASE/" || echo 000)
+          echo "GET $BASE/ -> $CODE"
+          if [ "$CODE" = "000" ]; then
+            echo "::error::$BASE is unreachable — aborting shard ${{ matrix.shard }}."
+            exit 1
+          fi
+
+      - name: Module sweep shard ${{ matrix.shard }}/4
+        continue-on-error: true
+        id: sweep
+        run: |
+          mkdir -p nightly-out
+          npx playwright test --config=modules.config.ts --reporter=line \
+            --shard=${{ matrix.shard }}/4 > "nightly-out/modules-${{ matrix.shard }}.txt" 2>&1
+          echo "rc=$?" >> "$GITHUB_OUTPUT"
+          tail -30 "nightly-out/modules-${{ matrix.shard }}.txt"
+
+      - name: Summarise shard
+        if: always()
+        run: |
+          F="nightly-out/modules-${{ matrix.shard }}.txt"
+          p=$(grep -oE '[0-9]+ passed' "$F" | tail -1 | grep -oE '[0-9]+' || echo 0)
+          x=$(grep -oE '[0-9]+ failed' "$F" | tail -1 | grep -oE '[0-9]+' || echo 0)
+          s=$(grep -oE '[0-9]+ skipped' "$F" | tail -1 | grep -oE '[0-9]+' || echo 0)
+          {
+            echo "### Module sweep — shard ${{ matrix.shard }}/4"
+            echo ""
+            echo "Target: \`$BASE\`"
+            echo ""
+            echo "| passed | failed | skipped |"
+            echo "|---|---|---|"
+            echo "| ${p:-0} | ${x:-0} | ${s:-0} |"
+            echo ""
+            echo "First run of these suites in a long time — a large failure count is"
+            echo "expected and is information, not a regression. See Section 12.9 of"
+            echo "\`references/playwright-harness.md\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload shard results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: modules-shard-${{ matrix.shard }}-${{ github.run_number }}
+          path: |
+            nightly-out/
+            test-results/
           retention-days: 14
           if-no-files-found: warn

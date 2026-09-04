@@ -1,0 +1,4 @@
+{
+  "_comment": "Spec files that intentionally cannot be run by any config. Each needs a reason. Prefer deleting or wiring up a file over adding it here — see scripts/check-orphans.mjs.",
+  "files": {}
+}
