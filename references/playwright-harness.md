@@ -615,6 +615,13 @@ Two changes:
   files reachable from more than one config; that is not an error (deliberate
   tiering, e.g. `guards` and `all-tc` sharing a spec) but it is worth seeing.
 
+The sweep runs weekly rather than nightly (866 tests), as a **4-way shard
+matrix** — four parallel jobs, each `workers=1`. Sharding only shortens
+wall-clock when the shards are separate jobs; four `--shard` invocations in a
+loop inside one job do the same total work in the same time. That mistake was
+made and corrected in #96 before merge; if you touch the workflow, keep the
+matrix.
+
 **Cautionary note for whoever reads the first module-sweep results.** These
 suites have not run in a long time and were never gated, so expect a large
 fraction to fail on first contact. That is information, not a regression. Also

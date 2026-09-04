@@ -26,10 +26,13 @@ import { defineConfig, devices } from '@playwright/test';
  * would rot into exactly the bug this config exists to fix.
  *
  * RUNTIME
- * ~1,050 tests. `workers` defaults to 1 to respect the 6-connection pool
- * (harness reference §10.9); the nightly job shards this across parallel runners
- * instead of raising workers, so the instance still sees one connection per
- * runner. Override locally with PW_WORKERS if you know what you are doing.
+ * 866 tests. `workers` defaults to 1 to respect the 6-connection pool (harness
+ * reference §10.9). The nightly runs this as a 4-way shard MATRIX — four
+ * parallel jobs, each with workers=1 — so wall-clock drops without the
+ * instance ever seeing more than four concurrent connections. Note that
+ * sharding only helps when the shards are parallel jobs; four `--shard`
+ * invocations inside one job do exactly the same total work. Override locally
+ * with PW_WORKERS if you know what you are doing.
  *
  * EXPECT RED. These suites have not run in a long time and were never gated,
  * so a large fraction will fail on first contact. That is information, not a
