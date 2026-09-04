@@ -47,6 +47,13 @@ jobs:
       BASE: ${{ github.event.inputs.base_url || 'https://testing.openelis-global.org' }}
       BASE_URL: ${{ github.event.inputs.base_url || 'https://testing.openelis-global.org' }}
       SUITE: ${{ github.event.inputs.suite || 'core' }}
+      # Fail-by-default for chain steps. An undeclared GAP/BLOCKED fails here
+      # instead of skipping, so this run surfaces the TRUE list of gaps rather
+      # than letting steps excuse themselves. The job is non-blocking, so it is
+      # the safe place to learn that list — declare the legitimate ones in
+      # tests/chains/known-gaps.ts from what this reports, then make the PR gate
+      # strict too. See known-gaps.ts.
+      GAPS_STRICT: '1'
     steps:
       - uses: actions/checkout@v4
 
@@ -130,6 +137,12 @@ jobs:
             echo "**Skipped is not passed.** A step that skipped did not run — if a"
             echo "count here is climbing, something is quietly excusing itself. See"
             echo "Section 12 of \`references/playwright-harness.md\`."
+            echo ""
+            echo "This job runs with \`GAPS_STRICT=1\`, so a chain step that would have"
+            echo "quietly excused itself fails here instead. Failures reading"
+            echo "*\"Undeclared gap\"* are that mechanism working: either the build really"
+            echo "lacks the feature — declare it in \`tests/chains/known-gaps.ts\` with a"
+            echo "ticket — or the call actually failed, which is a real defect."
             echo ""
             if [ "${{ steps.run.outputs.status }}" = "1" ]; then
               echo "> One or more suites reported failures. This job is non-blocking by"

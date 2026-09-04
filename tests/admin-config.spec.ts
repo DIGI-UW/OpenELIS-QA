@@ -108,9 +108,10 @@ test.describe('Admin Configuration (TC-ADMIN)', () => {
     }
 
     const hasAdiba = await page.getByText(/Adiba SC/i).isVisible({ timeout: 5000 }).catch(() => false);
-    console.log(hasAdiba
-      ? 'TC-ADMIN-03: PASS — Adiba SC present in organization list'
-      : 'TC-ADMIN-03: FAIL/GAP — Adiba SC not found in organization list');
+    // "Adiba SC" is expected seed data. If it is no longer part of the seed for
+    // this instance, retarget this case at whatever organisation IS expected —
+    // or delete it. Do not weaken the assertion to make the run green.
+    expect(hasAdiba, 'expected seed organisation "Adiba SC" was not found in the organization list').toBeTruthy();
   });
 
   test('TC-ADMIN-04: Rejection reasons dictionary accessible', async ({ page }) => {

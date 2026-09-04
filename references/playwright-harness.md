@@ -487,14 +487,13 @@ never executed once — and the chain reported healthy the whole time.
 | status | effect |
 | --- | --- |
 | `FAIL` | fails the test immediately, description becomes the assertion message |
-| `GAP` / `BLOCKED` | annotates **and skips** — visibly not-run, never a pass |
+| `GAP` / `BLOCKED` | **declared** in `known-gaps.ts` -> skips, with reason + ticket attached. **Undeclared** -> skips today, and FAILS under `GAPS_STRICT=1` (set by the nightly job). See 12.6. |
 | `PASS` / `PARTIAL` | logged only, as before |
 
 Callers no longer need a follow-up `expect()` after `markStep(..., 'FAIL', ...)`, and any
 `return` after a GAP/BLOCKED is now unreachable (harmless — leave or delete).
 
-`STRICT_STEPS=0` restores log-only behaviour for GAP/BLOCKED if a run goes sideways. FAIL
-always fails. Do not leave it set in CI.
+FAIL always fails. GAP/BLOCKED routing is governed by the declared-gap register — see 12.6.
 
 **The rule this encodes:** `GAP` means *this build genuinely does not have the feature under
 test*. It does not mean *the call failed and I would rather not deal with it*. A 4xx from an
@@ -542,7 +541,55 @@ of reading the frontend would have given: `rememberSiteAndRequester` is **requir
 that one boolean yields a 500, not a 400), and the ~45 empty-string/empty-array keys in
 `sampleOrderItems` are load-bearing for the binder.
 
-### 12.6 — The three gates, and what each one is for
+### 12.5 — Controls are what make a bug assertion mean anything
+
+`SampleEdit` returning 500 for a patientless sample only means something next to the two
+controls: a nonexistent accession returns `200 + noSampleFound: true`, and a sample with a
+patient returns `200 + payload`. Those controls are permanent truths in the OGC-1192 suite,
+not flip-when-fixed cases — and the suite says so, because if a control breaks, the bug
+assertion beside it proves nothing.
+
+Pair every "this is broken" assertion with the measurement that isolates the variable.
+
+---
+
+### 12.6 — Declared gaps: fail-by-default with an auditable escape
+
+`tests/chains/known-gaps.ts` is the register. A step may only excuse itself if
+the excuse was written down in advance, with a reason, a ticket where one
+exists, and a `retireWhen` condition saying what would let the entry be deleted.
+
+```
+markStep(chain, n, 'GAP', …)
+        |
+        |-- key "<chain>:<n>" in DECLARED_GAPS  -> skip, reason + ticket shown
+        `-- not declared                        -> FAIL (under GAPS_STRICT=1)
+```
+
+**Why a register and not a runtime decision.** The whole OGC-1192 failure was a
+step deciding, inside a catch block, that a 400 it did not like was a "gap". A
+gap you have to type into a file is one a reviewer can argue with. A gap decided
+at runtime is one nobody ever sees.
+
+**What belongs in it:** this build genuinely lacks the feature — an older
+instance without the environmental domain, a module not deployed, a feature
+behind an off flag.
+
+**What does not:** a 4xx or 5xx from an endpoint that exists; a selector that
+stopped matching; a payload the server rejected; data that was not seeded. Those
+are failures. Declaring them to get a green run is the old escape hatch wearing
+a new hat.
+
+**Why strict mode is opt-in for now.** You cannot honestly declare gaps you have
+never watched fire, and this repo had no unattended runs at all before
+2026-09-03 — so there is no evidence base to populate the register from. The
+nightly job sets `GAPS_STRICT=1` and is non-blocking, which makes it the safe
+place to learn the true list. Read a couple of weeks of its "Undeclared gap"
+failures, declare the legitimate ones, then flip the default on and make the PR
+gate strict too. Populating the register by guesswork first would recreate the
+original problem: excuses written by someone who never saw the step run.
+
+### 12.7 — The three gates, and what each one is for
 
 Added with the OGC-1192 remediation. Fail-by-default: anything not demonstrably
 green should be visible as not-green.
@@ -552,10 +599,13 @@ green should be visible as not-green.
 | assertion gate | `npm run lint:assert` | **yes**, on PR | a new test that asserts nothing; any focused test |
 | nightly run | `.github/workflows/nightly.yml` | no (reported) | the suites actually breaking against a live instance |
 | `markStep` semantics | built in (12.1) | **yes**, at runtime | a step self-excusing past a failure |
+| declared gaps | `GAPS_STRICT=1` (12.6) | nightly only, for now | an *undeclared* gap — an excuse nobody reviewed |
 
 **The assertion gate is a baseline, not a switch.** The 2026-09-03 scan found
-**296** pre-existing assertion-free tests across 111 files (93 of them in the
-legacy `openelis-e2e.spec.ts`). Turning the rule on hard would have made `main`
+**296** pre-existing assertion-free tests across 111 files. Quarantining the
+legacy `openelis-e2e.spec.ts` (93 of them — and no config ran it) plus
+converting 35 self-reported verdicts into real assertions brought that to
+**188 across 109 files**. Turning the rule on hard even so would make `main`
 unmergeable, and a gate people route around is worth less than no gate. So
 `.assert-baseline.json` records the backlog per file, and CI fails only when a
 file's count goes **up** or a new file appears. Fix a file, run
@@ -571,32 +621,27 @@ wallpaper — so promote a suite to blocking once it has been stable for a coupl
 of weeks, and treat a climbing **skipped** count as a failure signal in its own
 right. Skipped is not passed; a step that skipped did not run.
 
-### 12.7 — Shapes that pass while proving nothing (the 2026-09-03 census)
+### 12.8 — Shapes that pass while proving nothing (the 2026-09-03 census)
 
 Search for these before trusting any suite. Counts are from the scan that
 followed OGC-1192.
 
 | Shape | Count | Why it passes |
 |---|---|---|
-| test block with zero `expect()` | 296 | nothing can fail |
-| `console.log(ok ? 'TC-X: PASS' : 'TC-X: FAIL')` | 36 | a self-reported verdict is not an assertion — and it prints "FAIL" while the runner says green |
+| test block with zero `expect()` | 296 -> **188** | nothing can fail |
+| `console.log(ok ? 'TC-X: PASS' : 'TC-X: FAIL')` | 36 -> **1** | a self-reported verdict is not an assertion — and it prints "FAIL" while the runner says green |
 | `console.log('SKIP: …'); return;` | 57 | early return with no skip marker; shows as a pass, not even amber |
 | `.catch(() => false)` | 1119 | turns "this errored" into "this is absent", which then feeds a conditional that quietly does nothing |
 
-The first is now gated. The rest are open work — see the OGC-1192 remediation
-notes. When you touch a file containing any of them, fix what you touch.
+The first is gated and shrinking. The second is effectively gone — the single
+survivor is a seed script, not a test. The last two are open work: when you
+touch a file containing either, fix what you touch.
 
-### 12.5 — Controls are what make a bug assertion mean anything
-
-`SampleEdit` returning 500 for a patientless sample only means something next to the two
-controls: a nonexistent accession returns `200 + noSampleFound: true`, and a sample with a
-patient returns `200 + payload`. Those controls are permanent truths in the OGC-1192 suite,
-not flip-when-fixed cases — and the suite says so, because if a control breaks, the bug
-assertion beside it proves nothing.
-
-Pair every "this is broken" assertion with the measurement that isolates the variable.
-
----
+**On the 1119 catch-swallowers**: not all are wrong. `.catch(() => false)` on a
+visibility probe is idiomatic. It is wrong when the thing swallowed IS the thing
+under test — an API call whose status is the assertion, a navigation whose
+success is the claim. Judge them one at a time; a blanket rewrite would break
+the legitimate majority.
 
 ## Section 11 — PR #3987 findings (live-validated 2026-08-06, testing v3.2.1.11)
 

@@ -57,9 +57,9 @@ test.describe('Accessibility WCAG Smoke (TC-A11Y)', () => {
     });
 
     console.log(`TC-A11Y-02: ${unlabeled} input(s) without any label/aria-label/title/placeholder`);
-    console.log(unlabeled <= 2
-      ? 'TC-A11Y-02: PASS — most inputs are labeled'
-      : `TC-A11Y-02: FAIL — ${unlabeled} unlabeled inputs (accessibility barrier)`);
+    // Tolerance of 2 is the historical budget, not a target. Lower it as the
+    // form is fixed; never raise it to make a run go green.
+    expect(unlabeled, `${unlabeled} form inputs have no label, aria-label, title or placeholder — an accessibility barrier`).toBeLessThanOrEqual(2);
   });
 
   test('TC-A11Y-03: Color contrast check on results page', async ({ page }) => {
