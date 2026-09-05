@@ -70,6 +70,14 @@ async function probeList(page: import('@playwright/test').Page, name: string, pa
 test.describe.serial('Chain N — Environmental Sampling (deep round-trip)', () => {
   let domainPresent = true;
   let createdAccession: string | null = null;
+  /** Set by Step 1: are the dictionaries order entry actually needs populated? */
+  let dictsUsable = false;
+  /** Set by Step 1: were ALL the env dictionaries populated? Asserted in Step 7. */
+  let dictsFullyPopulated = false;
+  let dictDetail = '';
+  /** Set by Step 3, asserted in Step 7. */
+  let manifestComplete = false;
+  let manifestDetail = '';
 
   test.beforeAll(() => {
     // eslint-disable-next-line no-console
@@ -101,15 +109,42 @@ test.describe.serial('Chain N — Environmental Sampling (deep round-trip)', () 
       test.info().annotations.push({ type: 'gap', description: 'env domain absent' });
       return;
     }
-    if (populated >= 4) {
+    // NOTE (2026-09-05): this step used to require >= 4 populated dictionaries
+    // and FAIL otherwise, which aborted the whole serial chain — including
+    // Steps 4 and 6, the ones added to catch OGC-1192. On testing v3.2.2.0
+    // sampling-sites is populated but collection-methods / weather / containers
+    // are empty (OGC-1192 §4), so the chain never reached its own regression
+    // watch. The empty dictionaries are a real finding and still fail, but they
+    // fail HERE only — the create/read-back/visibility steps below do not
+    // depend on them and must still run.
+    const CORE_DICTS = ['sampling-sites', 'sample-types'];
+    const coreOk = probes.filter(p => CORE_DICTS.includes(p.name) && p.ok && p.n > 0).length;
+
+    dictsUsable = coreOk === CORE_DICTS.length;
+    dictDetail = detail;
+    dictsFullyPopulated = populated >= 4;
+
+    if (dictsFullyPopulated) {
       markStep('N', 1, 'PASS', `Environmental dictionaries populated (${detail})`);
       expect(populated).toBeGreaterThanOrEqual(4);
-    } else {
-      markStep('N', 1, 'FAIL',
-        `Some env dictionaries reachable but empty (${detail})`,
-        'The order form would render with empty dropdowns.');
-      expect(populated, 'populated env dictionaries').toBeGreaterThanOrEqual(4);
+      return;
     }
+
+    // This describe is `.serial`, so a FAIL here would skip every later test —
+    // which is precisely how Steps 4 and 6 never ran. So Step 1 fails ONLY when
+    // order entry is genuinely impossible. The partial-population finding is
+    // real and still fails the chain, but it is asserted in Step 7, after the
+    // regression watches have had their turn.
+    if (!dictsUsable) {
+      markStep('N', 1, 'FAIL',
+        `Environmental order entry is impossible — a required dictionary is empty (${detail})`,
+        'sampling-sites and sample-types must both be populated; nothing downstream can run.');
+      return;
+    }
+
+    markStep('N', 1, 'PARTIAL',
+      `Core dictionaries populated, optional ones empty (${detail})`,
+      'Order entry works; the empty ones back optional manifest columns (OGC-1192 §4). Asserted in Step 7 so Steps 4/6 still run.');
   });
 
   // ---------------------------------------------------------------------------
@@ -140,16 +175,32 @@ test.describe.serial('Chain N — Environmental Sampling (deep round-trip)', () 
     await page.goto(BASE);
     const types = await probeList(page, 'sample-types', VE_ENV_SAMPLE_TYPES);
     const containers = await probeList(page, 'containers', VE_ENV_CONTAINERS);
+    manifestDetail = `sample-types=${types.ok ? types.n : 'HTTP ' + types.status}, containers=${containers.ok ? containers.n : 'HTTP ' + containers.status}`;
+
     if (types.ok && types.n > 0 && containers.ok && containers.n > 0) {
       markStep('N', 3, 'PASS',
         `Manifest grid backed: ${types.n} sample types, ${containers.n} containers (one row = one physical sample, each carries its own GPS + container)`);
       expect(types.n).toBeGreaterThan(0);
       expect(containers.n).toBeGreaterThan(0);
-    } else {
-      markStep('N', 3, 'GAP',
-        `Manifest dropdowns incomplete (sample-types=${types.ok ? types.n : 'HTTP ' + types.status}, containers=${containers.ok ? containers.n : 'HTTP ' + containers.status})`);
-      test.info().annotations.push({ type: 'gap', description: 'manifest dropdowns incomplete' });
+      manifestComplete = true;
+      return;
     }
+
+    // Same serial-abort trap as Step 1. This branch used to record GAP, which
+    // under GAPS_STRICT=1 (the nightly) is a FAIL — and a FAIL in a `.serial`
+    // describe skips every later test, taking Steps 4/6 down again. Sample
+    // types alone are enough to create an order (containers is an optional
+    // column), so only a missing sample-types list blocks the chain here; the
+    // incomplete-manifest finding is asserted in Step 7.
+    if (!(types.ok && types.n > 0)) {
+      markStep('N', 3, 'FAIL',
+        `No environmental sample types — the manifest cannot be filled at all (${manifestDetail})`);
+      return;
+    }
+
+    markStep('N', 3, 'PARTIAL',
+      `Manifest dropdowns incomplete but usable (${manifestDetail})`,
+      'CONTAINER renders with no options (OGC-1192 §4). Asserted in Step 7 so Steps 4/6 still run.');
   });
 
   // ---------------------------------------------------------------------------
@@ -164,6 +215,12 @@ test.describe.serial('Chain N — Environmental Sampling (deep round-trip)', () 
   // ---------------------------------------------------------------------------
   test('Step 4 — Env order create -> read-back (ROUND-TRIP)', async ({ page }) => {
     if (!domainPresent) { markStep('N', 4, 'GAP', 'Skipped — env domain absent (see Step 1)'); return; }
+    // Deliberately NOT gated on Step 1 passing — see the note there. Only the
+    // dictionaries order entry truly needs matter for this step.
+    if (!dictsUsable) {
+      markStep('N', 4, 'FAIL', 'Cannot create an env order — sampling-sites or sample-types is empty (see Step 1)');
+      return;
+    }
     await page.goto(BASE);
 
     const gen = await apiCall<{ status?: boolean; body?: string }>(page, ACCESSION_GENERATOR);
@@ -279,5 +336,26 @@ test.describe.serial('Chain N — Environmental Sampling (deep round-trip)', () 
       'Absent from the unfiltered list too means this is not a workflowType filter problem — the row never enters the ' +
       'dashboard result set. Likely the query joins through patient, which excludes every patientless (i.e. every ' +
       'environmental) sample. When OGC-1192 is fixed this flips to PASS.');
+  });
+
+  // ---------------------------------------------------------------------------
+  // Step 7 — All environmental dictionaries populate (OGC-1192 §4)
+  //
+  // Deliberately LAST. This is the assertion that used to live in Step 1 and,
+  // because the describe is `.serial`, aborted the chain before Steps 4 and 6 —
+  // the two steps added to catch OGC-1192 — could run. The finding is real and
+  // still fails the chain; it just no longer takes the regression watches down
+  // with it.
+  // ---------------------------------------------------------------------------
+  test('Step 7 — All env dictionaries populate (OGC-1192 §4)', async () => {
+    if (!domainPresent) { markStep('N', 7, 'GAP', 'Skipped — env domain absent (see Step 1)'); return; }
+    if (dictsFullyPopulated) {
+      markStep('N', 7, 'PASS', `All environmental dictionaries populated (${dictDetail})`);
+      expect(dictsFullyPopulated).toBeTruthy();
+      return;
+    }
+    markStep('N', 7, 'FAIL',
+      `Some env dictionaries reachable but empty (dictionaries: ${dictDetail}; manifest: ${manifestDetail}, complete=${manifestComplete})`,
+      'OGC-1192 §4: the manifest CONTAINER column (and the collection-method / weather selects) render with no options. Order entry still works, which is why this is asserted here rather than gating the chain.');
   });
 });

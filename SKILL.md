@@ -81,7 +81,7 @@ Scan the repo for prior `qa-report-*` and `validation-report-*` outputs. When au
 Navigate to `BASE_URL`; log in (`admin`/`adminADMIN!`); verify the Dashboard KPI cards render. If login fails, stop. **ChangePasswordLogin redirect** (the env periodically forces a change): find the form's Formik context via the React fiber tree, `ctx.setValues({loginName, password, newPassword, confirmPassword})`, wait ~1s, `ctx.handleSubmit()`; fall back to the original password if the server rejects the change.
 
 ## Step 3 — Run the suites
-Execute per `references/suite-catalog.md` and the run tier. For each TC: follow steps exactly, screenshot after each meaningful action, record PASS/FAIL/BLOCKED/GAP + a one-line note + its acceptance criterion (below). On failure: screenshot, note the exact step, continue. Run the mandatory Chains/Personas/Y-RECON per `references/workflows.md`.
+Execute per `references/suite-catalog.md` and the run tier. For each TC: follow steps exactly, screenshot after each meaningful action, record PASS/FAIL/BLOCKED/GAP + a one-line note + its acceptance criterion (below), following the *Verdicts* rules — **fail by default**; GAP and BLOCKED both need a stated reason. On failure: screenshot, note the exact step, continue. Run the mandatory Chains/Personas/Y-RECON per `references/workflows.md`.
 
 ---
 
@@ -106,11 +106,38 @@ field (arrays/nested included — a 3-condition rule returning 2 is FAIL, not "m
 screen the user visits next (Modify Order after Add; Patient Search after Create; Admin list
 after Admin Create).
 
+**Verdicts — fail by default (2026-09-04):**
+
+Anything not demonstrably green is reported as not-green. The four verdicts are not
+interchangeable, and three of them were being used as escape hatches until the OGC-1192
+post-mortem:
+
+| Verdict | Means | Requires |
+|---|---|---|
+| `PASS` | the acceptance criterion was met, with its evidence | the read-back / cross-module check / excerpt |
+| `FAIL` | the thing under test did not work | the exact step and the observed response |
+| `GAP` | **this build genuinely does not have the feature** | evidence of absence, not of failure — and a note saying what would retire it |
+| `BLOCKED` | the step would damage the session (hang the tab, exhaust the 6-connection pool) | the specific hazard |
+
+**GAP is the one people get wrong.** A 4xx or 5xx from an endpoint that exists is a FAIL. A
+selector that stopped matching is a FAIL. A payload the server rejected is a FAIL. Data that was
+not seeded is a FAIL of the seeding step. GAP means the feature is not in this build at all — an
+older instance without the environmental domain, a module not deployed, a flag that is off.
+
+If you find yourself reaching for GAP to get past something that failed, write FAIL. That habit
+is exactly what let OGC-1192 (environmental orders invisible to every dashboard) sit undetected
+in a module that had dedicated coverage: a chain step decided at runtime that a 400 it did not
+like was a "gap", excused itself, and reported healthy for months.
+
+The Playwright harness now enforces this mechanically — `markStep(..., 'FAIL', ...)` fails the
+test, and an **undeclared** GAP fails under `GAPS_STRICT=1`. Interactive runs have no such
+enforcement, so the discipline is yours: state the reason next to every GAP and BLOCKED.
+
 **Error handling:**
 | Situation | Action |
 |---|---|
 | Element not found | scroll, wait 2s, retry once; still missing → FAIL |
-| URL 404/403 | try discovery alternates; all fail → GAP |
+| URL 404/403 | try discovery alternates; all fail → **FAIL**, unless the feature is genuinely absent from the build — see *Verdicts* below. A 404 is not automatically a GAP. |
 | Page load >10s | FAIL "page load timeout" |
 | Error banner/modal | screenshot → FAIL with the text |
 | Session "Still There?" | dismiss, re-auth, resume |
@@ -125,6 +152,29 @@ BLOCKED). BLOCKED is reserved for steps that would damage the session (hang the 
 non-destructive API equivalent may be **API-substituted** (tag it; the chain still PASSes if the
 round-trip read-back matches, and the UI gap stays visible). Current hazards: see
 `references/playwright-harness.md` (verify each via Step 0.5 — don't assume a past hazard still applies).
+
+## The harness gates (when you touch the Playwright repo)
+
+Four gates run on every PR to OpenELIS-QA. They exist because each one caught a class of defect
+that had been invisible; do not route around them.
+
+| Gate | Command | Blocks on |
+|---|---|---|
+| skill package in sync | `npm run check:skill` | the packaged `.skill` lagging its source |
+| typecheck | `npm run typecheck` | compile errors on the maintained surface |
+| every spec is reachable | `npm run check:orphans` | a spec file no config can run |
+| no assertion-free tests | `npm run lint:assert` | a new test with no `expect()`; any focused test |
+
+Plus an unattended **nightly** run (`.github/workflows/nightly.yml`) — `core` daily, the
+`modules` sweep weekly, non-blocking so a red run is a signal to read rather than a build to
+break. `GAPS_STRICT=1` there, so undeclared gaps surface as failures.
+
+Two rules that follow from these:
+- **Never raise `.assert-baseline.json` to make a build pass.** Add the assertion instead.
+- **A new `tests/*.spec.ts` needs no config edit** — `modules.config.ts` sweeps that directory by
+  exclusion. Anywhere else, wire it up or the orphan gate will stop you.
+
+Full reasoning: `references/playwright-harness.md` Section 12.
 
 ## Step 4 — Cleanup
 Deactivate any `QA_AUTO_` data you created (LIMS rule: **deactivate/reactivate, never hard-delete**). Restore any admin toggles you changed (branding, `eqaEnabled`) — the Playwright personas do this in `afterAll`.
@@ -169,7 +219,7 @@ report that the tracker was refreshed.
 | `references/workflows.md` | Chains, Personas, Y-RECON, Partial-Feature Audit (mandatory, tiered) |
 | `references/report-template.md` | Step 5 — the maturity/acceptance-driven report structure |
 | `references/bug-triage.md` | Step 0.5 / Step 6 — Jira-as-source-of-truth + the revalidation gate |
-| `references/playwright-harness.md` | When using the Playwright harness or Carbon component workarounds; operational hazards. The harness lives in **this repo (OpenELIS-QA)**: `playwright.config.ts`, `*.setup.ts`, `helpers/`, `pages/`, `tests/`, `gap-suites-*.spec.ts` |
+| `references/playwright-harness.md` | When using the Playwright harness or Carbon component workarounds; operational hazards. The harness lives in **this repo (OpenELIS-QA)**: `playwright.config.ts`, `*.setup.ts`, `helpers/`, `pages/`, `tests/`, `gap-suites-*.spec.ts`. **Section 12 is required reading before writing any spec** — verdict semantics, the gates, and why coverage that cannot fail is not coverage |
 | `references/test-case-authoring.md` | When writing or extending the catalog — deep chained cases + surfacing uncovered/uncertain workflows |
 | `references/test-targets.md` | Step 0 — target taxonomy (release/distro/branch/rapid), known instances, operational quirks |
 | `references/open-questions.md` | The standing NEEDS-GUIDANCE ledger — append workflow questions for Casey; promote answered ones to cases |

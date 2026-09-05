@@ -6,7 +6,8 @@
 > single-file `openelis-e2e.spec.ts` all live at the repo root. This skill (SKILL.md +
 > references/) is the methodology layer over that harness. Canonical spec layout is **one spec
 > per chain/persona** (`tests/chains/chain-a-*.spec.ts`, run via `--project=chain-a`); the
-> single `openelis-e2e.spec.ts` is legacy.
+> single `openelis-e2e.spec.ts` is legacy and was quarantined to `archive/` in #94 (no config
+> ran it). Module suites live in `tests/` and are swept by `modules.config.ts`.
 
 ---
 
@@ -302,7 +303,10 @@ console.log(summarize(session));
 
 ## Section 10 — Playwright Rules
 
-When generating or updating Playwright test specs (`openelis-e2e.spec.ts`), follow these rules:
+When generating or updating Playwright test specs, follow these rules. (This line used to name
+`openelis-e2e.spec.ts` as the place specs go; that file was quarantined to `archive/` in #94
+because no config ran it. New module suites go in `tests/`, where `modules.config.ts` picks them
+up automatically — see 12.9. **Read Section 12 before writing a spec.**)
 
 ### 10.1 — Navigation
 - Use sidebar menu clicks for React SPA pages, NOT direct `page.goto()` URLs
@@ -588,6 +592,37 @@ place to learn the true list. Read a couple of weeks of its "Undeclared gap"
 failures, declare the legitimate ones, then flip the default on and make the PR
 gate strict too. Populating the register by guesswork first would recreate the
 original problem: excuses written by someone who never saw the step run.
+
+### 12.10 — `describe.serial` turns one FAIL into a silent chain amputation
+
+Found 2026-09-05 while fixing the very steps added to catch OGC-1192.
+
+Every chain is a `test.describe.serial`. In serial mode a failing test causes Playwright to
+**skip every later test in the group**. That is usually what you want — step 4 is meaningless if
+step 2 never seeded anything. It is a trap when an early step asserts something that later steps
+do not actually depend on.
+
+Chain N had exactly that. Step 1 required four populated environmental dictionaries and failed
+otherwise. On `testing` v3.2.2.0, `sampling-sites` and `sample-types` are populated but
+`collection-methods`, `env-weather` and `sample-containers` are empty (OGC-1192 §4) — so Step 1
+failed, and Steps 4 and 6, *the regression watches written for OGC-1192*, never ran once. The
+chain reported a legitimate finding and amputated its own reason for existing. Step 3 had the
+same shape: its GAP branch becomes a FAIL under `GAPS_STRICT=1`, with the same effect.
+
+**The rule:** in a serial chain, an early step may only FAIL on a precondition later steps
+genuinely need. Anything else is recorded and asserted at the END of the chain.
+
+Chain N now does this:
+
+- Step 1 fails only if `sampling-sites` **or** `sample-types` is empty — order entry is then
+  impossible and nothing downstream can run.
+- Step 3 fails only if there are no sample types at all.
+- Both record their shortfall in module state and report `PARTIAL`.
+- **Step 7**, last, asserts full dictionary and manifest population. The finding still fails the
+  chain; it just no longer takes Steps 4-6 with it.
+
+When you add a step to a serial chain, ask: *if this fails, which later steps become
+meaningless?* If the answer is "none", it belongs at the end.
 
 ### 12.9 — A spec no config runs is not coverage
 
