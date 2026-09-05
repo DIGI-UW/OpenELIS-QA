@@ -15,8 +15,15 @@
  *
  *   CLINICAL      works end to end. /order/clinical is an Order Dashboard listing in-progress
  *                 orders with a Continue action, so reuse is reliable.
- *   ENVIRONMENTAL cannot create an order. The lane renders correctly but its reference data is
- *   VECTOR        empty and unwritable:
+ *   ENVIRONMENTAL **CORRECTED 2026-09-05** — the environmental lane CAN now create orders.
+ *                 GET /rest/environmental-sample-types returns Water plus the QA matrices, and
+ *                 the OGC-1192 evidence orders (DEV…655 through DEV…677) were all created
+ *                 through this lane. What remains empty is narrower: collection-methods,
+ *                 env-weather and sample-containers still return [], so those columns render
+ *                 with no options (filed as OGC-1192 §4). The paragraph below is the ORIGINAL
+ *                 2026-08-21 measurement, kept because the vector lane may still match it —
+ *                 re-measure before relying on it.
+ *   VECTOR        (as measured 2026-08-21) reference data empty and unwritable:
  *                     GET /rest/environmental-sample-types            -> []
  *                     GET /rest/vector-sample-types                  -> []
  *                     GET /rest/vector/dictionary/sampling-site-types -> []
