@@ -714,6 +714,34 @@ guard in `tests/helpers/api-json.ts` is what handles a session lapsing partway t
 and ask which are the harness failing rather than the product. A count of red tests is not a
 count of bugs. Here the single most common "failure" was the suite logging in too often.
 
+**And a second one, found the same way.** All four `gap-suites-*` files hardcoded
+`const BASE = 'https://www.jdhealthsolutions-openelis.com'` — a different instance from the one
+every config and the nightly target use, not overridable by env. 131 tests had been pointed at
+the wrong server. Nothing surfaced it because those files were unreachable by any config until
+#96; being orphaned hid a second defect underneath the first. They now read `BASE`/`BASE_URL`
+with the same default as the rest of the repo.
+
+#### The fix regressed, and the second run caught it
+
+Worth reading as a worked example of measuring instead of assuming.
+
+The first version of the fast path returned immediately when a session cookie was present — no
+navigation. The next sweep traded the login failures for a different error, one-for-one:
+
+| | run 1 | run 2 |
+|---|---|---|
+| `Login failed: still on login page` | **76** | **0** |
+| `SecurityError: Failed to read the 'localStorage' property` | **0** | **61** |
+
+The login noise really was gone. But the unconditional `page.goto()` that the old `login()` did
+was *also* the thing getting the page off `about:blank`, and every helper that reads the CSRF
+token out of `localStorage` depends on that — **§6.6, in this same document**. Skipping the form
+is the win; skipping the navigation is a regression, and net failures went UP.
+
+The fast path now still navigates (to `BASE`, only when the page is not already on it) and only
+the credential submission is skipped. The general point: when you remove a step, ask what else
+that step was incidentally providing. A `goto` in a login helper is doing two jobs.
+
 **Artifacts:** the same run produced >520 MB, because `test-results/` carries Playwright traces.
 That also made `gh run download` slow enough to time out repeatedly. The modules job now uploads
 `nightly-out/` only; re-run a single spec locally when you need a trace.
