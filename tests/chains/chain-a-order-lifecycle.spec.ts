@@ -43,7 +43,24 @@ import {
   ChainOrderRef,
 } from './_common';
 
-test.describe.serial('Chain A — Order Lifecycle', () => {
+// SERIAL REMOVED 2026-09-05 (harness reference 12.10).
+//
+// This chain was `test.describe.serial`, so one failing step skipped every
+// later one. Step 2 (the BUG-37 patient-linkage check) fails on `testing`, and
+// it was taking Steps 3-8 with it — the whole result -> validate -> report ->
+// FHIR spine — even though nothing downstream reads anything Step 2 sets.
+//
+// Serial is not needed here: every step from 2 on already guards its own
+// precondition (`if (!order) test.skip()`, plus Step 6 on `order.pdf` and
+// Step 8 on `order.fhir`). regression-chains.config.ts runs `workers: 1` with
+// `fullyParallel: false`, so declaration order is still execution order — the
+// only change is that one failing step no longer cancels the rest, and a retry
+// re-runs just that step instead of the whole group.
+//
+// Chains whose later steps genuinely depend on an earlier one (C on `rule` and
+// `triggerValue`, D on `testAccession`) keep `.serial` deliberately. Do not
+// remove it there without redoing the dependency audit in 12.10.
+test.describe('Chain A — Order Lifecycle', () => {
   let order: ChainOrderRef | null = null;
   const enteredResultValue = '12.5'; // arbitrary numeric we expect to round-trip
 
