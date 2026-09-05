@@ -36,7 +36,7 @@ on:
         required: false
         default: 'core'
         type: choice
-        options: [core, chains, ogc1192, modules, all]
+        options: [core, chains, ogc1192, modules, gap-suites, all]
       order_path:
         description: 'Which order-entry path the chain seeder uses'
         required: false
@@ -128,6 +128,7 @@ jobs:
               run_cfg rbac rbac.config.ts
               run_cfg all-tc all-tc.config.ts
               run_cfg modules modules.config.ts
+              run_cfg gap-suites gap-suites.config.ts
               ;;
             *)  # core
               run_cfg ogc1192 ogc1192.config.ts
@@ -276,6 +277,83 @@ jobs:
           # also made `gh run download` slow enough to time out. Traces for a
           # 300-failure run are not worth that; re-run a single spec locally when
           # you need one.
+          path: nightly-out/
+          retention-days: 14
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------------------
+  # gap-suites — 131 tests in four files, split out of the module sweep.
+  #
+  # Playwright shards by FILE, so these four always landed in one shard and made
+  # it the long pole (91 min vs 14-49 for the rest). They cannot be spread by
+  # raising the shard count; they need their own job. Unsharded on purpose —
+  # four files, one runner, one connection.
+  # ---------------------------------------------------------------------------
+  gap-suites:
+    if: >-
+      github.event.inputs.suite == 'gap-suites' ||
+      github.event.inputs.suite == 'modules' ||
+      github.event.inputs.suite == 'all' ||
+      github.event.schedule == '0 6 * * 0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      BASE: ${{ github.event.inputs.base_url || 'https://testing.openelis-global.org' }}
+      BASE_URL: ${{ github.event.inputs.base_url || 'https://testing.openelis-global.org' }}
+      GAPS_STRICT: '1'
+      ORDER_PATH: ${{ github.event.inputs.order_path || 'domain' }}
+      PW_RETRIES: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dev dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Target is reachable
+        run: |
+          CODE=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 30 "$BASE/" || echo 000)
+          echo "GET $BASE/ -> $CODE"
+          if [ "$CODE" = "000" ]; then
+            echo "::error::$BASE is unreachable — aborting gap-suites."
+            exit 1
+          fi
+
+      - name: Run gap-suites
+        continue-on-error: true
+        run: |
+          mkdir -p nightly-out
+          npx playwright test -c gap-suites.config.ts --reporter=line \
+            > nightly-out/gap-suites.txt 2>&1
+          tail -30 nightly-out/gap-suites.txt
+
+      - name: Summarise
+        if: always()
+        run: |
+          F=nightly-out/gap-suites.txt
+          p=$(grep -oE '[0-9]+ passed' "$F" | tail -1 | grep -oE '[0-9]+' || echo 0)
+          x=$(grep -oE '[0-9]+ failed' "$F" | tail -1 | grep -oE '[0-9]+' || echo 0)
+          s=$(grep -oE '[0-9]+ skipped' "$F" | tail -1 | grep -oE '[0-9]+' || echo 0)
+          {
+            echo "### gap-suites"
+            echo ""
+            echo "| passed | failed | skipped |"
+            echo "|---|---|---|"
+            echo "| ${p:-0} | ${x:-0} | ${s:-0} |"
+            echo ""
+            echo "These four files were pointed at the wrong instance until #101 and"
+            echo "unreachable by any config until #96. Remaining failures are mostly"
+            echo "selector drift, not product defects — see gap-suites.config.ts."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gap-suites-${{ github.run_number }}
           path: nightly-out/
           retention-days: 14
           if-no-files-found: warn

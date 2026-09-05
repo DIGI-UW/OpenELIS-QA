@@ -18,6 +18,12 @@ import { defineConfig, devices } from '@playwright/test';
  * lives at, and `scripts/check-orphans.mjs` is the gate that stops it coming
  * back.
  *
+ * GAP-SUITES MOVED OUT (2026-09-05). The four root `gap-suites-*` files now
+ * live in gap-suites.config.ts with their own nightly job. Playwright shards by
+ * FILE, so those four files always landed together and made whichever shard
+ * held them the long pole — 91 minutes against 14-49 for the others. Splitting
+ * them out is the only way to unblock the rest, short of splitting the files.
+ *
  * WHAT IT SWEEPS
  * Everything at the top level of `tests/` EXCEPT the files another config
  * already owns (see OWNED_ELSEWHERE), plus the root gap-suites. The sweep is
@@ -75,7 +81,12 @@ const MODULE_MATCH = new RegExp(`(^|/)tests/(?!(?:${EXCLUDED})\\.spec\\.ts$)[^/]
 
 export default defineConfig({
   testDir: '.',
-  timeout: 90_000,
+  // 30s, not 90s. Casey's rule, 2026-09-05: "if it's longer than 30 seconds,
+  // it's a defect anyway". This is a policy, not a tuning knob — a click that
+  // has not landed in 30s is a finding, and waiting another minute to confirm
+  // it buys nothing. The first sweep spent most of its wall clock here: shard 6
+  // alone had 50 click timeouts at 90s each, ~75 minutes of pure waiting.
+  timeout: Number(process.env.PW_TIMEOUT ?? 30_000),
   expect: { timeout: 15_000 },
   fullyParallel: false,
   workers: Number(process.env.PW_WORKERS ?? 1),
@@ -99,12 +110,6 @@ export default defineConfig({
     {
       name: 'modules',
       testMatch: MODULE_MATCH,
-      dependencies: ['setup'],
-      use: { storageState: '.auth/user.json' },
-    },
-    {
-      name: 'gap-suites',
-      testMatch: /(^|\/)gap-suites-[A-Z]+-[A-Z]+\.spec\.ts$/,
       dependencies: ['setup'],
       use: { storageState: '.auth/user.json' },
     },

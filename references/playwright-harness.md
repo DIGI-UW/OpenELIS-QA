@@ -746,6 +746,61 @@ that step was incidentally providing. A `goto` in a login helper is doing two jo
 That also made `gh run download` slow enough to time out repeatedly. The modules job now uploads
 `nightly-out/` only; re-run a single spec locally when you need a trace.
 
+### 12.12 — Sweep tuning, and two fixture bugs the third sweep exposed
+
+Third module sweep (2026-09-05, 6 shards, retries 0, login fast path fixed):
+**544 passed / 308 failed / 19 skipped**, against run 1's 493 / 364 / 14 — and
+**zero** of both harness error classes (`Login failed` 76 -> 0,
+`SecurityError` 61 -> 0).
+
+**Per-test timeout is 30 seconds, and that is a policy.** Casey's rule: *if it
+takes longer than 30 seconds, it is a defect anyway.* A click that has not
+landed in 30s is a finding; waiting another minute to confirm it buys nothing
+and costs the whole run. Shard 6 alone had ~50 click timeouts at the old 90s
+default — roughly 75 minutes of pure waiting, which was most of its 91-minute
+wall clock. Override with `PW_TIMEOUT` only to investigate a specific slow
+path, never in CI.
+
+**gap-suites have their own config and job.** Playwright shards by FILE, so the
+four `gap-suites-*` files (131 tests) always landed in one shard and made it
+the long pole — 91 minutes against 14-49 for the others. No shard count fixes
+that; four files cannot spread across more than four shards. They now run from
+`gap-suites.config.ts` in a separate nightly job.
+
+Their own history is worth keeping straight: unreachable by any config until
+#96, pointed at `jdhealthsolutions-openelis.com` until #101. Repointed at the
+real target they went from ~all failing to **70 of 131 passing**. The 61 that
+still fail are dominated by click timeouts — selector drift against a
+deployment they were never written for. A cleanup backlog, not a bug list.
+
+#### National IDs cannot contain underscores
+
+The server validates `nationalId` against `(?i)^[-a-z0-9/]*$`. `QA_PREFIX` is
+`QA_AUTO_MMDD`, so **every test that filled `#nationalId` with it was failing
+validation before reaching the behaviour under test** — 11 fills in
+`order-creation-e2e` alone, plus TC-PAT-05's hardcoded `QA_PAT_0324`.
+
+Verified by hand on testing 2026-09-05: `QA_PAT_0905` -> `400 {"error":
+"nationalId: must match ..."}`; `qa-pat-0905` -> `200 {"patientId":"502",
+"status":"success"}`. **Patient creation is not broken.** Use `QA_ID_PREFIX`
+(hyphenated, lowercased) for nationalId and anything else the server
+pattern-checks; keep `QA_PREFIX` for names, orgs and catalog entries, where
+underscores are fine and already-seeded `QA_AUTO_` data must stay findable.
+
+#### An SPA returns 200 for every path, so "did it load" is not a check
+
+TC-PAT-05 tried `/AddPatient`, `/PatientEdit` and `/SamplePatientEntry`, taking
+the first that returned 200. All three return 200 — OpenELIS serves the SPA
+shell for any path — so the test proceeded on a page that rendered nothing.
+The real screen is `/PatientManagement` (Add Or Modify Patient) with a **New
+Patient** tab routing to `/PatientManagement/new`, and `#nationalId` exists
+only there. That single wrong assumption also produced the run's 10
+`Element not found: #nationalId` failures.
+
+**Assert on a rendered element, never on a status code, when the target is an
+SPA.** The corrected test waits for `#nationalId` to be visible and skips with
+a named reason if it is not.
+
 ### 12.9 — A spec no config runs is not coverage
 
 Added 2026-09-04, after the audit that followed OGC-1192.

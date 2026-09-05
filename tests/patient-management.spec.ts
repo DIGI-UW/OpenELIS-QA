@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, navigateToAdminItem, getDateRange, getFutureDateRange } from '../helpers/test-helpers';
+import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, QA_ID_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, navigateToAdminItem, getDateRange, getFutureDateRange } from '../helpers/test-helpers';
 
 /**
  * Patient Management Test Suite
@@ -144,32 +144,31 @@ test.describe('Patient Management (TC-PAT)', () => {
   });
 
   test('TC-PAT-05: Create a new patient', async ({ page }) => {
-    // Try to find Add Patient screen
-    const addPatientUrls = ['/AddPatient', '/PatientEdit', '/SamplePatientEntry'];
-    let landed = false;
-    for (const u of addPatientUrls) {
-      const res = await page.goto(`${BASE}${u}`).catch(() => null);
-      if (res && res.ok() && !page.url().includes('LoginPage')) {
-        landed = true;
-        break;
-      }
-    }
-    test.skip(!landed, `no Add Patient screen at any of: ${addPatientUrls.join(', ')}`);
+    // ROUTE CORRECTED 2026-09-05, verified by hand on testing v3.2.2.0.
+    //
+    // This used to try /AddPatient, /PatientEdit and /SamplePatientEntry and
+    // take the first that returned 200. That is not a real check: OpenELIS is
+    // an SPA, so EVERY path returns 200 with the shell, and `landed` was true
+    // on a page that rendered nothing. The real screen is /PatientManagement
+    // (Add Or Modify Patient) with a "New Patient" tab that routes to
+    // /PatientManagement/new — and #nationalId only exists there, which is
+    // also what produced the run's 10 "Element not found: #nationalId".
+    await page.goto(`${BASE}/PatientManagement/new`, { waitUntil: 'domcontentloaded' });
+    const idField = page.locator('#nationalId');
+    const landed = await idField.isVisible({ timeout: 10_000 }).catch(() => false);
+    test.skip(!landed, 'Add Patient form (/PatientManagement/new) did not render #nationalId');
 
-    // Fill demographics
-    const lastNameField = page.getByRole('textbox', { name: /last.*name/i }).first();
-    const firstNameField = page.getByRole('textbox', { name: /first.*name/i }).first();
-    const idField = page.locator('input[id*="national" i], input[id*="patientId" i]').first();
-
-    if (await lastNameField.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await lastNameField.fill('QA_Patient');
-    }
-    if (await firstNameField.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await firstNameField.fill('Automated');
-    }
-    if (await idField.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await idField.fill('QA_PAT_0324');
-    }
+    // Fill demographics. National ID must match the server's
+    // `(?i)^[-a-z0-9/]*$` — underscores are REJECTED with a 400, which is what
+    // the old 'QA_PAT_0324' hit. See QA_ID_PREFIX in helpers/test-helpers.ts.
+    const nationalId = `${QA_ID_PREFIX}-pat-05`;
+    await idField.fill(nationalId);
+    await page.locator('#lastName').fill('QAPatient');
+    await page.locator('#firstName').fill('Automated');
+    // Gender and Date of Birth are both required (marked * on the form).
+    await page.locator('#radio-1').click().catch(() => {});
+    await page.locator('#date-picker-default-id').fill('01/01/1990').catch(() => {});
+    await page.keyboard.press('Escape'); // dismiss the datepicker overlay
 
     // Submit
     const saveBtn = page.getByRole('button', { name: /save|submit|add patient/i }).first();
@@ -178,8 +177,10 @@ test.describe('Patient Management (TC-PAT)', () => {
       await page.waitForTimeout(2000);
     }
 
-    const savedOk = await page.getByText(/QA_Patient|QA_PAT_0324/i).isVisible({ timeout: 5000 }).catch(() => false);
-    expect(savedOk, 'new patient did not persist after save — neither the name nor the national ID appeared').toBeTruthy();
+    // Read back through search rather than trusting the post-save screen.
+    const savedOk = await page.getByText(new RegExp(`QAPatient|${nationalId}`, 'i'))
+      .isVisible({ timeout: 5000 }).catch(() => false);
+    expect(savedOk, `new patient ${nationalId} did not persist after save — neither the name nor the national ID appeared`).toBeTruthy();
   });
 });
 
