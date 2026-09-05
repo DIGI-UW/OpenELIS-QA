@@ -303,17 +303,36 @@ export async function navigateToAdminItem(page: Page, itemName: string): Promise
     return;
   }
 
-  // Fallback: click the admin item in the left sidebar
-  const adminItem = await page
+  // Fallback: click the admin item in the left sidebar.
+  //
+  // BUG FIXED 2026-09-05. This used to be:
+  //
+  //     const adminItem = await page.locator(...).first();
+  //     if (adminItem) { await adminItem.click(); } else { throw ... }
+  //
+  // `page.locator()` ALWAYS returns a Locator — it is never falsy, even when
+  // nothing matches. So the guard was always true, the `else` was unreachable
+  // dead code, and a missing sidebar item spent the full timeout inside
+  // `.click()` before failing with `locator.click: Test timeout exceeded`.
+  // That is the single largest error class in the module sweep: 42 such
+  // timeouts in run 1, 34 in shard 6 alone. The named error this helper was
+  // written to throw had never once been seen.
+  //
+  // Now: check the locator actually resolves, and fail fast with the message.
+  const adminItem = page
     .locator('a, button, span')
     .filter({ hasText: itemName })
     .first();
 
-  if (adminItem) {
-    await adminItem.click();
-  } else {
-    throw new Error(`Admin item "${itemName}" not found in sidebar`);
+  const present = await adminItem.isVisible({ timeout: 5_000 }).catch(() => false);
+  if (!present) {
+    throw new Error(
+      `Admin item "${itemName}" not found in the sidebar, and it has no entry in ` +
+      `CONFIRMED_ADMIN_URLS. Add the confirmed slug there, or fix the label — do ` +
+      `not let this fall through to a click that can only time out.`,
+    );
   }
+  await adminItem.click();
 
   // Wait for page to load
   await page.waitForLoadState('networkidle', { timeout: TIMEOUT });

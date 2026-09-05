@@ -800,6 +800,51 @@ only there. That single wrong assumption also produced the run's 10
 **Assert on a rendered element, never on a status code, when the target is an
 SPA.** The corrected test waits for `#nationalId` to be visible and skips with
 a named reason if it is not.
+### 12.13 — `page.locator()` is never falsy, and that cost 42 timeouts a run
+
+The single largest error class in every module sweep was
+`locator.click: Test timeout exceeded` — 42 in run 1, 34 in shard 6 alone. One
+bug in a shared helper produced most of them:
+
+```ts
+const adminItem = await page.locator('a, button, span')
+  .filter({ hasText: itemName }).first();
+
+if (adminItem) {                 // <- ALWAYS true
+  await adminItem.click();       // <- waits the full timeout, then throws
+} else {
+  throw new Error(`Admin item "${itemName}" not found in sidebar`);   // dead code
+}
+```
+
+**`page.locator()` returns a Locator object whether or not anything matches.**
+It is a query, not a result — it is never falsy. So the guard always passed,
+the `else` was unreachable, and a missing sidebar item spent the entire timeout
+inside `.click()` before failing with a message that named the timeout instead
+of the missing item. The helpful error the helper was written to throw had
+never once been printed.
+
+At the old 90s timeout each of these cost a minute and a half of run time for
+no information. That is why the timeout policy (12.12) and this fix belong
+together: one makes the failures cheap, the other makes them legible.
+
+**The fix, and the pattern to use:**
+
+```ts
+const adminItem = page.locator(...).first();      // no await — it is a query
+const present = await adminItem.isVisible({ timeout: 5_000 }).catch(() => false);
+if (!present) throw new Error(`... not found ...`);
+await adminItem.click();
+```
+
+Nine more instances of the same shape were found and fixed in
+`tests/admin-config.spec.ts` and `gap-suites-AQ-AX.spec.ts` (`if (chevron)`,
+`if (batchItem)`, `if (adminItem)`).
+
+**Grep for it before trusting any suite:** `const X = await page.locator(...)`
+followed by `if (X)`. The `await` is the tell — awaiting a locator gives you the
+locator, not a match. Anything that reads like an existence check on a raw
+locator is not one.
 
 ### 12.9 — A spec no config runs is not coverage
 

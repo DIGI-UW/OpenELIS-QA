@@ -73,9 +73,19 @@ async function login(page: Page, user: string, pass: string): Promise<void> {
  */
 async function navigateToAdminItem(page: Page, itemName: string): Promise<void> {
   // Click the admin item in the left sidebar
-  const adminItem = await page.locator(`a:has-text("${itemName}"), button:has-text("${itemName}"), span:has-text("${itemName}")`).first();
+  const adminItem = page.locator(`a:has-text("${itemName}"), button:has-text("${itemName}"), span:has-text("${itemName}")`).first();
 
-  if (adminItem) {
+  // NOTE 2026-09-05: `page.locator()` always returns a Locator — never falsy — so
+
+  // `if (x)` here was always true and a missing element burned the full timeout
+
+  // inside .click(). Guarded with an actual visibility check. See
+
+  // navigateToAdminItem in helpers/test-helpers.ts.
+
+  const adminItemPresent = await adminItem.isVisible({ timeout: 5_000 }).catch(() => false);
+
+  if (adminItemPresent) {
     await adminItem.click();
   } else {
     throw new Error(`Admin item "${itemName}" not found in sidebar`);
@@ -358,8 +368,13 @@ test.describe('Suite AT — Result Reporting & Menu Configuration', () => {
 
   test('TC-MCF-01: Menu Configuration page loads', async ({ page }) => {
     // Menu Configuration may be expandable
-    const chevron = await page.locator('[role="button"]:has-text("Menu Configuration"), button:has-text("Menu Configuration"), span.chevron').first();
-    if (chevron) {
+    const chevron = page.locator('[role="button"]:has-text("Menu Configuration"), button:has-text("Menu Configuration"), span.chevron').first();
+    // NOTE 2026-09-05: `page.locator()` always returns a Locator — never falsy — so
+    // `if (x)` here was always true and a missing element burned the full timeout
+    // inside .click(). Guarded with an actual visibility check. See
+    // navigateToAdminItem in helpers/test-helpers.ts.
+    const chevronPresent = await chevron.isVisible({ timeout: 5_000 }).catch(() => false);
+    if (chevronPresent) {
       await chevron.click();
     }
 
@@ -404,8 +419,13 @@ test.describe('Suite AU — General Config & App Properties', () => {
 
   test('TC-GCF-01: General Configurations page loads', async ({ page }) => {
     // General Configurations may be expandable
-    const chevron = await page.locator('[role="button"]:has-text("General Configurations"), button:has-text("General Configurations")').first();
-    if (chevron) {
+    const chevron = page.locator('[role="button"]:has-text("General Configurations"), button:has-text("General Configurations")').first();
+    // NOTE 2026-09-05: `page.locator()` always returns a Locator — never falsy — so
+    // `if (x)` here was always true and a missing element burned the full timeout
+    // inside .click(). Guarded with an actual visibility check. See
+    // navigateToAdminItem in helpers/test-helpers.ts.
+    const chevronPresent = await chevron.isVisible({ timeout: 5_000 }).catch(() => false);
+    if (chevronPresent) {
       await chevron.click();
     }
 
@@ -632,8 +652,13 @@ test.describe('Suite AX — Localization, Notify User, Batch Reassignment', () =
 
   test('TC-LOC-01: Localization page loads', async ({ page }) => {
     // Localization may be expandable
-    const chevron = await page.locator('[role="button"]:has-text("Localization"), button:has-text("Localization")').first();
-    if (chevron) {
+    const chevron = page.locator('[role="button"]:has-text("Localization"), button:has-text("Localization")').first();
+    // NOTE 2026-09-05: `page.locator()` always returns a Locator — never falsy — so
+    // `if (x)` here was always true and a missing element burned the full timeout
+    // inside .click(). Guarded with an actual visibility check. See
+    // navigateToAdminItem in helpers/test-helpers.ts.
+    const chevronPresent = await chevron.isVisible({ timeout: 5_000 }).catch(() => false);
+    if (chevronPresent) {
       await chevron.click();
     }
 
@@ -698,9 +723,19 @@ test.describe('Suite AX — Localization, Notify User, Batch Reassignment', () =
 
   test('TC-BTR-01: Batch test reassignment page loads', async ({ page }) => {
     // Search for batch reassignment item (may be truncated)
-    const batchItem = await page.locator('a, button, span').filter({ hasText: /batch.*reassign/i }).first();
+    const batchItem = page.locator('a, button, span').filter({ hasText: /batch.*reassign/i }).first();
 
-    if (batchItem) {
+    // NOTE 2026-09-05: `page.locator()` always returns a Locator — never falsy — so
+
+    // `if (x)` here was always true and a missing element burned the full timeout
+
+    // inside .click(). Guarded with an actual visibility check. See
+
+    // navigateToAdminItem in helpers/test-helpers.ts.
+
+    const batchItemPresent = await batchItem.isVisible({ timeout: 5_000 }).catch(() => false);
+
+    if (batchItemPresent) {
       await batchItem.click();
     } else {
       // Try alternative name pattern
