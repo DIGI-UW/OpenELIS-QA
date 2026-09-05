@@ -2,7 +2,8 @@
  * OpenELIS Global 3.2.1.3 — End-to-End Test Suite (Suites AE–AG)
  * Reports Module Gap Coverage
  *
- * Target: https://www.jdhealthsolutions-openelis.com
+ * Target: whatever BASE/BASE_URL points at (default testing.openelis-global.org).
+ *         Was hardcoded to jdhealthsolutions-openelis.com until 2026-09-05.
  * Covers:
  *   - Suite AE: Routine Reports (5 TCs)
  *       - Patient Status Report
@@ -31,7 +32,12 @@ import { test, expect, Page } from '@playwright/test';
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
-const BASE = 'https://www.jdhealthsolutions-openelis.com';
+// BASE was hardcoded to 'https://www.jdhealthsolutions-openelis.com' — a
+// different instance from the one every other config and the nightly target.
+// These four files were unreachable by any config until #96, so nothing
+// surfaced it: 131 tests pointed at the wrong server. Now env-overridable with
+// the same default as the rest of the repo (2026-09-05).
+const BASE = process.env.BASE ?? process.env.BASE_URL ?? 'https://testing.openelis-global.org';
 const ADMIN = { user: 'admin', pass: 'adminADMIN!' };
 
 // Test data and constants
@@ -74,9 +80,18 @@ async function login(page: Page, user: string, pass: string) {
   // so a full UI login per test is redundant — and several hundred of them across
   // six parallel shards is what produced the "Login failed: still on login page"
   // wave in the first module sweep. See hasSession() in helpers/test-helpers.ts.
+  //
+  // NOTE: this still navigates. Returning without one traded 76 login failures
+  // for 61 `SecurityError: Failed to read the 'localStorage' property` — the
+  // page was left on about:blank. See reference §6.6.
   try {
     const cookies = await page.context().cookies();
-    if (cookies.some(c => /^(JSESSIONID|SESSION|session)$/i.test(c.name) && !!c.value)) return;
+    if (cookies.some(c => /^(JSESSIONID|SESSION|session)$/i.test(c.name) && !!c.value)) {
+      if (!page.url().startsWith(BASE)) {
+        await page.goto(BASE, { waitUntil: 'domcontentloaded' });
+      }
+      return;
+    }
   } catch { /* fall through to the real login */ }
 
   await page.goto(`${BASE}/LoginPage`);

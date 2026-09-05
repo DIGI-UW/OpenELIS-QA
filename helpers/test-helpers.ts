@@ -391,10 +391,23 @@ export async function hasSession(page: Page): Promise<boolean> {
 }
 
 export async function login(page: Page, user: string, pass: string): Promise<void> {
-  // Fast path — see hasSession(). Skips the whole form dance when the config
-  // already supplied an authenticated storageState, which is every suite run
-  // through modules.config.ts, all-tc.config.ts and friends.
-  if (await hasSession(page)) return;
+  // Fast path — see hasSession(). Skips the credential submission when the
+  // config already supplied an authenticated storageState, which is every suite
+  // run through modules.config.ts, all-tc.config.ts and friends.
+  //
+  // It still NAVIGATES. The first version of this returned immediately, and the
+  // next sweep traded 76 `Login failed: still on login page` for 61
+  // `SecurityError: Failed to read the 'localStorage' property` — reference
+  // §6.6. The old unconditional `goto` was incidentally the thing getting the
+  // page off about:blank, and every helper that reads the CSRF token out of
+  // localStorage depends on it. Skipping the form is the win; skipping the
+  // navigation is a regression.
+  if (await hasSession(page)) {
+    if (!page.url().startsWith(BASE)) {
+      await page.goto(BASE, { waitUntil: 'domcontentloaded' });
+    }
+    return;
+  }
 
   await page.goto(`${BASE}/LoginPage`);
 
