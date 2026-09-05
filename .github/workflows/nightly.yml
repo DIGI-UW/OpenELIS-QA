@@ -200,12 +200,18 @@ jobs:
       github.event.inputs.suite == 'all' ||
       github.event.schedule == '0 6 * * 0'
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    # The first run (4 shards, retries=1) had not finished a shard in 65 min and
+    # was killed by a 120-min cap. Weekly cadence makes a long job acceptable;
+    # a job that is killed before reporting is not.
+    timeout-minutes: 300
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6]
     env:
+      # See modules.config.ts — retries are for flake, and nothing here has a
+      # baseline yet. Halves the cost of a failing first run.
+      PW_RETRIES: '0'
       BASE: ${{ github.event.inputs.base_url || 'https://testing.openelis-global.org' }}
       BASE_URL: ${{ github.event.inputs.base_url || 'https://testing.openelis-global.org' }}
       GAPS_STRICT: '1'
@@ -229,13 +235,13 @@ jobs:
             exit 1
           fi
 
-      - name: Module sweep shard ${{ matrix.shard }}/4
+      - name: Module sweep shard ${{ matrix.shard }}/6
         continue-on-error: true
         id: sweep
         run: |
           mkdir -p nightly-out
           npx playwright test --config=modules.config.ts --reporter=line \
-            --shard=${{ matrix.shard }}/4 > "nightly-out/modules-${{ matrix.shard }}.txt" 2>&1
+            --shard=${{ matrix.shard }}/6 > "nightly-out/modules-${{ matrix.shard }}.txt" 2>&1
           echo "rc=$?" >> "$GITHUB_OUTPUT"
           tail -30 "nightly-out/modules-${{ matrix.shard }}.txt"
 
@@ -247,7 +253,7 @@ jobs:
           x=$(grep -oE '[0-9]+ failed' "$F" | tail -1 | grep -oE '[0-9]+' || echo 0)
           s=$(grep -oE '[0-9]+ skipped' "$F" | tail -1 | grep -oE '[0-9]+' || echo 0)
           {
-            echo "### Module sweep — shard ${{ matrix.shard }}/4"
+            echo "### Module sweep — shard ${{ matrix.shard }}/6"
             echo ""
             echo "Target: \`$BASE\`"
             echo ""
