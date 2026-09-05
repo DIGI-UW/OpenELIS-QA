@@ -72,6 +72,30 @@ test.describe.serial('Chain Z — Compliance standards admin CRUD', () => {
     expect(list.ok).toBeTruthy();
   });
 
+  // MOVED 2026-09-05: Step 5 executes BEFORE the destructive create/update/archive
+  // steps. It is independent of them — `const ref = createdId ?? seedId ?? 1`, and
+  // country-regions needs no id at all — but as the LAST step in a `.serial`
+  // describe it was skipped every time Step 2's create failed. Its step NUMBER is
+  // unchanged so report keys stay stable; only the execution order moved.
+  // See harness reference 12.10.
+  // Step 5 — Standard sub-resources are wired (CROSS-LINK)
+  test('Step 5 — parameter-groups / linked-tests / country-regions wired (CROSS-LINK)', async ({ page }) => {
+    if (!featurePresent) { markStep('Z', 5, 'GAP', 'Skipped — feature absent (Step 1)'); return; }
+    await page.goto(BASE);
+    const ref = createdId ?? seedId ?? 1;
+    const pg = await apiCall(page, COMPLIANCE_STANDARD_PARAM_GROUPS(ref));
+    const lt = await apiCall(page, COMPLIANCE_STANDARD_LINKED_TESTS(ref));
+    const cr = await apiCall(page, COMPLIANCE_COUNTRY_REGIONS);
+    const wired = [pg, lt, cr].filter(r => r.status < 500).length;
+    if (wired === 3) {
+      markStep('Z', 5, 'PASS', `Standard sub-resources wired (parameter-groups ${pg.status}, linked-tests ${lt.status}, country-regions ${cr.status})`);
+      expect(wired).toBe(3);
+    } else {
+      markStep('Z', 5, 'GAP', `Some sub-resource 5xx (pg=${pg.status}, lt=${lt.status}, cr=${cr.status})`);
+      test.info().annotations.push({ type: 'gap', description: 'standard sub-resource 5xx' });
+    }
+  });
+
   // Step 2 — Create a standard, verify it lands (ROUND-TRIP, destructive)
   test('Step 2 — Create standard lands in the list (ROUND-TRIP)', async ({ page }) => {
     if (!featurePresent) { markStep('Z', 2, 'GAP', 'Skipped — feature absent (Step 1)'); return; }
@@ -160,21 +184,4 @@ test.describe.serial('Chain Z — Compliance standards admin CRUD', () => {
     }
   });
 
-  // Step 5 — Standard sub-resources are wired (CROSS-LINK)
-  test('Step 5 — parameter-groups / linked-tests / country-regions wired (CROSS-LINK)', async ({ page }) => {
-    if (!featurePresent) { markStep('Z', 5, 'GAP', 'Skipped — feature absent (Step 1)'); return; }
-    await page.goto(BASE);
-    const ref = createdId ?? seedId ?? 1;
-    const pg = await apiCall(page, COMPLIANCE_STANDARD_PARAM_GROUPS(ref));
-    const lt = await apiCall(page, COMPLIANCE_STANDARD_LINKED_TESTS(ref));
-    const cr = await apiCall(page, COMPLIANCE_COUNTRY_REGIONS);
-    const wired = [pg, lt, cr].filter(r => r.status < 500).length;
-    if (wired === 3) {
-      markStep('Z', 5, 'PASS', `Standard sub-resources wired (parameter-groups ${pg.status}, linked-tests ${lt.status}, country-regions ${cr.status})`);
-      expect(wired).toBe(3);
-    } else {
-      markStep('Z', 5, 'GAP', `Some sub-resource 5xx (pg=${pg.status}, lt=${lt.status}, cr=${cr.status})`);
-      test.info().annotations.push({ type: 'gap', description: 'standard sub-resource 5xx' });
-    }
-  });
 });

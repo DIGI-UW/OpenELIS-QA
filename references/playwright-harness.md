@@ -624,6 +624,64 @@ Chain N now does this:
 When you add a step to a serial chain, ask: *if this fails, which later steps become
 meaningless?* If the answer is "none", it belongs at the end.
 
+#### The 2026-09-05 audit across all 26 chains
+
+Measured from nightly run `33901256497` (GAPS_STRICT=1, ORDER_PATH set): **21 chains failed and
+65 later steps never ran.** Per-chain, steps lost to an early failure:
+
+| Lost | Chains |
+|---|---|
+| 6 | A, N |
+| 5 | B, D, F |
+| 4 | C, E, G, J, M |
+| 3 | L, S, Z |
+| 2 | AB, K, O, T, U |
+| 0 | H, I, P, Q, R, W, X, Y |
+
+**Amputation is not always wrong.** Three distinct cases came out of the audit, and only the
+first is a defect:
+
+1. **The early step is a leaf finding — nothing downstream reads it.**
+
+   **Chain A**: fixed by dropping `.serial`. Step 2's BUG-37 linkage check was taking Steps 3-8
+   — the whole result → validate → report → FHIR spine — with it, and nothing downstream reads
+   anything Step 2 sets. Every step from 2 on already guards its own precondition
+   (`if (!order) test.skip()`, plus Step 6 on `order.pdf` and Step 8 on `order.fhir`), and the
+   config runs `workers: 1` / `fullyParallel: false`, so declaration order is still execution
+   order. The only change is that one failing step no longer cancels the rest.
+
+   **Dropping `.serial` is the preferred fix when every later step guards itself.** The first
+   attempt here split Step 2 into a measurement step plus a verdict step at the end — and the
+   assertion gate caught it, correctly: the measurement step no longer asserted anything, which
+   is precisely the shape `lint:assert` exists to reject. Splitting is the fallback for when a
+   step's finding really must be asserted after later work has run (**Chain N** Step 7, above);
+   reach for de-serialising first.
+
+2. **The chain is genuinely linear.** **Chain C** needs `rule` and `triggerValue` from Step 2 for
+   everything after it; **Chain D** is linear on `testAccession` from Step 2. Nothing to reorder —
+   a Step 2 failure legitimately ends both. Left alone deliberately.
+
+3. **Step 1 is a real hard precondition that the whole chain rests on.** **F** (`eqaEnabled` is
+   false), **G** (Cold Storage endpoint 404), **J** (`AuditTrail` 404), **L** (empty test
+   catalog), **M** (worklist contract changed). These chains are correctly reporting that their
+   subject is unavailable. Left alone.
+
+**Chain Z** was a fourth, smaller case: Step 5 (sub-resource wiring) is independent of the
+destructive create/update/archive and carries its own `createdId ?? seedId ?? 1` fallback, but sat
+last and was lost every time the create failed. Its `test()` declaration now runs after Step 1
+while keeping its step *number*, so report keys stay stable.
+
+**One latent defect fell out of the audit.** Chain C Step 4 guarded `if (!order)` but compared
+against `triggerValue`, which Step 2 sets. A null `triggerValue` reached the comparison and
+reported *"Entered result not found in read-back"* — blaming the write instead of the missing
+rule. Now guarded on both.
+
+**Guard style is inconsistent and worth a follow-up.** Chains A-E use `if (!order) test.skip()`,
+which protects against null state but produces a silent skip. Chain Z uses
+`markStep(..., 'GAP', 'Skipped — …'); return;`, which keeps the step visible in the report with
+its reason. Z's pattern is the better one; adopting it chain-wide would make "did not run"
+legible instead of absent.
+
 ### 12.9 — A spec no config runs is not coverage
 
 Added 2026-09-04, after the audit that followed OGC-1192.

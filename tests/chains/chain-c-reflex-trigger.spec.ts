@@ -178,7 +178,11 @@ test.describe.serial('Chain C — Reflex Trigger', () => {
   // Acceptance criterion: ROUND-TRIP
   // ---------------------------------------------------------------------------
   test('Step 4 — Verify result persisted (ROUND-TRIP)', async ({ page }) => {
-    if (!order) test.skip();
+    // Guard on triggerValue too, not just `order`. Step 2 sets both; without this
+    // check a null triggerValue reaches the comparison below and reports
+    // "Entered result not found in read-back" — a misleading FAIL that blames the
+    // write instead of the missing rule. Found in the 2026-09-05 serial audit.
+    if (!order || !triggerValue) test.skip();
     await page.goto(BASE);
     const read = await apiCall<{ resultList?: Array<{ testId?: string; value?: string }> }>(
       page,
