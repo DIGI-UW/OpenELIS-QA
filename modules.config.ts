@@ -26,13 +26,23 @@ import { defineConfig, devices } from '@playwright/test';
  * would rot into exactly the bug this config exists to fix.
  *
  * RUNTIME
- * 866 tests. `workers` defaults to 1 to respect the 6-connection pool (harness
- * reference §10.9). The nightly runs this as a 4-way shard MATRIX — four
- * parallel jobs, each with workers=1 — so wall-clock drops without the
- * instance ever seeing more than four concurrent connections. Note that
- * sharding only helps when the shards are parallel jobs; four `--shard`
- * invocations inside one job do exactly the same total work. Override locally
- * with PW_WORKERS if you know what you are doing.
+ * 866 tests, and they are slow: these suites are UI-driven and littered with
+ * fixed `waitForTimeout` sleeps. The first sharded run (2026-09-04, 4 shards,
+ * retries=1) had not finished any shard after 65 minutes.
+ *
+ * `workers` defaults to 1 to respect the 6-connection pool (harness reference
+ * §10.9). The nightly runs this as a shard MATRIX — parallel jobs, each with
+ * workers=1 — so wall-clock drops without the instance seeing more concurrent
+ * connections than there are shards. Sharding only helps when the shards are
+ * parallel JOBS; N `--shard` invocations inside one job do the same total work.
+ *
+ * Two levers, in order of effect:
+ *   1. retries. PW_RETRIES=0 in the nightly — see the `retries` note below.
+ *      On a first run where most things fail, this roughly halves wall-clock.
+ *   2. shard count. Raised 4 -> 6, which sits AT the documented connection
+ *      limit, not over it. Do not raise it further without re-reading §10.9
+ *      and watching the instance.
+ * Override locally with PW_WORKERS if you know what you are doing.
  *
  * EXPECT RED. These suites have not run in a long time and were never gated,
  * so a large fraction will fail on first contact. That is information, not a
@@ -69,7 +79,11 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   fullyParallel: false,
   workers: Number(process.env.PW_WORKERS ?? 1),
-  retries: 1,
+  // Retries default to 1 locally, but the nightly sets PW_RETRIES=0. Retries
+  // exist to absorb flake; in a suite that has never run, the failures are not
+  // flake — they are the point. Retrying them doubles the cost of every failure
+  // for no information. Raise this once the sweep has a stable baseline.
+  retries: Number(process.env.PW_RETRIES ?? 1),
   reporter: [['line'], ['json', { outputFile: 'regression-results/modules.json' }]],
   use: {
     ...devices['Desktop Chrome'],

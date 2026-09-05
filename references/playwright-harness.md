@@ -708,12 +708,28 @@ Two changes:
   files reachable from more than one config; that is not an error (deliberate
   tiering, e.g. `guards` and `all-tc` sharing a spec) but it is worth seeing.
 
-The sweep runs weekly rather than nightly (866 tests), as a **4-way shard
-matrix** — four parallel jobs, each `workers=1`. Sharding only shortens
-wall-clock when the shards are separate jobs; four `--shard` invocations in a
-loop inside one job do the same total work in the same time. That mistake was
-made and corrected in #96 before merge; if you touch the workflow, keep the
-matrix.
+The sweep runs weekly rather than nightly (866 tests), as a **shard matrix** —
+parallel jobs, each `workers=1`. Sharding only shortens wall-clock when the
+shards are separate jobs; N `--shard` invocations in a loop inside one job do
+the same total work in the same time. That mistake was made and corrected in
+#96 before merge; if you touch the workflow, keep the matrix.
+
+**Sizing it (measured 2026-09-04).** These suites are UI-driven and full of
+fixed `waitForTimeout` sleeps, so they are far slower per test than the chains
+(131 tests in 8.7 min). The first sweep — 4 shards, `retries: 1` — had not
+finished a single shard after 65 minutes and was killed by the 120-minute cap.
+Two levers, in order of effect:
+
+1. **Retries.** The nightly now sets `PW_RETRIES=0`. Retries absorb flake; in a
+   suite that has never run, the failures are not flake, they are the point —
+   and retrying each one doubles its cost for no information. Raise it again
+   once the sweep has a stable baseline.
+2. **Shard count**, raised 4 → 6. Six parallel runners at `workers: 1` sits **at**
+   the 6-connection limit in §10.9, not over it. Do not raise it further without
+   re-reading that section and watching the instance for strain.
+
+Job timeout is 300 minutes. A long weekly job is acceptable; a job killed
+before it reports is not.
 
 **Cautionary note for whoever reads the first module-sweep results.** These
 suites have not run in a long time and were never gated, so expect a large
