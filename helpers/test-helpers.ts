@@ -64,6 +64,24 @@ export const ACCESSION2: string = (() => {
 })();
 
 export const QA_PREFIX = `QA_AUTO_${new Date().toISOString().slice(5, 10).replace('-', '')}`;
+
+/**
+ * QA_PREFIX, but valid as a patient National ID.
+ *
+ * The server validates nationalId against `(?i)^[-a-z0-9/]*$` — **underscores
+ * are rejected**, with `400 {"error":"nationalId: must match ..."}`. QA_PREFIX
+ * is `QA_AUTO_MMDD`, so every test that filled `#nationalId` with it was
+ * failing validation before it ever reached the behaviour under test.
+ *
+ * Confirmed by hand on testing 2026-09-05: `QA_PAT_0905` -> 400,
+ * `qa-pat-0905` -> 200 with `{"patientId":"502","status":"success"}`. Patient
+ * creation is not broken; the fixture data was invalid.
+ *
+ * Use this for nationalId and anything else the server pattern-checks. Keep
+ * QA_PREFIX for names, orgs and test-catalog entries, where underscores are
+ * fine and where already-seeded QA_AUTO_ data has to stay findable.
+ */
+export const QA_ID_PREFIX = QA_PREFIX.toLowerCase().replace(/_/g, '-');
 export const TIMEOUT = 5000;
 
 // ---------------------------------------------------------------------------

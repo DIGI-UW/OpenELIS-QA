@@ -21,7 +21,8 @@
     "lint:assert": "node scripts/lint-assert-gate.mjs",
     "lint:baseline": "node scripts/lint-assert-gate.mjs --update",
     "check:orphans": "node scripts/check-orphans.mjs",
-    "test:modules": "playwright test -c modules.config.ts"
+    "test:modules": "playwright test -c modules.config.ts",
+    "test:gap-suites": "playwright test -c gap-suites.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

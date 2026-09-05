@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, QA_PREFIX, login } from '../helpers/test-helpers';
+import { BASE, ADMIN, QA_PREFIX, QA_ID_PREFIX, login } from '../helpers/test-helpers';
 
 /**
  * Order Creation E2E Test Suite — Phase 32
@@ -66,7 +66,7 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
     }
 
     // Fill patient info using React native setter
-    await setReactInput(page, '#nationalId', `${QA_PREFIX}-E2E-001`);
+    await setReactInput(page, '#nationalId', `${QA_ID_PREFIX}-E2E-001`);
     await setReactInput(page, '#lastName', 'E2ETestPatient');
 
     // Select gender via JS
@@ -91,7 +91,7 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
   test('TC-ORD-02: Navigate from Step 2 (Program Selection) to Step 3 (Add Sample)', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
     await page.goto(ORDER_URL);
-    await setReactInput(page, '#nationalId', `${QA_PREFIX}-E2E-002`);
+    await setReactInput(page, '#nationalId', `${QA_ID_PREFIX}-E2E-002`);
     await setReactInput(page, '#lastName', 'E2ETest2');
     await page.click('button:has-text("Next")');
     await page.waitForTimeout(1000);
@@ -110,7 +110,7 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
     await page.goto(ORDER_URL);
 
     // Quick navigate through Steps 1-2
-    await setReactInput(page, '#nationalId', `${QA_PREFIX}-E2E-003`);
+    await setReactInput(page, '#nationalId', `${QA_ID_PREFIX}-E2E-003`);
     await setReactInput(page, '#lastName', 'E2ETest3');
     await page.click('button:has-text("Next")');
     await page.waitForTimeout(1000);
@@ -158,7 +158,7 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
     await page.goto(ORDER_URL);
     await page.waitForSelector('text=Patient Info');
 
-    const nationalId = `${QA_PREFIX}-P32-TEST`;
+    const nationalId = `${QA_ID_PREFIX}-P32-TEST`;
     await setReactInput(page, '#nationalId', nationalId);
     await setReactInput(page, '#lastName', 'QATestPatient');
 
@@ -219,7 +219,7 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
     await page.goto(ORDER_URL);
 
     // Navigate to Step 3
-    await setReactInput(page, '#nationalId', `${QA_PREFIX}-SAMPLE-001`);
+    await setReactInput(page, '#nationalId', `${QA_ID_PREFIX}-SAMPLE-001`);
     await setReactInput(page, '#lastName', 'SampleTest');
     await page.click('button:has-text("Next")');
     await page.waitForTimeout(1000);
@@ -249,7 +249,7 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
     await page.goto(ORDER_URL);
 
     // Navigate to Step 3 and select Serum
-    await setReactInput(page, '#nationalId', `${QA_PREFIX}-TEST-001`);
+    await setReactInput(page, '#nationalId', `${QA_ID_PREFIX}-TEST-001`);
     await setReactInput(page, '#lastName', 'TestSelect');
     await page.click('button:has-text("Next")');
     await page.waitForTimeout(1000);
@@ -291,7 +291,7 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
     await login(page, ADMIN.user, ADMIN.pass);
     await page.goto(ORDER_URL);
 
-    await setReactInput(page, '#nationalId', `${QA_PREFIX}-PERSIST-001`);
+    await setReactInput(page, '#nationalId', `${QA_ID_PREFIX}-PERSIST-001`);
     await setReactInput(page, '#lastName', 'PersistTest');
     await page.click('button:has-text("Next")');
     await page.waitForTimeout(1000);
@@ -334,7 +334,7 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
     await page.goto(ORDER_URL);
 
     // Navigate through all steps to Step 4
-    await setReactInput(page, '#nationalId', `${QA_PREFIX}-LABNUM-001`);
+    await setReactInput(page, '#nationalId', `${QA_ID_PREFIX}-LABNUM-001`);
     await setReactInput(page, '#lastName', 'LabNumTest');
     await page.click('button:has-text("Next")');
     await page.waitForTimeout(1000);
@@ -373,7 +373,7 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
     await page.goto(ORDER_URL);
 
     // Navigate to Step 4
-    await setReactInput(page, '#nationalId', `${QA_PREFIX}-DETAILS-001`);
+    await setReactInput(page, '#nationalId', `${QA_ID_PREFIX}-DETAILS-001`);
     await setReactInput(page, '#lastName', 'DetailsTest');
     await page.click('button:has-text("Next")');
     await page.waitForTimeout(1000);
@@ -408,7 +408,7 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
     await page.goto(ORDER_URL);
 
     // Full wizard flow
-    await setReactInput(page, '#nationalId', `${QA_PREFIX}-SUBMIT-001`);
+    await setReactInput(page, '#nationalId', `${QA_ID_PREFIX}-SUBMIT-001`);
     await setReactInput(page, '#lastName', 'SubmitTest');
     await page.click('button:has-text("Next")');
     await page.waitForTimeout(1000);
@@ -465,7 +465,7 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
     await login(page, ADMIN.user, ADMIN.pass);
     await page.goto(ORDER_URL);
 
-    await setReactInput(page, '#nationalId', `${QA_PREFIX}-PRINT-001`);
+    await setReactInput(page, '#nationalId', `${QA_ID_PREFIX}-PRINT-001`);
     await setReactInput(page, '#lastName', 'PrintTest');
     await page.click('button:has-text("Next")');
     await page.waitForTimeout(1000);
