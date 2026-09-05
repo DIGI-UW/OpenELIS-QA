@@ -364,7 +364,38 @@ export async function navigateWithDiscovery(page: Page, candidates: string[]): P
  * So: probe for the form first. If it is not there we are already in, and the
  * correct behaviour is to do nothing.
  */
+/**
+ * Is this context already carrying an authenticated session?
+ *
+ * WHY (2026-09-05): the first module sweep produced 364 failures, and the single
+ * most common error was `Login failed: still on login page` (38), followed by
+ * ~100 click/fill timeouts. Cause: all 46 module suites call login() themselves —
+ * tests/system-misc.spec.ts alone has 18 `beforeEach` login blocks — even though
+ * modules.config.ts already hands every test an authenticated `storageState`.
+ * Across six parallel shards that is several hundred redundant full UI logins
+ * against one instance, and it trips over itself. Roughly 140 of those 364
+ * failures were this, not product defects.
+ *
+ * The check is cookie-only and deliberately does NOT navigate: a navigation per
+ * test is most of the cost we are trying to remove. A stale cookie passes this
+ * check, which is fine — the mid-run re-auth guard in tests/helpers/api-json.ts
+ * is what handles a session lapsing partway through a run.
+ */
+export async function hasSession(page: Page): Promise<boolean> {
+  try {
+    const cookies = await page.context().cookies();
+    return cookies.some(c => /^(JSESSIONID|SESSION|session)$/i.test(c.name) && !!c.value);
+  } catch {
+    return false;
+  }
+}
+
 export async function login(page: Page, user: string, pass: string): Promise<void> {
+  // Fast path — see hasSession(). Skips the whole form dance when the config
+  // already supplied an authenticated storageState, which is every suite run
+  // through modules.config.ts, all-tc.config.ts and friends.
+  if (await hasSession(page)) return;
+
   await page.goto(`${BASE}/LoginPage`);
 
   const formIsThere = await page

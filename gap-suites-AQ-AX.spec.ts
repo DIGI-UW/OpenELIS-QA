@@ -26,6 +26,15 @@ const TIMEOUT = 5000;
  * Navigates to login page, enters credentials, and waits for /MasterListsPage
  */
 async function login(page: Page, user: string, pass: string): Promise<void> {
+  // Fast path (2026-09-05): these suites run with an authenticated storageState,
+  // so a full UI login per test is redundant — and several hundred of them across
+  // six parallel shards is what produced the "Login failed: still on login page"
+  // wave in the first module sweep. See hasSession() in helpers/test-helpers.ts.
+  try {
+    const cookies = await page.context().cookies();
+    if (cookies.some(c => /^(JSESSIONID|SESSION|session)$/i.test(c.name) && !!c.value)) return;
+  } catch { /* fall through to the real login */ }
+
   await page.goto(`${BASE}/login`);
 
   // Find and fill username field

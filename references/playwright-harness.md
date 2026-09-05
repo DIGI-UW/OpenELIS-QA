@@ -682,6 +682,42 @@ which protects against null state but produces a silent skip. Chain Z uses
 its reason. Z's pattern is the better one; adopting it chain-wide would make "did not run"
 legible instead of absent.
 
+### 12.11 — Read the failure *causes* before triaging a first sweep
+
+The first module sweep (2026-09-05, 6 shards, `PW_RETRIES=0`) came back **493 passed,
+364 failed, 14 skipped** across 866 tests — a 42% failure rate. Longest shard 69 min against
+a 300-min cap, so 6 shards is the right count.
+
+But 42% badly overstates the product signal, and the shape of the failures says so:
+
+| Error | Count |
+|---|---|
+| `locator.click: Test timeout` | 42 |
+| **`Login failed: still on login page`** | **38** |
+| `page.fill: Test timeout` | 36 |
+| `expect(received).toBe(expected)` | 33 |
+| `expect(locator).toBeVisible() failed` | 18 |
+
+Roughly **140 of the 364 were self-inflicted**. All 46 adopted suites call `login()` themselves
+— `tests/system-misc.spec.ts` alone has 18 `beforeEach` login blocks — even though
+`modules.config.ts` already hands every test an authenticated `storageState`. Six parallel
+shards doing several hundred redundant full UI logins against one instance trips over itself,
+and the timeouts cascade from there.
+
+Fixed by giving `login()` a cookie-only fast path (`hasSession()` in
+`helpers/test-helpers.ts`, mirrored in the four `gap-suites-*` files, which each define their
+own local `login`). It deliberately does not navigate — a navigation per test is most of the
+cost being removed — and a stale cookie passing the check is fine, because the mid-run re-auth
+guard in `tests/helpers/api-json.ts` is what handles a session lapsing partway through.
+
+**The lesson generalises.** Before triaging a first run of anything, group the failures by cause
+and ask which are the harness failing rather than the product. A count of red tests is not a
+count of bugs. Here the single most common "failure" was the suite logging in too often.
+
+**Artifacts:** the same run produced >520 MB, because `test-results/` carries Playwright traces.
+That also made `gh run download` slow enough to time out repeatedly. The modules job now uploads
+`nightly-out/` only; re-run a single spec locally when you need a trace.
+
 ### 12.9 — A spec no config runs is not coverage
 
 Added 2026-09-04, after the audit that followed OGC-1192.

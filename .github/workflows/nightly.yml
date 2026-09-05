@@ -271,8 +271,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: modules-shard-${{ matrix.shard }}-${{ github.run_number }}
-          path: |
-            nightly-out/
-            test-results/
+          # nightly-out only. Including test-results/ pulled Playwright traces in
+          # and the first full sweep produced >520 MB across six shards, which
+          # also made `gh run download` slow enough to time out. Traces for a
+          # 300-failure run are not worth that; re-run a single spec locally when
+          # you need one.
+          path: nightly-out/
           retention-days: 14
           if-no-files-found: warn
