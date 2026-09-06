@@ -589,3 +589,63 @@ export async function resolveSectionName(page: Page, want: RegExp): Promise<stri
   const names = (Array.isArray(sections) ? sections : []).map((x: any) => String(x.value ?? x.name ?? ''));
   return names.find((n) => want.test(n)) ?? null;
 }
+
+/**
+ * Navigation and form helpers that several module specs call but never defined.
+ *
+ * When `openelis-e2e.spec.ts` was split into per-module specs, each new file got
+ * a copy-pasted local copy of these. Two files got the CALL SITES without the
+ * definitions — `tests/system-misc.spec.ts` and `tests/non-conforming.spec.ts` —
+ * so every test in them died on a ReferenceError before touching the product.
+ * `typecheck:all` had been reporting exactly this as TS2304 the whole time.
+ *
+ * These are the canonical versions. New specs should import from here rather
+ * than pasting another copy; the remaining local duplicates in order-entry,
+ * results-entry, pathology and the gap-suites are a separate cleanup.
+ */
+export async function navigateViaMenu(page: Page, menuItems: string[]): Promise<void> {
+  const hamburger = page
+    .locator('button[aria-label*="menu" i], button[aria-label*="Menu"], [class*="hamburger"]')
+    .first();
+  if (await hamburger.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    await hamburger.click();
+    await page.waitForTimeout(500);
+  }
+
+  for (const item of menuItems) {
+    const menuItem = page.locator('button, a, [role="menuitem"]').filter({ hasText: item }).first();
+    if (await menuItem.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      await menuItem.click();
+      await page.waitForTimeout(300);
+    }
+  }
+}
+
+/**
+ * Try each candidate path in turn; return true for the first that lands
+ * somewhere other than the login page. Returns false if none do.
+ *
+ * NOTE: this is a navigation convenience, NOT an existence check. The SPA
+ * serves 200 for every path, so "we did not get bounced to login" is the only
+ * thing a true return actually proves. Assert on a rendered element after it.
+ */
+export async function tryNavigateToURL(page: Page, candidates: string[]): Promise<boolean> {
+  for (const url of candidates) {
+    try {
+      await page.goto(`${BASE}${url}`, { waitUntil: 'domcontentloaded', timeout: 8_000 });
+      const landed = page.url();
+      if (!/login|signin/i.test(landed)) return true;
+    } catch {
+      // try the next candidate
+    }
+  }
+  return false;
+}
+
+/** Select a sample type by its option id on the order form, if the select is present. */
+export async function selectSampleType(page: Page, typeId: string): Promise<void> {
+  const typeSelect = page.locator('select[id*="sample"], select[id*="type"]').first();
+  if (await typeSelect.isVisible({ timeout: 3_000 }).catch(() => false)) {
+    await typeSelect.selectOption(typeId);
+  }
+}

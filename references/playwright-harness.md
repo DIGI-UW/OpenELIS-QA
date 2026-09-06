@@ -846,6 +846,64 @@ followed by `if (X)`. The `await` is the tell — awaiting a locator gives you t
 locator, not a match. Anything that reads like an existence check on a raw
 locator is not one.
 
+
+### 12.14 — Two defect classes that `typecheck:all` had been reporting all along
+
+Added 2026-09-06, after sweep 4.
+
+`tsconfig.all.json` is not the blocking gate — `tsconfig.json` is, and it lists
+only the files that compile clean. That ratchet is the right design, but it
+made it easy to wave off `npm run typecheck:all` as "a backlog". Two of its
+error codes are not style debt. They are runtime defects with a compiler
+already pointing at them.
+
+**TS2304 on a FUNCTION name is a guaranteed `ReferenceError`.** Not a missing
+type import — a missing *value*. `tests/system-misc.spec.ts` and
+`tests/non-conforming.spec.ts` called `navigateViaMenu`, `tryNavigateToURL`,
+`selectSampleType` and `getFutureDate` without ever defining or importing them.
+When `openelis-e2e.spec.ts` was split into per-module specs, every other file
+got a copy-pasted local copy of these helpers; those two got the call sites
+alone. Every test in them died before touching the product. That is 18
+failures a sweep that were never about OpenELIS at all.
+
+Distinguish the two cases when triaging TS2304: `Cannot find name 'Page'` is a
+missing *type* import and erases at runtime, so it costs nothing but a red
+compiler. `Cannot find name 'someFunction'` is a missing *value* and the test
+cannot run. Fix the second class on sight.
+
+**TS2367 (`no overlap`) is the compiler noticing a tautology.** Fifteen
+instances in `gap-suites-AQ-AX.spec.ts` and fifteen more in
+`tests/admin-config.spec.ts` read:
+
+```ts
+const hasInterface = await Promise.any([
+  table.isVisible().catch(() => false),
+  form.isVisible().catch(() => false),
+  buttons.isVisible().catch(() => false)
+]).then(v => v === true || v === true);   // same comparison twice
+expect(hasInterface).toBeTruthy();
+```
+
+The duplicated comparison is what the compiler flagged, but it is the smaller
+half of the bug. **`Promise.any` resolves on the first promise to FULFIL, and
+`.catch(() => false)` makes all three of these always fulfil.** So the "at
+least one of these is visible" check is really "whichever locator settles
+first, report that one" — a race. A page with a visible table still fails the
+assertion whenever the form's `isVisible` happens to settle first with `false`.
+
+`Promise.any` is for genuinely-rejecting promises. Once every branch is
+`.catch()`-ed into a value, the primitive you want is:
+
+```ts
+const hasInterface = await Promise.all([...]).then((results) => results.some(Boolean));
+```
+
+**The general rule:** a type error inside an assertion is never cosmetic. The
+assertion is the only part of a test that does any work, and a compiler
+complaining about its logic is telling you the test does not check what its
+name claims. Grep the backlog for TS2367 and for TS2304 on call expressions
+before reading another sweep's failures — both classes are cheaper to fix than
+to triage.
 ### 12.9 — A spec no config runs is not coverage
 
 Added 2026-09-04, after the audit that followed OGC-1192.
