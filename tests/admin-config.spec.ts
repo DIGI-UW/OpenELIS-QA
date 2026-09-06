@@ -238,11 +238,11 @@ test.describe('Suite AQ — Reflex Tests & Analyzer Test Name', () => {
     const buttons = await page.locator('button:has-text("Add"), button:has-text("Edit"), button:has-text("Delete")').first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       table.isVisible().catch(() => false),
       form.isVisible().catch(() => false),
       buttons.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -268,11 +268,11 @@ test.describe('Suite AQ — Reflex Tests & Analyzer Test Name', () => {
     const buttons = await page.locator('button:has-text("Add"), button:has-text("Edit")').first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       table.isVisible().catch(() => false),
       form.isVisible().catch(() => false),
       buttons.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -304,11 +304,11 @@ test.describe('Suite AR — Lab Number & Program Management', () => {
     const inputs = await page.locator('input[type="text"], input[type="number"], textarea').first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       form.isVisible().catch(() => false),
       table.isVisible().catch(() => false),
       inputs.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -334,11 +334,11 @@ test.describe('Suite AR — Lab Number & Program Management', () => {
     const buttons = await page.locator('button:has-text("Add"), button:has-text("Edit")').first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       table.isVisible().catch(() => false),
       form.isVisible().catch(() => false),
       buttons.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -370,11 +370,11 @@ test.describe('Suite AS — Provider & Barcode Configuration', () => {
     const buttons = await page.locator('button:has-text("Add"), button:has-text("Edit")').first();
 
     // At least table or search should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       table.isVisible().catch(() => false),
       searchBox.isVisible().catch(() => false),
       buttons.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -400,11 +400,11 @@ test.describe('Suite AS — Provider & Barcode Configuration', () => {
     const saveBtn = await page.locator('button:has-text("Save"), button:has-text("Update"), button:has-text("Apply")').first();
 
     // At least form or inputs should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       form.isVisible().catch(() => false),
       inputs.isVisible().catch(() => false),
       saveBtn.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -436,11 +436,11 @@ test.describe('Suite AT — Result Reporting & Menu Configuration', () => {
     const buttons = await page.locator('button:has-text("Add"), button:has-text("Edit")').first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       table.isVisible().catch(() => false),
       form.isVisible().catch(() => false),
       buttons.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -477,11 +477,11 @@ test.describe('Suite AT — Result Reporting & Menu Configuration', () => {
     const buttons = await page.locator('button:has-text("Edit"), button:has-text("Enable"), button:has-text("Disable")').first();
 
     // At least table or buttons should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       table.isVisible().catch(() => false),
       form.isVisible().catch(() => false),
       buttons.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -524,11 +524,11 @@ test.describe('Suite AU — General Config & App Properties', () => {
     const inputs = await page.locator('input[type="text"], textarea').first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       table.isVisible().catch(() => false),
       form.isVisible().catch(() => false),
       inputs.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -554,11 +554,11 @@ test.describe('Suite AU — General Config & App Properties', () => {
     const inputs = await page.locator('input[type="text"], textarea').first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       table.isVisible().catch(() => false),
       form.isVisible().catch(() => false),
       inputs.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -590,11 +590,11 @@ test.describe('Suite AV — Notifications & Search Index', () => {
     const buttons = await page.locator('button:has-text("Add"), button:has-text("Edit")').first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       table.isVisible().catch(() => false),
       form.isVisible().catch(() => false),
       buttons.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -620,11 +620,11 @@ test.describe('Suite AV — Notifications & Search Index', () => {
     const statsDisplay = await page.locator('div, span, p').filter({ hasText: /indexed|status|last/i }).first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       reindexBtn.isVisible().catch(() => false),
       statusDisplay.isVisible().catch(() => false),
       statsDisplay.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -656,11 +656,11 @@ test.describe('Suite AW — Logging, Legacy Admin, Plugins', () => {
     const buttons = await page.locator('button').filter({ hasText: /DEBUG|INFO|WARN|ERROR/i }).first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       selector.isVisible().catch(() => false),
       radioButtons.isVisible().catch(() => false),
       buttons.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -745,11 +745,11 @@ test.describe('Suite AX — Localization, Notify User, Batch Reassignment', () =
     const inputs = await page.locator('input[type="text"], textarea').first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       table.isVisible().catch(() => false),
       form.isVisible().catch(() => false),
       inputs.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -775,11 +775,11 @@ test.describe('Suite AX — Localization, Notify User, Batch Reassignment', () =
     const sendBtn = await page.locator('button:has-text("Send"), button:has-text("Submit")').first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       form.isVisible().catch(() => false),
       table.isVisible().catch(() => false),
       sendBtn.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
