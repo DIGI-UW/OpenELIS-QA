@@ -692,6 +692,13 @@ export async function clickFormSearch(page: Page, fieldSelector: string): Promis
   // necessary where it is not — states this probe did not reach, such as an
   // order-entry screen opened mid-flow. Do it unconditionally when present
   // rather than reasoning about which state we are in.
+  // NOTHING TO CHECK, AND ORDER IS SAFE (measured 2026-09-08): the button
+  // exposes no aria-pressed / aria-selected / aria-current and its class string
+  // is byte-identical before and after clicking, so selection can only be
+  // confirmed behaviourally — hence the unconditional click. That absence is
+  // also a WCAG 4.1.2 defect in the product (harness ref 12.20). Clicking it
+  // AFTER the fields are filled does NOT clear them, so callers fill first.
+
   const modeBtn = page.getByRole('button', { name: /^\s*Search for Patient\s*$/i }).first();
   if (await modeBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
     await modeBtn.click().catch(() => { /* mode already active */ });
