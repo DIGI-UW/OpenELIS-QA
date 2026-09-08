@@ -155,7 +155,7 @@ round-trip read-back matches, and the UI gap stays visible). Current hazards: se
 
 ## The harness gates (when you touch the Playwright repo)
 
-Four gates run on every PR to OpenELIS-QA. They exist because each one caught a class of defect
+Eight gates run on every PR to OpenELIS-QA. Each exists because it caught a class of defect
 that had been invisible; do not route around them.
 
 | Gate | Command | Blocks on |
@@ -163,18 +163,78 @@ that had been invisible; do not route around them.
 | skill package in sync | `npm run check:skill` | the packaged `.skill` lagging its source |
 | typecheck | `npm run typecheck` | compile errors on the maintained surface |
 | every spec is reachable | `npm run check:orphans` | a spec file no config can run |
-| no assertion-free tests | `npm run lint:assert` | a new test with no `expect()`; any focused test |
+| no assertion-free tests | `npm run lint:assert` | a new test with no assertion; any focused test |
+| no duplicate case IDs | `npm run check:dupe-ids` | a new clone, drifted twin, or ID collision |
+| ID grammar self-test | `npm run catalogue:selftest` | a change that makes the case-ID parser blind |
+| every catalogue indexed | `npm run check:catalogue-index` | a catalogue not in `catalogues.json`; a new cross-catalogue ID collision |
+| coverage report | `npm run check:coverage-gaps` | (reports; `--strict` blocks on real coverage falling) |
 
 Plus an unattended **nightly** run (`.github/workflows/nightly.yml`) — `core` daily, the
 `modules` sweep weekly, non-blocking so a red run is a signal to read rather than a build to
 break. `GAPS_STRICT=1` there, so undeclared gaps surface as failures.
 
-Two rules that follow from these:
+Rules that follow from these:
+
 - **Never raise `.assert-baseline.json` to make a build pass.** Add the assertion instead.
 - **A new `tests/*.spec.ts` needs no config edit** — `modules.config.ts` sweeps that directory by
   exclusion. Anywhere else, wire it up or the orphan gate will stop you.
+- **A new catalogue is one line in `catalogues.json`.** Write a per-feature suite in its own
+  `.md` and it is invisible to the coverage report until you index it — four such suites were
+  reported as entirely untested for months for exactly this reason.
 
 Full reasoning: `references/playwright-harness.md` Section 12.
+
+## Writing a test that counts as coverage
+
+A case is covered only when a test **names its ID**, **asserts something**, and **can run**.
+Miss any of the three and the coverage report will say the case is untested — correctly.
+
+**1. Name the case ID exactly.** `test('TC-STOR-02: Storage locations list visible', …)`. The ID
+is how a sweep line traces back to a catalogue entry. Never reuse an ID that means something
+else; `check:dupe-ids` will stop you. New per-feature suites get a prefixed ID
+(`TC-LP-01`), never a bare `TC-01` — bare IDs collide across catalogues and become unattributable.
+
+**2. Land before you measure.** The SPA answers 200 for every path, so a status code proves
+nothing and neither does "the page rendered". Assert you are not on the login screen, then wait
+for an element that only the target page has. A scan of the wrong page reports a clean result
+forever.
+
+```ts
+expect(page.url(), 'must be on AccessionResults, not bounced to login').not.toMatch(/login|signin/i);
+await expect(page.locator('table, main').first(), 'page must render before measuring').toBeVisible({ timeout: 10_000 });
+```
+
+**3. End on a verdict, not a measurement.** This is the most common defect in the repo — a test
+that computes the right thing and then prints it:
+
+```ts
+// NOT coverage: passes whatever the app does
+const issues = await page.evaluate(collectContrastIssues);
+console.log(`TC-A11Y-03: ${issues.length} issue(s)`);
+
+// coverage: fails when the app is wrong, and says what it found
+expect(issues, `unreadable fg/bg on AccessionResults: ${issues.slice(0, 5).join('; ')}`).toEqual([]);
+```
+
+Put the observed value in the assertion message. A failure that names what it saw is triage;
+one that says `expected true, got false` is a second investigation.
+
+**4. `markStep` is not an assertion.** It throws only on the `FAIL` verdict, so a
+`markStep('PASS')`-only test proves nothing and `lint:assert` will reject it. Same for
+`assertIdentity`, which despite the name returns `{ok, detail}` and throws nothing — assert on
+`.ok` yourself.
+
+**5. A skip must be conditional and named.** `test.skip(cond, 'why')` is a declared precondition
+and still counts as coverage when the condition is false. A bare `test.skip()` never runs and
+counts as nothing — if the case genuinely cannot run yet, register it in
+`tests/chains/known-gaps.ts` so it is an auditable gap rather than a silent one.
+
+**6. Write the round-trip.** For anything that saves, assert the value reads back from REST, not
+that a toast appeared. `expect.poll` is the tool; it is a real assertion and the gates count it.
+
+**Before opening the PR:** run the specs you touched (`npx playwright test -c modules.config.ts
+<file> --grep '<TC-ID>'`) and paste the result in the PR. A fix verified only by the typecheck
+gate is not verified.
 
 ## Step 4 — Cleanup
 Deactivate any `QA_AUTO_` data you created (LIMS rule: **deactivate/reactivate, never hard-delete**). Restore any admin toggles you changed (branding, `eqaEnabled`) — the Playwright personas do this in `afterAll`.

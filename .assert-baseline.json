@@ -1,6 +1,6 @@
 {
   "rule": "playwright/expect-expect",
-  "total": 187,
+  "total": 184,
   "files": {
     "_discover.spec.ts": 1,
     "_timing.spec.ts": 1,
@@ -14,8 +14,7 @@
     "revalidate-ogc1120.spec.ts": 1,
     "tc-dom-probe.spec.ts": 1,
     "test-catalog-downstream.spec.ts": 5,
-    "tests/accessibility.spec.ts": 2,
-    "tests/admin-config.spec.ts": 2,
+    "tests/accessibility.spec.ts": 1,
     "tests/alerts-notifications.spec.ts": 1,
     "tests/aliquot.spec.ts": 3,
     "tests/chains/chain-a-order-lifecycle.spec.ts": 2,
