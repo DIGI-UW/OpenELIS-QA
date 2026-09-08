@@ -1311,7 +1311,7 @@ rather than as a parse failure, which is how it stayed quiet.
 
 #### The corrected picture
 
-**1636 catalogued · 859 implemented · 1210 with no test · 433 tests whose ID no
+**1636 catalogued · 859 implemented · 1210 with no test · 433 tests whose ID no (per-catalogue figures below are superseded by 12.18: ids shared between catalogues were mis-attributed, and 82 of the covered cases prove nothing)
 catalogue declares.** The gap roughly doubled, and it is concentrated almost
 entirely in `master-test-cases.md`. The features the team catalogued
 deliberately are fully covered; the sprawling core catalogue is not.
@@ -1344,3 +1344,69 @@ narrower question than the one asked: `if (locator)` that was never false,
 third of the catalogue. None of them errored. The defence is not more care while
 writing the regex — it is a self-test that names the shapes, and a gate that
 fails when a file the tool should see produces nothing.
+
+### 12.18 — What "covered" means, and whose case an id refers to
+
+Added 2026-09-08, sharpening 12.17 rather than correcting it. 12.17's headline
+(1210 gaps across seven catalogues) survives; two things underneath it did not.
+
+#### First, the good news: the gap number is sound
+
+The obvious worry about exact-ID matching is that a test covering a catalogued
+case under a *different* id reads as a gap, and 433 uncatalogued tests were
+sitting next to 1210 unimplemented cases. Cross-referencing the two piles by
+normalised title found **18 matches** — they are genuinely disjoint. The
+catalogue's own internal duplication is likewise small once the heuristic's
+false positives are discounted (a dozen suites each declare a case titled "Page
+structure", for twelve *different* pages). The gap is real.
+
+#### Identity: a case is (catalogue, id), not id
+
+Fourteen ids are declared in two catalogues — the bare `TC-NN` forms shared by
+`master-test-cases.md` and `references/test-cases.md`, plus three shared with
+the edit-order suite. Keying one map by id collapsed them, so a test for
+master's `TC-01` credited the unrelated `TC-01` in `references/test-cases.md`:
+
+| catalogue | reported | actual |
+|---|---|---|
+| `references/test-cases.md` | 42% (11/26) | **0%** — every "covered" case was a borrowed credit |
+| `edit-order-rbac-test-cases.md` | 21% (3/14) | **0%** — same |
+
+Such ids are now reported as **ambiguous** and counted as neither covered nor
+gap, because a test naming one cannot be attributed and guessing is what caused
+the error. `check-catalogue-index` grandfathers the existing 14 and fails on any
+new one; the fix is to give those cases prefixed ids.
+
+#### Substance: a test that cannot fail is not coverage
+
+"Covered" meant "some test declares this id". But an assertion-free test cannot
+fail and an always-skipped test never runs, so a case whose *every* test is one
+of those is reported as covered while proving nothing. There are **82**:
+
+```
+  real coverage      341   a test that asserts and can run
+  hollow coverage     82   a test exists but asserts nothing, or always skips
+  no test at all    1199
+  ambiguous id        14
+```
+
+**Real coverage is 21%, not the 26% the id-only count reports.** The correction
+also lands on suites I had reported as fully covered: analyzer guided setup is
+96% (one always-skipped case) and test-catalog-mgmt-deep is 71% —
+`TC-DEEP-TERMINOLOGY` and `TC-DEEP-STORAGE` assert nothing. Test catalog
+management and label presets really are 100%.
+
+This is 12.8's census applied to the coverage number instead of to the suite: a
+test shaped like coverage is not coverage. The two gates now agree —
+`lint:assert` stops new assertion-free tests being written, and
+`check:coverage-gaps` stops the existing ones being counted as coverage.
+
+#### The habit worth keeping
+
+Every correction in 12.13 through 12.18 came from asking one question of a
+number I had just produced: *what would make this number wrong, and can I check
+it cheaply?* Cross-referencing the two gap piles took twenty lines and confirmed
+the headline. Grouping coverage by catalogue instead of globally took about the
+same and demolished two of the per-catalogue figures. Neither needed a rerun of
+the suite. **Print one raw sample, then check the aggregate against a second
+method, before reporting it.**

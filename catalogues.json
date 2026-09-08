@@ -1,15 +1,15 @@
 {
-  "_comment": "THE INDEX OF QA CATALOGUES. Every file that DECLARES test cases (as `### TC-... \u2014 Title` headings) must be listed here, because `npm run check:coverage-gaps` reads this index to decide what 'catalogued' means. A catalogue that is not indexed is invisible: its cases are reported as never written, even when they are written and passing. `npm run check:catalogue-index` fails the build if a tracked .md declares cases and appears in neither list. Adding a per-feature suite is one line here.",
+  "_comment": "THE INDEX OF QA CATALOGUES. Every file that DECLARES test cases (as `### TC-... — Title` headings) must be listed here, because `npm run check:coverage-gaps` reads this index to decide what 'catalogued' means. A catalogue that is not indexed is invisible: its cases are reported as never written, even when they are written and passing. `npm run check:catalogue-index` fails the build if a tracked .md declares cases and appears in neither list. Adding a per-feature suite is one line here.",
   "catalogues": [
     {
       "file": "master-test-cases.md",
-      "area": "Core suites A\u2013JF (full product sweep)",
+      "area": "Core suites A–JF (full product sweep)",
       "note": "The main catalogue. Mixed heading styles and ID shapes; see catalogue-ids.mjs."
     },
     {
       "file": "references/test-cases.md",
       "area": "Test Catalog module (detailed CRUD steps)",
-      "note": "Uses bare TC-NN ids, which are NOT globally unique \u2014 TC-01 here is a different case from TC-01 in master-test-cases.md. Treated as declared regardless; see open-questions.md."
+      "note": "Uses bare TC-NN ids, which are NOT globally unique — TC-01 here is a different case from TC-01 in master-test-cases.md. Treated as declared regardless; see open-questions.md."
     },
     {
       "file": "edit-order-rbac-test-cases.md",
@@ -18,7 +18,7 @@
     },
     {
       "file": "analyzer-guided-setup.md",
-      "area": "Analyzer guided setup (Instrument \u2192 Verify \u2192 Connect)",
+      "area": "Analyzer guided setup (Instrument → Verify → Connect)",
       "note": "Feature suite for OGC-1057, v3.2.2.0. Spec: analyzer-profile-mapping.md."
     },
     {
@@ -28,7 +28,7 @@
     },
     {
       "file": "test-catalog-mgmt-deep.md",
-      "area": "Test Catalog Management \u2014 deep interaction",
+      "area": "Test Catalog Management — deep interaction",
       "note": "Deep-interaction companion to test-catalog-mgmt.md."
     },
     {
@@ -78,5 +78,22 @@
       "file": "tests/docs/HARNESS-FINDINGS.md",
       "reason": "Seeding findings for pathology/IHC/cytology. Narrative notes, not a case list."
     }
-  ]
+  ],
+  "knownAmbiguous": [
+    "TC-01",
+    "TC-02",
+    "TC-03",
+    "TC-04",
+    "TC-05",
+    "TC-06",
+    "TC-07",
+    "TC-08",
+    "TC-09",
+    "TC-10",
+    "TC-11",
+    "TC-EO-01",
+    "TC-EO-02",
+    "TC-EO-03"
+  ],
+  "_ambiguousNote": "Ids declared in more than one catalogue. A test naming one cannot be attributed to a single case, so check-coverage-gaps counts it as neither covered nor gap. These are grandfathered; check-catalogue-index fails on any NEW one. Fixing them means renaming the bare TC-NN ids in references/test-cases.md and edit-order-rbac-test-cases.md to prefixed forms."
 }

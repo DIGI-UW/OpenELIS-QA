@@ -1,6 +1,8 @@
 {
-  "catalogued": 1636,
-  "implemented": 859,
-  "unimplemented": 1210,
-  "uncatalogued": 433
+  "catalogued": 1650,
+  "real": 341,
+  "hollow": 82,
+  "unimplemented": 1199,
+  "ambiguous": 14,
+  "uncatalogued": 432
 }
