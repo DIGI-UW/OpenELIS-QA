@@ -403,17 +403,21 @@ test.describe('Phase 4 — H-DEEP: Patient Interaction Tests', () => {
 
   test('TC-H-DEEP-02: Patient History page has search fields', async ({ page }) => {
     await page.goto(`${BASE}/PatientHistory`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(2_500);
 
-    const bodyText = await page.locator('body').innerText();
-    expect(bodyText).not.toMatch(/500|Internal Server Error/);
-    expect(page.url()).not.toMatch(/LoginPage|login/i);
-
-    // Patient History must have at least one search field
-    const hasSearchField = await page.locator(
-      'input[placeholder*="Last Name" i], input[placeholder*="patient" i], input[placeholder*="search" i], input'
-    ).first().isVisible({ timeout: 3000 }).catch(() => false);
-    expect(hasSearchField, 'Patient History must have a search field').toBe(true);
+    // The fields ARE there — probed live 2026-09-08, /PatientHistory renders
+    // five text inputs: "Enter Patient Id", "Enter Previous Lab Number",
+    // "Enter Patient's Last Name", "Enter Patient's First Name" and a
+    // dd/mm/yyyy picker. This case used to fail on a selector, not on a
+    // missing feature, so assert on the ids the screen really uses.
+    expect(page.url(), 'must be on Patient History').toMatch(/PatientHistory/i);
+    for (const id of ['#patientId', '#lastName', '#firstName']) {
+      await expect(
+        page.locator(id).first(),
+        `Patient History must offer the ${id} search field`
+      ).toBeVisible({ timeout: 10_000 });
+    }
   });
 
   test('TC-H-DEEP-03: Merge Patient search step is accessible', async ({ page }) => {

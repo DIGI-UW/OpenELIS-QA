@@ -678,6 +678,26 @@ export async function selectSampleType(page: Page, typeId: string): Promise<void
  * an ancestor with the field you just filled — never `.first()`.
  */
 export async function clickFormSearch(page: Page, fieldSelector: string): Promise<boolean> {
+  // SELECT "Search for Patient" FIRST.
+  //
+  // Casey's note (2026-09-08): the patient-search mode has to be selected
+  // before searching, and the control for it is not visually distinctive.
+  // It is a `cds--btn--primary` labelled "Search for Patient" — which reads
+  // like the submit button and is not; probing it on /PatientManagement and
+  // /SamplePatientEntry fired NO request and changed no visible input, while
+  // the form's own TERTIARY "Search" returned 3 rows. So it is a mode/panel
+  // control, not a submit.
+  //
+  // Clicking it is therefore harmless where the panel is already active, and
+  // necessary where it is not — states this probe did not reach, such as an
+  // order-entry screen opened mid-flow. Do it unconditionally when present
+  // rather than reasoning about which state we are in.
+  const modeBtn = page.getByRole('button', { name: /^\s*Search for Patient\s*$/i }).first();
+  if (await modeBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    await modeBtn.click().catch(() => { /* mode already active */ });
+    await page.waitForTimeout(600);
+  }
+
   const candidates = page.getByRole('button', { name: /^\s*Search\s*$/i });
   const n = await candidates.count();
   for (let i = 0; i < n; i++) {
