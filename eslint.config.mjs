@@ -14,6 +14,7 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import playwright from 'eslint-plugin-playwright';
+import { ASSERT_FUNCTION_NAMES } from './scripts/assertions.mjs';
 
 export default tseslint.config(
   { ignores: ['node_modules/**', 'test-results/**', 'playwright-report/**', 'regression-results/**', 'archive/**', 'evals/**'] },
@@ -35,8 +36,18 @@ export default tseslint.config(
       // genuine helper-based assertion is not a false positive. Do NOT add
       // markStep here: markStep only fails on 'FAIL', so a markStep('PASS')-only
       // test asserts nothing and must still be caught.
+      // The list is derived from scripts/assertions.mjs so this gate and the
+      // coverage report agree on what an assertion is. They did not: the two
+      // names that used to sit here (expectRowCount, assertNoServerErrors) do
+      // not exist anywhere in the repo, while three helpers that really do call
+      // expect() and throw were missing, so tests using only those were
+      // reported as assertion-free.
+      //
+      // Still deliberately ABSENT: markStep (throws only on the FAIL verdict,
+      // so a markStep('PASS')-only test proves nothing) and assertIdentity
+      // (returns {ok, detail} and throws nothing — the caller must assert).
       'playwright/expect-expect': ['error', {
-        assertFunctionNames: ['expect', 'expectRowCount', 'assertNoServerErrors'],
+        assertFunctionNames: ASSERT_FUNCTION_NAMES,
       }],
       // Self-reported verdicts are the same disease in prose form; these two
       // catch the mechanical half (a test that is skipped or focused by accident).

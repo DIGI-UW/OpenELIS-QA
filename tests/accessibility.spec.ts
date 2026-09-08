@@ -84,10 +84,24 @@ test.describe('Accessibility WCAG Smoke (TC-A11Y)', () => {
       return issues;
     });
 
-    console.log(`TC-A11Y-03: ${contrastIssues.length} obvious contrast issue(s)`);
-    if (contrastIssues.length > 0) {
-      console.log('TC-A11Y-03 details:', contrastIssues.slice(0, 5).join('; '));
-    }
+    // LANDING CHECK FIRST. The SPA serves 200 for every path, so measuring a
+    // page proves nothing until you know which page you measured — a contrast
+    // scan of the login screen would report a clean zero forever.
+    expect(page.url(), 'must be on AccessionResults, not bounced to login')
+      .not.toMatch(/login|signin/i);
+    await expect(
+      page.locator('table, [role="table"], main, .cds--content').first(),
+      'AccessionResults must render content before its contrast is meaningful'
+    ).toBeVisible({ timeout: 10_000 });
+
+    // VERDICT. Measured 0 on testing.openelis-global.org (v3.2.2.0, 2026-09-08).
+    // This is a narrow oracle on purpose: it catches white-on-white and
+    // identical fg/bg only, which are unambiguous defects. Real WCAG ratio
+    // checking belongs in an axe-core pass (TC-CM-AXE-01), not here.
+    expect(
+      contrastIssues,
+      `elements with unreadable foreground/background on AccessionResults: ${contrastIssues.slice(0, 5).join('; ')}`
+    ).toEqual([]);
   });
 
   test('TC-A11Y-04: ARIA landmark roles present', async ({ page }) => {

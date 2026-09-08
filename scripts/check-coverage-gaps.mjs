@@ -23,6 +23,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { declaredIn } from './catalogue-ids.mjs';
+import { assertsSomething, alwaysSkips } from './assertions.mjs';
 
 const BASELINE = '.coverage-gaps-baseline.json';
 const strict = process.argv.includes('--strict');
@@ -52,8 +53,8 @@ function testsIn(src) {
     const body = src.slice(m.index, end + 1);
     out.push({
       id: idm[1],
-      asserts: (body.match(/\bexpect\s*\(/g) || []).length,
-      alwaysSkips: /^\s*test\.skip\s*\(/.test(body) || /\btest\.skip\(\s*\)/.test(body),
+      asserts: assertsSomething(body),
+      alwaysSkips: alwaysSkips(body),
     });
   }
   return out;
@@ -83,7 +84,7 @@ for (const f of specs)
     if (!tested.has(t.id)) tested.set(t.id, []);
     tested.get(t.id).push(t);
   }
-const isHollow = (id) => tested.get(id).every((t) => t.asserts === 0 || t.alwaysSkips);
+const isHollow = (id) => tested.get(id).every((t) => !t.asserts || t.alwaysSkips);
 
 // --- per catalogue
 const rows = [];

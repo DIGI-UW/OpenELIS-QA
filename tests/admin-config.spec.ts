@@ -70,7 +70,14 @@ test.describe('Admin Configuration (TC-ADMIN)', () => {
   });
 
   test('TC-ADMIN-02: Reference labs list accessible', async ({ page }) => {
+    // ROUTE DRIFT (2026-09-08). The three URLs this case used to try do not
+    // exist — `/MasterListsPage/Organizations` in particular is a near-miss for
+    // the real `organizationManagement` (lower-case o). The case had been
+    // failing to reach any of them since it was written, and said so only via
+    // console.log, so it passed every run. Lead with the verified route from
+    // CONFIRMED_ADMIN_URLS and keep the old spellings as fallbacks.
     const refLabUrls = [
+      CONFIRMED_ADMIN_URLS['Organization Management'],
       '/MasterListsPage/ReferenceLabs',
       '/MasterListsPage/Organizations',
       '/MasterListsPage/ExternalInstitutes',
@@ -89,13 +96,38 @@ test.describe('Admin Configuration (TC-ADMIN)', () => {
       }
     }
 
-    if (!found) {
-      console.log('TC-ADMIN-02: GAP — reference labs list not accessible at known URLs');
-    }
+    // VERDICT. `res.ok()` above is not an existence check — this SPA answers 200
+    // for every path (harness ref 12.2) — so the oracle is what the page renders.
+    //
+    // WHAT THIS CASE CAN AND CANNOT CHECK (2026-09-08). A route probe of
+    // /MasterListsPage on v3.2.2.0 lists 50-odd admin screens and there is no
+    // "Reference Labs" or "External Institutes" among them; external laboratories
+    // live in Organization Management. The old body probed three routes that do
+    // not exist and matched page text against /laboratory|reference|institute|
+    // CPHL|doherty/, then console.log'd either verdict — so it passed for as long
+    // as it has existed while reaching nothing.
+    //
+    // This now asserts what is actually true and checkable: the Organization
+    // Management screen loads and renders its list. Whether the catalogue still
+    // wants a distinct "reference labs" case, and against which screen, is a
+    // catalogue decision — see open-questions.md.
+    expect(page.url(), 'must not be bounced to login').not.toMatch(/login|signin/i);
+    // Assert on the screen's own name rather than on a table: this screen does
+    // not render a `.cds--data-table` (checked live 2026-09-08), and pinning a
+    // case to one Carbon component is how selector drift turns into a phantom
+    // failure. "The named admin screen loaded" is the claim this case can make.
+    await expect(
+      page.getByText(/organization management/i).first(),
+      'the Organization Management screen must load and name itself'
+    ).toBeVisible({ timeout: 15_000 });
   });
 
   test('TC-ADMIN-03: Organization/site list accessible and contains Adiba SC', async ({ page }) => {
-    await page.goto(`${BASE}/MasterListsPage/Organizations`).catch(() =>
+    // ROUTE DRIFT (2026-09-08). `/MasterListsPage/Organizations` does not exist;
+    // the real screen is `organizationManagement` (lower-case o). This case has
+    // been failing on the wrong route rather than on missing seed data — the
+    // "Adiba SC not found" verdict was true but for the wrong reason.
+    await page.goto(`${BASE}${CONFIRMED_ADMIN_URLS['Organization Management']}`).catch(() =>
       page.goto(`${BASE}/MasterListsPage`)
     );
     await page.waitForTimeout(2000);
@@ -115,10 +147,13 @@ test.describe('Admin Configuration (TC-ADMIN)', () => {
   });
 
   test('TC-ADMIN-04: Rejection reasons dictionary accessible', async ({ page }) => {
+    // ROUTE DRIFT (2026-09-08) — same story as TC-ADMIN-02: the real route is
+    // DictionaryMenu, not Dictionary.
     const dictUrls = [
+      CONFIRMED_ADMIN_URLS['Dictionary Menu'],
       '/MasterListsPage/Dictionary',
       '/DictionaryManagement',
-      '/MasterListsPage/NonConformityConfiguration',
+      '/MasterListsPage/NonConformityConfigurationMenu',
     ];
 
     let found = false;
@@ -134,9 +169,14 @@ test.describe('Admin Configuration (TC-ADMIN)', () => {
       }
     }
 
-    if (!found) {
-      console.log('TC-ADMIN-04: GAP — rejection reasons dictionary not accessible at known URLs');
-    }
+    // Same story as TC-ADMIN-02: the real screens are DictionaryMenu and
+    // NonConformityConfigurationMenu (the old body tried a "…Configuration"
+    // spelling that 404s), and the text probe never rendered a verdict.
+    expect(page.url(), 'must not be bounced to login').not.toMatch(/login|signin/i);
+    await expect(
+      page.locator('table, [role="table"], .cds--data-table, form').first(),
+      'the dictionary / non-conformity config screen must render its content'
+    ).toBeVisible({ timeout: 15_000 });
   });
 
   test('TC-ADMIN-05: Test sections list contains Hematology and Biochemistry', async ({ page }) => {
