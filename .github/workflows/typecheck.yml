@@ -72,6 +72,15 @@ jobs:
       - name: No new duplicate TC IDs
         run: npm run check:dupe-ids
 
+      # NON-BLOCKING report: the catalogue vs the code. "Are we missing QA
+      # checks?" cannot be answered by running more tests — a test that exists
+      # says nothing about one that does not. This diffs the case IDs declared
+      # in master-test-cases.md against the IDs implemented in *.spec.ts and
+      # prints the gap list by area. 607 catalogued cases had no test as of
+      # 2026-09-08. Pass --strict to fail when that number grows.
+      - name: Coverage gaps (catalogue vs code)
+        run: npm run check:coverage-gaps
+
       # NON-BLOCKING: the rest of the repo. ~166 errors as of 2026-07-31,
       # mostly missing type imports in older specs. Reported so the number is
       # visible and can only go down; widen tsconfig.json's include as files

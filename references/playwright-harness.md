@@ -905,62 +905,115 @@ name claims. Grep the backlog for TS2367 and for TS2304 on call expressions
 before reading another sweep's failures — both classes are cheaper to fix than
 to triage.
 
-### 12.15 — The duplicated helpers were the symptom; duplicated TEST CASES were the disease
 
-Added 2026-09-08, chasing the copy-pasted `navigateViaMenu` / `tryNavigateToURL`
-noted in 12.14.
+### 12.15 — Duplicated test cases, and a parser bug that misdescribed them
 
-The working hypothesis was that the local helper copies had drifted on purpose
-— that each spec's copy targeted its own screen, e.g. two different order entry
-screens. Checking it did not support that, and found something worse.
+Added 2026-09-08. **Substantially corrected the same day — the first version of
+this section reported a number that was an artefact of my own tooling. The
+correction is the more useful lesson, so it is kept here rather than quietly
+edited away.**
 
-**The helper copies barely differ.** `order-entry` and `results-entry` hold
-byte-identical `navigateViaMenu`; `pathology` differs by a single added
-`goto(BASE)`; the gap-suites carry the `archive/` lineage. Nobody was
-reconciling screens. But `tryNavigateToURL` does have two real variants, and
-one is a bad oracle:
+The trail started at the copy-pasted `navigateViaMenu` / `tryNavigateToURL` in
+12.14. The hypothesis was that the local copies had drifted on purpose, each
+targeting its own screen. That is not what the code says: `order-entry` and
+`results-entry` hold identical `navigateViaMenu`, `pathology` adds one
+`goto(BASE)`. What the call sites showed instead is that whole TEST CASES exist
+in two files — `tests/order-entry.spec.ts` and `gap-suites-AH-AP.spec.ts` carry
+the same TC IDs over the same menu paths and URL lists.
+
+#### What the first scan claimed, and why it was wrong
+
+It reported **72 exact clones** — same ID, same title, byte-identical body. It
+found them with:
 
 ```ts
-// variant A — order-entry, results-entry, pathology
-const res = await page.goto(`${BASE}${url}`).catch(() => null);
-if (res && res.ok() && !page.url().includes('login')) return true;
+let i = src.indexOf('{', m.index), depth = 0;   // WRONG
 ```
 
-`res.ok()` is TRUE for every path in this SPA (12.2), so variant A reports
-"found" for routes that do not exist. Variant B (gap-suites, and the canonical
-helper) at least only claims "we were not bounced to login" — weak, but not
-affirmatively false.
+In `test('TC-X-01: ...', async ({ page }) => { ... })` the first `{` after the
+title is the **destructuring brace of `({ page })`**, not the function body. So
+brace-matching closed immediately and every "body" was really just the test
+header. Both sides of every comparison truncated identically, so tests that
+merely shared an ID compared as byte-identical. The gate shipped in #105 with a
+baseline built from that, and the PR asserted 72 clones existed.
 
-**Then the call sites gave it away.** `tests/order-entry.spec.ts:523-634` and
-`gap-suites-AH-AP.spec.ts:127-239` are the same tests: same TC IDs, same menu
-paths, same URL candidate lists, same bodies. A repo scan found the scale:
+**The real numbers are different, and one whole category was invisible.**
+Matching the PARENTHESES of the `test(...)` call instead — which captures the
+arguments and the entire callback — gives:
 
-- **72 exact clones** — same TC ID, title AND body, in two files.
-- **47 ID collisions** — same TC ID on genuinely *different* tests.
-- **0 drifted** — nobody ever edited a copy after making it. They are inert.
+| | first scan | correct |
+|---|---|---|
+| identical body (true clones) | 72 | **59** |
+| same ID and title, **different body** | 0 (invisible) | **28** |
+| same ID, different title | 47 | **47** |
 
-Every one of the 72 clones pairs a `gap-suites-*` file with a `tests/*` file,
-which is exactly the seam #102 split into two CI jobs. So all 72 run twice per
-sweep. In sweep 4, **34 TC IDs failed in both jobs** — the same 34 failures
-counted twice inside the reported 306, with zero disagreement between the
-copies. Any triage that treats 306 as 306 distinct findings is overcounting.
+Clones do exist — `TC-ANZ-01` really is byte-identical between
+`gap-suites-AH-AP` and `tests/system-misc`. But 13 of the claimed 72 were not
+clones, and the 28 **drifted** pairs were a category the broken parser could
+not represent at all, because it had thrown away the bodies that distinguish
+them. They are two *implementations* of one case that diverged:
 
-The collisions are the more corrosive half. `TC-IO-03` is
-"Batch Order Entry screen loads" in two files and
-"Status dropdown enumerates expected order states" in a third. A sweep line
-saying `TC-IO-03 failed` cannot be traced back to a case in the catalogue,
-which is the entire point of putting IDs on tests.
+```ts
+// TC-VBO-01, gap-suites-AA-AD          // TC-VBO-01, tests/validation
+page.click('button[aria-label*="menu" i]')   page.getByRole('button', { name: /menu/i })
+navigateWithDiscovery(page, candidates)      navigateWithDiscoveryLocal(page, candidates)
+```
 
-**Gate:** `npm run check:dupe-ids` (`scripts/check-dupe-ids.mjs`), a ratchet in
-the shape of `lint:assert`. It classifies clone vs collision, fails on anything
-new, and records the known 72/47 in `.dupe-ids-baseline.json`. Resolving the
-existing backlog needs a decision about which copy owns each case — the module
-spec or the gap suite — and that is a product call, not a refactor.
+Both run, both report under `TC-VBO-01`, and **they can disagree** — one can
+pass while the other fails, and the sweep line does not say which ran. That is
+worse than a clone, and it is not fixable by deleting a copy at random: someone
+has to decide which implementation is correct.
 
-**The transferable lesson:** duplicated *helpers* are cosmetic, and it is
-tempting to fix them and move on. Ask where the helper copies came from
-instead. Here they were dragged along by whole test cases being copied between
-files, and the tests were the thing corrupting the numbers.
+#### What survives from the first version
+
+The **double-counting is real and was measured from sweep logs, not the
+parser**: in sweep 4, 34 TC IDs failed in both the `modules` and `gap-suites`
+jobs. Treating 306 failures as 306 distinct findings still overcounts.
+
+The **collisions are real**: `TC-IO-03` is "Batch Order Entry screen loads" in
+two files and "Status dropdown enumerates expected order states" in a third.
+
+#### The lesson
+
+This is 12.13 again in a different costume. There, `if (locator)` looked like an
+existence check and was not. Here, `indexOf('{')` looked like "find the test
+body" and found a parameter list. In both cases the code ran, produced
+confident output, and the output was about something other than the question
+asked. **When a scan produces a surprisingly clean number — 72 exact clones,
+zero drift — treat the cleanliness as suspicious.** Real codebases are untidy;
+a suspiciously tidy measurement usually means the measurement collapsed a
+distinction rather than that the distinction is absent. Print one raw sample and
+read it before believing the aggregate.
+
+The gate (`npm run check:dupe-ids`) now parses correctly and classifies into
+clone / drifted / collision, because the three need different fixes. Baseline
+`.dupe-ids-baseline.json`: 59 clones / 28 drifted / 47 collisions.
+
+### 12.16 — "Are we missing checks?" is a catalogue question, not a test suite
+
+The gap-suites (`gap-suites-AA-AX`) exist to answer whether QA coverage is
+missing somewhere. They cannot: **a test that exists tells you nothing about a
+test that does not.** 105 of their 107 cases duplicate an ID that a
+module spec also defines, so the suites re-run covered ground and report it as
+gap closure, at 18.2 minutes of wall clock per sweep.
+
+The instrument that does answer it compares the **catalogue** against the
+**code**: `npm run check:coverage-gaps` reads the case IDs declared as headings
+in `master-test-cases.md` and the IDs implemented in `*.spec.ts`, and reports
+both directions.
+
+- **607 catalogued cases have no test** — grouped by area, this is the real gap
+  list (HP 22, HN 20, MGT 20, HO 14, EQA 13, …).
+- **242 implemented IDs are not in the catalogue** — either the catalogue is
+  stale or the ID is wrong; both break traceability from a sweep line to a case.
+
+Report-only by default so it can run on every build; `--strict` fails when the
+unimplemented count grows past `.coverage-gaps-baseline.json`.
+
+**Retiring the duplicated suites is deliberately NOT bundled with this.** With
+28 of the pairs being drifted implementations rather than copies, deleting
+either side is a judgement about which implementation is correct — 28 separate
+calls, not a refactor.
 ### 12.9 — A spec no config runs is not coverage
 
 Added 2026-09-04, after the audit that followed OGC-1192.
