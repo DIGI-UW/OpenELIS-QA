@@ -232,6 +232,25 @@ counts as nothing — if the case genuinely cannot run yet, register it in
 **6. Write the round-trip.** For anything that saves, assert the value reads back from REST, not
 that a toast appeared. `expect.poll` is the tool; it is a real assertion and the gates count it.
 
+**7. Never look up a control by name alone.** Three separate false results in
+`patient-management.spec.ts` came from `getByRole('button', { name: /…/i }).first()`: `/save|add/i`
+matched "**Add**itional Information", and `/^Search$/` matched the Carbon *header* search action,
+which renders before page content — so `.first()` and even `.nth(0)` hit the chrome, not the form.
+Scope the lookup to the field it belongs to: `clickFormSearch(page, '#lastName')`. And Carbon
+radios cannot be `.check()`ed at all — the label's `__appearance` span intercepts the click, so a
+30-second timeout on a radio always means that. Use `checkCarbonRadio(page, input)`.
+
+**8. Assert with retrying matchers, not snapshots.** `expect(await page.locator('body').innerText())
+.toMatch(…)` is a race dressed up as an assertion — in this SPA the URL changes before the content
+renders, so the snapshot catches the SideNav and nothing else. `expect(locator).toContainText(…)`
+retries.
+
+**9. Ask what a hollow test would DO if its locators started matching.** A `.catch(() => console.log())`
+test is not merely uninformative. TC-MP-04 sat green for months clicking `/Merge|Submit|Confirm/i`
+against a UI that never matched; had it matched, it would have merged two real patient records on
+the shared instance. Where the real action is destructive, a hollow test is a loaded gun with the
+safety taped down — fix the locators and add an explicit stop before the destructive step.
+
 **Before opening the PR:** run the specs you touched (`npx playwright test -c modules.config.ts
 <file> --grep '<TC-ID>'`) and paste the result in the PR. A fix verified only by the typecheck
 gate is not verified.

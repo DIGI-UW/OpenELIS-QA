@@ -36,7 +36,7 @@ on:
         required: false
         default: 'core'
         type: choice
-        options: [core, chains, ogc1192, modules, all]
+        options: [core, chains, ogc1192, modules, patient, all]
       order_path:
         description: 'Which order-entry path the chain seeder uses'
         required: false
@@ -108,10 +108,13 @@ jobs:
           set +e
           mkdir -p nightly-out
           STATUS=0
+          # Extra args after the config are passed to playwright, so a single
+          # spec can be verified without dispatching the whole 866-test module
+          # sweep. That gap is why a one-file fix used to have no run path.
           run_cfg () {
-            local name="$1" cfg="$2"
+            local name="$1" cfg="$2"; shift 2
             echo "::group::$name"
-            npx playwright test --config="$cfg" --reporter=line > "nightly-out/$name.txt" 2>&1
+            npx playwright test --config="$cfg" "$@" --reporter=line > "nightly-out/$name.txt" 2>&1
             local rc=$?
             [ $rc -ne 0 ] && STATUS=1
             tail -25 "nightly-out/$name.txt"
@@ -128,6 +131,9 @@ jobs:
               run_cfg rbac rbac.config.ts
               run_cfg all-tc all-tc.config.ts
               run_cfg modules modules.config.ts
+              ;;
+            patient)
+              run_cfg patient modules.config.ts tests/patient-management.spec.ts
               ;;
             *)  # core
               run_cfg ogc1192 ogc1192.config.ts

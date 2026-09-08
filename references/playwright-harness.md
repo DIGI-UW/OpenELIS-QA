@@ -1742,3 +1742,90 @@ Order creation is therefore left broken deliberately rather than half-fixed. It
 is a multi-step wizard, its first step exceeds the test budget, and the fixture's
 API fallback needs a captured payload — three separate pieces of work, none of
 which should be rushed at the end of a long session.
+
+### 12.22 Patient history and patient merge: four hollow cases, and two traps I walked into
+
+**2026-09-08.** `patient-management.spec.ts` went from 15/3 to **18/18**, and
+the interesting part is that not one of the six cases fixed here was blocked by
+a product defect. Every one of them was a test that could not see the screen it
+claimed to test.
+
+**TC-PAT-04 was never on the history screen.** It searched with
+`getByRole('textbox', { name: /id|patient|national/i }).first()` — the loose
+regex plus `.first()` trap for the fourth time in this file — and there is no
+national-ID input on any patient search screen, so it typed a national ID into
+whichever textbox came first. Then it pressed Enter (no submit), clicked
+`getByText(/Sebby/i).first()` on the table that re-renders per row (12.21), and
+asserted only `/Abby|Sebby/i`, which the still-visible *search* screen satisfies.
+The history half of the case was a `console.log`.
+
+**The four TC-MP merge cases were written against a UI that does not exist.**
+All of them looked for `input[placeholder*="patient"]`, `[role="option"]` and an
+autocomplete dropdown. The real screen is a three-step wizard with two full
+search panels. Every assertion in all four was `.catch(() => console.log(...))`,
+so the suite reported four green merge cases while never selecting a patient.
+
+**And that mattered more than a false green.** Had those locators ever matched,
+TC-MP-04 would have clicked `/Merge|Submit|Confirm/i` and merged two real
+patient records on the shared instance. It was a destructive test; only a broken
+locator kept it from doing damage. Worth generalising: *a hollow test is not
+merely uninformative — a hollow test whose real actions are destructive is a
+loaded gun with the safety taped down.* TC-MP-04 now walks to the confirmation
+gate and cancels, and says in a comment why it stops.
+
+#### What the screens actually offer
+
+| Screen | Hook | Behaviour |
+|---|---|---|
+| `/PatientHistory` results | `tr[data-cy="patient-result-row-<patientId>"]` | **Checking the row radio IS the navigation** — no submit button; it goes to `/PatientResults/<patientId>` |
+| `/PatientMerge` panels | `#patient1-*`, `#patient2-*` | one Search per panel, each enabled only once its own panel has input |
+| `/PatientMerge` results | `input#patient<N>-select-<patientId>` | radio per candidate |
+| `/PatientMerge` step 2 | `#patient-1`, `#patient-2` | warns "marked as merged and inactive", asks which record is primary, Next Step disabled until one is chosen |
+
+Note `/PatientHistory` has **no** "Search for Patient" mode control, while
+`/PatientManagement` does. The same-looking panel is not the same panel.
+
+#### Trap 1: Carbon radios cannot be `.check()`ed
+
+Carbon draws a radio as a real `<input type="radio">` plus a `<label>`
+containing a `<span class="cds--radio-button__appearance">`. The input is
+visible and enabled, but the span sits on top of it, so both `.check()` and
+`.click()` retry until the test times out with:
+
+```
+<span class="cds--radio-button__appearance"> from <label for="503"> subtree intercepts pointer events
+```
+
+**A 30-second timeout on a radio in this app always means this.** New helper
+`checkCarbonRadio(page, inputLocator)` clicks the bound label, which is also
+the correct user gesture. Use it everywhere; the gender radios and the search
+radios are the same shape.
+
+#### Trap 2: there is a THIRD button named "Search"
+
+My first merge fix used `getByRole('button', { name: /^Search$/ }).nth(panel - 1)`,
+reasoning that there is one Search per panel in panel order. There are three:
+the Carbon header's search action has the accessible name "Search" too, and it
+renders before page content. So `nth(0)` clicked the header icon and both panels
+came back empty.
+
+This is the *same* trap `clickFormSearch` was written to close in 12.20, and I
+walked straight back into it one section later. The lesson is not "remember the
+header button" — it is that **any name-based button lookup on this app must be
+scoped to the field it belongs to**, and `clickFormSearch(page, fieldSelector)`
+is that scoping. Reach for the helper, not for `nth()`.
+
+#### One more retracted measurement
+
+TC-PAT-03's empty-state probe used `/no.*(found|result|patient)/i` and reported
+"message present" on a screen that has no empty-state message. `.*` spans any
+amount of intervening text, so it matched unrelated copy. Anchored to an actual
+empty-state shape, it correctly reports the gap: **zero results are communicated
+only by the pager reading "0-0 of 0 items"**. That is a sixth finding for the
+patient-search UX work item.
+
+Also fixed: TC-PAT-04's identity assertion first failed because it read
+`body.innerText()` immediately after `waitForURL`. The URL changes before the
+patient header renders, so it captured the SideNav and nothing else. Use
+`expect(locator).toContainText(...)`, which retries; a one-shot `innerText()`
+snapshot is a race dressed up as an assertion.
