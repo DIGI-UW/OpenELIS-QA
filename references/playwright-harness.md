@@ -1692,3 +1692,53 @@ state attributes is set. Consequences, in order of who they hurt:
 `#lastName` still held "Sebby" after the mode click, the helper returned true,
 and the search returned 3 rows with the real request. So `fill → clickFormSearch`
 is the correct sequence and needs no reordering.
+
+### 12.21 — Two fixes, and why order creation is a separate job
+
+Added 2026-09-08.
+
+**TC-PAT-05 now passes.** Its failure was reported as
+`keyboard.press: Target page, context or browser has been closed`, which named
+the last line to run rather than the one that broke. The case filled gender and
+the date picker with `.catch(() => {})` on each, so a selector matching nothing
+was indistinguishable from a field being filled; by the time it reached
+`keyboard.press('Escape')` — a line that only existed to dismiss the picker
+overlay — the test had already exhausted its budget and Playwright had torn the
+page down. Rewritten on the sequence the data factory now uses: gender by label,
+`#date-picker-default-id`, an ANCHORED `/^Save$/`, wait for
+`/PatientManagement/<id>`, then confirm by read-back through
+`patient-search-results?nationalID=`. Verified live: 3 passed.
+
+**The patient results table never settles, and that is what blocks order
+creation.** Driving `/SamplePatientEntry` — search for the patient, then select
+the row — fails at the row's radio with:
+
+```
+locator.click: Timeout exceeded
+  - waiting for element to be visible, enabled and stable
+```
+
+`isVisible()` passes; **stable** never does. The likely cause is visible in the
+network capture: each search fires one `GET /rest/patient-photos/<id>/true` per
+result row, and with three patients named Abby Sebby present those three
+responses land at different moments and re-render the table each time. Playwright
+waits for the element to stop moving; it does not.
+
+Two consequences worth separating:
+
+- **For the harness:** an order test cannot simply click the row. It has to wait
+  for the photo requests to settle first (or click through the row's label), and
+  the whole wizard — search, select, Next Step, choose tests, save — took **3.2
+  minutes** to reach step 2 in a probe with the timeout raised. That does not fit
+  the 30-second policy, so order-creating tests need either a documented
+  exemption like `data.setup`'s, or a faster path (the API, once a payload has
+  been CAPTURED rather than hand-composed — `createOrderViaAPI` currently
+  composes one by hand, which 12.4 says not to do).
+- **For the product:** a results table that re-renders once per row photo is
+  also a table that visibly jumps for a user, and it gets worse with more rows.
+  Worth a look, though it is a design observation rather than a defect claim.
+
+Order creation is therefore left broken deliberately rather than half-fixed. It
+is a multi-step wizard, its first step exceeds the test budget, and the fixture's
+API fallback needs a captured payload — three separate pieces of work, none of
+which should be rushed at the end of a long session.
