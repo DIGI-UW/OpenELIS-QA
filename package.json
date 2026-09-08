@@ -24,7 +24,9 @@
     "test:modules": "playwright test -c modules.config.ts",
     "test:gap-suites": "playwright test -c gap-suites.config.ts",
     "check:dupe-ids": "node scripts/check-dupe-ids.mjs",
-    "dupe-ids:baseline": "node scripts/check-dupe-ids.mjs --update"
+    "dupe-ids:baseline": "node scripts/check-dupe-ids.mjs --update",
+    "check:coverage-gaps": "node scripts/check-coverage-gaps.mjs",
+    "coverage-gaps:baseline": "node scripts/check-coverage-gaps.mjs --update"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
