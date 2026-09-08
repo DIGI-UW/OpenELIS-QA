@@ -120,20 +120,38 @@ export async function findPatientByNationalId(page: Page, nationalId: string): P
     //
     // The endpoint the application itself uses is patient-search-results, which
     // answers 200 with { paging, patientSearchResults: [...] }.
-    const result = await page.evaluate(async (nid: string) => {
+    // QUERY BY NAME, NOT BY ID.
+    //
+    // patient-search-results answers 200 for every parameter shape, but only
+    // some of them actually search. Probed on v3.2.2.0 with three patients
+    // named Abby Sebby present:
+    //
+    //   ?lastName=Sebby&firstName=Abby   -> 3 results   <- the one that works
+    //   ?searchValue=0123456             -> []
+    //   ?nationalId=0123456              -> []
+    //   ?searchValue=Sebby               -> []
+    //   ?patientId=504                   -> []
+    //
+    // A 200 with an empty list is indistinguishable from "no such patient",
+    // which is why the earlier version of this function looked correct and
+    // reported the baseline patient missing while it sat in the database. The
+    // nationalId is still used to narrow the results when the payload carries
+    // it — it just cannot be the query.
+    const result = await page.evaluate(async ({ nid, first, last }) => {
       const csrf = localStorage.getItem('CSRF') || '';
       const res = await fetch(
-        `/api/OpenELIS-Global/rest/patient-search-results?searchValue=${encodeURIComponent(nid)}`,
+        `/api/OpenELIS-Global/rest/patient-search-results?lastName=${encodeURIComponent(last)}` +
+        `&firstName=${encodeURIComponent(first)}`,
         { headers: { 'X-CSRF-Token': csrf, Accept: 'application/json' } }
       );
       if (!res.ok) return null;
       const data = await res.json();
       const list: any[] = data.patientSearchResults ?? [];
-      const match = list.find((p: any) =>
-        String(p.nationalId ?? p.nationalIdNumber ?? '') === nid
-      );
-      return match ? String(match.patientID ?? match.patientId ?? match.id ?? 'found') : null;
-    }, nationalId);
+      if (!list.length) return null;
+      const byNid = list.find((p: any) => String(p.nationalId ?? p.nationalIdNumber ?? '') === nid);
+      const pick = byNid ?? list[0];
+      return String(pick.patientID ?? pick.patientId ?? pick.id ?? 'found');
+    }, { nid: nationalId, first: TEST_PATIENT.firstName, last: TEST_PATIENT.lastName });
     return result;
   } catch {
     return null;
@@ -146,30 +164,36 @@ export async function findPatientByNationalId(page: Page, nationalId: string): P
  */
 export async function createPatientViaUI(page: Page, state: TestDataState): Promise<boolean> {
   try {
-    // Navigate to Patient Management
-    await page.goto(`${BASE}/PatientManagement`, { waitUntil: 'networkidle' });
+    // GO STRAIGHT TO THE CREATE ROUTE.
+    //
+    // This used to load /PatientManagement and click "New Patient". The button
+    // is there, but /PatientManagement is the SEARCH screen and carries its own
+    // lastName / firstName / nationalId inputs — so when the click did not land
+    // (or had not finished after the fixed 1s wait), the field selectors below
+    // matched the SEARCH form instead, typed the patient's details into it, and
+    // looked for a Save button that screen does not have. Nothing was created
+    // and nothing said so. A probe on v3.2.2.0 confirms /PatientManagement has
+    // 7 visible inputs and /PatientManagement/new has 12.
+    //
+    // The create route is known (it is the same one TC-PAT-05 was corrected to
+    // use), so navigate to it and assert the form is really there rather than
+    // driving the menu and hoping.
+    await page.goto(`${BASE}/PatientManagement/new`, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(2_500);
 
-    // Look for "Add Patient" or "New Patient" button
-    const addBtn = page.getByRole('button', { name: /add patient|new patient|create patient/i }).first();
-    const hasAdd = await addBtn.isVisible({ timeout: 5000 }).catch(() => false);
-
-    if (!hasAdd) {
-      // Try clicking directly into the form if it's already open
-      const firstInput = page.locator('input').first();
-      const hasForm = await firstInput.isVisible({ timeout: 3000 }).catch(() => false);
-      if (!hasForm) {
-        state.setupErrors.push('createPatient: no Add button and no form found on PatientManagement');
-        return false;
-      }
-    } else {
-      await addBtn.click();
-      await page.waitForTimeout(1000);
+    const formAnchor = page.locator('#lastName, #firstName, #nationalId').first();
+    if (!(await formAnchor.isVisible({ timeout: 10_000 }).catch(() => false))) {
+      state.setupErrors.push(
+        `createPatient: the create form did not render at /PatientManagement/new (url=${page.url()})`
+      );
+      return false;
     }
 
     // Fill last name
-    const lastNameField = page.locator(
-      'input[name*="lastName" i], input[id*="lastName" i], input[placeholder*="last" i]'
-    ).first();
+    // `#lastName` is the real id on the create form; the loose attribute match is
+    // kept as a fallback but must not be the primary — it also matches the
+    // search screen's field of the same name.
+    const lastNameField = page.locator('#lastName, input[name*="lastName" i]').first();
     if (await lastNameField.isVisible({ timeout: 3000 }).catch(() => false)) {
       // Carbon controlled input requires native value setter
       await lastNameField.focus();
@@ -177,47 +201,90 @@ export async function createPatientViaUI(page: Page, state: TestDataState): Prom
     }
 
     // Fill first name
-    const firstNameField = page.locator(
-      'input[name*="firstName" i], input[id*="firstName" i], input[placeholder*="first" i]'
-    ).first();
+    // `#firstName` is the real id on the create form; the loose attribute match is
+    // kept as a fallback but must not be the primary — it also matches the
+    // search screen's field of the same name.
+    const firstNameField = page.locator('#firstName, input[name*="firstName" i]').first();
     if (await firstNameField.isVisible({ timeout: 3000 }).catch(() => false)) {
       await firstNameField.focus();
       await page.keyboard.type(TEST_PATIENT.firstName);
     }
 
     // Fill national ID
-    const nationalIdField = page.locator(
-      'input[name*="nationalId" i], input[id*="nationalId" i], input[placeholder*="national" i]'
-    ).first();
+    // `#nationalId` is the real id on the create form; the loose attribute match is
+    // kept as a fallback but must not be the primary — it also matches the
+    // search screen's field of the same name.
+    const nationalIdField = page.locator('#nationalId, input[name*="nationalId" i]').first();
     if (await nationalIdField.isVisible({ timeout: 3000 }).catch(() => false)) {
       await nationalIdField.focus();
       await page.keyboard.type(TEST_PATIENT.nationalId);
     }
 
-    // Fill date of birth
-    const dobField = page.locator(
-      'input[name*="dob" i], input[name*="dateOfBirth" i], input[id*="dob" i], input[placeholder*="date" i]'
-    ).first();
-    if (await dobField.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await dobField.focus();
-      await page.keyboard.type(TEST_PATIENT.dateOfBirth);
+    // DATE OF BIRTH — Carbon date picker, not an input named "dob".
+    //
+    // The old selectors here were
+    //   input[name*=dob], input[name*=dateOfBirth], input[id*=dob],
+    //   input[placeholder*=date]
+    // and a live probe of /PatientManagement/new on v3.2.2.0 matched ZERO
+    // elements for all four. The real field is `#date-picker-default-id` with
+    // placeholder `dd/mm/yyyy` — it contains neither "dob" nor "date". So DOB
+    // was never filled. `legacy-order-helper.ts` has driven this same picker
+    // correctly for a long time; this now uses that pattern.
+    const dobField = page.locator('#date-picker-default-id').last();
+    if (await dobField.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await dobField.fill(TEST_PATIENT.dateOfBirth);
+    } else {
+      state.setupErrors.push('createPatient: date-of-birth picker not found (#date-picker-default-id)');
     }
 
-    // Select gender (Female)
-    const genderSelect = page.locator('select[name*="gender" i], select[id*="gender" i]').first();
-    if (await genderSelect.isVisible({ timeout: 2000 }).catch(() => false)) {
-      // Try to select Female by value or text
-      await genderSelect.selectOption({ value: 'F' }).catch(() =>
-        genderSelect.selectOption({ label: /female/i })
-      );
+    // GENDER — radio buttons, not a <select>.
+    //
+    // The old selector was select[name*=gender] / select[id*=gender], which
+    // also matched zero elements: gender renders as `input[name="gender"]`
+    // radios (#radio-1 / #radio-2) in Carbon. So gender was never set either.
+    //
+    // Both of these were wrapped in `if (visible) { ... }` with no else, so a
+    // selector matching nothing was indistinguishable from a field that had
+    // been filled. The form was then submitted missing two required values,
+    // Save was rejected, no "Internal Server Error" string appeared, and the
+    // function reported success. Click by LABEL text so this does not depend on
+    // which radio index the sex happens to occupy.
+    const wantFemale = TEST_PATIENT.gender.toUpperCase().startsWith('F');
+    const genderLabel = page.getByText(wantFemale ? /^Female$/ : /^Male$/).first();
+    if (await genderLabel.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await genderLabel.click();
+    } else {
+      const fallback = page.locator(`label[for="${wantFemale ? 'radio-2' : 'radio-1'}"]`).first();
+      if (await fallback.isVisible({ timeout: 2_000 }).catch(() => false)) await fallback.click();
+      else state.setupErrors.push('createPatient: gender radio not found by label or index');
     }
 
-    // Submit
-    const saveBtn = page.getByRole('button', { name: /save|submit|add|create/i }).first();
-    if (await saveBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await saveBtn.click();
-      await page.waitForTimeout(2000);
+    // SUBMIT — and this is the bug that made the whole fixture a no-op.
+    //
+    // The selector used to be:
+    //     getByRole('button', { name: /save|submit|add|create/i }).first()
+    //
+    // The patient form has exactly two buttons matching that alternation:
+    // "Additional Information" and "Save" — because `/add/i` matches
+    // "ADDitional". "Additional Information" comes first in the DOM, so
+    // `.first()` picked it, the click expanded a form section, and Save was
+    // never pressed. Combined with the "no Internal Server Error means
+    // success" check below, the fixture reported creating a patient on every
+    // run while doing nothing but opening an accordion.
+    //
+    // ANCHOR the name. A loose alternation over button labels will eventually
+    // match a button you did not mean, and `.first()` hides which one it hit.
+    const saveBtn = page.getByRole('button', { name: /^\s*Save\s*$/i }).first();
+    if (!(await saveBtn.isVisible({ timeout: 5_000 }).catch(() => false))) {
+      state.setupErrors.push('createPatient: no Save button on the create form');
+      return false;
     }
+    await saveBtn.click();
+    // The app answers POST /rest/PatientManagement with
+    // {"status":"success","patientId":"<id>"} and routes to
+    // /PatientManagement/<id>. Wait for the navigation rather than a fixed
+    // sleep, then fall through to the read-back check.
+    await page.waitForURL(/\/PatientManagement\/\d+/, { timeout: 20_000 }).catch(() => { /* read-back decides */ });
 
     // ROUND-TRIP, NOT "THE PAGE DID NOT CRASH" (2026-09-08).
     //
@@ -240,9 +307,17 @@ export async function createPatientViaUI(page: Page, state: TestDataState): Prom
 
     const readBack = await findPatientByNationalId(page, TEST_PATIENT.nationalId);
     if (!readBack) {
+      // Say WHAT the form complained about. "It did not save" sends the next
+      // person back to the browser; the validation text usually names the field.
+      const complaints = await page
+        .locator('.cds--form-requirement, [role="alert"], .cds--inline-notification__subtitle, .error, .cds--text-input__field-wrapper--warning')
+        .evaluateAll((els) => els.map((e) => (e.textContent || '').trim()).filter(Boolean).slice(0, 6))
+        .catch(() => [] as string[]);
       state.setupErrors.push(
         `createPatient: save produced no error, but nationalId=${TEST_PATIENT.nationalId} ` +
-        'does not read back from /rest/patient-search-results — the patient was NOT created'
+        'does not read back from /rest/patient-search-results — the patient was NOT created' +
+        (complaints.length ? ` :: form said: ${complaints.join(' | ')}` : ' :: form showed no validation message') +
+        ` :: url=${page.url()}`
       );
       return false;
     }
