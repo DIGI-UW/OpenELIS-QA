@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, QA_ID_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, navigateToAdminItem, getDateRange, getFutureDateRange } from '../helpers/test-helpers';
+import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, QA_ID_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, navigateToAdminItem, getDateRange, getFutureDateRange, clickFormSearch } from '../helpers/test-helpers';
 
 /**
  * Patient Management Test Suite
@@ -60,30 +60,45 @@ test.describe('Patient Management (TC-PAT)', () => {
   });
 
   test('TC-PAT-02: Search by national ID returns Abby Sebby', async ({ page }) => {
+    // WHAT THIS CASE CAN CHECK, AND WHERE (probed live 2026-09-08, v3.2.2.0).
+    //
+    // The patient search SCREEN has no national-ID input. Its fields are
+    // patientId, labNumber, lastName, firstName, a date picker and the gender
+    // radios; the only "National ID" on the page is a results-table column
+    // header (`cds--table-header-label`). The old body matched that loose
+    // selector against `#patientId`, typed the national ID into it, pressed
+    // Enter — which this form does not submit on — and then reported FAIL via
+    // console.log while asserting on a page that had never searched.
+    //
+    // The SERVER does support it, under the parameter the screen itself sends:
+    // `nationalID` (capital I, capital D). `nationalId` is ignored and answers
+    // 200 with an empty list. So this case now asserts the capability at the
+    // level where it exists, and TC-PAT-03 covers the UI path by name.
+    //
+    // Whether the search screen OUGHT to expose a national-ID field is a
+    // product question, not a test failure — national ID is a primary patient
+    // identifier in this domain. Raised in open-questions.md.
     await goToPatientSearch(page);
+    expect(page.url(), 'must be on the patient search screen').toMatch(/PatientManagement/);
 
-    // Try national ID field
-    const idField = page.locator(
-      'input[id*="national" i], input[id*="patientId" i], input[placeholder*="national" i], input[placeholder*="ID" i]'
-    ).first();
+    const found = await page.evaluate(async (nid) => {
+      const r = await fetch(
+        `/api/OpenELIS-Global/rest/patient-search-results?nationalID=${encodeURIComponent(nid)}`,
+        { headers: { Accept: 'application/json' } }
+      );
+      if (!r.ok) return { status: r.status, names: [] as string[] };
+      const d = await r.json();
+      return {
+        status: r.status,
+        names: (d.patientSearchResults ?? []).map((p: any) => `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim()),
+      };
+    }, PATIENT_ID);
 
-    if (!(await idField.isVisible({ timeout: 3000 }).catch(() => false))) {
-      console.log('TC-PAT-02: SKIP — no national ID field found');
-      test.skip();
-      return;
-    }
-
-    await idField.fill('0123456');
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(2000);
-
-    const hasAbby = await page.getByText(/Sebby/i).isVisible({ timeout: 5000 }).catch(() => false);
-    if (hasAbby) {
-      console.log('TC-PAT-02: PASS — Abby Sebby found by national ID');
-    } else {
-      console.log('TC-PAT-02: FAIL — Abby Sebby not returned for ID 0123456');
-    }
-    expect(hasAbby).toBe(true);
+    expect(found.status, 'patient search must answer 200').toBe(200);
+    expect(
+      found.names.join(' | '),
+      `national ID ${PATIENT_ID} returned no ${PATIENT_NAME}. Saw: ${JSON.stringify(found.names)}`
+    ).toMatch(/Sebby/i);
   });
 
   test('TC-PAT-03: Partial last-name search returns matching patient', async ({ page }) => {
@@ -98,13 +113,19 @@ test.describe('Patient Management (TC-PAT)', () => {
       return; // not a hard fail — document as GAP
     }
 
+    // This form does NOT submit on Enter (verified live 2026-09-08 — pressing
+    // Enter fires no request at all), and its Search button is not the first
+    // /search/i match on the page. Both were why this case failed.
     await lastNameField.fill('Seb');
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(2000);
+    const searched = await clickFormSearch(page, '#lastName');
+    expect(searched, 'the patient search form must have a Search button').toBe(true);
+    await page.waitForTimeout(3000);
 
-    const hasAbby = await page.getByText(/Sebby/i).isVisible({ timeout: 5000 }).catch(() => false);
-    console.log(hasAbby ? 'TC-PAT-03: PASS' : 'TC-PAT-03: FAIL — partial name match not working');
-    expect(hasAbby).toBe(true);
+    const hasAbby = await page.getByText(/Sebby/i).first().isVisible({ timeout: 8000 }).catch(() => false);
+    expect(
+      hasAbby,
+      `partial last-name search for "Seb" did not return ${PATIENT_NAME} (url=${page.url()})`
+    ).toBe(true);
 
     // Empty-state test
     await lastNameField.fill('ZZZNOTEXIST');
@@ -369,13 +390,10 @@ test.describe('Phase 4 — H-DEEP: Patient Interaction Tests', () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     });
 
-    const searchBtn = page.getByRole('button', { name: /search/i }).first();
-    if (await searchBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await searchBtn.click();
-    } else {
-      await page.keyboard.press('Enter');
-    }
-    await page.waitForTimeout(2000);
+    // `/search/i` + .first() resolves to the Carbon HEADER search action, which
+    // fires no request — see clickFormSearch in helpers/test-helpers.ts.
+    await clickFormSearch(page, 'input[id*="national" i], input[placeholder*="National" i], #patientId');
+    await page.waitForTimeout(3000);
 
     // Patient Abby Sebby (ID 0123456) must appear in results
     const patientVisible = await page.getByText(/Sebby|0123456/i).first()
@@ -453,13 +471,10 @@ test.describe('Phase 6 — BD-DEEP: Patient History Tests', () => {
     }
 
     await lastNameInput.fill('Sebby');
-    const searchBtn = page.getByRole('button', { name: /search/i }).first();
-    if (await searchBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await searchBtn.click();
-    } else {
-      await page.keyboard.press('Enter');
-    }
-    await page.waitForTimeout(2000);
+    // `/search/i` + .first() resolves to the Carbon HEADER search action, which
+    // fires no request — see clickFormSearch in helpers/test-helpers.ts.
+    await clickFormSearch(page, 'input[id*="national" i], input[placeholder*="National" i], #patientId');
+    await page.waitForTimeout(3000);
 
     // Results table or patient list must appear
     const hasResults = await page.locator('table, [role="table"]').first()

@@ -139,9 +139,15 @@ export async function findPatientByNationalId(page: Page, nationalId: string): P
     // it — it just cannot be the query.
     const result = await page.evaluate(async ({ nid, first, last }) => {
       const csrf = localStorage.getItem('CSRF') || '';
+      // `nationalID` — capital I, capital D. This is the parameter the
+      // application itself sends (captured from the search screen's own
+      // request); `nationalId` is silently ignored and answers 200 with an
+      // empty list, which is what made every earlier lookup here look like
+      // "no such patient". Verified live: nationalID=0123456 -> 5 results,
+      // nationalId=0123456 -> 0.
       const res = await fetch(
-        `/api/OpenELIS-Global/rest/patient-search-results?lastName=${encodeURIComponent(last)}` +
-        `&firstName=${encodeURIComponent(first)}`,
+        `/api/OpenELIS-Global/rest/patient-search-results?nationalID=${encodeURIComponent(nid)}` +
+        `&lastName=${encodeURIComponent(last)}&firstName=${encodeURIComponent(first)}`,
         { headers: { 'X-CSRF-Token': csrf, Accept: 'application/json' } }
       );
       if (!res.ok) return null;
