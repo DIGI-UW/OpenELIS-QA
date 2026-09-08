@@ -601,7 +601,11 @@ export async function resolveSectionName(page: Page, want: RegExp): Promise<stri
  *
  * These are the canonical versions. New specs should import from here rather
  * than pasting another copy; the remaining local duplicates in order-entry,
- * results-entry, pathology and the gap-suites are a separate cleanup.
+ * results-entry, pathology and the gap-suites are tracked in 12.15 — they were
+ * dragged along by whole TEST CASES being copied between those files, so they
+ * are not a standalone refactor. Note that those copies of tryNavigateToURL
+ * check `res.ok()`, which is true for every path in this SPA; this one does
+ * not, deliberately.
  */
 export async function navigateViaMenu(page: Page, menuItems: string[]): Promise<void> {
   const hamburger = page
