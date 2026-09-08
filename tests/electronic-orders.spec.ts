@@ -7,6 +7,8 @@ import {
   login,
   navigateWithDiscovery,
   getDateRange,
+  navigateViaMenu,
+  tryNavigateToURL,
 } from '../helpers/test-helpers';
 
 /**
@@ -291,4 +293,163 @@ test.describe('Suite BC-DEEP — Electronic Orders API & Integration (TC-IO-06�
     expect(result.status).toBe(200);
     expect(result.programCount, 'Must have at least 5 programs for order acceptance').toBeGreaterThanOrEqual(5);
   });
+});
+
+/**
+ * Relocated from the retired gap-suites (2026-09-08) — see harness ref 12.16.
+ * These are the cases the gap suites uniquely carried; the rest of those files
+ * duplicated tests that already lived here.
+ *   TC-IO-01 -> TC-IO-11   (renumbered: TC-IO-01 already meant a different test)
+ *   TC-IO-02 -> TC-IO-12   (renumbered: TC-IO-02 already meant a different test)
+ *   TC-IO-03 -> TC-IO-13   (renumbered: TC-IO-03 already meant a different test)
+ *   TC-IO-04 -> TC-IO-14   (renumbered: TC-IO-04 already meant a different test)
+ *   TC-IO-05 -> TC-IO-15   (renumbered: TC-IO-05 already meant a different test)
+ */
+test.describe('Relocated from gap-suites', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+  });
+
+  test('TC-IO-11: Incoming Orders screen loads', async ({ page }) => {
+      await login(page, ADMIN.user, ADMIN.pass);
+  
+      // Try menu navigation first
+      try {
+        await navigateViaMenu(page, ['Order', 'Incoming Orders']);
+      } catch (e) {
+        // Fallback to direct URL attempts
+        const found = await tryNavigateToURL(page, ['/IncomingOrders', '/IncominOrders', '/order/incoming']);
+        if (!found) {
+          test.skip();
+          return;
+        }
+      }
+  
+      await page.waitForTimeout(1000);
+  
+      // Verify page loaded and not login redirect
+      expect(page.url()).not.toContain('login');
+      expect(page.url()).not.toContain('signin');
+  
+      // Check for page heading or table
+      const heading = await page.$('[class*="heading"], h1, h2, [role="heading"]');
+      const table = await page.$('table, [role="table"], [class*="list"], [class*="grid"]');
+  
+      expect(heading || table).toBeTruthy();
+    });
+
+  test('TC-IO-12: Incoming orders list displays columns', async ({ page }) => {
+      await login(page, ADMIN.user, ADMIN.pass);
+      await navigateViaMenu(page, ['Order', 'Incoming Orders']).catch(async () => {
+        await tryNavigateToURL(page, ['/IncomingOrders', '/IncominOrders', '/order/incoming']);
+      });
+  
+      await page.waitForTimeout(1000);
+  
+      // Check for key columns in table
+      const table = await page.$('table');
+      if (!table) {
+        test.skip();
+        return;
+      }
+  
+      const cells = await page.$$('th, [role="columnheader"]');
+      const headerText = await Promise.all(cells.map(cell => cell.textContent()));
+      const headerStr = headerText.join(' ').toLowerCase();
+  
+      // At least some key columns should be present
+      const hasKeyColumns = ['accession', 'patient', 'test', 'status', 'date'].some(
+        col => headerStr.includes(col)
+      );
+  
+      expect(hasKeyColumns).toBeTruthy();
+    });
+
+  test('TC-IO-13: Batch Order Entry screen loads', async ({ page }) => {
+      await login(page, ADMIN.user, ADMIN.pass);
+  
+      try {
+        await navigateViaMenu(page, ['Order', 'Batch Order Entry']);
+      } catch (e) {
+        const found = await tryNavigateToURL(page, ['/BatchOrderEntry', '/BatchEntry', '/order/batch']);
+        if (!found) {
+          test.skip();
+          return;
+        }
+      }
+  
+      await page.waitForTimeout(1000);
+  
+      expect(page.url()).not.toContain('login');
+  
+      // Check for form or input field
+      const textarea = await page.$('textarea, [role="textbox"]');
+      const input = await page.$('input[type="text"]');
+  
+      expect(textarea || input).toBeTruthy();
+    });
+
+  test('TC-IO-14: Batch entry form accepts multiple accession numbers', async ({ page }) => {
+      await login(page, ADMIN.user, ADMIN.pass);
+  
+      try {
+        await navigateViaMenu(page, ['Order', 'Batch Order Entry']);
+      } catch (e) {
+        await tryNavigateToURL(page, ['/BatchOrderEntry', '/BatchEntry', '/order/batch']);
+      }
+  
+      await page.waitForTimeout(1000);
+  
+      const textarea = await page.$('textarea');
+      if (!textarea) {
+        test.skip();
+        return;
+      }
+  
+      // Fill in batch accessions
+      await textarea.fill('26CPHL00001T\n26CPHL00002T\n26CPHL00003T');
+  
+      // Look for submit/process button
+      const button = await page.$('button:has-text("Submit"), button:has-text("Process"), button:has-text("Parse")');
+      if (button) {
+        await button.click();
+        await page.waitForTimeout(2000);
+      }
+  
+      // Check if form processed (no immediate error)
+      const errorMsg = await page.$('[class*="error"], [class*="alert"][class*="error"], .error');
+      expect(!errorMsg).toBeTruthy();
+    });
+
+  test('TC-IO-15: Batch order validation flags incomplete entries', async ({ page }) => {
+      await login(page, ADMIN.user, ADMIN.pass);
+  
+      try {
+        await navigateViaMenu(page, ['Order', 'Batch Order Entry']);
+      } catch (e) {
+        await tryNavigateToURL(page, ['/BatchOrderEntry', '/BatchEntry', '/order/batch']);
+      }
+  
+      await page.waitForTimeout(1000);
+  
+      const textarea = await page.$('textarea');
+      if (!textarea) {
+        test.skip();
+        return;
+      }
+  
+      // Enter incomplete/invalid data
+      await textarea.fill('INVALID\n\n');
+  
+      const button = await page.$('button:has-text("Submit"), button:has-text("Process"), button:has-text("Parse")');
+      if (button) {
+        await button.click();
+        await page.waitForTimeout(2000);
+      }
+  
+      // System should either validate or process without error
+      // This is a permissive test — just verify no crash
+      expect(page.url()).not.toContain('error');
+    });
+
 });

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange } from '../helpers/test-helpers';
+import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, navigateViaMenu, tryNavigateToURL } from '../helpers/test-helpers';
 
 /**
  * Workplan and Sample Tracking Test Suite
@@ -448,4 +448,82 @@ test.describe('Phase 5 — N-DEEP: Workplan Interaction Tests', () => {
       'Selecting a panel must show workplan data or an appropriate empty state'
     ).toBe(true);
   });
+});
+
+/**
+ * Relocated from the retired gap-suites (2026-09-08) — see harness ref 12.16.
+ * These are the cases the gap suites uniquely carried; the rest of those files
+ * duplicated tests that already lived here.
+ *   TC-WPP-02 -> TC-WPP-06   (renumbered: TC-WPP-02 already meant a different test)
+ *   TC-WPP-03 -> TC-WPP-07   (renumbered: TC-WPP-03 already meant a different test)
+ *   TC-WPP-05 -> TC-WPP-08   (renumbered: TC-WPP-05 already meant a different test)
+ */
+test.describe('Relocated from gap-suites', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+  });
+
+  test('TC-WPP-06: Panel selector populates with panels', async ({ page }) => {
+      await login(page, ADMIN.user, ADMIN.pass);
+  
+      try {
+        await navigateViaMenu(page, ['Workplan', 'By Panel']);
+      } catch (e) {
+        await tryNavigateToURL(page, ['/WorkplanByPanel', '/PanelWorkplan', '/workplan/panel']);
+      }
+  
+      await page.waitForTimeout(1000);
+  
+      const selector = await page.$('select');
+      if (!selector) {
+        test.skip();
+        return;
+      }
+  
+      const options = await page.$$('option, [role="option"]');
+      expect(options.length).toBeGreaterThanOrEqual(0);
+    });
+
+  test('TC-WPP-07: Select panel shows filtered workplan items', async ({ page }) => {
+      await login(page, ADMIN.user, ADMIN.pass);
+  
+      try {
+        await navigateViaMenu(page, ['Workplan', 'By Panel']);
+      } catch (e) {
+        await tryNavigateToURL(page, ['/WorkplanByPanel', '/PanelWorkplan', '/workplan/panel']);
+      }
+  
+      await page.waitForTimeout(1000);
+  
+      const selector = await page.$('select');
+      if (selector) {
+        await selector.selectOption({ index: 1 }).catch(() => null);
+        await page.waitForTimeout(1000);
+      }
+  
+      const table = await page.$('table, [role="table"]');
+      expect(table).toBeTruthy();
+    });
+
+  test('TC-WPP-08: Priority filter shows urgent and routine items', async ({ page }) => {
+      await login(page, ADMIN.user, ADMIN.pass);
+  
+      try {
+        await navigateViaMenu(page, ['Workplan', 'By Priority']);
+      } catch (e) {
+        await tryNavigateToURL(page, ['/WorkplanByPriority', '/PriorityWorkplan', '/workplan/priority']);
+      }
+  
+      await page.waitForTimeout(1000);
+  
+      const filter = await page.$('select, [role="listbox"]');
+      if (filter) {
+        await filter.selectOption({ index: 1 }).catch(() => null);
+        await page.waitForTimeout(1000);
+      }
+  
+      const table = await page.$('table, [role="table"]');
+      expect(table).toBeTruthy();
+    });
+
 });

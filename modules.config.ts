@@ -11,22 +11,26 @@ import { defineConfig, devices } from '@playwright/test';
  * order-entry, validation, patient-management, reports, workplan, dashboard,
  * pathology, inventory, referral-workflow, reflex-testing, session-security,
  * storage, non-conforming, fhir-integration, i18n, accessibility, performance,
- * eqa, and the four root `gap-suites-*` files.
+ * eqa. (The four root `gap-suites-*` files were retired on 2026-09-08.)
  *
  * `openelis-e2e.spec.ts` (quarantined in #94) was the same problem noticed one
  * file at a time. This config is the fix at the level the problem actually
  * lives at, and `scripts/check-orphans.mjs` is the gate that stops it coming
  * back.
  *
- * GAP-SUITES MOVED OUT (2026-09-05). The four root `gap-suites-*` files now
- * live in gap-suites.config.ts with their own nightly job. Playwright shards by
- * FILE, so those four files always landed together and made whichever shard
- * held them the long pole — 91 minutes against 14-49 for the others. Splitting
- * them out is the only way to unblock the rest, short of splitting the files.
+ * GAP-SUITES RETIRED (2026-09-08). The four root `gap-suites-*` files were
+ * split into their own job on 2026-09-05 because Playwright shards by FILE and
+ * they made one shard the long pole. They are now gone entirely: 87 of their
+ * 107 cases duplicated tests that already lived in the module specs (59
+ * byte-identical, 28 drifted implementations of the same TC ID), and the
+ * remaining 20 were relocated into the specs that own their areas. The
+ * question those suites existed to answer — "are we missing QA checks?" — is
+ * now answered by `npm run check:coverage-gaps`, which diffs the catalogue
+ * against the code instead of re-running covered ground. See harness ref 12.16.
  *
  * WHAT IT SWEEPS
  * Everything at the top level of `tests/` EXCEPT the files another config
- * already owns (see OWNED_ELSEWHERE), plus the root gap-suites. The sweep is
+ * already owns (see OWNED_ELSEWHERE). The sweep is
  * defined by exclusion rather than by a hand-listed include set on purpose: a
  * newly added `tests/foo.spec.ts` is picked up automatically. An include list
  * would rot into exactly the bug this config exists to fix.

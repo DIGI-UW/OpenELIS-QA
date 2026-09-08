@@ -1,13 +1,12 @@
 {
   "rule": "playwright/expect-expect",
-  "total": 188,
+  "total": 187,
   "files": {
     "_discover.spec.ts": 1,
     "_timing.spec.ts": 1,
     "capture-longcode.spec.ts": 1,
     "capture-testcatalog-save.spec.ts": 1,
     "capture-topsave.spec.ts": 1,
-    "gap-suites-AE-AG.spec.ts": 1,
     "probe-lookup.spec.ts": 1,
     "probe-orderentry.spec.ts": 1,
     "probe-typepicker.spec.ts": 3,

@@ -22,7 +22,6 @@
     "lint:baseline": "node scripts/lint-assert-gate.mjs --update",
     "check:orphans": "node scripts/check-orphans.mjs",
     "test:modules": "playwright test -c modules.config.ts",
-    "test:gap-suites": "playwright test -c gap-suites.config.ts",
     "check:dupe-ids": "node scripts/check-dupe-ids.mjs",
     "dupe-ids:baseline": "node scripts/check-dupe-ids.mjs --update",
     "check:coverage-gaps": "node scripts/check-coverage-gaps.mjs",

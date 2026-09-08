@@ -367,3 +367,56 @@ test.describe('Suite PATH-EXT — Pathology Module Extended', () => {
     }
   });
 });
+
+/**
+ * Relocated from the retired gap-suites (2026-09-08) — see harness ref 12.16.
+ * These are the cases the gap suites uniquely carried; the rest of those files
+ * duplicated tests that already lived here.
+ *   TC-PATH-02 -> TC-PATH-03   (renumbered: TC-PATH-02 already meant a different test)
+ *   TC-CYT-02 -> TC-CYT-03   (renumbered: TC-CYT-02 already meant a different test)
+ */
+test.describe('Relocated from gap-suites', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+  });
+
+  test('TC-PATH-03: Pathology case list or entry form visible', async ({ page }) => {
+      await login(page, ADMIN.user, ADMIN.pass);
+  
+      try {
+        await navigateViaMenu(page, ['Pathology']);
+      } catch (e) {
+        await tryNavigateToURL(page, ['/Pathology', '/PathologyDashboard', '/pathology']);
+      }
+  
+      await page.waitForTimeout(1000);
+  
+      const table = await page.$('table, [role="table"]');
+      const form = await page.$('form, [role="form"]');
+      const button = await page.$('button:has-text("Create"), button:has-text("New")');
+  
+      expect(table || form || button).toBeTruthy();
+    });
+
+  test('TC-CYT-03: Cytology case entry form available', async ({ page }) => {
+      await login(page, ADMIN.user, ADMIN.pass);
+  
+      try {
+        await navigateViaMenu(page, ['Pathology', 'Cytology']);
+      } catch (e) {
+        await tryNavigateToURL(page, ['/Cytology', '/CytologyDashboard', '/pathology/cytology']);
+      }
+  
+      await page.waitForTimeout(1000);
+  
+      const button = await page.$('button:has-text("Create"), button:has-text("New"), button:has-text("Add")');
+      if (button) {
+        await button.click();
+        await page.waitForTimeout(1000);
+      }
+  
+      const form = await page.$('form, [role="form"], textarea, input');
+      expect(form).toBeTruthy();
+    });
+
+});
