@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { seedDuplicatePair, findPatientIdsByNationalId, findPatientIdsByLastName } from '../helpers/data-factory';
+import { seedDuplicatePair, seedMergedPair, findPatientIdsByNationalId, findPatientIdsByLastName } from '../helpers/data-factory';
 import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, QA_ID_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, navigateToAdminItem, getDateRange, getFutureDateRange, clickFormSearch, checkCarbonRadio } from '../helpers/test-helpers';
 
 /**
@@ -579,15 +579,119 @@ test.describe('Suite AC — Merge Patient', () => {
     // The raw list is not quotable as evidence: the last-name search is fuzzy,
     // so it also returns earlier runs' seeds, and a reader counting ids would
     // mistake that noise for survivors.
+    //
+    // This is no longer an open question — all three revalidation gates were
+    // cleared on 2026-09-08 and it is tracked as a confirmed defect by TC-MP-05
+    // and TC-MP-06. The line stays because it is useful per-run evidence.
     const byLastName = await findPatientIdsByLastName(page, pair.lastName);
     const survivedByName = byLastName.includes(pair.ids[1]);
     console.log(
       `TC-MP-04: merged ${pair.ids[1]} into ${pair.ids[0]}; nationalID search -> [${pair.ids[0]}] (consolidated). ` +
         (survivedByName
-          ? `OBSERVATION: ${pair.ids[1]} is still returned by a last-name search after being merged away ` +
-            '— needs the fresh-tab and re-login revalidation gates before it is called a defect.'
-          : `last-name search no longer returns ${pair.ids[1]}.`)
+          ? `${pair.ids[1]} is still returned by a last-name search after being merged away — ` +
+            'confirmed defect, tracked by TC-MP-05/TC-MP-06.'
+          : `last-name search no longer returns ${pair.ids[1]} — if TC-MP-05 also went red, the defect is FIXED; ` +
+            'delete the test.fail markers.')
     );
+  });
+
+  // ── The merge is only advisory outside the wizard ──────────────────────────
+  //
+  // The two cases below assert what SHOULD happen and are marked test.fail(),
+  // so the suite tracks a confirmed defect instead of going quiet about it: they
+  // pass while the defect stands, and turn RED the moment the product is fixed,
+  // which is the signal to delete the marker. Both are deliberately MINIMAL —
+  // seed and merge through the API, then one assertion — because under
+  // test.fail() ANY failure counts as the expected one, so a case that also did
+  // elaborate setup could "pass" by being broken. That is the hollow-test trap
+  // wearing a different hat.
+  //
+  // Confirmed 2026-09-08 on testing v3.2.2.0 against all three revalidation
+  // gates: 3x API repeat, a fresh browser context in each of two full runs, and
+  // a genuine logout + re-login. Reported to Casey; no ticket filed from here.
+  //
+  // What IS enforced after a merge, and worth not regressing: a national-ID
+  // search returns only the primary (TC-MP-04 asserts that), the merged record
+  // is badged "Merged" in result rows, opening it shows "This patient record was
+  // merged / Active records are kept on Patient <nationalId>", and it cannot be
+  // edited — no Edit or Save control is rendered.
+
+  test('TC-MP-05: A merged-away record must not be returned by a name search', async ({ page }) => {
+    test.fail(
+      true,
+      'CONFIRMED DEFECT (v3.2.2.0): a name search still returns records that have been merged away. ' +
+        'The identifier search filters them; the name search does not. Delete this marker when fixed.'
+    );
+    const pair = await seedMergedPair(page);
+    expect(
+      await findPatientIdsByLastName(page, pair.lastName),
+      `${pair.ids[1]} was merged into ${pair.ids[0]} and must no longer appear in a name search`
+    ).not.toContain(pair.ids[1]);
+  });
+
+  test('TC-MP-06: A merged-away record must not be usable for a new order', async ({ page }) => {
+    test.fail(
+      true,
+      'CONFIRMED DEFECT (v3.2.2.0): order entry accepts a merged-away patient. The banner appears, ' +
+        'but Patient Info is marked Complete and the wizard advances. Delete this marker when fixed.'
+    );
+    // This is the consequential half. Editing a merged record is correctly
+    // locked, and the identifier search correctly hides it — but order entry
+    // will still build a requisition against it, which is how a result ends up
+    // attached to a record the lab has already declared dead.
+    const pair = await seedMergedPair(page, 'ORD');
+    await page.goto(`${BASE}/SamplePatientEntry`, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('#lastName')).toBeVisible({ timeout: 15_000 });
+
+    await page.locator('#lastName').fill(pair.lastName);
+    const searched = await clickFormSearch(page, '#lastName');
+    expect(searched, 'order entry must have a patient Search button').toBe(true);
+
+    // ANTI-VACUITY GUARD, and it is not optional.
+    //
+    // The first version of this case was just
+    //   await expect(mergedRow).toHaveCount(0, { timeout: 15_000 })
+    // straight after the search, and the run reported "Expected to fail, but
+    // passed". Not because order entry filters merged records — it does not —
+    // but because `toHaveCount(0)` is satisfied the instant it is evaluated,
+    // before the search has rendered anything at all, and expect() polls until
+    // it PASSES. A "must not exist" assertion placed right after an async
+    // action is always vacuously true.
+    //
+    // So wait for the search to have actually produced its results — the
+    // primary's row proves that — and only then assert the merged one is
+    // absent. TC-MP-07 asserts this same guard WITHOUT the fail marker, so if
+    // order-entry search ever breaks outright, that case goes red and tells you
+    // this one can no longer be trusted.
+    await expect(
+      page.locator(`[data-cy="patient-result-row-${pair.ids[0]}"]`),
+      `order-entry search returned no row for the surviving record ${pair.ids[0]}, so this case cannot judge the merged one`
+    ).toBeAttached({ timeout: 15_000 });
+
+    await expect(
+      page.locator(`[data-cy="patient-result-row-${pair.ids[1]}"]`),
+      `order entry must not offer merged-away record ${pair.ids[1]}`
+    ).toHaveCount(0);
+  });
+
+  test('TC-MP-07: Order entry can find a patient by last name', async ({ page }) => {
+    // The canary for TC-MP-06. That case is test.fail()-marked, which means any
+    // failure inside it reads as the expected one — including a failure that has
+    // nothing to do with merges. This case asserts the same precondition
+    // unmarked, so a broken order-entry patient search shows up as a real
+    // failure here instead of hiding as a false "defect still present" there.
+    const pair = await seedDuplicatePair(page, 'CANARY');
+    await page.goto(`${BASE}/SamplePatientEntry`, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('#lastName')).toBeVisible({ timeout: 15_000 });
+
+    await page.locator('#lastName').fill(pair.lastName);
+    const searched = await clickFormSearch(page, '#lastName');
+    expect(searched, 'order entry must have a patient Search button').toBe(true);
+
+    await expect(
+      page.locator(`[data-cy="patient-result-row-${pair.ids[0]}"]`),
+      `order-entry search for "${pair.lastName}" must return the seeded record ${pair.ids[0]}`
+    ).toBeAttached({ timeout: 15_000 });
   });
 });
 

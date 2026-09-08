@@ -1998,3 +1998,98 @@ its payload by hand, which 12.4 says not to do. The capture technique used above
 for `PatientManagement` and `patient/merge/execute` is exactly what that needs —
 drive the order wizard once in the browser with a request interceptor installed
 and keep what it actually sends. That remains its own piece of work.
+
+### 12.24 CONFIRMED: a merge is enforced for editing, advisory for search and order entry
+
+**2026-09-08.** Casey, on the 12.23 observation: *"for some reason, we don't remove
+the duplicated patient, which seems wrong, it should at least be a filter."* He is
+right, and chasing it into the UI turned a search-filter annoyance into a patient-safety
+finding.
+
+**All three revalidation gates now cleared** (12.23 owed the third): 3× API repeat,
+a fresh browser context in each of two consecutive full runs, and a genuine logout
+plus re-login. So this is a confirmed defect, not an observation. Reported; no
+ticket filed from here.
+
+#### What a merge actually does, feature by feature
+
+Seeded pair 566 (primary) / 567 (merged away), merged via
+`POST /rest/patient/merge/execute` →
+`{"success":true,"mergeAuditId":"6","primaryPatientId":"566","mergedPatientId":"567","mergeDurationMs":156}`.
+
+| Surface | Behaviour after merge | Verdict |
+|---|---|---|
+| `?nationalID=` search | returns `[566]` only | **enforced** |
+| `?lastName=` search | returns `[566, 567]` | **advisory** |
+| Result row for 567 | badged `Merged` in the leading column | marked, not hidden |
+| Opening 567 | banner: "This patient record was merged / Active records are kept on Patient `<nationalId>`" | good |
+| Editing 567 | no Edit and no Save control rendered | **enforced** |
+| `/SamplePatientEntry` search | offers 567, radio **enabled** | **advisory** |
+| Selecting 567 for an order | banner shows, **Patient Info marks Complete, wizard advances to Program Selection** | **not guarded** |
+
+So the merge is real where the record is written to, and advisory everywhere the
+record is *chosen*. That inversion is the problem: the guard is on the door nobody
+walks through.
+
+**Why the order-entry half is the serious one.** A filter on the name search is a
+usability fix — the user sees a row they should not have to reason about. Order
+entry accepting a merged patient is different in kind: it will build a requisition
+against a record the lab has already declared dead and consolidated elsewhere, so
+a sample and eventually a result end up attached to it. The banner is present and
+says the right thing, but a banner is not a control. Nothing blocks Next.
+
+Worth being precise about what is *not* broken, so a fix does not regress it: the
+identifier search filters correctly, the record is badged in results, the banner
+names where the active records went, and editing is locked. The gap is the name
+search and the order-entry guard.
+
+#### Tracked as two `test.fail()` cases
+
+TC-MP-05 (name search) and TC-MP-06 (order entry) assert the CORRECT behaviour and
+carry `test.fail(true, '<why>')`. They pass while the defect stands and turn **red
+the moment the product is fixed**, which is the signal to delete the marker. A
+logged observation goes quiet; a tracked expectation does not.
+
+Both are deliberately **minimal** — seed and merge through the API, then one
+assertion. Under `test.fail()` *any* failure counts as the expected one, so a case
+that also did elaborate setup could "pass" by being broken. That is the hollow-test
+trap (12.22) wearing a different hat, and it is the rule for every `test.fail()`
+case in this repo: **one assertion, API setup, nothing else.**
+
+Setup for these uses `seedMergedPair` → `mergePatientsViaAPI`, not the wizard.
+Driving the merge UI to reach a merged state would put the wizard's own defects
+inside another case's precondition.
+
+#### `toHaveCount(0)` after an async action is vacuously true
+
+The first TC-MP-06 was one line after the search:
+
+```ts
+await expect(mergedRow).toHaveCount(0, { timeout: 15_000 });
+```
+
+The run reported **"Expected to fail, but passed"** — and not because order entry
+filters merged records. `expect()` polls until the assertion PASSES, and
+`toHaveCount(0)` is satisfied the instant it is first evaluated, before the search
+has rendered anything. The 15-second timeout never came into play. **Any
+"must not exist" assertion placed straight after an async action is always
+vacuously true**, and it will keep being true when the thing it forbids is right
+there on screen a second later.
+
+The fix is to wait for evidence that the action completed, then assert the absence:
+
+```ts
+await expect(page.locator(`[data-cy="patient-result-row-${primaryId}"]`)).toBeAttached({ timeout: 15_000 });
+await expect(page.locator(`[data-cy="patient-result-row-${mergedId}"]`)).toHaveCount(0);
+```
+
+That guard sits inside a `test.fail()` case, where a failure would read as the
+expected one — so **TC-MP-07 asserts the same precondition unmarked**. If
+order-entry patient search ever breaks outright, TC-MP-07 goes red and says the
+marked case can no longer be trusted. Pair every `test.fail()` case with an
+unmarked canary for its preconditions.
+
+Note also what caught this: the marker itself. A plain green test asserting
+`toHaveCount(0)` would have sailed through and been counted as coverage forever.
+`test.fail()` inverts the reporting, so a vacuous assertion becomes a loud
+"Expected to fail, but passed" instead of a silent pass.

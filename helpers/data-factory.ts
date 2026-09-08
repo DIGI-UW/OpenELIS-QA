@@ -820,3 +820,51 @@ export async function findPatientIdsByLastName(page: Page, lastName: string): Pr
     return ((d && d.patientSearchResults) || []).map((p: any) => String(p.patientID ?? p.patientId));
   }, lastName);
 }
+
+/**
+ * Execute a patient merge through the REST API.
+ *
+ * PAYLOAD AND RESPONSE CAPTURED (harness ref 12.23/12.24), Chrome on testing
+ * v3.2.2.0, 2026-09-08:
+ *
+ *   POST /api/OpenELIS-Global/rest/patient/merge/execute
+ *   {"patient1Id","patient2Id","primaryPatientId","reason","confirmed":true}
+ *   -> 200 {"success":true,"mergeAuditId":"6","message":"Patient merge completed
+ *           successfully","primaryPatientId":"566","mergedPatientId":"567",
+ *           "mergeDurationMs":156}
+ *
+ * Use this when a case needs a merged record as a PRECONDITION. The UI wizard
+ * itself is what TC-MP-04 covers; driving it again just to arrive at a merged
+ * state would put the wizard's own defects inside another case's setup.
+ */
+export async function mergePatientsViaAPI(
+  page: Page,
+  args: { primaryId: string; mergedId: string; reason?: string }
+): Promise<{ ok: boolean; detail: string }> {
+  return page.evaluate(async (a) => {
+    const csrf = localStorage.getItem('CSRF') || '';
+    const r = await fetch('/api/OpenELIS-Global/rest/patient/merge/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept-Language': 'en', 'X-CSRF-Token': csrf },
+      body: JSON.stringify({
+        patient1Id: a.primaryId,
+        patient2Id: a.mergedId,
+        primaryPatientId: a.primaryId,
+        reason: a.reason ?? 'QA_AUTO_ merge (fixture precondition)',
+        confirmed: true,
+      }),
+    });
+    const text = await r.text().catch(() => '');
+    let d: any = null;
+    try { d = JSON.parse(text); } catch { /* not json */ }
+    return { ok: r.ok && !!(d && d.success), detail: `status=${r.status} body=${text.slice(0, 200)}` };
+  }, args);
+}
+
+/** Seed a duplicate pair and merge the second into the first. Returns the pair. */
+export async function seedMergedPair(page: Page, tag = 'FILT'): Promise<DuplicatePair> {
+  const pair = await seedDuplicatePair(page, tag);
+  const res = await mergePatientsViaAPI(page, { primaryId: pair.ids[0], mergedId: pair.ids[1] });
+  if (!res.ok) throw new Error(`seedMergedPair: merge failed — ${res.detail}`);
+  return pair;
+}
