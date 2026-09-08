@@ -186,22 +186,49 @@ test.describe('Patient Management (TC-PAT)', () => {
     await idField.fill(nationalId);
     await page.locator('#lastName').fill('QAPatient');
     await page.locator('#firstName').fill('Automated');
-    // Gender and Date of Birth are both required (marked * on the form).
-    await page.locator('#radio-1').click().catch(() => {});
-    await page.locator('#date-picker-default-id').fill('01/01/1990').catch(() => {});
-    await page.keyboard.press('Escape'); // dismiss the datepicker overlay
 
-    // Submit
-    const saveBtn = page.getByRole('button', { name: /save|submit|add patient/i }).first();
-    if (await saveBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await saveBtn.click();
-      await page.waitForTimeout(2000);
-    }
+    // GENDER — radios, clicked by LABEL. `#radio-1` by index is brittle (the
+    // search screen uses `search-radio-1` for the same control) and the old
+    // body wrapped the click in `.catch(() => {})`, so a miss was
+    // indistinguishable from a hit. Same for the date picker below.
+    await page.getByText(/^Female$/).first().click();
+    await page.locator('#date-picker-default-id').last().fill('01/01/1990');
 
-    // Read back through search rather than trusting the post-save screen.
-    const savedOk = await page.getByText(new RegExp(`QAPatient|${nationalId}`, 'i'))
-      .isVisible({ timeout: 5000 }).catch(() => false);
-    expect(savedOk, `new patient ${nationalId} did not persist after save — neither the name nor the national ID appeared`).toBeTruthy();
+    // SUBMIT — anchored. An unanchored alternation over button labels is how
+    // the data factory ended up clicking "Additional Information" for months
+    // (harness ref 12.20).
+    //
+    // The old body then pressed Escape to dismiss the picker overlay, and THAT
+    // is what failed the case: by then the test had exceeded its budget,
+    // Playwright had torn the page down, and keyboard.press threw "Target
+    // page, context or browser has been closed" — while every earlier step's
+    // `.catch(() => {})` hid which one had actually hung.
+    const saveBtn = page.getByRole('button', { name: /^\s*Save\s*$/i }).first();
+    await expect(saveBtn, 'the create form must offer a Save button').toBeVisible({ timeout: 10_000 });
+    await saveBtn.click();
+
+    // The app answers POST /rest/PatientManagement with
+    // {"status":"success","patientId":"<id>"} and routes to
+    // /PatientManagement/<id>. Wait for that, then confirm by READ-BACK: the
+    // post-save screen showing a name is not proof the record persisted
+    // (harness ref 12.3, and the data-factory bug in 12.19).
+    await page.waitForURL(/\/PatientManagement\/\d+/, { timeout: 20_000 }).catch(() => { /* read-back decides */ });
+
+    const readBack = await page.evaluate(async (nid) => {
+      const r = await fetch(
+        `/api/OpenELIS-Global/rest/patient-search-results?nationalID=${encodeURIComponent(nid)}`,
+        { headers: { Accept: 'application/json' } }
+      );
+      if (!r.ok) return { status: r.status, names: [] as string[] };
+      const d = await r.json();
+      return { status: r.status, names: (d.patientSearchResults ?? []).map((x: any) => `${x.firstName ?? ''} ${x.lastName ?? ''}`.trim()) };
+    }, nationalId);
+
+    expect(readBack.status, 'patient search must answer 200').toBe(200);
+    expect(
+      readBack.names.join(' | '),
+      `new patient ${nationalId} did not read back from patient-search-results (url=${page.url()})`
+    ).toMatch(/QAPatient/i);
   });
 });
 
