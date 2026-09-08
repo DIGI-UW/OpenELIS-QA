@@ -111,26 +111,28 @@ function emptyState(): TestDataState {
  */
 export async function findPatientByNationalId(page: Page, nationalId: string): Promise<string | null> {
   try {
+    // ENDPOINTS CORRECTED (2026-09-08). The three URLs this used to try —
+    // /rest/patient?nationalId=, /rest/PatientSearch?, /rest/patient/search? —
+    // ALL answer 404 NoHandlerFoundException on v3.2.2.0. Every candidate
+    // failed `res.ok`, the loop fell through, and the finder returned null
+    // unconditionally. It could never report an existing patient, so the setup
+    // attempted creation on every single run.
+    //
+    // The endpoint the application itself uses is patient-search-results, which
+    // answers 200 with { paging, patientSearchResults: [...] }.
     const result = await page.evaluate(async (nid: string) => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const candidates = [
-        `/api/OpenELIS-Global/rest/patient?nationalId=${nid}`,
-        `/api/OpenELIS-Global/rest/PatientSearch?nationalId=${nid}`,
-        `/api/OpenELIS-Global/rest/patient/search?nationalId=${nid}`,
-      ];
-      for (const url of candidates) {
-        const res = await fetch(url, { headers: { 'X-CSRF-Token': csrf } });
-        if (res.ok) {
-          const data = await res.json();
-          // data may be an array of patients or a single patient object
-          const list = Array.isArray(data) ? data : (data.patients ?? data.results ?? [data]);
-          const match = list.find((p: any) =>
-            p.nationalId === nid || p.nationalIdNumber === nid
-          );
-          return match ? (match.patientPK ?? match.id ?? match.patientId ?? 'found') : null;
-        }
-      }
-      return null;
+      const res = await fetch(
+        `/api/OpenELIS-Global/rest/patient-search-results?searchValue=${encodeURIComponent(nid)}`,
+        { headers: { 'X-CSRF-Token': csrf, Accept: 'application/json' } }
+      );
+      if (!res.ok) return null;
+      const data = await res.json();
+      const list: any[] = data.patientSearchResults ?? [];
+      const match = list.find((p: any) =>
+        String(p.nationalId ?? p.nationalIdNumber ?? '') === nid
+      );
+      return match ? String(match.patientID ?? match.patientId ?? match.id ?? 'found') : null;
     }, nationalId);
     return result;
   } catch {
@@ -217,14 +219,36 @@ export async function createPatientViaUI(page: Page, state: TestDataState): Prom
       await page.waitForTimeout(2000);
     }
 
-    // Verify success (no error message, page didn't crash)
+    // ROUND-TRIP, NOT "THE PAGE DID NOT CRASH" (2026-09-08).
+    //
+    // This used to read the body text, check it did not contain "Internal
+    // Server Error", and then set patient.found = true. That is not a check
+    // that a patient was created — it is a check that the browser did not show
+    // one specific string. A live probe found ZERO patients matching either
+    // nationalId 0123456 or lastName "Sebby" while this function was reporting
+    // "Patient created successfully" on every run. Seventeen module specs
+    // import PATIENT_NAME / PATIENT_ID and were searching for someone who was
+    // never there, so their failures read as product defects.
+    //
+    // Success now means the patient READS BACK from the search endpoint. See
+    // harness ref 12.3: every write path needs a round-trip.
     const bodyText = await page.locator('body').innerText();
     if (bodyText.includes('Internal Server Error')) {
       state.setupErrors.push('createPatient: Internal Server Error after save');
       return false;
     }
 
+    const readBack = await findPatientByNationalId(page, TEST_PATIENT.nationalId);
+    if (!readBack) {
+      state.setupErrors.push(
+        `createPatient: save produced no error, but nationalId=${TEST_PATIENT.nationalId} ` +
+        'does not read back from /rest/patient-search-results — the patient was NOT created'
+      );
+      return false;
+    }
+
     state.patient.found = true;
+    state.patient.systemId = readBack === 'found' ? null : readBack;
     return true;
   } catch (e) {
     state.setupErrors.push(`createPatient: ${String(e)}`);
@@ -501,23 +525,34 @@ export async function runDataSetup(page: Page): Promise<TestDataState> {
     }
   }
 
-  // ── 2. Create primary order (HGB) ────────────────────────────────────────
-  if (state.patient.found) {
-    console.log('[data-setup] Creating primary order (HGB)...');
-    const acc1 = await createOrderViaUI(page, state, 'HGB', 'primaryOrder');
-    if (!acc1) {
-      console.warn('[data-setup] Primary order UI creation failed, trying API...');
-      await createOrderViaAPI(page, state, 'HGB', 'primaryOrder');
-    }
-  }
-
-  // ── 3. Create secondary order (WBC) ──────────────────────────────────────
-  if (state.patient.found) {
-    console.log('[data-setup] Creating secondary order (WBC)...');
-    const acc2 = await createOrderViaUI(page, state, 'WBC', 'secondaryOrder');
-    if (!acc2) {
-      console.warn('[data-setup] Secondary order UI creation failed, trying API...');
-      await createOrderViaAPI(page, state, 'WBC', 'secondaryOrder');
+  // ── 2 & 3. Create the two baseline orders ────────────────────────────────
+  //
+  // ORDER OF ATTEMPTS REVERSED (2026-09-08). This used to try the UI first and
+  // fall back to the API. On v3.2.2.0 the UI attempt no longer completes —
+  // `createOrder(HGB): locator.click: Test timeout exceeded` — and because a
+  // Playwright locator waits out the WHOLE test budget, the UI attempt consumed
+  // every second the setup had and the API fallback was never reached. The
+  // setup then failed on timeout, and since the module sweep depends on this
+  // project, a failure here skips all 866 tests.
+  //
+  // API first is also the better fixture design: a fixture should take the
+  // cheapest reliable path to the state a test needs, and drive the UI only
+  // when the UI itself is what is under test. Set DATA_SETUP_ORDER_UI=1 to
+  // restore the old order once the UI path is fixed.
+  const preferUI = process.env.DATA_SETUP_ORDER_UI === '1';
+  for (const [testName, slot] of [['HGB', 'primaryOrder'], ['WBC', 'secondaryOrder']] as const) {
+    if (!state.patient.found) break;
+    console.log(`[data-setup] Creating ${slot} (${testName})${preferUI ? '' : ' via API'}...`);
+    let acc: string | null = null;
+    if (preferUI) {
+      acc = await createOrderViaUI(page, state, testName, slot);
+      if (!acc) {
+        console.warn(`[data-setup] ${slot} UI creation failed, trying API...`);
+        acc = await createOrderViaAPI(page, state, testName, slot);
+      }
+    } else {
+      acc = await createOrderViaAPI(page, state, testName, slot);
+      if (!acc) console.warn(`[data-setup] ${slot} API creation failed (UI path is known-broken; not attempted)`);
     }
   }
 

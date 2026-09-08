@@ -15,6 +15,16 @@
  * rather than parsing testMatch regexes by hand — several configs build their
  * patterns dynamically, so static parsing gets the wrong answer.
  *
+ * SETUP PROJECTS COUNT TOO (added 2026-09-08). The audit above only looked at
+ * `*.spec.ts`, and that blind spot hid a worse bug for months: `data.setup.ts`
+ * — the fixture that creates the baseline patient "Abby Sebby" and the two
+ * orders whose accessions land in `.auth/test-data.json` — was run by NO
+ * config. Seventeen module specs import PATIENT_NAME / PATIENT_ID expecting
+ * that patient; a live probe found zero patients matching it. The whole module
+ * sweep ran against an instance with no baseline data, and every
+ * patient-dependent failure read as a product defect. A setup nothing runs is
+ * exactly the same defect as a spec nothing runs, so this now audits both.
+ *
  * A file may be intentionally unrunnable (a fixture, a helper that ends in
  * .spec.ts, something parked). Record it in .orphan-allowlist.json with a
  * reason. Everything else fails.
@@ -37,7 +47,7 @@ function walk(dir, out = []) {
     if (e.isDirectory()) {
       if (SKIP_DIRS.has(e.name)) continue;
       walk(join(dir, e.name), out);
-    } else if (e.name.endsWith('.spec.ts')) {
+    } else if (e.name.endsWith('.spec.ts') || e.name.endsWith('.setup.ts')) {
       out.push(relative(ROOT, join(dir, e.name)));
     }
   }
@@ -57,7 +67,7 @@ for (const cfg of configs) {
     out = e.stdout || '';
     if (!out) { console.warn(`  (warn) ${cfg} could not be listed — skipping`); continue; }
   }
-  for (const m of out.matchAll(/[A-Za-z0-9_./-]+\.spec\.ts/g)) {
+  for (const m of out.matchAll(/[A-Za-z0-9_./-]+\.(?:spec|setup)\.ts/g)) {
     const base = m[0].split('/').pop();
     if (!reachable.has(base)) reachable.set(base, []);
     if (!reachable.get(base).includes(cfg)) reachable.get(base).push(cfg);
@@ -78,7 +88,7 @@ if (process.argv.includes('--list')) {
   process.exit(0);
 }
 
-console.log(`${specs.length} spec files, ${configs.length} configs, ${specs.length - orphans.length} reachable.`);
+console.log(`${specs.length} spec + setup files, ${configs.length} configs, ${specs.length - orphans.length} reachable.`);
 
 if (dupes.length) {
   console.log(`\n${dupes.length} file(s) reachable from more than one config (not an error, but they run twice):`);
@@ -86,11 +96,13 @@ if (dupes.length) {
 }
 
 if (orphans.length) {
-  console.error(`\n✗ ${orphans.length} spec file(s) no config can run:\n`);
+  console.error(`\n✗ ${orphans.length} spec/setup file(s) no config can run:\n`);
   for (const o of orphans) console.error(`  ${o}`);
   console.error(`
   A spec no config runs is not coverage — it looks like coverage in a
-  directory listing and executes never. See modules.config.ts.
+  directory listing and executes never. A SETUP no config runs is worse: the
+  fixtures it creates are simply absent, and every test that depends on them
+  fails for a reason that looks like a product defect. See modules.config.ts.
 
   Fix by adding the file to a config's testMatch (modules.config.ts sweeps
   tests/*.spec.ts automatically, so a new module suite there needs nothing).
@@ -100,4 +112,4 @@ if (orphans.length) {
   process.exit(1);
 }
 
-console.log('✓ every spec file is reachable by at least one config.');
+console.log('✓ every spec and setup file is reachable by at least one config.');

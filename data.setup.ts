@@ -24,6 +24,27 @@ import { runDataSetup } from './helpers/data-factory';
 const BASE = process.env.BASE_URL || 'https://testing.openelis-global.org';
 
 setup('create baseline test data', async ({ page }) => {
+  // THIS SETUP MUST NOT FAIL THE RUN. `modules.config.ts` declares it as a
+  // dependency of the 866-test module sweep, and Playwright SKIPS a project
+  // whose dependency failed — so a broken fixture here would silently take the
+  // entire sweep with it, which is a far worse failure than missing baseline
+  // data. Specs already degrade gracefully through getTestData().
+  //
+  // So: catch everything, and make the state LOUD in the log instead. This is
+  // the one place in the repo where swallowing an error is correct, and it is
+  // only correct because the alternative is skipping every test.
+  try {
+    await createBaselineData(page);
+  } catch (e) {
+    console.log('\n╔══════════════════════════════════════════════════════════════╗');
+    console.log('║  BASELINE DATA SETUP FAILED — specs will degrade, not fail   ║');
+    console.log('╚══════════════════════════════════════════════════════════════╝');
+    console.log(String(e).split('\n').slice(0, 4).join('\n'));
+    console.log('Fix this before trusting any patient- or accession-dependent result.\n');
+  }
+});
+
+async function createBaselineData(page: import('@playwright/test').Page) {
   // Navigate to dashboard to establish session + CSRF token
   await page.goto(`${BASE}`);
   await page.waitForLoadState('networkidle');
@@ -52,4 +73,4 @@ setup('create baseline test data', async ({ page }) => {
   // Non-fatal: if setup fails, tests will gracefully skip their data-dependent
   // assertions rather than failing the entire run. This is enforced via the
   // `getTestData()` helper's fallback behaviour.
-});
+}
