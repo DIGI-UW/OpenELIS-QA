@@ -1562,12 +1562,11 @@ query.
 
 #### Two findings that came out of it
 
-**Search by national ID appears genuinely broken.** `?nationalId=` returns empty
+**Search by national ID appears genuinely broken.** *(RETRACTED — see 12.20: the parameter is nationalID, and neither UI case actually searched.)* `?nationalId=` returns empty
 for a national ID that demonstrably exists, and two independent UI cases —
 `TC-PAT-02` and `TC-H-DEEP-01`, both "search by national ID finds the known
 patient" — fail on it in separate runs. That is API repetition plus two UI
-paths agreeing. It still needs a clickthrough before it becomes a ticket, but it
-is the strongest candidate for a real defect this thread produced.
+paths agreeing. It was NOT a defect; 12.20 has the correction.
 
 **Three duplicate Abby Sebbys (503, 504, 505)** now exist, created while the
 finder was blind. The fixture is idempotent again and settles on 503, but any
@@ -1576,3 +1575,88 @@ case asserting a unique search result will see three rows.
 `tests/patient-management.spec.ts` after the fix: **10 passed, 7 failed,
 1 skipped** of 18 — and the remaining failures are about the product or about
 stale expectations, not about a patient that isn't there.
+
+### 12.20 — `.first()` on a loose name is the defect of the day, three times over
+
+Added 2026-09-08. Casey asked whether the UI could really create a patient, and
+following that question to the end turned up the same mistake in three
+unrelated places — and produced a defect claim I had to retract.
+
+#### The retraction first
+
+I told Casey that **search by national ID looked like a real product defect**:
+`?nationalId=0123456` returned nothing for an ID that three patients carried,
+and two independently-written cases (`TC-PAT-02`, `TC-H-DEEP-01`) failed on it
+across separate runs. API repetition plus two UI paths agreeing felt conclusive.
+
+It was wrong on both halves.
+
+**The parameter is `nationalID`** — capital I, capital D — captured from the
+request the search screen sends for itself:
+
+```
+GET /rest/patient-search-results?lastName=Sebby&firstName=Abby&STNumber=
+    &subjectNumber=&nationalID=&labNumber=&guid=&dateOfBirth=&gender=
+    &suppressExternalSearch=true
+```
+
+| query | results |
+|---|---|
+| `?nationalID=0123456` | **5** |
+| `?nationalId=0123456` | **0** |
+
+And **the two UI cases never searched at all** — see below. So neither leg of
+the evidence stood. The revalidation protocol's Method A is what caught it:
+running it properly, rather than treating "two tests agree" as confirmation,
+flipped the verdict. *Two tests failing the same way is not two pieces of
+evidence when both fail for the same test-side reason.*
+
+#### The shape, three times
+
+**Save on the patient form.** `/save|submit|add|create/i` + `.first()` →
+matched **"Additional Information"**, because `/add/i` matches "ADDitional".
+Clicked an accordion; Save never pressed.
+
+**Search on the patient screen.** `/search/i` + `.first()` → matched the Carbon
+header's `cds--header__action` search icon, which is rendered before page
+content and belongs to no form. Captured live: candidate 0 was the header
+action, candidate 1 was `cds--btn--tertiary` inside the form holding
+`#lastName`, and only the second issued a request. The first fired **nothing** —
+no request of any kind — so the case then asserted against a page that had never
+searched, and reported the absence as a product failure.
+
+**My own probe.** I filtered captured requests with `/patient-search/i` and saw
+an empty list, and briefly read that as "the app sends no request". It was my
+filter. Capturing everything is what exposed the real parameter list.
+
+#### What replaced it
+
+`clickFormSearch(page, fieldSelector)` in `helpers/test-helpers.ts` picks the
+`/^Search$/` button that shares an ancestor with the field just filled, and
+**warns loudly** when it has to fall back — a silent fallback is how the
+original bug survived. `TC-PAT-03` and `TC-H-DEEP-01` use it; both now pass.
+
+Two more things this settled:
+
+- **The form does not submit on Enter.** `TC-PAT-02` and `TC-PAT-03` both
+  pressed Enter. No request fires. Anything that "searches" by pressing Enter on
+  these screens has never searched.
+- **The patient search screen has no national-ID input.** Its fields are
+  `patientId`, `labNumber`, `lastName`, `firstName`, a date picker and gender
+  radios; the only "National ID" on the page is a results-table column header
+  (`cds--table-header-label`). The server supports the query, the screen does not
+  expose it. That is a product question — national ID is a primary patient
+  identifier in this domain — not a test failure, and it is in
+  `open-questions.md` rather than a ticket.
+
+`tests/patient-management.spec.ts`: **13 passed, 4 failed, 1 skipped** of 18,
+from 10/7/1 before this pass.
+
+#### The rule
+
+**Anchor the name, and never `.first()` a name that could match twice.** When a
+screen genuinely has two controls of the same name, pick by relationship — the
+one inside the form you filled — not by document order. And when a locator that
+"can't fail" produces no effect, check what it actually resolved to before
+concluding the application is broken: on all three occasions here, the button
+was found, visible, enabled, clicked without error, and wrong.

@@ -653,3 +653,54 @@ export async function selectSampleType(page: Page, typeId: string): Promise<void
     await typeSelect.selectOption(typeId);
   }
 }
+
+/**
+ * Click the Search button that BELONGS TO the form holding `fieldSelector`.
+ *
+ * Why this exists: OpenELIS screens carry more than one button whose accessible
+ * name matches /search/i — the Carbon header has a `cds--header__action` search
+ * icon, and the patient screen also has "Search for Patient" and
+ * "External Search" alongside the form's own "Search". Every previous version of
+ * this interaction used
+ *
+ *     getByRole('button', { name: /search/i }).first()
+ *
+ * which resolves to the HEADER action, clicks it, fires no request, and leaves
+ * the test asserting on a page that never searched. Captured live on
+ * 2026-09-08: candidate 0 was `cds--header__action` (outside any form),
+ * candidate 1 was `cds--btn--tertiary` inside the form with `#lastName`, and
+ * only the second one issued
+ *   GET /rest/patient-search-results?lastName=…&firstName=…&nationalID=…
+ *
+ * This is the same defect shape as the patient-form Save button, which matched
+ * "Additional Information" through `/add/i`. THE RULE: anchor the name, and
+ * when a screen has more than one button of that name, pick the one that shares
+ * an ancestor with the field you just filled — never `.first()`.
+ */
+export async function clickFormSearch(page: Page, fieldSelector: string): Promise<boolean> {
+  const candidates = page.getByRole('button', { name: /^\s*Search\s*$/i });
+  const n = await candidates.count();
+  for (let i = 0; i < n; i++) {
+    const owns = await candidates
+      .nth(i)
+      .evaluate((el, sel) => {
+        const form = (el as Element).closest('form, section, .cds--form, div[class*="Search"]');
+        return !!(form && form.querySelector(sel));
+      }, fieldSelector)
+      .catch(() => false);
+    if (owns) {
+      await candidates.nth(i).click();
+      return true;
+    }
+  }
+  // No button shares the field's form. Fall back to the LAST match rather than
+  // the first: the header action is rendered before page content, so last() is
+  // the better guess — but say so, because a silent fallback is how the
+  // original bug survived.
+  if (n > 0) {
+    console.warn(`clickFormSearch: no Search button shares a form with ${fieldSelector}; using last() of ${n}`);
+    await candidates.last().click();
+    return true;
+  }
+  return false;
+}
