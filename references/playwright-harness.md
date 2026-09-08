@@ -1660,3 +1660,35 @@ one inside the form you filled — not by document order. And when a locator tha
 "can't fail" produces no effect, check what it actually resolved to before
 concluding the application is broken: on all three occasions here, the button
 was found, visible, enabled, clicked without error, and wrong.
+
+#### "Search for Patient" has no selected state at all (verified 2026-09-08)
+
+Casey flagged that the patient-search mode must be selected first and that the
+control is *not visually distinctive*. Measuring it is worse than that phrasing
+suggests — there is **no state signal of any kind**:
+
+```
+before click: { cls: "cds--btn cds--btn--primary", aria-pressed: null,
+                aria-selected: null, aria-current: null }
+after  click: { cls: "cds--btn cds--btn--primary", aria-pressed: null,
+                aria-selected: null }
+```
+
+The class string is byte-identical before and after, and none of the three
+state attributes is set. Consequences, in order of who they hurt:
+
+- **A user cannot tell which mode is active** — the only "primary" styling on
+  the row is permanent, not selection feedback.
+- **A screen reader is told nothing.** A control that changes mode without
+  `aria-pressed` (or a tab with `aria-selected`) fails WCAG 2.1 §4.1.2
+  *Name, Role, Value*. This is a real accessibility defect, not a nicety.
+- **A test cannot assert selection either.** `clickFormSearch` can only verify
+  the mode *behaviourally* — click it, then check that the form's Search
+  produced a request. That is why the helper clicks it unconditionally rather
+  than checking first: there is nothing to check.
+
+**Order is safe**, which was the risk worth measuring: clicking the mode button
+*after* the fields are filled does not clear them. Verified end-to-end —
+`#lastName` still held "Sebby" after the mode click, the helper returned true,
+and the search returned 3 rows with the real request. So `fill → clickFormSearch`
+is the correct sequence and needs no reordering.
