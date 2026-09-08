@@ -1829,3 +1829,172 @@ Also fixed: TC-PAT-04's identity assertion first failed because it read
 patient header renders, so it captured the SideNav and nothing else. Use
 `expect(locator).toContainText(...)`, which retries; a one-shot `innerText()`
 snapshot is a race dressed up as an assertion.
+
+### 12.23 The merge case now really merges, and seeds its own victim
+
+**2026-09-08, after Casey's ruling:** *"destructive tests are fine, this will only
+be run against a testing instance."* So TC-MP-04 executes the merge. The
+interesting problem was never permission — it was **repeatability**.
+
+The merge cases used to lean on the five duplicate "Abby Sebby" records that
+happen to exist on `testing`. A merge case that actually merges *consumes* them.
+After one or two runs there would be nothing left to merge, and the case would
+start failing for a reason that has nothing to do with the product: it would have
+destroyed its own precondition. Generalising: **a destructive test must create
+what it destroys.** TC-MP-04 seeds a fresh duplicate pair, merges that, and the
+merge is the pair's cleanup.
+
+#### Both payloads, captured (12.4)
+
+Patient creation — off the wire from the Add Patient form:
+
+```
+POST /api/OpenELIS-Global/rest/PatientManagement
+Content-Type: application/json   Accept-Language: en   X-CSRF-Token: <localStorage['CSRF']>
+{"patientUpdateStatus":"ADD","nationalId":…,"lastName":…,"firstName":…,
+ "gender":"F","birthDateForDisplay":"01/01/1990", …all-empty rest…}
+-> 200 {"patientId":"515","status":"success"}
+```
+
+The captured request also carried a stray `"date-picker-default-id"` key next to
+`birthDateForDisplay` — the form's own field id leaking into its payload. Omitting
+it is verified good (200, patient created), so `createPatientViaAPI` omits it.
+Two POSTs seed a duplicate pair in about a second, which is what makes per-test
+seeding affordable inside the 30-second policy.
+
+Merge execution:
+
+```
+POST /api/OpenELIS-Global/rest/patient/merge/execute
+{"patient1Id":"514","patient2Id":"515","primaryPatientId":"514","reason":"…","confirmed":true}
+```
+
+After it succeeds the app navigates to `/PatientManagement/<primaryId>`.
+
+#### What the merge wizard gates, and how it is id'd
+
+| Step | Hooks | Gate |
+|---|---|---|
+| 1 Select Patients | `#patient<N>-lastName`, `input#patient<N>-select-<patientId>` | Next Step disabled until two distinct records; panel 2 excludes panel 1's pick |
+| 2 Select Primary | `#patient-1`, `#patient-2` | Next Step disabled until a primary is chosen; warns "marked as merged and inactive" |
+| 3 Confirm Merge | `#mergeReason`, `label[for="confirmMerge"]`, `button.cds--btn--danger` | **two independent gates** — a reason AND the acknowledgement; states "cannot be undone" |
+
+This is a well-built destructive flow, which is worth saying out loud given the
+state of the tests that were pointed at it. TC-MP-04 asserts all three gates,
+including that a reason *alone* does not unlock the danger button.
+
+#### Duplicate id on the create form
+
+`/PatientManagement/new` renders **two** elements with `id="date-picker-default-id"`
+— a `div.cds--form-item` wrapper and the input inside it. `document.querySelector`
+returns the div, so a naive value-setter throws. Use `input#date-picker-default-id`
+(the factory's existing `.last()` works for the same reason). Duplicate ids are an
+HTML validity error and a screen-reader hazard; noted for the product, not claimed
+as a defect here. The same screen also renders **two** buttons named `Save`, only
+one visible — another reason never to use `.first()` on a name (12.22).
+
+#### The last-name search is FUZZY — never assert an exact result set from it
+
+Found while reading TC-MP-04's own log output. A query for `lastName=QA AUTO Smith`
+returns **every** `qa-auto-*` record on the instance: `QA-AUTO Chain`,
+`qa-auto-probe`, `QaautoSmith`, `QA-AUTO-Davis`… The endpoint normalises case and
+punctuation and matches loosely, so it is not prefix matching and not exact
+matching.
+
+This bit immediately. TC-MP-02 first asserted that the merge search returned
+**exactly** its seeded pair. It passed — because it runs before the other two
+merge cases seed theirs. On the *second* run it would have found the first run's
+leftovers and failed, and the failure would have looked like a product
+regression. A test that passes only on a clean instance is a test that will lie
+to you later. The assertion is now a subset check per seeded id.
+
+It is soundex-like, not merely case-insensitive. Two consecutive attempts at a
+"unique" seeded last name both failed:
+
+1. `QAAutoMRG1788898067465248` → **400** `{"error":"lastName: invalid name format,
+   possibly illegal character"}`. Names reject digits.
+2. Transliterating the stamp into letters (`QAAutoMRGBHIIJ…`) made the name unique
+   but not unique *to the search*. Every `QAAuto…` name matched every other one,
+   so each run's panel search returned all previous runs' seeds, the pair got
+   pushed onto page 2 of the results, and its radio was never rendered. That is
+   what a 30-second `waiting for #patient1-select-530` timeout meant — not a
+   Carbon interception (12.22), not a slow server, just a result set the pair had
+   fallen out of.
+
+**How a destructive test identifies its own records here.** The merge panel's
+"Patient Id" field does not search the internal patient id — it matches the
+**subject number (Unique Health ID) by substring**. Verified: searching `530`
+returned patient 439, whose subject number merely *contains* `530`. So the seeder
+sets a fresh long digit subject number (`99<timestamp>`) on both records, and the
+panels search on that. It returned exactly the seeded pair and nothing else, and
+it is immune to both soundex and accumulation. The last name is now a constant,
+used for display only.
+
+General rule: **identify seeded records by a field that is matched exactly (or by
+a long unique substring), never by name.** Names on this app are for driving the
+UI.
+
+#### Finding: the primary-selection step labels both candidates identically
+
+Step 2 labels each candidate with its **subject number** when it has one, and
+falls back to the internal patient id when it does not — so the same screen reads
+`Patient 1: 514 - Alpha QAMergeProbe` for a record with no subject number and
+`Patient 1: 991788898821595883 - Alpha QaautoMRG` for one with.
+
+The consequence lands exactly where it hurts: a duplicate pair usually *shares*
+its identifier — that is generally why someone is merging it — so step 2 shows
+both candidates prefixed with the **same** string. On a real pair the only thing
+distinguishing "Patient 1" from "Patient 2" is the given name, on the screen where
+the user decides which record survives and which is marked inactive. Worth raising
+with the merge UX; it is what forced this case to assert on
+`Patient 1: <subjectNumber> - Alpha` rather than on an id.
+
+(Step 2 also shows a useful per-candidate summary — Active Orders / Total Results
+/ Samples, and an Identifiers block — so the data needed to choose is there. It is
+the label that does not distinguish.)
+
+#### Observation from the merge, NOT a defect claim
+
+After a successful merge of 515 into 514, on the same endpoint:
+
+- `?nationalID=<shared id>` returns **`[514]`** — correctly consolidated.
+- `?lastName=<shared name>` returns **`[514, 515]`** — the merged-away record is
+  still there.
+
+Stable across three consecutive repeats, on a pair with no other similar records
+present — which matters, because the fuzzy matching above means a longer result
+list proves nothing on its own. If 515 is "merged and inactive", a user searching
+by name can still find and select it, which defeats the merge.
+
+Revalidation status: **two of three gates cleared.** 3× API on a clean pair, and
+reproduced on a different pair in each of two consecutive full runs, every one of
+which uses a fresh browser context — that is the fresh-tab gate. What is still
+owed is a genuine **re-login**: the suite authenticates from saved storage state,
+so no run so far has actually re-authenticated. Until that third gate is cleared
+this stays an observation, because 12.14's lesson stands — I have called a search
+parameter a defect before and been wrong twice over. TC-MP-04 asserts the
+national-ID outcome and *logs* the last-name result with an `OBSERVATION` marker,
+naming only its own pair's record rather than quoting the raw list. Promote it to
+an assertion once the re-login gate is cleared.
+
+#### Repeatability, demonstrated rather than asserted
+
+The seeding design exists to make a destructive case re-runnable, so it was worth
+proving rather than reasoning about. Two consecutive full runs of the file:
+
+```
+pass 1   TC-MP-04: merged 558 into 557; nationalID search -> [557]     18 passed (1.3m)
+pass 2   TC-MP-04: merged 565 into 564; nationalID search -> [564]     18 passed (1.3m)
+```
+
+Different pair each pass, merge executed each pass, no state carried between them.
+A destructive test that has only ever been run once is not a verified test.
+
+#### Still open: order creation in the fixture
+
+Both runs logged `[data-setup] primaryOrder API creation failed`. That is the
+known 12.21 item, not a regression from this work: `createOrderViaAPI` composes
+its payload by hand, which 12.4 says not to do. The capture technique used above
+for `PatientManagement` and `patient/merge/execute` is exactly what that needs —
+drive the order wizard once in the browser with a request interceptor installed
+and keep what it actually sends. That remains its own piece of work.

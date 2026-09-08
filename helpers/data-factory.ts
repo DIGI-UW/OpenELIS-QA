@@ -651,3 +651,172 @@ export async function runDataSetup(page: Page): Promise<TestDataState> {
 
   return state;
 }
+
+// ---------------------------------------------------------------------------
+// Duplicate-pair seeding (for the patient-merge cases)
+// ---------------------------------------------------------------------------
+
+export interface DuplicatePair {
+  /** The national ID both records share. Fresh per call, so runs never collide. */
+  nationalId: string;
+  /**
+   * The unique health ID (subject number) both records share. THIS is what the
+   * merge screen's panels should search on: its "Patient Id" field matches the
+   * subject number by substring, so a fresh long digit string finds exactly this
+   * pair. Do not identify the pair by last name — see the soundex note below.
+   */
+  subjectNumber: string;
+  /** The last name both records share. For display only, not for identification. */
+  lastName: string;
+  /** The two patient ids, in creation order. */
+  ids: [string, string];
+}
+
+/**
+ * Create one patient through the REST API.
+ *
+ * PAYLOAD CAPTURED, NOT COMPOSED (harness ref 12.4). This is the exact body
+ * the Add Patient form sends, taken off the wire in Chrome on testing v3.2.2.0
+ * on 2026-09-08:
+ *
+ *   POST /api/OpenELIS-Global/rest/PatientManagement
+ *   Content-Type: application/json   Accept-Language: en   X-CSRF-Token: <token>
+ *   {"patientUpdateStatus":"ADD","nationalId":…,"lastName":…,"firstName":…,
+ *    "gender":"F","birthDateForDisplay":"01/01/1990", …all-empty rest…}
+ *   -> 200 {"patientId":"515","status":"success"}
+ *
+ * The captured request also carried a stray `"date-picker-default-id"` key
+ * alongside `birthDateForDisplay` — a UI artifact, the form's own field id
+ * leaking into the payload. It is omitted here, and the omission is verified:
+ * the request above without it answered 200 and created patient 515.
+ */
+export async function createPatientViaAPI(
+  page: Page,
+  p: { nationalId: string; firstName: string; lastName: string; subjectNumber?: string; gender?: string; dateOfBirth?: string }
+): Promise<{ id: string | null; detail: string }> {
+  return page.evaluate(async (pt) => {
+    const csrf = localStorage.getItem('CSRF') || '';
+    const body = {
+      patientUpdateStatus: 'ADD',
+      nationalId: pt.nationalId,
+      subjectNumber: pt.subjectNumber ?? '',
+      lastName: pt.lastName,
+      firstName: pt.firstName,
+      aka: '',
+      streetAddress: '',
+      city: '',
+      primaryPhone: '',
+      email: '',
+      gender: pt.gender ?? 'F',
+      birthDateForDisplay: pt.dateOfBirth ?? '01/01/1990',
+      commune: '',
+      education: '',
+      maritialStatus: '',
+      nationality: '',
+      healthDistrict: '',
+      healthRegion: '',
+      otherNationality: '',
+      occupation: '',
+      customNotes: '',
+      targetDiseaseProgramme: '',
+      photo: '',
+      idDocuments: [] as unknown[],
+      patientContact: { person: { firstName: '', lastName: '', primaryPhone: '', email: '' } },
+    };
+    const r = await fetch('/api/OpenELIS-Global/rest/PatientManagement', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept-Language': 'en', 'X-CSRF-Token': csrf },
+      body: JSON.stringify(body),
+    });
+    const text = await r.text().catch(() => '');
+    let d: any = null;
+    try { d = JSON.parse(text); } catch { /* not json */ }
+    return {
+      id: d && d.status === 'success' ? String(d.patientId) : null,
+      // Diagnostics, because "first=null, second=null" is not a bug report.
+      // A 403 with "CSRF token missing or invalid" means the token was not in
+      // localStorage yet (see apiShapes.ts); anything else is the server's own
+      // complaint and should be read, not guessed at.
+      detail: `status=${r.status} csrf=${csrf ? 'present' : 'MISSING'} origin=${location.origin} body=${text.slice(0, 200)}`,
+    };
+  }, p);
+}
+
+/**
+ * Seed two patients that share a national ID and a last name — i.e. exactly the
+ * duplicate a person would open the merge screen to resolve.
+ *
+ * WHY SEED RATHER THAN USE THE ABBY SEBBYS. The merge cases used to lean on the
+ * five duplicate "Abby Sebby" records on the shared instance. A merge case that
+ * actually merges would consume those, and after one or two runs there would be
+ * nothing left to merge — the test would destroy its own precondition and start
+ * failing for reasons that have nothing to do with the product. A fresh pair per
+ * test is repeatable forever, and TC-MP-04 merging it is the pair's cleanup.
+ *
+ * Cheap on purpose: two API POSTs, well inside the 30-second policy.
+ */
+export async function seedDuplicatePair(page: Page, tag = 'MRG'): Promise<DuplicatePair> {
+  const stamp = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
+  const nationalId = `QA${tag}${stamp}`;
+  // Identification lives in the SUBJECT NUMBER, not the name. Two earlier
+  // attempts failed and both are worth remembering:
+  //
+  //  1. A digit-bearing last name is rejected outright:
+  //     400 {"error":"lastName: invalid name format, possibly illegal character"}
+  //  2. Transliterating the stamp into letters made the name unique but NOT
+  //     unique to the search. The last-name search is soundex-like — every
+  //     `QAAuto…` name collided with every other one, so each run's search
+  //     returned all previous runs' seeds, the pair got pushed onto page 2 of
+  //     the results, and its radio was never rendered. That is what a
+  //     "waiting for #patient1-select-530" timeout meant.
+  //
+  // The merge panel's "Patient Id" field matches the subject number by
+  // substring (verified: searching "530" returned a record whose subject number
+  // merely CONTAINS 530), so a fresh long digit string identifies exactly this
+  // pair and nothing else. The last name can therefore be a constant.
+  const subjectNumber = `99${stamp}`;
+  const lastName = `Qaauto${tag}`;
+  // The POST is same-origin and needs localStorage['CSRF'], so the page must
+  // already be on the app. Make that a precondition with a readable message
+  // rather than letting it surface as a null id.
+  if (!/^https?:/.test(page.url()) || page.url().includes('about:blank')) {
+    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
+  }
+  const first = await createPatientViaAPI(page, { nationalId, subjectNumber, firstName: 'Alpha', lastName });
+  const second = first.id
+    ? await createPatientViaAPI(page, { nationalId, subjectNumber, firstName: 'Beta', lastName })
+    : { id: null, detail: 'not attempted' };
+  if (!first.id || !second.id) {
+    throw new Error(
+      `seedDuplicatePair: could not create the pair for nationalId=${nationalId}\n` +
+        `  first:  ${first.detail}\n  second: ${second.detail}`
+    );
+  }
+  return { nationalId, subjectNumber, lastName, ids: [first.id, second.id] };
+}
+
+/** Patient ids the search endpoint returns for a national ID. */
+export async function findPatientIdsByNationalId(page: Page, nationalId: string): Promise<string[]> {
+  return page.evaluate(async (nid) => {
+    const r = await fetch(
+      `/api/OpenELIS-Global/rest/patient-search-results?nationalID=${encodeURIComponent(nid)}&lastName=&firstName=`,
+      { headers: { Accept: 'application/json' } }
+    );
+    if (!r.ok) return [];
+    const d = await r.json().catch(() => null);
+    return ((d && d.patientSearchResults) || []).map((p: any) => String(p.patientID ?? p.patientId));
+  }, nationalId);
+}
+
+/** Patient ids the search endpoint returns for a last name. */
+export async function findPatientIdsByLastName(page: Page, lastName: string): Promise<string[]> {
+  return page.evaluate(async (ln) => {
+    const r = await fetch(
+      `/api/OpenELIS-Global/rest/patient-search-results?lastName=${encodeURIComponent(ln)}&firstName=`,
+      { headers: { Accept: 'application/json' } }
+    );
+    if (!r.ok) return [];
+    const d = await r.json().catch(() => null);
+    return ((d && d.patientSearchResults) || []).map((p: any) => String(p.patientID ?? p.patientId));
+  }, lastName);
+}

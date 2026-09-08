@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { seedDuplicatePair, findPatientIdsByNationalId, findPatientIdsByLastName } from '../helpers/data-factory';
 import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, QA_ID_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, navigateToAdminItem, getDateRange, getFutureDateRange, clickFormSearch, checkCarbonRadio } from '../helpers/test-helpers';
 
 /**
@@ -339,10 +340,20 @@ test.describe('Suite AC — Merge Patient', () => {
   // id'd patient<N>-select-<patientId>. Carbon's radio label intercepts pointer
   // events, so they must be checked through checkCarbonRadio.
 
-  /** Search one merge panel by last name and return the patient ids it offered. */
-  async function searchMergePanel(page, panel: 1 | 2, lastName: string): Promise<string[]> {
-    const field = `#patient${panel}-lastName`;
-    await page.locator(field).fill(lastName);
+  /**
+   * Search one merge panel by the seeded pair's subject number and return the
+   * patient ids it offered.
+   *
+   * NOT by last name. The last-name search is soundex-like, so every seeded
+   * `Qaauto…` record matches every other one: each run's search returned all
+   * previous runs' seeds, which pushed the pair onto page 2 of the results and
+   * left its radio unrendered — a 30s "waiting for #patient1-select-530"
+   * timeout. The panel's "Patient Id" field matches the subject number by
+   * substring, so a fresh long digit string finds exactly this pair.
+   */
+  async function searchMergePanel(page, panel: 1 | 2, subjectNumber: string): Promise<string[]> {
+    const field = `#patient${panel}-patientId`;
+    await page.locator(field).fill(subjectNumber);
     // clickFormSearch, not nth(). My first attempt used
     // getByRole('button', { name: /^Search$/ }).nth(panel - 1) on the reasoning
     // that there is one Search per panel in panel order. There is a THIRD:
@@ -355,7 +366,7 @@ test.describe('Suite AC — Merge Patient', () => {
     const radios = page.locator(`input[id^="patient${panel}-select-"]`);
     await expect(
       radios.first(),
-      `merge panel ${panel} returned no results for last name "${lastName}"`
+      `merge panel ${panel} returned no results for subject number "${subjectNumber}"`
     ).toBeAttached({ timeout: 15_000 });
     const ids: string[] = [];
     for (const r of await radios.all()) {
@@ -396,51 +407,57 @@ test.describe('Suite AC — Merge Patient', () => {
     }
   });
 
-  test('TC-MP-02: Merge search surfaces the duplicate patients', async ({ page }) => {
+  test('TC-MP-02: Merge search surfaces both records of a duplicate', async ({ page }) => {
+    const pair = await seedDuplicatePair(page);
     await page.goto(`${BASE}/PatientMerge`, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#patient1-lastName')).toBeVisible({ timeout: 15_000 });
 
-    const ids = await searchMergePanel(page, 1, 'Sebby');
+    const ids = await searchMergePanel(page, 1, pair.subjectNumber);
 
-    // This is the point of the case: merge exists because duplicates exist, so
-    // a last name with known duplicates must return more than one record.
+    // The point of the case: merge exists because duplicates exist, so a search
+    // that matches a duplicate must return both of its records — and, searching
+    // on the pair's own subject number, ONLY those two. This is an exact-set
+    // assertion because the subject number identifies the pair exactly; the
+    // equivalent assertion on a last-name search would be wrong (soundex —
+    // see searchMergePanel).
     expect(
-      ids.length,
-      `last name "Sebby" must return more than one patient for merge to be testable (got ${JSON.stringify(ids)})`
-    ).toBeGreaterThan(1);
-    expect(new Set(ids).size, 'each result must be a distinct patient id').toBe(ids.length);
+      ids.slice().sort(),
+      `merge search for subject number ${pair.subjectNumber} must return exactly the seeded pair`
+    ).toEqual(pair.ids.slice().sort());
 
-    // And the shared national ID must be visible in the results, because that
-    // is the only thing on screen that tells a user these are duplicates.
+    // And the shared national ID must be on screen, because it is the only
+    // thing here that tells a user these two records are the same person.
     await expect(
       page.locator('table'),
-      `merge results must show the national ID that these ${ids.length} records share`
-    ).toContainText(PATIENT_ID);
-    console.log(`TC-MP-02: ${ids.length} candidates sharing national ID ${PATIENT_ID}: ${ids.join(', ')}`);
+      'merge results must show the national ID the two records share'
+    ).toContainText(pair.nationalId);
+    console.log(`TC-MP-02: ${pair.ids.join(' + ')} share national ID ${pair.nationalId}`);
   });
 
   test('TC-MP-03: Selecting two patients enables Next Step', async ({ page }) => {
+    const pair = await seedDuplicatePair(page);
     await page.goto(`${BASE}/PatientMerge`, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#patient1-lastName')).toBeVisible({ timeout: 15_000 });
 
     const nextStep = page.getByRole('button', { name: /^\s*Next Step\s*$/ });
     await expect(nextStep, 'Next Step must start disabled').toBeDisabled();
 
-    const ids = await searchMergePanel(page, 1, 'Sebby');
-    expect(ids.length, 'need at least two candidates to select two patients').toBeGreaterThan(1);
-    await checkCarbonRadio(page, page.locator(`#patient1-select-${ids[0]}`));
+    await searchMergePanel(page, 1, pair.subjectNumber);
+    await checkCarbonRadio(page, page.locator(`#patient1-select-${pair.ids[0]}`));
 
-    // One panel filled is still not enough — this is the guard TC-BE-DEEP-02
+    // One panel filled is still not enough — the same guard TC-BE-DEEP-02
     // asserts from the other direction.
     await expect(
       nextStep,
       'Next Step must stay disabled with only the first patient selected'
     ).toBeDisabled();
 
-    const ids2 = await searchMergePanel(page, 2, 'Sebby');
-    const second = ids2.find((id) => id !== ids[0]);
-    expect(second, `second panel offered no patient other than ${ids[0]}`).toBeTruthy();
-    await checkCarbonRadio(page, page.locator(`#patient2-select-${second}`));
+    const ids2 = await searchMergePanel(page, 2, pair.subjectNumber);
+    // The second panel excludes whatever the first panel already took.
+    expect(ids2, 'the second panel must not offer the patient already selected in the first')
+      .not.toContain(pair.ids[0]);
+    expect(ids2, 'the second panel must still offer the other half of the pair').toContain(pair.ids[1]);
+    await checkCarbonRadio(page, page.locator(`#patient2-select-${pair.ids[1]}`));
 
     await expect(
       nextStep,
@@ -450,62 +467,127 @@ test.describe('Suite AC — Merge Patient', () => {
       page.locator('body'),
       'neither panel should still say "No patient selected"'
     ).not.toContainText('No patient selected');
-    console.log(`TC-MP-03: selected ${ids[0]} and ${second}`);
+    console.log(`TC-MP-03: selected ${pair.ids[0]} and ${pair.ids[1]}`);
   });
 
-  test('TC-MP-04: Merge reaches the confirmation step and stops there', async ({ page }) => {
-    // DELIBERATE BOUNDARY. This case does NOT execute the merge.
+  test('TC-MP-04: A merge completes and consolidates the duplicate', async ({ page }) => {
+    // THIS CASE REALLY MERGES. It seeds its own duplicate pair first, so it
+    // never consumes the shared instance's Abby Sebby records and stays
+    // repeatable: the pair it destroys is the pair it created.
     //
-    // A merge marks one patient inactive and relinks all of its data to the
-    // other. That is a non-reversible write, on an instance whose data we share
-    // with everyone else testing, and the duplicate Abby Sebbys are useful
-    // precisely because they are duplicates. So this case walks the wizard up
-    // to "Confirm Merge" and cancels. What it verifies is that the destructive
-    // step is properly gated and properly explained — which is the part a
-    // person's safety actually depends on.
+    // Every locator and both payloads below were captured on the wire in Chrome
+    // on testing v3.2.2.0, 2026-09-08 (harness ref 12.23).
+    const pair = await seedDuplicatePair(page);
+    expect(
+      (await findPatientIdsByNationalId(page, pair.nationalId)).slice().sort(),
+      'the seeded pair must both exist before the merge'
+    ).toEqual(pair.ids.slice().sort());
+
     await page.goto(`${BASE}/PatientMerge`, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#patient1-lastName')).toBeVisible({ timeout: 15_000 });
 
-    const ids = await searchMergePanel(page, 1, 'Sebby');
-    expect(ids.length, 'need at least two candidates').toBeGreaterThan(1);
-    await checkCarbonRadio(page, page.locator(`#patient1-select-${ids[0]}`));
-
-    const ids2 = await searchMergePanel(page, 2, 'Sebby');
-    const second = ids2.find((id) => id !== ids[0]);
-    expect(second, `second panel offered no patient other than ${ids[0]}`).toBeTruthy();
-    await checkCarbonRadio(page, page.locator(`#patient2-select-${second}`));
+    // Step 1 — pick the two records.
+    await searchMergePanel(page, 1, pair.subjectNumber);
+    await checkCarbonRadio(page, page.locator(`#patient1-select-${pair.ids[0]}`));
+    await searchMergePanel(page, 2, pair.subjectNumber);
+    await checkCarbonRadio(page, page.locator(`#patient2-select-${pair.ids[1]}`));
 
     const nextStep = page.getByRole('button', { name: /^\s*Next Step\s*$/ });
     await expect(nextStep).toBeEnabled({ timeout: 15_000 });
     await nextStep.click();
 
-    // Step 2 must say what a merge does before asking which record survives.
+    // Step 2 — the primary choice, and the warning that earns it.
     const shell = page.locator('body');
     await expect(
       shell,
-      'the primary-selection step must warn what a merge does to the non-primary record'
+      'the primary-selection step must say what happens to the non-primary record'
     ).toContainText(/marked as merged and inactive/i, { timeout: 15_000 });
+    // The wizard labels each candidate with its SUBJECT NUMBER when it has one,
+    // falling back to the internal patient id when it does not — so asserting
+    // `Patient 1: <patientId>` fails on a seeded pair. And because a duplicate
+    // pair shares its subject number, both candidates carry the SAME identifier
+    // string here; the only thing distinguishing them on screen is the given
+    // name. Assert the pair including the name, and see harness 12.23 for why
+    // that is also a finding rather than just a test detail.
     await expect(
       shell,
-      'the primary-selection step must ask which record becomes primary'
-    ).toContainText(/which patient should become the primary record/i);
-    await expect(shell, 'both candidates must be shown side by side').toContainText(`Patient 1: ${ids[0]}`);
-    await expect(shell, 'both candidates must be shown side by side').toContainText(`Patient 2: ${second}`);
-
-    // And the next destructive step must stay gated until a primary is chosen.
+      'the first candidate must be labelled with its identifier and name'
+    ).toContainText(`Patient 1: ${pair.subjectNumber} - Alpha`);
     await expect(
-      page.getByRole('button', { name: /^\s*Next Step\s*$/ }),
+      shell,
+      'the second candidate must be labelled with its identifier and name'
+    ).toContainText(`Patient 2: ${pair.subjectNumber} - Beta`);
+    await expect(
+      nextStep,
       'Next Step must be disabled until a primary record is chosen'
     ).toBeDisabled();
-    await expect(
-      page.getByRole('button', { name: /^\s*Back\s*$/ }),
-      'the user must be able to go back from the primary-selection step'
-    ).toBeVisible();
 
-    // Leave the instance as we found it.
-    await page.getByRole('button', { name: /^\s*Cancel\s*$/ }).click();
-    await page.waitForURL(/\/PatientManagement/, { timeout: 15_000 });
-    console.log(`TC-MP-04: reached the confirmation gate for ${ids[0]} + ${second} and cancelled without merging`);
+    await checkCarbonRadio(page, page.locator('#patient-1'));
+    await expect(nextStep, 'choosing a primary must unlock the next step').toBeEnabled({ timeout: 10_000 });
+    await nextStep.click();
+
+    // Step 3 — the destructive gate. THREE conditions, all asserted, because
+    // this is the screen a person's safety actually rests on.
+    const confirmMerge = page.locator('button.cds--btn--danger').filter({ hasText: /Confirm Merge/i });
+    await expect(
+      shell,
+      'the confirmation step must state that the merge cannot be undone'
+    ).toContainText(/cannot be undone/i, { timeout: 15_000 });
+    await expect(shell, 'the summary must name the primary record').toContainText(`Primary Patient:`);
+    await expect(shell, 'the summary must name the record being merged away').toContainText(`Merging From:`);
+    await expect(
+      confirmMerge,
+      'Confirm Merge must be disabled before a reason is given and the acknowledgement ticked'
+    ).toBeDisabled();
+
+    await page.locator('#mergeReason').fill('QA_AUTO_ merge of a seeded duplicate pair (TC-MP-04).');
+    await expect(
+      confirmMerge,
+      'a reason alone must not unlock Confirm Merge — the acknowledgement is a separate gate'
+    ).toBeDisabled();
+
+    await page.locator('label[for="confirmMerge"]').click();
+    await expect(
+      confirmMerge,
+      'Confirm Merge must unlock only once both the reason and the acknowledgement are given'
+    ).toBeEnabled({ timeout: 10_000 });
+
+    // Execute. POST /rest/patient/merge/execute
+    // {"patient1Id","patient2Id","primaryPatientId","reason","confirmed":true}
+    await confirmMerge.click();
+
+    // The app lands on the surviving record.
+    await page.waitForURL(new RegExp(`/PatientManagement/${pair.ids[0]}(?:[/?#]|$)`), { timeout: 30_000 });
+
+    // THE OUTCOME ASSERTION. A national-ID search must now return the primary
+    // and only the primary — that is what "consolidated" has to mean.
+    await expect
+      .poll(async () => (await findPatientIdsByNationalId(page, pair.nationalId)).join(','), {
+        timeout: 15_000,
+      })
+      .toBe(pair.ids[0]);
+
+    // OBSERVATION, deliberately not an assertion (yet). A last-name search
+    // still returns BOTH records after the merge — stable across three repeats
+    // in the probe — while the national-ID search correctly returns one. If the
+    // merged-away record is inactive, a user searching by name can still find
+    // and pick it, which defeats the merge. That needs the other two
+    // revalidation gates (fresh tab, re-login) before it is called a defect, so
+    // it is logged here rather than claimed. Harness ref 12.23.
+    //
+    // The log reports only whether THIS pair's merged-away record came back.
+    // The raw list is not quotable as evidence: the last-name search is fuzzy,
+    // so it also returns earlier runs' seeds, and a reader counting ids would
+    // mistake that noise for survivors.
+    const byLastName = await findPatientIdsByLastName(page, pair.lastName);
+    const survivedByName = byLastName.includes(pair.ids[1]);
+    console.log(
+      `TC-MP-04: merged ${pair.ids[1]} into ${pair.ids[0]}; nationalID search -> [${pair.ids[0]}] (consolidated). ` +
+        (survivedByName
+          ? `OBSERVATION: ${pair.ids[1]} is still returned by a last-name search after being merged away ` +
+            '— needs the fresh-tab and re-login revalidation gates before it is called a defect.'
+          : `last-name search no longer returns ${pair.ids[1]}.`)
+    );
   });
 });
 
