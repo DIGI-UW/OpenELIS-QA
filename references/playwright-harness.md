@@ -1410,3 +1410,89 @@ the headline. Grouping coverage by catalogue instead of globally took about the
 same and demolished two of the per-catalogue figures. Neither needed a rerun of
 the suite. **Print one raw sample, then check the aggregate against a second
 method, before reporting it.**
+
+### 12.19 — The baseline patient never existed, and three layers hid it
+
+Added 2026-09-08, from pulling on "is `Anga, Dr` still seeded?".
+
+`helpers/test-helpers.ts` exports `PATIENT_NAME = 'Abby Sebby'` and
+`PATIENT_ID = '0123456'`, described as *"the baseline test patient created by
+data.setup.ts"*. **Seventeen module specs import them. The patient does not
+exist, and as far as this audit can tell never has.**
+
+A live probe on v3.2.2.0: `patient-search-results?searchValue=0123456` →
+`patientSearchResults: []`. Same for `lastName=Sebby`. Zero.
+
+Three independent failures had to line up, and each one hid the next:
+
+**1. No config ran the setup.** `data.setup.ts` exists precisely to create this
+patient and two orders. Every other setup has a home — `auth.setup.ts` in ~25
+configs, `roles.setup.ts` in two, `analyzer-auth.setup.ts` in the analyzer
+configs, `seed-data.setup.ts` in `regression-seed` — and `data.setup.ts` had
+none. `check:orphans`, the gate built in #96 for exactly this class of bug, only
+audited `*.spec.ts`, so a setup nothing ran was outside its remit. It now audits
+both, and the reachable side of its scan had to be widened to match, or the two
+halves disagree and the gate reports files it just fixed.
+
+**2. The finder could never find anyone.** `findPatientByNationalId` tried three
+endpoints:
+
+```
+/rest/patient?nationalId=        404 NoHandlerFoundException
+/rest/PatientSearch?nationalId=  404
+/rest/patient/search?nationalId= 404
+```
+
+All three 404 on this build. Every candidate failed `res.ok`, the loop fell
+through, and the function returned `null` unconditionally — so the setup
+concluded "patient not found" every run, regardless of reality. The endpoint the
+app itself uses is `patient-search-results`.
+
+**3. Creation reported success from "the page did not crash".**
+
+```ts
+// Verify success (no error message, page didn't crash)
+const bodyText = await page.locator('body').innerText();
+if (bodyText.includes('Internal Server Error')) return false;
+state.patient.found = true;   // <- the only other outcome
+return true;
+```
+
+That is not a check that a patient was created; it is a check that the browser
+did not render one particular string. So the log said
+`[data-setup] Patient created successfully` on every run while creating nothing.
+
+#### What this cost
+
+Every patient-dependent failure in the module sweep looked like a product
+defect. `TC-PAT-02: Search by national ID returns Abby Sebby` fails because
+Abby Sebby is not there — nothing to do with patient search. Any triage of the
+sweep that treated those as findings was investigating the wrong system.
+
+#### Fixed
+
+- `data.setup.ts` is now a dependency of the module sweep, with its own 120s
+  budget (a fixture is not a check, so the 30s test policy does not apply to it)
+  and `retries: 0`.
+- The finder uses `patient-search-results`.
+- Creation requires a **read-back** and now reports honestly:
+  *"save produced no error, but nationalId=0123456 does not read back — the
+  patient was NOT created."*
+- Order creation tries the **API before the UI**. The UI path burns the entire
+  budget on one `locator.click`, which meant the API fallback was never reached
+  and the setup died on timeout. Both paths currently fail; the setup now says
+  so in 14 seconds instead of 4 minutes.
+- `check:orphans` covers `*.setup.ts`.
+
+Whether the UI cannot create a patient because of a product defect or a stale
+selector needs a clickthrough before it becomes a ticket. What is settled is
+that the fixture no longer claims a success it cannot demonstrate.
+
+#### The rule
+
+**A fixture that reports success it has not verified is worse than a fixture
+that fails.** A failing fixture gets fixed; a lying one sends every dependent
+failure to the wrong investigation, for months. Fixtures need round-trips for
+the same reason tests do (12.3) — and a fixture that is a dependency of a large
+project must also be unable to take that project down with it, which is why this
+one is non-fatal and fast rather than thorough and blocking.

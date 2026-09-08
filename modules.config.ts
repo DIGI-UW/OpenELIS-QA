@@ -111,10 +111,41 @@ export default defineConfig({
   },
   projects: [
     { name: 'setup', testMatch: /(^|\/)auth\.setup\.ts$/ },
+    // BASELINE DATA (added 2026-09-08). `data.setup.ts` creates the patient
+    // "Abby Sebby" (nationalId 0123456) and two orders, and writes their
+    // accessions to `.auth/test-data.json`. Seventeen module specs import
+    // PATIENT_NAME / PATIENT_ID from helpers/test-helpers.ts expecting it.
+    //
+    // Until now NO config ran this setup — a live probe on 2026-09-08 found
+    // zero patients matching either "Sebby" or 0123456 — so the whole module
+    // sweep ran against an instance with no baseline patient, and every
+    // patient-dependent failure looked like a product defect. `check:orphans`
+    // did not catch it because it only audits `*.spec.ts`, not setup projects;
+    // it now covers both.
+    //
+    // The setup is deliberately non-fatal (see its tail comment): if creation
+    // fails, specs degrade through getTestData() rather than the run aborting.
+    {
+      name: 'data',
+      testMatch: /(^|\/)data\.setup\.ts$/,
+      dependencies: ['setup'],
+      use: { storageState: '.auth/user.json' },
+      // The 30-second per-test timeout is a POLICY about tests: if a check
+      // takes longer than that, the slowness is itself the finding. A fixture
+      // is not a check — this one drives the UI to create a patient and two
+      // orders, which legitimately takes minutes. Giving it its own budget
+      // respects the policy rather than routing around it.
+      // 120s, not 300s: patient creation takes ~40s, and order creation is
+      // currently BROKEN (see below), so a larger budget just adds ten minutes
+      // of doomed clicking to every sweep. Raise it via PW_SETUP_TIMEOUT if the
+      // order step is fixed and needs longer.
+      timeout: Number(process.env.PW_SETUP_TIMEOUT ?? 120_000),
+      retries: 0,
+    },
     {
       name: 'modules',
       testMatch: MODULE_MATCH,
-      dependencies: ['setup'],
+      dependencies: ['setup', 'data'],
       use: { storageState: '.auth/user.json' },
     },
   ],
