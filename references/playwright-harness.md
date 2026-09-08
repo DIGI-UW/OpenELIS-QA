@@ -1002,9 +1002,9 @@ The instrument that does answer it compares the **catalogue** against the
 in `master-test-cases.md` and the IDs implemented in `*.spec.ts`, and reports
 both directions.
 
-- **607 catalogued cases have no test** — grouped by area, this is the real gap
+- **607 catalogued cases have no test** (SUPERSEDED — the real figure is 1210 across all seven catalogues; see 12.17) — grouped by area, this is the gap
   list (HP 22, HN 20, MGT 20, HO 14, EQA 13, …).
-- **242 implemented IDs are not in the catalogue** — either the catalogue is
+- **242 implemented IDs are not in the catalogue** (SUPERSEDED: 433 — see 12.17) — either the catalogue is
   stale or the ID is wrong; both break traceability from a sweep line to a case.
 
 Report-only by default so it can run on every build; `--strict` fails when the
@@ -1261,3 +1261,86 @@ the gate is wrong.
 
 Backlog after: **0 clones, 0 drifted, 40 collisions** (the 40 are all
 `tests/*` ↔ `tests/*`, untouched by this and still needing per-case decisions).
+
+### 12.17 — The catalogue is plural, and the grammar for reading it is load-bearing
+
+Added 2026-09-08, immediately after 12.16 shipped a number that was wrong.
+
+12.16 reported "607 catalogued cases have no test". That was computed from
+`master-test-cases.md` alone, with a regex that matched a subset of even that
+file. Casey's correction — *we wrote test catalogs for the new features, and I'm
+pretty sure we did reflexes too* — was right, and finding them changed every
+figure.
+
+#### Two independent errors, both silent
+
+**The catalogue is not one file.** Seven files declare cases. Four are
+per-feature suites written alongside the features they cover:
+
+| catalogue | area | covered |
+|---|---|---|
+| `master-test-cases.md` | core suites A–JF | **24%** (383/1567) |
+| `references/test-cases.md` | Test Catalog module | 42% (11/26) |
+| `edit-order-rbac-test-cases.md` | Edit Order & RBAC | 21% (3/14) |
+| `analyzer-guided-setup.md` | analyzer guided setup (OGC-1057) | **100%** (23/23) |
+| `test-catalog-mgmt.md` | test catalog editor (OGC-949) | **100%** (8/8) |
+| `test-catalog-mgmt-deep.md` | editor, deep interaction | **100%** (7/7) |
+| `label-presets.md` | label presets | **100%** (5/5) |
+
+Reading only `master` reported all four 100%-covered feature suites as
+uncatalogued *and* their cases as ungapped — invisible in both directions.
+
+**The grammar matched a subset, three times over.** Cases are declared in six ID
+shapes and two layouts, and each version of the scanner saw only some:
+
+```
+TC-01                        bare
+TC-HP-01                     common
+TC-ADMIN-SITEINFO-TABLE-01   multi-segment   <- dropped 575 of master's 1504
+TC-RPT-R01                   letter-number
+CLEANUP-01                   teardown
+TC-DEEP-FILTER               no number at all
+
+### TC-HP-01 — Title                              heading form
+| TC-LP-01 | List renders with the 5 presets |    TABLE form  <- every per-feature suite
+```
+
+The table form is how *all four* newer suites declare cases. A heading-only
+grammar sees zero cases in them — and reports the file as "indexed but empty"
+rather than as a parse failure, which is how it stayed quiet.
+
+#### The corrected picture
+
+**1636 catalogued · 859 implemented · 1210 with no test · 433 tests whose ID no
+catalogue declares.** The gap roughly doubled, and it is concentrated almost
+entirely in `master-test-cases.md`. The features the team catalogued
+deliberately are fully covered; the sprawling core catalogue is not.
+
+The 433 uncatalogued run the other way: tests written code-first, spread across
+~40 module specs (generic-sample 19, fhir-integration 18, order-creation 18),
+with no case ever written down. The catalogue is not a complete inventory of
+what QA covers, in either direction.
+
+#### What stops it recurring
+
+Three things, in the order they fail:
+
+1. **One grammar, in one file.** `scripts/catalogue-ids.mjs` is the only
+   definition of "a case ID" and "a declaration". Every script imports it.
+2. **`npm run catalogue:selftest`** asserts all six shapes and both layouts, plus
+   negatives (prose, suite headings and plain tables must NOT count). Blocking.
+   This is what a regex change has to get past now.
+3. **`npm run check:catalogue-index`** walks every tracked `.md` and fails when
+   one declares cases but appears in neither `catalogues.json` nor its
+   `notCatalogues` list — the latter requiring a written reason. Adding a
+   per-feature suite is one line; deciding a file is not a catalogue is one line
+   and a sentence. Blocking. It also fails on an indexed file that declares
+   *zero* cases, which is what catches a grammar that has stopped matching.
+
+**The pattern across 12.13, 12.15 and this one is now unmistakable.** Three
+times a scanner ran cleanly, produced a confident number, and answered a
+narrower question than the one asked: `if (locator)` that was never false,
+`indexOf('{')` that found a parameter list, and a case-ID regex that matched a
+third of the catalogue. None of them errored. The defence is not more care while
+writing the regex — it is a self-test that names the shapes, and a gate that
+fails when a file the tool should see produces nothing.

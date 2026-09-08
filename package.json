@@ -25,7 +25,10 @@
     "check:dupe-ids": "node scripts/check-dupe-ids.mjs",
     "dupe-ids:baseline": "node scripts/check-dupe-ids.mjs --update",
     "check:coverage-gaps": "node scripts/check-coverage-gaps.mjs",
-    "coverage-gaps:baseline": "node scripts/check-coverage-gaps.mjs --update"
+    "coverage-gaps:baseline": "node scripts/check-coverage-gaps.mjs --update",
+    "catalogue:selftest": "node scripts/catalogue-selftest.mjs",
+    "check:catalogue-index": "node scripts/check-catalogue-index.mjs",
+    "coverage-gaps:json": "node scripts/check-coverage-gaps.mjs --json"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

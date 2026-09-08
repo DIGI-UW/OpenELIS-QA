@@ -73,11 +73,29 @@ jobs:
         run: npm run check:dupe-ids
 
       # NON-BLOCKING report: the catalogue vs the code. "Are we missing QA
+
+      # BLOCKING: the shared case-ID grammar must still match every shape the
+      # catalogues use. Three separate miscounts this month traced to a regex
+      # that looked right and quietly matched a subset — one dropped 575 of
+      # master-test-cases.md's 1504 headings; another could not see the
+      # table-row form every per-feature suite uses. This asserts all six ID
+      # shapes and both declaration layouts, plus negatives.
+      - name: Case-ID grammar self-test
+        run: npm run catalogue:selftest
+
+      # BLOCKING: every .md that declares cases must be in catalogues.json. A
+      # catalogue nothing indexes is invisible to the coverage report, so its
+      # cases read as "never written" even when they are written and passing —
+      # which is exactly what happened to the analyzer, label-preset and
+      # test-catalog-management suites.
+      - name: Every catalogue is indexed
+        run: npm run check:catalogue-index
       # checks?" cannot be answered by running more tests — a test that exists
       # says nothing about one that does not. This diffs the case IDs declared
-      # in master-test-cases.md against the IDs implemented in *.spec.ts and
-      # prints the gap list by area. 607 catalogued cases had no test as of
-      # 2026-09-08. Pass --strict to fail when that number grows.
+      # across ALL indexed catalogues against the IDs implemented in *.spec.ts,
+      # and reports per catalogue. 1210 of 1636 catalogued cases had no test as
+      # of 2026-09-08, concentrated in master-test-cases.md (24% covered); the
+      # four per-feature suites are at 100%. Pass --strict to fail on growth.
       - name: Coverage gaps (catalogue vs code)
         run: npm run check:coverage-gaps
 
