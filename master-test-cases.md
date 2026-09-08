@@ -59,6 +59,20 @@ All 28 admin items validated as PASS. Use these exact URL slugs (all under `/Mas
 
 ## How to Use This Document
 
+
+> **SEED DATA — verified 2026-09-08 (v3.2.2.0, testing.openelis-global.org).**
+> `GET /rest/displayList/ACTIVE_ORG_LIST` returns **26** active organisations.
+> The cases below were written against an instance carrying **4,726** (see
+> TC-K-DEEP-02), and **"Adiba SC" is not in the current seed** — no test creates
+> it either, so every case naming it was asserting on data that does not exist.
+> Sites that DO exist: `Mulago`, `Riverside Community Clinic`,
+> `Northgate Health Center`, `Harborview Clinic`, and reference laboratories
+> `National Reference Laboratory` / `Regional Reference Laboratory`, plus the
+> environmental monitoring sites. Steps below now name `Mulago`; the original
+> `Adiba SC` is kept in parentheses so older run reports stay readable.
+> **Requesters (`Anga, Dr`) have NOT been re-verified** — treat any requester
+> name here as unconfirmed until probed the same way.
+
 Run the suites in order:
 1. **SETUP** — create test accounts and verify admin can log in
 2. **Suite A: Test Catalog CRUD** (TC-01 through TC-08) — as admin
@@ -351,7 +365,7 @@ Mark each as **PASS**, **FAIL**, **SKIP** (with reason), or **GAP** (feature not
 5. **Add Order step:**
    - Click **Generate** to auto-generate Lab Number
    - Request Date: today's date
-   - Search Site Name: type `Adiba` → select **Adiba SC**
+   - Search Site Name: type `Mulago` → select **Mulago**  _(was `Adiba SC`, not in the 2026-09 seed)_
    - Search Requester: type `Anga` → select **Anga, Dr**
    - Click Submit
 6. **Confirmation screen:**
@@ -532,7 +546,7 @@ Mark each as **PASS**, **FAIL**, **SKIP** (with reason), or **GAP** (feature not
    - Program: Routine Testing
    - Sample: Serum
    - Test: **Glucose (Serum)** (search `Glucose`, select it)
-   - Generate Lab Number, fill Site = Adiba SC, Requester = Anga Dr
+   - Generate Lab Number, fill Site = Mulago _(was Adiba SC)_, Requester = Anga Dr _(unverified)_
    - Submit
 2. Screenshot the confirmation with accession number
 
@@ -987,7 +1001,7 @@ Mark each as **PASS**, **FAIL**, **SKIP** (with reason), or **GAP** (feature not
    - Add Sample: Select Whole Blood, check **Reject Sample**, select a rejection reason (e.g., "Hemolysis" or first available option)
    - Select HGB test
    - Next
-2. Add Order: click Generate for lab number, fill Site (Adiba SC) and Requester (Anga Dr)
+2. Add Order: click Generate for lab number, fill Site (Mulago — was Adiba SC) and Requester (Anga Dr — unverified)
 3. Submit
 4. Screenshot the confirmation screen — note the accession number as `NC_ACCESSION`
 
@@ -1581,12 +1595,12 @@ Mark each as **PASS**, **FAIL**, **SKIP** (with reason), or **GAP** (feature not
 
 **Steps:**
 1. Navigate to the Organizations or Sites management screen
-2. Search for `Adiba` — verify **Adiba SC** is in the list (it appears in Add Order site picker)
+2. Search for `Mulago` — verify **Mulago** is in the list (it appears in Add Order site picker). _Was `Adiba SC`; absent from the 2026-09 seed._
 3. Verify each site shows: name, code, contact (if present)
 4. Screenshot the list
 
-**Expected:** Organization list accessible; Adiba SC present with correct details
-**Fail:** List not accessible; Adiba SC absent despite being selectable in Add Order
+**Expected:** Organization list accessible; the seeded site (`Mulago`) present with correct details
+**Fail:** List not accessible; the seeded site absent despite being selectable in Add Order
 
 ---
 
@@ -6717,7 +6731,7 @@ If menu navigation is not available or unreliable, use URL discovery:
 | TC ID | Scenario | URL | Key Validation |
 |-------|----------|-----|----------------|
 | TC-K-DEEP-01 | Dictionary search/filter | `/MasterListsPage/DictionaryMenu` | Search narrows 1,273 entries; empty state for no-match |
-| TC-K-DEEP-02 | Org Management search/pagination | `/MasterListsPage/organizationManagement` | `Adiba` found; pagination across 4,726 orgs |
+| TC-K-DEEP-02 | Org Management search/pagination | `/MasterListsPage/organizationManagement` | `Adiba` found; pagination across 4,726 _(2026-03 instance; the 2026-09 seed has 26 orgs and no Adiba SC — re-verify before reusing this figure)_ orgs |
 | TC-K-DEEP-03 | Provider Management search | `/MasterListsPage/providerMenu` | `Anga` found in 33 providers |
 | TC-K-DEEP-04 | User Management search/count | `/MasterListsPage/userManagement` | `admin` found; CRUD buttons present |
 | TC-K-DEEP-05 | Translation Management search/stats | `/MasterListsPage/translationManagement` | fr 51.4% stat visible; search works |

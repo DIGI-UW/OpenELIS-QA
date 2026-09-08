@@ -41,6 +41,26 @@ async function verifyPageLoad(page, expectedTitle: string): Promise<void> {
   expect(errorText).not.toContain('Internal Server Error');
 }
 
+/**
+ * Organisations actually present on testing.openelis-global.org (v3.2.2.0).
+ *
+ * Read from GET /rest/displayList/ACTIVE_ORG_LIST on 2026-09-08: 26 active
+ * organisations. "Adiba SC", which TC-ADMIN-03 asserted on and which
+ * master-test-cases.md still names, is NOT among them and no test creates it —
+ * it is a stale expectation carried over from the instance the catalogue was
+ * first written against. Two QA_AUTO orgs are present and are deliberate
+ * leftovers from earlier runs.
+ *
+ * `/rest/organization/list` answers 500 on this build; ACTIVE_ORG_LIST is the
+ * working read path.
+ */
+const SEEDED_ORGS = {
+  /** Reference laboratories — what TC-ADMIN-02 is really about. */
+  referenceLabs: ['National Reference Laboratory', 'Regional Reference Laboratory'],
+  /** A clinical site that ships with the seed. */
+  clinicalSite: 'Mulago',
+};
+
 test.describe('Admin Configuration (TC-ADMIN)', () => {
   test.beforeEach(async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
@@ -112,17 +132,31 @@ test.describe('Admin Configuration (TC-ADMIN)', () => {
     // wants a distinct "reference labs" case, and against which screen, is a
     // catalogue decision — see open-questions.md.
     expect(page.url(), 'must not be bounced to login').not.toMatch(/login|signin/i);
-    // Assert on the screen's own name rather than on a table: this screen does
-    // not render a `.cds--data-table` (checked live 2026-09-08), and pinning a
-    // case to one Carbon component is how selector drift turns into a phantom
-    // failure. "The named admin screen loaded" is the claim this case can make.
     await expect(
       page.getByText(/organization management/i).first(),
       'the Organization Management screen must load and name itself'
     ).toBeVisible({ timeout: 15_000 });
+
+    // THE ACTUAL CLAIM. The seed does carry reference laboratories — the org
+    // list read on 2026-09-08 contains both National and Regional Reference
+    // Laboratory — so this case can assert what its title says rather than
+    // settle for "a screen loaded". It failed for years only because it probed
+    // three routes that do not exist.
+    const orgs = await page.evaluate(async (base) => {
+      const r = await fetch(`${base}/api/OpenELIS-Global/rest/displayList/ACTIVE_ORG_LIST`,
+        { headers: { Accept: 'application/json' }, credentials: 'include' });
+      if (!r.ok) return { status: r.status, names: [] as string[] };
+      const rows = await r.json();
+      return { status: r.status, names: (Array.isArray(rows) ? rows : []).map((o: any) => String(o.value ?? o.name ?? '')) };
+    }, BASE);
+    expect(orgs.status, 'ACTIVE_ORG_LIST must be readable').toBe(200);
+    expect(
+      orgs.names.filter((n) => SEEDED_ORGS.referenceLabs.includes(n)),
+      `reference laboratories missing from the organisation list. Saw: ${orgs.names.slice(0, 12).join(', ')}`
+    ).toEqual(expect.arrayContaining(SEEDED_ORGS.referenceLabs));
   });
 
-  test('TC-ADMIN-03: Organization/site list accessible and contains Adiba SC', async ({ page }) => {
+  test('TC-ADMIN-03: Organization/site list accessible and contains a seeded site', async ({ page }) => {
     // ROUTE DRIFT (2026-09-08). `/MasterListsPage/Organizations` does not exist;
     // the real screen is `organizationManagement` (lower-case o). This case has
     // been failing on the wrong route rather than on missing seed data — the
@@ -132,18 +166,22 @@ test.describe('Admin Configuration (TC-ADMIN)', () => {
     );
     await page.waitForTimeout(2000);
 
-    // Search for Adiba SC
+    // Search for a seeded site (was "Adiba", which this instance does not have)
     const searchField = page.getByRole('textbox', { name: /search|filter/i }).first();
     if (await searchField.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await searchField.fill('Adiba');
+      await searchField.fill(SEEDED_ORGS.clinicalSite);
       await page.waitForTimeout(1000);
     }
 
-    const hasAdiba = await page.getByText(/Adiba SC/i).isVisible({ timeout: 5000 }).catch(() => false);
-    // "Adiba SC" is expected seed data. If it is no longer part of the seed for
-    // this instance, retarget this case at whatever organisation IS expected —
-    // or delete it. Do not weaken the assertion to make the run green.
-    expect(hasAdiba, 'expected seed organisation "Adiba SC" was not found in the organization list').toBeTruthy();
+    const hasSeededSite = await page
+      .getByText(new RegExp(SEEDED_ORGS.clinicalSite, 'i'))
+      .first()
+      .isVisible({ timeout: 5000 })
+      .catch(() => false);
+    expect(
+      hasSeededSite,
+      `seeded organisation "${SEEDED_ORGS.clinicalSite}" was not found in the organisation list`
+    ).toBeTruthy();
   });
 
   test('TC-ADMIN-04: Rejection reasons dictionary accessible', async ({ page }) => {
@@ -881,9 +919,9 @@ test.describe('Phase 4 — K-DEEP: Admin Interaction Tests', () => {
     // Search for known org "Adiba"
     const searchInput = page.locator('input[type="search"], input[placeholder*="Search" i]');
     if (await searchInput.isVisible()) {
-      await searchInput.fill('Adiba');
+      await searchInput.fill(SEEDED_ORGS.clinicalSite);
       await page.waitForTimeout(500);
-      await expect(page.locator('text=Adiba')).toBeVisible();
+      await expect(page.locator(`text=${SEEDED_ORGS.clinicalSite}`).first()).toBeVisible();
     }
     // Verify pagination controls exist for 4,726 orgs
     const pagination = page.locator('[class*="pagination" i], nav[aria-label="pagination"]');
