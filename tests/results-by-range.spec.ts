@@ -7,6 +7,8 @@ import {
   navigateWithDiscovery,
   discoverAccessionWithResults,
   getDateRange,
+  navigateViaMenu,
+  tryNavigateToURL,
 } from '../helpers/test-helpers';
 
 /**
@@ -314,4 +316,144 @@ test.describe('Suite BF-DEEP — Results By Range API & Cross-Module (TC-RBR-06�
       console.log('TC-RBR-10: SKIP — page not reachable');
     }
   });
+});
+
+/**
+ * Relocated from the retired gap-suites (2026-09-08) — see harness ref 12.16.
+ * These are the cases the gap suites uniquely carried; the rest of those files
+ * duplicated tests that already lived here.
+ *   TC-RBR-01 -> TC-RBR-11   (renumbered: TC-RBR-01 already meant a different test)
+ *   TC-RBR-02 -> TC-RBR-12   (renumbered: TC-RBR-02 already meant a different test)
+ *   TC-RBR-03 -> TC-RBR-13   (renumbered: TC-RBR-03 already meant a different test)
+ *   TC-RBR-04 -> TC-RBR-14   (renumbered: TC-RBR-04 already meant a different test)
+ *   TC-RBR-05 -> TC-RBR-15   (renumbered: TC-RBR-05 already meant a different test)
+ */
+test.describe('Relocated from gap-suites', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+  });
+
+  test('TC-RBR-11: Results > By Range of Order Numbers screen loads', async ({ page }) => {
+      await login(page, ADMIN.user, ADMIN.pass);
+  
+      try {
+        await navigateViaMenu(page, ['Results', 'By Range of Order Numbers']);
+      } catch (e) {
+        const found = await tryNavigateToURL(page, ['/ResultsByRange', '/OrderRange', '/results/range']);
+        if (!found) {
+          test.skip();
+          return;
+        }
+      }
+  
+      await page.waitForTimeout(1000);
+  
+      expect(page.url()).not.toContain('login');
+  
+      // Check for from/to input fields
+      const inputs = await page.$$('input[type="text"], input[type="number"]');
+      expect(inputs.length).toBeGreaterThanOrEqual(2);
+    });
+
+  test('TC-RBR-12: Enter range returns results', async ({ page }) => {
+      await login(page, ADMIN.user, ADMIN.pass);
+  
+      try {
+        await navigateViaMenu(page, ['Results', 'By Range of Order Numbers']);
+      } catch (e) {
+        await tryNavigateToURL(page, ['/ResultsByRange', '/OrderRange', '/results/range']);
+      }
+  
+      await page.waitForTimeout(1000);
+  
+      const inputs = await page.$$('input[type="text"], input[type="number"]');
+      if (inputs.length < 2) {
+        test.skip();
+        return;
+      }
+  
+      await inputs[0].fill('26CPHL00001T');
+      await inputs[1].fill('26CPHL00010T');
+  
+      const button = await page.$('button:has-text("Search"), button:has-text("Submit")');
+      if (button) {
+        await button.click();
+        await page.waitForTimeout(2000);
+      }
+  
+      // Verify results table present or empty state
+      const table = await page.$('table, [role="table"]');
+      expect(table).toBeTruthy();
+    });
+
+  test('TC-RBR-13: Results > By Test, Date or Status screen loads', async ({ page }) => {
+      await login(page, ADMIN.user, ADMIN.pass);
+  
+      try {
+        await navigateViaMenu(page, ['Results', 'By Test, Date or Status']);
+      } catch (e) {
+        const found = await tryNavigateToURL(page, ['/ResultsByFilter', '/FilterResults', '/results/filter']);
+        if (!found) {
+          test.skip();
+          return;
+        }
+      }
+  
+      await page.waitForTimeout(1000);
+  
+      expect(page.url()).not.toContain('login');
+  
+      // Check for filter controls
+      const filters = await page.$$('select, input, [class*="filter"]');
+      expect(filters.length).toBeGreaterThanOrEqual(1);
+    });
+
+  test('TC-RBR-14: Filter by test type returns results', async ({ page }) => {
+      await login(page, ADMIN.user, ADMIN.pass);
+  
+      try {
+        await navigateViaMenu(page, ['Results', 'By Test, Date or Status']);
+      } catch (e) {
+        await tryNavigateToURL(page, ['/ResultsByFilter', '/FilterResults', '/results/filter']);
+      }
+  
+      await page.waitForTimeout(1000);
+  
+      const selector = await page.$('select');
+      if (selector) {
+        await selector.selectOption({ index: 1 }).catch(() => null);
+        await page.waitForTimeout(500);
+      }
+  
+      const button = await page.$('button:has-text("Search"), button:has-text("Submit")');
+      if (button) {
+        await button.click();
+        await page.waitForTimeout(2000);
+      }
+  
+      const table = await page.$('table, [role="table"]');
+      expect(table).toBeTruthy();
+    });
+
+  test('TC-RBR-15: Order Programs screen loads', async ({ page }) => {
+      await login(page, ADMIN.user, ADMIN.pass);
+  
+      try {
+        await navigateViaMenu(page, ['Results', 'Order Programs']);
+      } catch (e) {
+        const found = await tryNavigateToURL(page, ['/OrderPrograms', '/Programs', '/results/programs']);
+        if (!found) {
+          test.skip();
+          return;
+        }
+      }
+  
+      await page.waitForTimeout(1000);
+  
+      expect(page.url()).not.toContain('login');
+  
+      const heading = await page.$('h1, h2, [role="heading"]');
+      expect(heading).toBeTruthy();
+    });
+
 });

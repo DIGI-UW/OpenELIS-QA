@@ -80,9 +80,22 @@ for (const [id, occ] of byId) {
   const oneBody = new Set(occ.map((o) => o.body)).size === 1;
   const oneTitle = new Set(occ.map((o) => o.title)).size === 1;
   const kind = oneBody ? 'clones' : oneTitle ? 'drifted' : 'collisions';
-  found[kind].push(`${id}|${inFiles.join(',')}`);
+  found[kind].push({ id, files: inFiles.join(',') });
 }
-const current = Object.fromEntries(Object.entries(found).map(([k, v]) => [k, v.sort()]));
+// Key on the ID ALONE, not id+files. A duplicate spread over three files is
+// one known problem; removing one participant leaves the same problem with a
+// smaller file set, and keying on the file list would report that cleanup as a
+// NEW violation and block it. Files are recorded for the reader, not the key.
+const current = Object.fromEntries(
+  Object.entries(found).map(([k, v]) => [
+    k,
+    v.sort((a, b) => a.id.localeCompare(b.id)).map((e) => `${e.id}  [${e.files}]`),
+  ])
+);
+// Tolerates the pre-2026-09-08 baseline format (`id|file,file`) as well as the
+// current `id  [files]`, so an old baseline does not read as all-new.
+const idOnly = (e) => String(e).split(/\s{2}\[|\|/)[0].trim();
+const idsOf = (list) => new Set((list ?? []).map(idOnly));
 
 if (update) {
   writeFileSync(BASELINE, JSON.stringify(current, null, 2) + '\n');
@@ -99,14 +112,14 @@ const LABEL = {
 };
 let failed = false;
 for (const kind of ['clones', 'drifted', 'collisions']) {
-  const known = new Set(base[kind] ?? []);
-  const added = current[kind].filter((k) => !known.has(k));
+  const known = idsOf(base[kind]);
+  const added = current[kind].filter((k) => !known.has(idOnly(k)));
   if (!added.length) continue;
   failed = true;
   console.error(`\n✗ ${LABEL[kind]}:`);
   for (const a of added) {
-    const [id, fs] = a.split('|');
-    console.error(`    ${id}\n      ${fs.split(',').join('\n      ')}`);
+    const [id, fs] = a.split('  [');
+    console.error(`    ${id}\n      ${(fs ?? '').replace(/\]$/, '').split(',').join('\n      ')}`);
   }
 }
 if (failed) {

@@ -1010,7 +1010,7 @@ both directions.
 Report-only by default so it can run on every build; `--strict` fails when the
 unimplemented count grows past `.coverage-gaps-baseline.json`.
 
-**Retiring the duplicated suites is deliberately NOT bundled with this.** With
+**Retired on 2026-09-08 — see below.** The decision was deferred at first because with
 28 of the pairs being drifted implementations rather than copies, deleting
 either side is a judgement about which implementation is correct — 28 separate
 calls, not a refactor.
@@ -1224,3 +1224,40 @@ Reading a component's own `disabled` prop (as distinct from an ancestor
 `__reactFiber$` up to the named component and read `memoizedProps.disabled`. On Add
 Order the fieldset is disabled while the selector's prop is `false`, and those two
 facts grade differently.
+
+#### Retirement (2026-09-08)
+
+The suites are gone. Accounting for all 107 of their cases:
+
+| | | |
+|---|---|---|
+| **59** | byte-identical clones | dropped; the module spec's copy stands |
+| **28** | drifted — same TC ID and title, different implementation | dropped; the module implementation kept in **all 28** |
+| **20** | genuinely distinct (2 unique, 18 wearing a colliding ID) | **relocated** into the spec that owns the area, renumbered where the old ID already meant another test |
+
+On the 28 drifted pairs: scored against the module version, the gap-suite
+version won **zero** times. It was consistently the older idiom — raw CSS menu
+clicks over `getByRole`, and in the ones that scored "tied", `page.$(...)`
+(truthy for a hidden element, and deprecated) where the module version used
+`locator(...).isVisible()`. The tie was an artefact of the scoring heuristic,
+not of the code; reading one pair settled it.
+
+The 20 survivors went to `results-entry` (TC-RBP-01, TC-RBO-04),
+`electronic-orders` (TC-IO-01…05 → 11…15), `results-by-range` (TC-RBR-01…05 →
+11…15), `aliquot` (TC-ALQ-01…03 → 17…19), `workplan` (TC-WPP-02/03/05 →
+06/07/08) and `pathology` (TC-PATH-02 → 03, TC-CYT-02 → 03). Their relocation
+promptly produced eight `TS2304 Cannot find name` errors, because the helpers
+they call live in `helpers/test-helpers.ts` and the destination files did not
+import them — 12.14's defect class, caught by the gate this time instead of by
+a sweep.
+
+**A gate bug the cleanup exposed.** `check-dupe-ids` keyed its baseline on
+`id|file,file`. `TC-ALQ-01` was a *three*-file collision; removing the
+gap-suite participant left the same collision over two files, a different key,
+which the gate reported as a NEW violation — i.e. the gate blocked the cleanup
+it existed to encourage. It now keys on the **TC ID alone** and records the
+file list for the reader only. If a gate makes the fix look like a regression,
+the gate is wrong.
+
+Backlog after: **0 clones, 0 drifted, 40 collisions** (the 40 are all
+`tests/*` ↔ `tests/*`, untouched by this and still needing per-case decisions).

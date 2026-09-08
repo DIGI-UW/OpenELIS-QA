@@ -612,3 +612,99 @@ test.describe('Phase 6 — BG-DEEP: Results By Status Tests', () => {
     }
   });
 });
+
+/**
+ * Relocated from the retired gap-suites (2026-09-08) — see harness ref 12.16.
+ * These are the cases the gap suites uniquely carried; the rest of those files
+ * duplicated tests that already lived here.
+ *   TC-RBP-01
+ *   TC-RBO-04
+ */
+test.describe('Relocated from gap-suites', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+  });
+
+  test('TC-RBP-01: Results > By Patient screen loads', async ({ page }) => {
+      // Navigate to hamburger menu
+      await page.click('button[aria-label*="menu" i], button[id*="menu" i]');
+      await page.waitForTimeout(500);
+  
+      // Try to find and click Results menu
+      const resultsLink = page.getByText(/^Results$/i, { exact: true });
+      if (await resultsLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await resultsLink.click();
+        await page.waitForTimeout(500);
+      }
+  
+      // Try to find and click By Patient
+      const byPatientLink = page.getByText('By Patient', { exact: true });
+      if (await byPatientLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await byPatientLink.click();
+      }
+  
+      // URL discovery pattern
+      const candidates = [
+        '/PatientResults',
+        '/ResultsByPatient',
+        '/patient/results',
+        '/results/patient',
+      ];
+      const success = await navigateWithDiscovery(page, candidates);
+  
+      // Verify page loaded
+      if (!success) {
+        // Mark as GAP if no route found
+        console.log('GAP: Results > By Patient screen not found');
+        expect(success).toBe(true); // Will fail but documents the gap
+      }
+  
+      // Verify not redirected to login
+      expect(page.url()).not.toMatch(/LoginPage|login/i);
+  
+      // Verify search field exists
+      const searchField = page.locator(
+        'input[placeholder*="patient" i], input[placeholder*="name" i], input[id*="search"]'
+      ).first();
+      await expect(searchField).toBeVisible({ timeout: 3000 }).catch(() => {
+        console.log('Note: Search field selector may need adjustment for this app version');
+      });
+    });
+
+  test('TC-RBO-04: Results > By Order screen loads', async ({ page }) => {
+      // Navigate via menu or direct URL
+      await page.click('button[aria-label*="menu" i], button[id*="menu" i]');
+      await page.waitForTimeout(500);
+  
+      const resultsLink = page.getByText(/^Results$/i, { exact: true });
+      if (await resultsLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await resultsLink.click();
+        await page.waitForTimeout(500);
+        const byOrderLink = page.getByText('By Order', { exact: true });
+        if (await byOrderLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+          await byOrderLink.click();
+        }
+      }
+  
+      // URL discovery
+      const candidates = [
+        '/AccessionResults',
+        '/OrderResults',
+        '/order/results',
+        '/results/order',
+      ];
+      const success = await navigateWithDiscovery(page, candidates);
+  
+      // Verify page loaded and not login
+      expect(page.url()).not.toMatch(/LoginPage|login/i);
+  
+      // Verify accession input field exists
+      const accessionField = page.locator(
+        'input[placeholder*="accession" i], input[id*="accession" i], input'
+      ).first();
+      await expect(accessionField).toBeVisible({ timeout: 3000 }).catch(() => {
+        console.log('Accession search field not found');
+      });
+    });
+
+});
