@@ -904,6 +904,63 @@ complaining about its logic is telling you the test does not check what its
 name claims. Grep the backlog for TS2367 and for TS2304 on call expressions
 before reading another sweep's failures — both classes are cheaper to fix than
 to triage.
+
+### 12.15 — The duplicated helpers were the symptom; duplicated TEST CASES were the disease
+
+Added 2026-09-08, chasing the copy-pasted `navigateViaMenu` / `tryNavigateToURL`
+noted in 12.14.
+
+The working hypothesis was that the local helper copies had drifted on purpose
+— that each spec's copy targeted its own screen, e.g. two different order entry
+screens. Checking it did not support that, and found something worse.
+
+**The helper copies barely differ.** `order-entry` and `results-entry` hold
+byte-identical `navigateViaMenu`; `pathology` differs by a single added
+`goto(BASE)`; the gap-suites carry the `archive/` lineage. Nobody was
+reconciling screens. But `tryNavigateToURL` does have two real variants, and
+one is a bad oracle:
+
+```ts
+// variant A — order-entry, results-entry, pathology
+const res = await page.goto(`${BASE}${url}`).catch(() => null);
+if (res && res.ok() && !page.url().includes('login')) return true;
+```
+
+`res.ok()` is TRUE for every path in this SPA (12.2), so variant A reports
+"found" for routes that do not exist. Variant B (gap-suites, and the canonical
+helper) at least only claims "we were not bounced to login" — weak, but not
+affirmatively false.
+
+**Then the call sites gave it away.** `tests/order-entry.spec.ts:523-634` and
+`gap-suites-AH-AP.spec.ts:127-239` are the same tests: same TC IDs, same menu
+paths, same URL candidate lists, same bodies. A repo scan found the scale:
+
+- **72 exact clones** — same TC ID, title AND body, in two files.
+- **47 ID collisions** — same TC ID on genuinely *different* tests.
+- **0 drifted** — nobody ever edited a copy after making it. They are inert.
+
+Every one of the 72 clones pairs a `gap-suites-*` file with a `tests/*` file,
+which is exactly the seam #102 split into two CI jobs. So all 72 run twice per
+sweep. In sweep 4, **34 TC IDs failed in both jobs** — the same 34 failures
+counted twice inside the reported 306, with zero disagreement between the
+copies. Any triage that treats 306 as 306 distinct findings is overcounting.
+
+The collisions are the more corrosive half. `TC-IO-03` is
+"Batch Order Entry screen loads" in two files and
+"Status dropdown enumerates expected order states" in a third. A sweep line
+saying `TC-IO-03 failed` cannot be traced back to a case in the catalogue,
+which is the entire point of putting IDs on tests.
+
+**Gate:** `npm run check:dupe-ids` (`scripts/check-dupe-ids.mjs`), a ratchet in
+the shape of `lint:assert`. It classifies clone vs collision, fails on anything
+new, and records the known 72/47 in `.dupe-ids-baseline.json`. Resolving the
+existing backlog needs a decision about which copy owns each case — the module
+spec or the gap suite — and that is a product call, not a refactor.
+
+**The transferable lesson:** duplicated *helpers* are cosmetic, and it is
+tempting to fix them and move on. Ask where the helper copies came from
+instead. Here they were dragged along by whole test cases being copied between
+files, and the tests were the thing corrupting the numbers.
 ### 12.9 — A spec no config runs is not coverage
 
 Added 2026-09-04, after the audit that followed OGC-1192.

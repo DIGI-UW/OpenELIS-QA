@@ -60,6 +60,18 @@ jobs:
       - name: Every spec is reachable by a config
         run: npm run check:orphans
 
+      # BLOCKING: no NEW duplicate TC ID. Two separate defects, both of which
+      # make a sweep's numbers lie. A CLONE is the same ID, title and body in
+      # two files: both copies run, so the case is counted twice and every
+      # failure is double counted — sweep 4 double-counted 34 failures between
+      # gap-suites and the module specs. A COLLISION is the same ID on two
+      # DIFFERENT tests, which stops "TC-IO-03 failed" from being traceable to
+      # a case in the catalogue. An audit on 2026-09-08 found 72 clones and 47
+      # collisions, so this is a baseline gate like lint:assert; the backlog in
+      # .dupe-ids-baseline.json can only shrink.
+      - name: No new duplicate TC IDs
+        run: npm run check:dupe-ids
+
       # NON-BLOCKING: the rest of the repo. ~166 errors as of 2026-07-31,
       # mostly missing type imports in older specs. Reported so the number is
       # visible and can only go down; widen tsconfig.json's include as files
