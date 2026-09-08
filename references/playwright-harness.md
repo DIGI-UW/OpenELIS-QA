@@ -1485,7 +1485,8 @@ sweep that treated those as findings was investigating the wrong system.
 - `check:orphans` covers `*.setup.ts`.
 
 Whether the UI cannot create a patient because of a product defect or a stale
-selector needs a clickthrough before it becomes a ticket. What is settled is
+selector needs a clickthrough before it becomes a ticket. **ANSWERED the same
+day — see the resolution below: the UI works, the fixture had five defects.** What is settled is
 that the fixture no longer claims a success it cannot demonstrate.
 
 #### The rule
@@ -1496,3 +1497,82 @@ failure to the wrong investigation, for months. Fixtures need round-trips for
 the same reason tests do (12.3) — and a fixture that is a dependency of a large
 project must also be unable to take that project down with it, which is why this
 one is non-fatal and fast rather than thorough and blocking.
+
+#### Resolved (same day): the UI was never the problem
+
+Casey's read — *"I'm sure we can create a patient through the UI"* — was right.
+A live drive of the form creates a patient in about eight seconds:
+
+```
+POST /rest/PatientManagement -> 200 {"status":"success","patientId":"503"}
+```
+
+The fixture had **five** separate defects between it and that request. Each one
+alone was enough to stop the patient being created, and none of them said so.
+
+**1. The Save selector matched the wrong button.**
+
+```ts
+getByRole('button', { name: /save|submit|add|create/i }).first()
+```
+
+The form carries exactly two buttons matching that alternation —
+**"Additional Information"** and **"Save"** — because `/add/i` matches
+"ADDitional". "Additional Information" is first in the DOM, so `.first()` took
+it, the click expanded an accordion, and Save was never pressed. Anchoring to
+`/^Save$/` fixed it. *A loose alternation over button labels will eventually
+match a button you did not mean, and `.first()` hides which one it hit.*
+
+**2. Gender was queried as a `<select>`.** It is a radio pair
+(`input[name="gender"]`, `#radio-1` / `#radio-2`). Zero matches.
+
+**3. Date of birth was queried as `input[name*="dob"]` / `[placeholder*="date"]`.**
+It is a Carbon picker, `#date-picker-default-id`, placeholder `dd/mm/yyyy` —
+containing neither "dob" nor "date". Zero matches. (Save turns out not to
+require it, but the selector was still dead.)
+
+**4. It filled the search screen, not the create screen.** The fixture loaded
+`/PatientManagement` and clicked "New Patient", then looked for fields. But
+`/PatientManagement` is the SEARCH screen and has its OWN lastName / firstName /
+nationalId inputs (7 visible inputs, against 12 on `/PatientManagement/new`), so
+when the click had not landed the selectors matched the search form and typed
+the patient's details into it.
+
+Defects 2, 3 and 4 shared one shape: every fill was wrapped in
+`if (await field.isVisible()) { ... }` **with no else**, so a selector matching
+nothing was indistinguishable from a field that had been filled.
+
+**5. The finder queried parameters that do not search.** `patient-search-results`
+answers 200 for every parameter shape, but only one of them looks anything up.
+With three patients named Abby Sebby present:
+
+| query | result |
+|---|---|
+| `?lastName=Sebby&firstName=Abby` | **3 results** |
+| `?searchValue=0123456` | `[]` |
+| `?nationalId=0123456` | `[]` |
+| `?searchValue=Sebby` | `[]` |
+| `?patientId=504` | `[]` |
+
+**A 200 with an empty list is indistinguishable from "no such patient".** This
+is what made the read-back oracle added earlier the same day report the patient
+missing while it sat in the database — the original false positive traded for a
+false negative. The nationalId still narrows the results; it just cannot be the
+query.
+
+#### Two findings that came out of it
+
+**Search by national ID appears genuinely broken.** `?nationalId=` returns empty
+for a national ID that demonstrably exists, and two independent UI cases —
+`TC-PAT-02` and `TC-H-DEEP-01`, both "search by national ID finds the known
+patient" — fail on it in separate runs. That is API repetition plus two UI
+paths agreeing. It still needs a clickthrough before it becomes a ticket, but it
+is the strongest candidate for a real defect this thread produced.
+
+**Three duplicate Abby Sebbys (503, 504, 505)** now exist, created while the
+finder was blind. The fixture is idempotent again and settles on 503, but any
+case asserting a unique search result will see three rows.
+
+`tests/patient-management.spec.ts` after the fix: **10 passed, 7 failed,
+1 skipped** of 18 — and the remaining failures are about the product or about
+stale expectations, not about a patient that isn't there.
