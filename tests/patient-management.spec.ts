@@ -610,15 +610,22 @@ test.describe('Suite AC — Merge Patient', () => {
   //     implies hidden becomes the default. Intended, not settled. There is no
   //     control to look at, so the exact shape is not knowable from here.
   //
-  // TC-MP-05 and TC-MP-06 below encode the intent as test.fail() tripwires.
-  // That is deliberately the cheapest possible bet on an unbuilt feature: if
-  // the filter lands as described the case goes red and becomes coverage; if it
-  // lands differently, one marker and one assertion get rewritten. What must
-  // NOT happen is writing locators for controls nobody has built — that is how
-  // the four hollow TC-MP cases this file just replaced came to exist (12.22).
+  // TC-MP-05 below encodes the intent as a single test.fail() tripwire. That is
+  // deliberately the cheapest possible bet on an unbuilt feature: if the filter
+  // lands as described the case goes red and becomes coverage; if it lands
+  // differently, one marker and one assertion get rewritten. What must NOT
+  // happen is writing locators for controls nobody has built — that is how the
+  // four hollow TC-MP cases this file just replaced came to exist (12.22).
   //
   // So there is no TC-MP-08 for the filter-ON state yet, on purpose. It gets
   // written against the real control on the day there is one.
+  //
+  // ORDER ENTRY IS SETTLED AND IS NOT PART OF THIS. Casey: "Order entry should
+  // not block a merged patient." TC-MP-06 is therefore ordinary green coverage
+  // of allow-plus-disclose, not a tripwire. One question that only the real
+  // filter can answer: if merged records are hidden from search results by
+  // default, how does a user reach one in order entry — through the filter, or
+  // not at all? Noted, not guessed at.
   //
   // What IS already enforced after a merge, and worth not regressing: a
   // national-ID search returns only the primary (TC-MP-04 asserts that), the
@@ -661,21 +668,26 @@ test.describe('Suite AC — Merge Patient', () => {
     ).not.toContain(pair.ids[1]);
   });
 
-  test('TC-MP-06: A merged-away record must not be usable for a new order', async ({ page }) => {
-    test.fail(
-      true,
-      'CURRENT BEHAVIOUR on v3.2.2.0: order entry accepts a merged-away patient — the banner ' +
-        'appears, but Patient Info is marked Complete and the wizard advances. The planned filter is ' +
-        'described in terms of search results; whether anything will guard this write path is ' +
-        'unknown, so this case is kept separate from TC-MP-05 rather than folded into it.'
-    );
-    // This is the half that is kept separate on purpose. A filter on search
-    // results and a guard on a write workflow are different changes, and the
-    // planned filter is described as the former. If the newer version turns
-    // TC-MP-05 red but leaves this one green, that is the useful answer: the
-    // list got cleaner and order entry can still build a requisition against a
-    // record the lab has already declared dead.
+  test('TC-MP-06: Order entry accepts a merged-away patient, and discloses the merge', async ({ page }) => {
+    // BY DESIGN. Casey, 2026-09-09: "Order entry should not block a merged
+    // patient." So this is NOT a guard that is missing — it is intended
+    // behaviour, and this case is ordinary green coverage that locks it in.
+    //
+    // It replaces a test.fail()-marked case that asserted the opposite. I had
+    // read "the merge is advisory in order entry" as a safety gap on the
+    // reasoning that a requisition against a consolidated record is how a
+    // result ends up on a dead patient. That reasoning was mine, not the
+    // product's, and it was wrong about the intent. What the product does is
+    // disclose and allow, which is a legitimate choice: the record still
+    // exists, someone may have a sample in hand labelled with it, and blocking
+    // at the counter would strand that work.
+    //
+    // So what is worth protecting here is the DISCLOSURE, not a block. If a
+    // future change quietly drops the banner while still allowing the order,
+    // this case goes red — which is the actual risk now that allowing is
+    // settled.
     const pair = await seedMergedPair(page, 'ORD');
+
     await page.goto(`${BASE}/SamplePatientEntry`, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#lastName')).toBeVisible({ timeout: 15_000 });
 
@@ -683,51 +695,39 @@ test.describe('Suite AC — Merge Patient', () => {
     const searched = await clickFormSearch(page, '#lastName');
     expect(searched, 'order entry must have a patient Search button').toBe(true);
 
-    // ANTI-VACUITY GUARD, and it is not optional.
-    //
-    // The first version of this case was just
-    //   await expect(mergedRow).toHaveCount(0, { timeout: 15_000 })
-    // straight after the search, and the run reported "Expected to fail, but
-    // passed". Not because order entry filters merged records — it does not —
-    // but because `toHaveCount(0)` is satisfied the instant it is evaluated,
-    // before the search has rendered anything at all, and expect() polls until
-    // it PASSES. A "must not exist" assertion placed right after an async
-    // action is always vacuously true.
-    //
-    // So wait for the search to have actually produced its results — the
-    // primary's row proves that — and only then assert the merged one is
-    // absent. TC-MP-07 asserts this same guard WITHOUT the fail marker, so if
-    // order-entry search ever breaks outright, that case goes red and tells you
-    // this one can no longer be trusted.
+    // The merged-away record must still be offered — that is the point.
+    const mergedRow = page.locator(`[data-cy="patient-result-row-${pair.ids[1]}"]`);
     await expect(
-      page.locator(`[data-cy="patient-result-row-${pair.ids[0]}"]`),
-      `order-entry search returned no row for the surviving record ${pair.ids[0]}, so this case cannot judge the merged one`
+      mergedRow,
+      `order entry must still offer merged-away record ${pair.ids[1]} (url=${page.url()})`
     ).toBeAttached({ timeout: 15_000 });
 
+    await checkCarbonRadio(page, mergedRow.locator('input[type="radio"]'));
+
+    // Disclosure is the requirement. It must say the record was merged AND
+    // point at where the active records now live, which is the surviving
+    // record's identifier — a bare "this was merged" would leave the user
+    // nowhere to go.
+    const shell = page.locator('body');
     await expect(
-      page.locator(`[data-cy="patient-result-row-${pair.ids[1]}"]`),
-      `order entry must not offer merged-away record ${pair.ids[1]}`
-    ).toHaveCount(0);
-  });
-
-  test('TC-MP-07: Order entry can find a patient by last name', async ({ page }) => {
-    // The canary for TC-MP-06. That case is test.fail()-marked, which means any
-    // failure inside it reads as the expected one — including a failure that has
-    // nothing to do with merges. This case asserts the same precondition
-    // unmarked, so a broken order-entry patient search shows up as a real
-    // failure here instead of hiding as a false "defect still present" there.
-    const pair = await seedDuplicatePair(page, 'CANARY');
-    await page.goto(`${BASE}/SamplePatientEntry`, { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('#lastName')).toBeVisible({ timeout: 15_000 });
-
-    await page.locator('#lastName').fill(pair.lastName);
-    const searched = await clickFormSearch(page, '#lastName');
-    expect(searched, 'order entry must have a patient Search button').toBe(true);
-
+      shell,
+      'selecting a merged record in order entry must disclose that it was merged'
+    ).toContainText(/this patient record was merged/i, { timeout: 15_000 });
     await expect(
-      page.locator(`[data-cy="patient-result-row-${pair.ids[0]}"]`),
-      `order-entry search for "${pair.lastName}" must return the seeded record ${pair.ids[0]}`
-    ).toBeAttached({ timeout: 15_000 });
+      shell,
+      `the disclosure must name where the active records are kept (${pair.nationalId})`
+    ).toContainText(pair.nationalId);
+
+    // And it must not block. Advancing past Patient Info is the assertion.
+    const next = page.getByRole('button', { name: /^\s*Next\s*$/ });
+    await expect(next, 'order entry must not disable Next for a merged patient').toBeEnabled({ timeout: 10_000 });
+    await next.click();
+    await expect(
+      shell,
+      'the wizard must advance past Patient Info with a merged patient selected'
+    ).toContainText(/Routine Testing/i, { timeout: 15_000 });
+
+    console.log(`TC-MP-06: order entry accepted merged record ${pair.ids[1]} and disclosed the merge to ${pair.nationalId}`);
   });
 });
 

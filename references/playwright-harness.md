@@ -2059,35 +2059,53 @@ Seeded pair 566 (primary) / 567 (merged away), merged via
 | Result row for 567 | badged `Merged` in the leading column | marked, not hidden |
 | Opening 567 | banner: "This patient record was merged / Active records are kept on Patient `<nationalId>`" | good |
 | Editing 567 | no Edit and no Save control rendered | **enforced** |
-| `/SamplePatientEntry` search | offers 567, radio **enabled** | **advisory** |
-| Selecting 567 for an order | banner shows, **Patient Info marks Complete, wizard advances to Program Selection** | **not guarded** |
+| `/SamplePatientEntry` search | offers 567, radio **enabled** | **by design** |
+| Selecting 567 for an order | banner shows, Patient Info marks Complete, wizard advances to Program Selection | **by design** |
 
-So the merge is real where the record is written to, and advisory everywhere the
-record is *chosen*. That inversion is the problem: the guard is on the door nobody
-walks through.
+So the merge is enforced where the record is written to, and advisory where the
+record is *chosen*.
 
-**Why the order-entry half is worth separating.** A filter on the name search is a
-usability fix — the user sees a row they should not have to reason about. Order
-entry accepting a merged patient is different in kind: it will build a requisition
-against a record the lab has already declared dead and consolidated elsewhere, so a
-sample and eventually a result end up attached to it. The banner is present and
-says the right thing, but a banner is not a control; nothing blocks Next.
+**And the order-entry half is settled, the other way from how I read it.** Casey,
+2026-09-09: *"Order entry should not block a merged patient."*
 
-The planned filter is described in terms of search results. Whether anything will
-guard this write path is **unknown** — not "unconfirmed", unknown, since the work
-does not exist yet — which is precisely why TC-MP-06 exists separately from
-TC-MP-05.
+I had argued the opposite, and the argument is worth writing down because the shape
+of the mistake recurs. I reasoned: a requisition against a consolidated record is
+how a result ends up attached to a patient the lab has declared dead, therefore the
+absence of a block is a safety gap, therefore the banner is insufficient because
+"a banner is not a control". Every step follows, and the conclusion was still
+wrong — because the premise it rests on is a clinical-workflow judgement I am not
+the one making. The record still exists. Someone may be standing at the counter
+with a sample labelled with it. Blocking there strands real work, and disclosing
+plus allowing is a legitimate choice.
+
+**The lesson: measuring a behaviour correctly does not make me the one who decides
+whether it is wrong.** I can say what the app does and what the consequence would
+be; whether that consequence is acceptable is the product's call. In the same
+session I also read "a newer version will have a filter" as a finished spec. Same
+error twice — reasoning past the edge of what was actually established.
+
+So TC-MP-06 is now **ordinary green coverage** of allow-plus-disclose, not a
+tripwire. What it protects is the **disclosure**: the banner must appear and must
+name where the active records live (the surviving identifier), because a future
+change that quietly drops the banner while still allowing the order is the real
+remaining risk. TC-MP-07 has been **deleted** — it existed only as a canary for a
+`test.fail()`-marked TC-MP-06, and with that marker gone its rationale went with
+it. A duplicate assertion with no stated reason is how files rot.
+
+One question only the real filter can answer, noted rather than guessed at: if
+merged records are hidden from search results by default, how does a user reach
+one in order entry — through the filter, or not at all?
 
 Worth being precise about what is *not* broken, so a fix does not regress it: the
 identifier search filters correctly, the record is badged in results, the banner
 names where the active records went, and editing is locked. The gap is the name
 search and the order-entry guard.
 
-#### Tracked as two `test.fail()` tripwires
+#### Tracked as one `test.fail()` tripwire
 
-TC-MP-05 (name search) and TC-MP-06 (order entry) assert the behaviour the planned
-work is *intended* to bring, and carry `test.fail(true, '<why>')`. They pass on
-v3.2.2.0 and turn **red when something changes on the instance** — at which point
+TC-MP-05 (name search) asserts the behaviour the planned work is *intended* to
+bring, and carries `test.fail(true, '<why>')`. It passes on v3.2.2.0 and turns
+**red when something changes on the instance** — at which point
 the job is to look at what actually shipped, not to reflexively delete the marker.
 The assertion may need rewriting rather than unmarking.
 
@@ -2097,12 +2115,10 @@ lands differently, one marker and one assertion get rewritten. Either way the
 change cannot land unnoticed. That is the whole claim being made for it — nothing
 stronger.
 
-**They are kept as two cases on purpose.** A filter on search results and a guard
-on a write workflow are different changes, and the planned work is described as the
-former. If the new version turns TC-MP-05 red and leaves TC-MP-06 green, that is a
-useful answer rather than a loose end: the result list got cleaner and order entry
-can still build a requisition against a merged record. Folding them into one case
-would have thrown that distinction away.
+It was two tripwires until order entry was settled. Keeping them separate is what
+made that cheap to correct: inverting TC-MP-06 touched one case and left TC-MP-05
+untouched. Had they been folded into one "merged records are excluded everywhere"
+assertion, the correction would have meant unpicking a case that was half right.
 
 Generalising, because this keeps coming up: **a known-and-scheduled behaviour change
 is the best possible candidate for `test.fail()`.** Not a complaint, not a ticket —
@@ -2119,6 +2135,9 @@ Driving the merge UI to reach a merged state would put the wizard's own defects
 inside another case's precondition.
 
 #### `toHaveCount(0)` after an async action is vacuously true
+
+*(Found in the first TC-MP-06, which has since been rewritten as green coverage —
+the lesson outlives the case.)*
 
 The first TC-MP-06 was one line after the search:
 
@@ -2141,11 +2160,11 @@ await expect(page.locator(`[data-cy="patient-result-row-${primaryId}"]`)).toBeAt
 await expect(page.locator(`[data-cy="patient-result-row-${mergedId}"]`)).toHaveCount(0);
 ```
 
-That guard sits inside a `test.fail()` case, where a failure would read as the
-expected one — so **TC-MP-07 asserts the same precondition unmarked**. If
-order-entry patient search ever breaks outright, TC-MP-07 goes red and says the
-marked case can no longer be trusted. Pair every `test.fail()` case with an
-unmarked canary for its preconditions.
+That guard sat inside a `test.fail()` case, where a failure would read as the
+expected one — so TC-MP-07 asserted the same precondition unmarked, as a canary.
+**The rule still stands: pair every `test.fail()` case with an unmarked canary for
+its preconditions.** TC-MP-07 itself is gone, because TC-MP-06 stopped being
+`test.fail()`-marked and a canary for an ordinary green case is just a duplicate.
 
 Note also what caught this: the marker itself. A plain green test asserting
 `toHaveCount(0)` would have sailed through and been counted as coverage forever.
