@@ -486,91 +486,42 @@ export async function createOrderViaAPI(
   testName: string,
   orderKey: 'primaryOrder' | 'secondaryOrder'
 ): Promise<string | null> {
-  try {
-    const result = await page.evaluate(async (params: { nationalId: string; testName: string }) => {
-      const csrf = localStorage.getItem('CSRF') || '';
-
-      // Build minimal patient-order payload
-      const payload = {
-        sampleOrderItems: {
-          newRequesterName: '',
-          requestDate: new Date().toISOString().slice(0, 10),
-          receivedDateForDisplay: new Date().toISOString().slice(0, 10),
-          receivedTime: '08:00',
-          nextVisitDate: '',
-          requesterSampleID: '',
-          referringPatientNumber: params.nationalId,
-          referringSiteId: '',
-          referringSiteName: '',
-          providerId: '',
-          providerLastName: '',
-          providerFirstName: '',
-          providerWorkPhone: '',
-          providerFax: '',
-          providerEmail: '',
-          program: '',
-          billingReferenceNumber: '',
-          paymentOptionSelection: 'INSURANCE',
-          testLocationCode: '',
-          otherLocationCode: '',
-          facilityAddressStreet: '',
-          facilityAddressCommune: '',
-          facilityPhone: '',
-          facilityFax: '',
-        },
-        patientProperties: {
-          patientPK: '',
-          subjectNumber: '',
-          nationalId: params.nationalId,
-          patientLastName: 'Sebby',
-          patientFirstName: 'Abby',
-          patientLastNameNational: '',
-          patientFirstNameNational: '',
-          DOB: '01/01/1990',
-          gender: 'F',
-          primaryPhone: '555-0100',
-          streetAddress: '',
-          commune: '',
-          department: '',
-          healthDistrict: '',
-          healthRegion: '',
-          mothersName: '',
-          maritialStatus: '',
-          nationality: '',
-          educationLevel: '',
-          insureNumber: '',
-          activePatient: true,
-        },
-        sampleXML:
-          '<samples>' +
-          `<sample><tests><test><id>${params.testName}</id></test></tests></sample>` +
-          '</samples>',
-      };
-
-      const res = await fetch('/api/OpenELIS-Global/rest/SamplePatientEntry', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': csrf,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) return { status: res.status, accession: null };
-      const data = await res.json();
-      const accession = data.accessionNumber ?? data.labNo ?? data.sampleOrderItems?.labNo ?? null;
-      return { status: res.status, accession };
-    }, { nationalId: TEST_PATIENT.nationalId, testName });
-
-    if (result.accession) {
-      state[orderKey].accession = result.accession;
-      state[orderKey].status = 'created';
-      return result.accession;
-    }
-    return null;
-  } catch (e) {
-    return null;
-  }
+  // THIS NO LONGER FABRICATES A PAYLOAD, AND THAT IS THE FIX.
+  //
+  // What used to be here was a hand-composed POST to /rest/SamplePatientEntry:
+  // ~50 guessed fields plus a `sampleXML` string that put the TEST NAME where
+  // an id belongs (`<test><id>HGB</id></test>`). It never once succeeded — every
+  // run logged "primaryOrder API creation failed" — and it violated 12.4, which
+  // says payloads are CAPTURED off the wire, never composed.
+  //
+  // I set out to capture the real one on a clean local 3.2.2.0 install, drove
+  // the Add Order wizard to its final step, and found there is nothing to
+  // capture: a stock install cannot submit an order at all. Measured 2026-09-09
+  // (harness 12.26):
+  //
+  //   - Add Order has three required fields. `#requesterDepartmentId`
+  //     ("ward/dept/unit") is required and offers ONLY the blank option, so it
+  //     can never be satisfied and Submit stays disabled forever.
+  //   - Typing into `#siteName` fires ZERO network requests, so that field is
+  //     not a live lookup waiting on a slow endpoint — it has no data to offer.
+  //   - `/rest/organization/list` answers 500 on a freshly seeded database.
+  //
+  // So the honest state of this fixture is: no API path exists yet, because no
+  // successful request exists to copy. Returning a named failure is worth more
+  // than a fabricated one — the old code made `data.setup` look like it had a
+  // fallback, which is why "order creation is broken" sat in the backlog for
+  // weeks described as an unstable-row problem (12.21) rather than a
+  // required-field-with-no-options problem.
+  //
+  // To make this work, seed the config data first (departments / organizations
+  // / test locations). That is a data task, not a test task. Once an order can
+  // be submitted by hand, capture the POST and put it here.
+  state.setupErrors.push(
+    `createOrder(${testName}): no captured API payload exists. A stock 3.2.2.0 install cannot ` +
+      `submit an order — #requesterDepartmentId is required and has no options. See harness 12.26.`
+  );
+  state[orderKey].status = 'blocked: no submittable order on a stock install (12.26)';
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -633,7 +584,13 @@ export async function runDataSetup(page: Page): Promise<TestDataState> {
       }
     } else {
       acc = await createOrderViaAPI(page, state, testName, slot);
-      if (!acc) console.warn(`[data-setup] ${slot} API creation failed (UI path is known-broken; not attempted)`);
+      if (!acc) {
+        console.warn(
+          `[data-setup] ${slot}: not created. No order can be submitted on a stock install — ` +
+            `#requesterDepartmentId is required with no options (harness 12.26). Seed the config ` +
+            `data (departments/organizations/test locations) to unblock order-dependent coverage.`
+        );
+      }
     }
   }
 

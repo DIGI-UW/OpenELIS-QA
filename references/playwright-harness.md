@@ -2248,3 +2248,76 @@ work" into a result.
 `createOrderViaAPI` still fails — the payload is hand-composed (12.4). A clean
 local instance is the ideal place to capture the real one, and that is now the
 obvious next piece of work rather than a vague backlog item.
+
+### 12.26 Order creation: there is no payload to capture, because a stock install cannot submit an order
+
+**2026-09-09.** With a local 3.2.2.0 target in place (12.25), the obvious next
+piece was to capture the real order-entry payload and retire
+`createOrderViaAPI`'s hand-composed one (12.4). I drove the Add Order wizard to
+its final step on a freshly seeded install to record the POST. There is no POST
+to record.
+
+#### The wizard walks fine. It just cannot be submitted.
+
+All four steps advance in one pass on a clean instance — Patient Info → Program
+Selection → Add Sample → Add Order — in about a minute, not the 3.2 minutes
+12.21 measured against the shared instance. The blocker is at the end:
+
+| Add Order field | Required | State |
+|---|---|---|
+| `#priorityId` | yes | defaults to `Routine` — fine |
+| `#paymentOptionSelectionId` | yes | 4 options — fine |
+| `#testLocationCodeId` | yes | options `1303=B1`… — fine |
+| `#siteName` | yes | free text, **no data behind it** |
+| `#requesterDepartmentId` | yes | **only the blank option, `["="]`** |
+
+`#requesterDepartmentId` is a required select with nothing selectable in it, so
+it can never be satisfied and **Submit stays disabled permanently**. Confirmed on
+two separate runs.
+
+And the site field is not a slow lookup that needed more patience: **typing five
+characters into `#siteName` fires zero network requests.** That was the
+measurement worth taking, because "the autocomplete is slow" and "the field has
+no data" call for completely different work.
+
+`/rest/organization/list` answers **500** on this freshly seeded database — the
+same 500 seen on `testing` earlier in the session, now reproduced on a clean
+install, which is a much stronger signal than on a shared instance of unknown
+data. Two observations here plus one there. **What I am not claiming:** that the
+500 is *why* the department select is empty. Organizations and departments are
+different things, and I never successfully selected a site, so I cannot say site
+selection wouldn't populate the department list. The 500 is a reproducible fact;
+the causal chain to the empty select is a hypothesis.
+
+#### What this changes about a backlog item
+
+12.21 recorded order creation as blocked by an unstable results row and a
+3.2-minute step 1, and proposed "the API, once a payload has been CAPTURED". Both
+halves were about *cost*. The real blocker is *possibility*: on a stock install
+the form cannot be completed at all. That reframing matters because the two
+diagnoses buy different work — waiting-and-retrying versus seeding config data.
+
+So `createOrderViaAPI` no longer fabricates a payload. It now fails with a named
+reason pointing here. The old body was ~50 guessed fields and a `sampleXML`
+string that put a test NAME where an id belongs
+(`<test><id>HGB</id></test>`); it never once succeeded, and its real cost was
+making `data.setup` look like it had an API fallback. **A fabricated fallback is
+worse than none: it hides the fact that nothing works.**
+
+#### To unblock order-dependent coverage
+
+Seed the config data — departments (`ward/dept/unit`), organizations, test
+locations — then submit one order by hand and capture the POST. That is a data
+task, not a test task, and it is the prerequisite for TC-PAT-04's history
+assertions ever seeing real orders, for `ACCESSION`-dependent cases, and for the
+chains suites.
+
+Useful ids gathered while probing, so nobody repeats it: sample types are
+`#sampleId_0` (`2=Serum`, `4=Whole Blood`, `1=Urines`, 18 in all); test
+checkboxes are `test_0_<testId>` and panels `panel_0_<panelId>` (e.g.
+`test_0_15` = Hemoglobin, `test_0_3` = Glucose, `panel_0_1` = Bilan
+Biochimique); `/rest/test-list` returns `[{id, value}]` and works;
+`/rest/sample-type-tests` answers 500. Selecting a panel fires
+`POST /api/OpenELIS-Global/api/orderEntry/labelRequest` with
+`{"test_ids":[…],"samples":[{"sample_id_local":"0","sample_type":"2"}]}` — the
+label-preset call, not the order submit.
