@@ -2011,9 +2011,26 @@ fresh browser context in each of two consecutive full runs, and a genuine logout
 plus re-login. So the behaviour below is measured, not assumed.
 
 **Then the disposition changed, and it is worth recording why.** Casey, 2026-09-09:
-*"A newer version will have a filter. Keep this one as is."* So this is **not a
-defect against v3.2.2.0** — it is current expected behaviour, with the fix already
-coming. Nothing here is to be filed or chased.
+*"A newer version will have a filter. Keep this one as is."* — and on what that
+filter does: *"which will show the merged patients."* So the filter is an **opt-in
+control that reveals** merged records, and hidden becomes the default. This is
+therefore **not a defect against v3.2.2.0** — it is current expected behaviour,
+with the change already coming. Nothing here is to be filed or chased.
+
+Note the direction, because it decides what the tests assert. The filter is not a
+"hide merged" switch bolted onto today's behaviour; today's behaviour becomes the
+*non-default* state reached by turning the filter on. So the new version needs
+**two** cases:
+
+| Filter | Expected | Status |
+|---|---|---|
+| OFF (default) | merged records absent from results | TC-MP-05, written, `test.fail()`-marked |
+| ON | merged records present **and still badged `Merged`** | TC-MP-08 — **not written yet** |
+
+TC-MP-08 is deliberately not written. There is no control to drive, so every
+locator in it would be invented rather than verified — which is exactly how the
+four hollow TC-MP cases this file just replaced came to exist (12.22). Write it
+against the real control on the day it exists, not before.
 
 That does not make the work wasted; it changes what the work is *for*. A finding
 that is already scheduled to be fixed is exactly the finding worth encoding as a

@@ -598,9 +598,20 @@ test.describe('Suite AC — Merge Patient', () => {
   // ── The merge is only advisory outside the wizard ──────────────────────────
   //
   // NOT A DEFECT AGAINST THIS VERSION. Casey, 2026-09-09: "a newer version will
-  // have a filter. Keep this one as is." So on v3.2.2.0 a merged-away record
-  // still appearing in a name search is current expected behaviour, and nothing
-  // here should be filed or chased against it.
+  // have a filter. Keep this one as is." — and, on what that filter does:
+  // "which will show the merged patients." So the filter is an OPT-IN control
+  // that reveals merged records; hidden becomes the default. On v3.2.2.0 a
+  // merged-away record still appearing in a name search is current expected
+  // behaviour, and nothing here should be filed or chased against it.
+  //
+  // That shape means the new version needs TWO cases, not one:
+  //   - filter OFF (the default): merged records absent — TC-MP-05 below,
+  //     already written, currently test.fail()-marked.
+  //   - filter ON: merged records present AND still badged "Merged" — call it
+  //     TC-MP-08. NOT written yet, deliberately: there is no control to drive,
+  //     so any locator for it would be invented rather than verified, which is
+  //     how the four hollow TC-MP cases this file just replaced came to exist
+  //     (12.22). Write it against the real control when the version lands.
   //
   // The two cases below are therefore TRIPWIRES, not complaints. They assert the
   // behaviour the newer version is expected to bring and are marked
@@ -631,8 +642,10 @@ test.describe('Suite AC — Merge Patient', () => {
     test.fail(
       true,
       'EXPECTED on v3.2.2.0: a name search still returns records that have been merged away — the ' +
-        'identifier search filters them, the name search does not. A newer version adds the filter; ' +
-        'when this goes red, that version has landed. Delete the marker and keep the assertion.'
+        'identifier search filters them, the name search does not. The newer version adds a filter ' +
+        'that SHOWS merged patients, so hidden becomes the default and this assertion becomes ' +
+        'correct. When it goes red, that version has landed: delete the marker, keep the assertion, ' +
+        'and add the companion case for the filter switched ON (see TC-MP-08 note below).'
     );
     const pair = await seedMergedPair(page);
     expect(
