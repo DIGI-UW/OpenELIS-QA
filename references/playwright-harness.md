@@ -2010,27 +2010,35 @@ finding.
 fresh browser context in each of two consecutive full runs, and a genuine logout
 plus re-login. So the behaviour below is measured, not assumed.
 
-**Then the disposition changed, and it is worth recording why.** Casey, 2026-09-09:
-*"A newer version will have a filter. Keep this one as is."* — and on what that
-filter does: *"which will show the merged patients."* So the filter is an **opt-in
-control that reveals** merged records, and hidden becomes the default. This is
-therefore **not a defect against v3.2.2.0** — it is current expected behaviour,
-with the change already coming. Nothing here is to be filed or chased.
+**Then the disposition changed twice, and the sequence is the lesson.** Casey:
 
-Note the direction, because it decides what the tests assert. The filter is not a
-"hide merged" switch bolted onto today's behaviour; today's behaviour becomes the
-*non-default* state reached by turning the filter on. So the new version needs
-**two** cases:
+1. *"A newer version will have a filter. Keep this one as is."*
+2. *"which will show the merged patients."*
+3. *"Wait. That filter isn't built yet. They will show up right now."*
 
-| Filter | Expected | Status |
-|---|---|---|
-| OFF (default) | merged records absent from results | TC-MP-05, written, `test.fail()`-marked |
-| ON | merged records present **and still badged `Merged`** | TC-MP-08 — **not written yet** |
+I ran ahead on both of the first two. After (1) I wrote that the search-results
+half was "handled"; after (2) I wrote that the result-list question was "settled"
+and started deriving second-order consequences from a default state that does not
+exist. (3) is the correction, and it is the state to hold:
 
-TC-MP-08 is deliberately not written. There is no control to drive, so every
-locator in it would be invented rather than verified — which is exactly how the
-four hollow TC-MP cases this file just replaced came to exist (12.22). Write it
-against the real control on the day it exists, not before.
+- **Today, on v3.2.2.0:** merged-away records **do** appear in name searches and
+  in order entry. Measured, and it is what these tests run against. Not a defect
+  against this version — nothing to file or chase.
+- **Planned, not built:** a filter, *intended* to show merged patients, which
+  would imply hidden becomes the default. **Intended, not settled.** There is no
+  control to look at, so its shape is not knowable from here.
+
+The generalisable bit, since I did it twice in two turns: **a one-line answer
+about future work is not a specification.** "A newer version will have a filter"
+licenses a tripwire. It does not license writing up a default state, a toggle
+semantics, or knock-on requirements as decided — and a QA reference that states
+unbuilt behaviour as fact is worse than one that says nothing, because the next
+reader cannot tell which parts were measured.
+
+So: no TC-MP-08 for a filter-ON state. Not "not yet written" — **not written**,
+because there is nothing to write it against, and inventing locators for
+unbuilt controls is exactly how the four hollow TC-MP cases this file replaced
+came to exist (12.22).
 
 That does not make the work wasted; it changes what the work is *for*. A finding
 that is already scheduled to be fixed is exactly the finding worth encoding as a
@@ -2065,9 +2073,10 @@ against a record the lab has already declared dead and consolidated elsewhere, s
 sample and eventually a result end up attached to it. The banner is present and
 says the right thing, but a banner is not a control; nothing blocks Next.
 
-The planned filter is described as covering search results. Whether it also guards
-the order-entry wizard is **unconfirmed**, which is precisely why TC-MP-06 exists
-separately from TC-MP-05.
+The planned filter is described in terms of search results. Whether anything will
+guard this write path is **unknown** — not "unconfirmed", unknown, since the work
+does not exist yet — which is precisely why TC-MP-06 exists separately from
+TC-MP-05.
 
 Worth being precise about what is *not* broken, so a fix does not regress it: the
 identifier search filters correctly, the record is badged in results, the banner
@@ -2076,11 +2085,17 @@ search and the order-entry guard.
 
 #### Tracked as two `test.fail()` tripwires
 
-TC-MP-05 (name search) and TC-MP-06 (order entry) assert the behaviour the newer
-version is expected to bring, and carry `test.fail(true, '<why>')`. They pass on
-v3.2.2.0 and turn **red the moment the filter lands** — the signal to delete the
-marker and let the assertion stand as ordinary coverage. The change then arrives
-with a test already waiting for it.
+TC-MP-05 (name search) and TC-MP-06 (order entry) assert the behaviour the planned
+work is *intended* to bring, and carry `test.fail(true, '<why>')`. They pass on
+v3.2.2.0 and turn **red when something changes on the instance** — at which point
+the job is to look at what actually shipped, not to reflexively delete the marker.
+The assertion may need rewriting rather than unmarking.
+
+This is the cheapest possible bet on an unbuilt feature: if the filter lands as
+described, one marker comes off and the case becomes ordinary coverage; if it
+lands differently, one marker and one assertion get rewritten. Either way the
+change cannot land unnoticed. That is the whole claim being made for it — nothing
+stronger.
 
 **They are kept as two cases on purpose.** A filter on search results and a guard
 on a write workflow are different changes, and the planned work is described as the

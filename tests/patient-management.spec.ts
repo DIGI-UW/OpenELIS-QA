@@ -589,29 +589,43 @@ test.describe('Suite AC — Merge Patient', () => {
       `TC-MP-04: merged ${pair.ids[1]} into ${pair.ids[0]}; nationalID search -> [${pair.ids[0]}] (consolidated). ` +
         (survivedByName
           ? `${pair.ids[1]} is still returned by a last-name search after being merged away — ` +
-            'expected on v3.2.2.0; TC-MP-05/TC-MP-06 are the tripwires for the version that filters.'
-          : `last-name search no longer returns ${pair.ids[1]} — the filter has LANDED. ` +
-            'TC-MP-05 should now be red; delete its test.fail marker and keep the assertion.')
+            'current behaviour on v3.2.2.0; the filter is planned, not built. TC-MP-05/TC-MP-06 wait for it.'
+          : `last-name search no longer returns ${pair.ids[1]} — something has CHANGED on the instance. ` +
+            'Check what shipped: TC-MP-05 should now be red, and its assertion may need rewriting rather than unmarking.')
     );
   });
 
   // ── The merge is only advisory outside the wizard ──────────────────────────
   //
-  // NOT A DEFECT AGAINST THIS VERSION. Casey, 2026-09-09: "a newer version will
-  // have a filter. Keep this one as is." — and, on what that filter does:
-  // "which will show the merged patients." So the filter is an OPT-IN control
-  // that reveals merged records; hidden becomes the default. On v3.2.2.0 a
-  // merged-away record still appearing in a name search is current expected
-  // behaviour, and nothing here should be filed or chased against it.
+  // NOT A DEFECT AGAINST THIS VERSION, AND NOT FIXED EITHER. Casey, 2026-09-09:
+  // "A newer version will have a filter. Keep this one as is." — then, on the
+  // filter: "which will show the merged patients." — then, correcting me:
+  // "Wait. That filter isn't built yet. They will show up right now."
   //
-  // That shape means the new version needs TWO cases, not one:
-  //   - filter OFF (the default): merged records absent — TC-MP-05 below,
-  //     already written, currently test.fail()-marked.
-  //   - filter ON: merged records present AND still badged "Merged" — call it
-  //     TC-MP-08. NOT written yet, deliberately: there is no control to drive,
-  //     so any locator for it would be invented rather than verified, which is
-  //     how the four hollow TC-MP cases this file just replaced came to exist
-  //     (12.22). Write it against the real control when the version lands.
+  // So the state of the world, stated plainly because I got ahead of it twice:
+  //   - TODAY, on v3.2.2.0: merged-away records DO appear in name searches and
+  //     in order entry. That is current behaviour, measured, and it is what
+  //     these tests run against. Nothing to file or chase against this version.
+  //   - PLANNED, NOT BUILT: a filter, intended to show merged patients — which
+  //     implies hidden becomes the default. Intended, not settled. There is no
+  //     control to look at, so the exact shape is not knowable from here.
+  //
+  // TC-MP-05 and TC-MP-06 below encode the intent as test.fail() tripwires.
+  // That is deliberately the cheapest possible bet on an unbuilt feature: if
+  // the filter lands as described the case goes red and becomes coverage; if it
+  // lands differently, one marker and one assertion get rewritten. What must
+  // NOT happen is writing locators for controls nobody has built — that is how
+  // the four hollow TC-MP cases this file just replaced came to exist (12.22).
+  //
+  // So there is no TC-MP-08 for the filter-ON state yet, on purpose. It gets
+  // written against the real control on the day there is one.
+  //
+  // What IS already enforced after a merge, and worth not regressing: a
+  // national-ID search returns only the primary (TC-MP-04 asserts that), the
+  // merged record is badged "Merged" in result rows, opening it shows "This
+  // patient record was merged / Active records are kept on Patient
+  // <nationalId>", and it cannot be edited — no Edit or Save control is
+  // rendered.
   //
   // The two cases below are therefore TRIPWIRES, not complaints. They assert the
   // behaviour the newer version is expected to bring and are marked
@@ -628,24 +642,17 @@ test.describe('Suite AC — Merge Patient', () => {
   //
   // Behaviour recorded 2026-09-08 on testing v3.2.2.0 against all three
   // revalidation gates (3x API repeat, a fresh browser context in each of two
-  // full runs, and a genuine logout + re-login), so what these cases encode is
-  // measured, not assumed.
-  //
-  // What IS already enforced after a merge, and worth not regressing: a
-  // national-ID search returns only the primary (TC-MP-04 asserts that), the
-  // merged record is badged "Merged" in result rows, opening it shows "This
-  // patient record was merged / Active records are kept on Patient
-  // <nationalId>", and it cannot be edited — no Edit or Save control is
-  // rendered.
+  // full runs, and a genuine logout + re-login), so what these cases run
+  // against is measured, not assumed.
 
   test('TC-MP-05: A merged-away record must not be returned by a name search', async ({ page }) => {
     test.fail(
       true,
-      'EXPECTED on v3.2.2.0: a name search still returns records that have been merged away — the ' +
-        'identifier search filters them, the name search does not. The newer version adds a filter ' +
-        'that SHOWS merged patients, so hidden becomes the default and this assertion becomes ' +
-        'correct. When it goes red, that version has landed: delete the marker, keep the assertion, ' +
-        'and add the companion case for the filter switched ON (see TC-MP-08 note below).'
+      'CURRENT BEHAVIOUR on v3.2.2.0: a name search returns records that have been merged away — ' +
+        'the identifier search filters them, the name search does not. A filter is PLANNED BUT NOT ' +
+        'BUILT, intended to show merged patients, which would make hidden the default and this ' +
+        'assertion correct. This marker is a bet on that intent, not a claim it exists. If it goes ' +
+        'red, check what actually shipped before deleting anything.'
     );
     const pair = await seedMergedPair(page);
     expect(
@@ -657,10 +664,10 @@ test.describe('Suite AC — Merge Patient', () => {
   test('TC-MP-06: A merged-away record must not be usable for a new order', async ({ page }) => {
     test.fail(
       true,
-      'EXPECTED on v3.2.2.0: order entry accepts a merged-away patient — the banner appears, but ' +
-        'Patient Info is marked Complete and the wizard advances. OPEN QUESTION: the planned filter ' +
-        'covers search results; whether it also guards the order-entry wizard is unconfirmed, so this ' +
-        'case is kept separate from TC-MP-05 rather than folded into it.'
+      'CURRENT BEHAVIOUR on v3.2.2.0: order entry accepts a merged-away patient — the banner ' +
+        'appears, but Patient Info is marked Complete and the wizard advances. The planned filter is ' +
+        'described in terms of search results; whether anything will guard this write path is ' +
+        'unknown, so this case is kept separate from TC-MP-05 rather than folded into it.'
     );
     // This is the half that is kept separate on purpose. A filter on search
     // results and a guard on a write workflow are different changes, and the
