@@ -480,67 +480,206 @@ export async function createOrderViaUI(
  * Create an order via the REST API directly (faster than UI, requires working API).
  * Falls back to UI creation if API fails.
  */
+/**
+ * Create an order through the REST API.
+ *
+ * PAYLOAD CAPTURED (12.4), and it took the whole of 12.26-12.28 to get one,
+ * because a stock 3.2.2.0 install cannot submit an order at all. The four
+ * things that had to be true, all measured:
+ *
+ *   1. An organization of org type 5 ("referring clinic") must exist, or the
+ *      site field has nothing to offer.
+ *   2. An organization of org type 11 ("dept") whose PARENT is that clinic,
+ *      or the required #requesterDepartmentId select stays empty.
+ *   3. The accession must be GENERATED, never invented:
+ *        GET /rest/SampleEntryGenerateScanProvider -> {"status":true,"body":"DEV01260000000000002"}
+ *      An invented one is rejected with
+ *        400 sampleOrderItems.labNo: "Invalid accession number format".
+ *   4. referringSiteId must actually be set. In the UI that means choosing the
+ *      site through the combobox (ArrowDown + Enter); clicking a list item sets
+ *      the visible text and leaves the id unset, and Yup then reports
+ *      "Referring Site is required" on a field that looks filled.
+ *
+ * The accepted request was POST /rest/SamplePatientEntry -> 200, and the app
+ * then renders "Successfully saved" with the accession.
+ */
 export async function createOrderViaAPI(
   page: Page,
   state: TestDataState,
   testName: string,
   orderKey: 'primaryOrder' | 'secondaryOrder'
 ): Promise<string | null> {
-  // THIS NO LONGER FABRICATES A PAYLOAD, AND THAT IS THE FIX.
-  //
-  // What used to be here was a hand-composed POST to /rest/SamplePatientEntry:
-  // ~50 guessed fields plus a `sampleXML` string that put the TEST NAME where
-  // an id belongs (`<test><id>HGB</id></test>`). It never once succeeded — every
-  // run logged "primaryOrder API creation failed" — and it violated 12.4, which
-  // says payloads are CAPTURED off the wire, never composed.
-  //
-  // I set out to capture the real one on a clean local 3.2.2.0 install, drove
-  // the Add Order wizard to its final step, and found there is nothing to
-  // capture: a stock install cannot submit an order at all. Measured 2026-09-09
-  // (harness 12.26):
-  //
-  //   - Add Order has three required fields. `#requesterDepartmentId`
-  //     ("ward/dept/unit") is required and offers ONLY the blank option, so it
-  //     can never be satisfied and Submit stays disabled forever.
-  //   - `#siteName` is a plain <input type="text" required>. Typing into it
-  //     fires ZERO requests: its candidates come from an already-fetched
-  //     `displayList/REFERRAL_ORGANIZATIONS`, which returns 200 [].
-  //   - `departments-for-site?refferingSiteId=<id>` also returns 200 [] (yes,
-  //     two f's — that is upstream's spelling).
-  //
-  // Both endpoints work. They are empty because on a stock install NO
-  // organization is mapped to org type 5 ("referring clinic") or type 11
-  // ("dept") — all 24 organizations belong to the Indonesian address hierarchy
-  // (types 13-16). So on a stock install order entry cannot be completed by
-  // CONFIGURATION.
-  //
-  // 12.27 UPDATE: seeding those two organizations is necessary but NOT
-  // sufficient. With a referring clinic and a department seeded, a site can be
-  // selected and the department select populates — and Submit is STILL
-  // disabled with all five required fields holding values. The remaining gate
-  // is not yet identified, so this fixture still has no payload to capture.
-  // Read 12.27 before attempting it again; it records the wall, not just the
-  // starting point.
-  //
-  // So the honest state of this fixture is: no API path exists yet, because no
-  // successful request exists to copy. Returning a named failure is worth more
-  // than a fabricated one — the old code made `data.setup` look like it had a
-  // fallback, which is why "order creation is broken" sat in the backlog for
-  // weeks described as an unstable-row problem (12.21) rather than a
-  // no-referring-sites-configured problem.
-  //
-  // To make this work, per 12.27: seed a type-5 organization and a type-11
-  // organization whose PARENT is the type-5 one (the admin form does not set
-  // that parent — it saves 200 with the field silently empty), then find what
-  // else gates Submit. Test locations already exist.
-  state.setupErrors.push(
-    `createOrder(${testName}): no captured API payload exists. A stock 3.2.2.0 install cannot ` +
-      `submit an order. On a stock install no organization is typed as a referring clinic ` +
-      `(org type 5) or dept (type 11); seeding both is necessary but not sufficient — Submit ` +
-      `stays disabled even with every required field set. See harness 12.26 and 12.27.`
-  );
-  state[orderKey].status = 'blocked: no referring clinic / dept configured (12.26)';
-  return null;
+  try {
+    const patientId = state.patient.systemId;
+    if (!patientId) {
+      state.setupErrors.push(`createOrder(${testName}): no patient systemId; cannot build an order payload`);
+      return null;
+    }
+
+    const result = await page.evaluate(
+      async (args: { patientId: string; nationalId: string; testId: string; sampleTypeId: string }) => {
+        const csrf = localStorage.getItem('CSRF') || '';
+        const j = async (p: string) => {
+          const r = await fetch(p, { headers: { Accept: 'application/json' } });
+          if (!r.ok) return null;
+          return r.json().catch(() => null);
+        };
+
+        // (1)+(2) the referring site and its department
+        const sites = (await j('/api/OpenELIS-Global/rest/displayList/SAMPLE_PATIENT_REFERRING_CLINIC')) || [];
+        if (!sites.length) return { err: 'no referring clinic configured (org type 5) — see harness 12.27' };
+        const siteId = String(sites[0].id);
+        const depts = (await j(`/api/OpenELIS-Global/rest/departments-for-site?refferingSiteId=${siteId}`)) || [];
+        if (!depts.length) return { err: `site ${siteId} has no departments (need a type-11 org whose parent is it) — 12.27` };
+
+        // (3) the accession, generated
+        // the patient's own record, for the block above
+        const found = await j(
+          `/api/OpenELIS-Global/rest/patient-search-results?patientID=${encodeURIComponent(args.patientId)}&lastName=&firstName=`
+        );
+        let pt = ((found && found.patientSearchResults) || []).find(
+          (x: any) => String(x.patientID ?? x.patientId) === String(args.patientId)
+        );
+        if (!pt && args.nationalId) {
+          const byNid = await j(
+            `/api/OpenELIS-Global/rest/patient-search-results?nationalID=${encodeURIComponent(args.nationalId)}&lastName=&firstName=`
+          );
+          pt = ((byNid && byNid.patientSearchResults) || []).find(
+            (x: any) => String(x.patientID ?? x.patientId) === String(args.patientId)
+          );
+        }
+        if (!pt) return { err: `could not read patient ${args.patientId} back to build patientProperties` };
+
+        const gen = await j('/api/OpenELIS-Global/rest/SampleEntryGenerateScanProvider');
+        const labNo = gen && gen.body;
+        if (!labNo) return { err: 'SampleEntryGenerateScanProvider returned no accession' };
+
+        const pay = (await j('/api/OpenELIS-Global/rest/displayList/PAYMENT_OPTIONS')) || [];
+        const today = new Date();
+        const dd = String(today.getDate()).padStart(2, '0');
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const date = `${dd}/${mm}/${today.getFullYear()}`;
+
+        const body = {
+          rememberSiteAndRequester: false,
+          customNotificationLogic: false,
+          patientEmailNotificationTestIds: [],
+          patientSMSNotificationTestIds: [],
+          providerEmailNotificationTestIds: [],
+          providerSMSNotificationTestIds: [],
+          patientUpdateStatus: 'NO_ACTION',
+          referralItems: [],
+          useReferral: false,
+          sampleXML:
+            '<?xml version="1.0" encoding="utf-8"?><samples><sample ' +
+            `sampleID='${args.sampleTypeId}' date='' time='' collector='' quantity='' uom='' ` +
+            `tests='${args.testId}' testSectionMap='' testSampleTypeMap='' panels='' rejected='false' ` +
+            "rejectReasonId='' initialConditionIds='' storageLocationId='' storageLocationType='' " +
+            "storagePositionCoordinate='' gpsLatitude='' gpsLongitude='' gpsAccuracy='' " +
+            "gpsCaptureMethod='' collectionMethod='' sampleTemperature='' specimenOrigin='' " +
+            "numOrderLabels='1' numSpecimenLabels='1'/></samples>",
+          // The server validates the WHOLE patient block, not just the PK:
+          // trimming it to patientPK returned
+          //   400 patientProperties.gender "must not be blank"
+          //      patientProperties.nationalId "Cannot be blank"
+          // so it is rebuilt from the patient's own search record.
+          patientProperties: {
+            patientUpdateStatus: 'NO_ACTION',
+            patientPK: args.patientId,
+            nationalId: pt.nationalId || '',
+            subjectNumber: pt.subjectNumber || '',
+            lastName: pt.lastName || '',
+            firstName: pt.firstName || '',
+            gender: pt.gender || '',
+            birthDateForDisplay: pt.birthdate || pt.dob || '',
+            guid: pt.guid || '',
+            aka: '', streetAddress: '', city: '', primaryPhone: '', email: '',
+            commune: '', education: '', maritialStatus: '', nationality: '',
+            healthDistrict: '', healthRegion: '', otherNationality: '',
+            occupation: '', customNotes: '', targetDiseaseProgramme: '',
+            photo: '', idDocuments: [], mothersName: '', mothersInitial: '',
+            addressDepartment: '', insuranceNumber: '', isMerged: false,
+          },
+          sampleOrderItems: {
+            labNo,
+            requestDate: date,
+            receivedDateForDisplay: date,
+            receivedTime: '08:00',
+            nextVisitDate: '',
+            priority: 'ROUTINE',
+            referringSiteId: siteId,
+            referringSiteDepartmentId: String(depts[0].id),
+            referringSiteCode: '',
+            referringSiteName: '',
+            referringSiteDepartmentName: '',
+            referringSiteList: [],
+            referringSiteDepartmentList: [],
+            paymentOptionSelection: pay.length ? String(pay[0].id) : '',
+            paymentOptions: [],
+            testLocationCode: '',
+            otherLocationCode: '',
+            newRequesterName: '',
+            requesterSampleID: '',
+            referringPatientNumber: '',
+            providerId: '',
+            providerPersonId: '',
+            providerFirstName: '',
+            providerLastName: '',
+            providerWorkPhone: '',
+            providerFax: '',
+            providerEmail: '',
+            providersList: [],
+            externalOrderNumber: '',
+            orderType: '',
+            orderTypes: [],
+            billingReferenceNumber: '',
+            facilityAddressStreet: '',
+            facilityAddressCommune: '',
+            facilityPhone: '',
+            facilityFax: '',
+            program: '',
+            programList: [],
+            priorityList: [],
+            testLocationCodeList: [],
+            modified: true,
+            readOnly: false,
+            sampleId: '',
+            isEQASample: false,
+          },
+        };
+
+        const r = await fetch('/api/OpenELIS-Global/rest/SamplePatientEntry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept-Language': 'en', 'X-CSRF-Token': csrf },
+          body: JSON.stringify(body),
+        });
+        const text = await r.text().catch(() => '');
+        return { status: r.status, labNo, detail: text.slice(0, 300) };
+      },
+      {
+        patientId,
+        nationalId: state.patient.nationalId,
+        testId: process.env.QA_TEST_ID || '3',
+        sampleTypeId: process.env.QA_SAMPLE_TYPE_ID || '2',
+      }
+    );
+
+    if ((result as any).err) {
+      state.setupErrors.push(`createOrder(${testName}): ${(result as any).err}`);
+      return null;
+    }
+    const r = result as { status: number; labNo: string; detail: string };
+    if (r.status === 200) {
+      state[orderKey].accession = r.labNo;
+      state[orderKey].status = 'created';
+      return r.labNo;
+    }
+    state.setupErrors.push(`createOrder(${testName}): POST SamplePatientEntry -> ${r.status} ${r.detail}`);
+    return null;
+  } catch (e) {
+    state.setupErrors.push(`createOrder(${testName}): ${String(e).slice(0, 200)}`);
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -598,14 +737,17 @@ export async function runDataSetup(page: Page): Promise<TestDataState> {
     if (preferUI) {
       acc = await createOrderViaUI(page, state, testName, slot);
       if (!acc) {
-        console.warn(`[data-setup] ${slot} UI creation failed, trying API...`);
-        acc = await createOrderViaAPI(page, state, testName, slot);
+        console.warn(
+          `[data-setup] ${slot}: not created — see the setup error above and harness 12.28.` +
+            `An order needs a type-5 referring clinic and a type-11 dept whose PARENT is that ` +
+            `clinic; on a stock install neither exists.`
+        );
       }
     } else {
       acc = await createOrderViaAPI(page, state, testName, slot);
       if (!acc) {
         console.warn(
-          `[data-setup] ${slot}: not created. No order can be submitted on a stock install — ` +
+          `[data-setup] ${slot}: not created — see the setup error above and harness 12.28.` +
             `order entry cannot be submitted (harness 12.26/12.27). A stock install has no ` +
             `referring clinic or dept organization; seeding both gets the required fields filled ` +
             `but Submit stays disabled, and that last gate is not yet identified.`

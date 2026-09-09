@@ -2480,3 +2480,74 @@ the site, or it came back empty.
 So `createOrderViaAPI` stays as it is — a named failure, no fabricated payload.
 Its message needs the update this section brings: the blocker is no longer "no
 referring clinic exists" on a stack where one has been seeded.
+
+### 12.28 SOLVED: an order can be created, and what four things it took
+
+**2026-09-09.** 12.27 stopped at "all five required fields hold values and Submit
+is still disabled". Casey: *"let's figure this out now."* Here is the answer, and
+the method matters more than the answer.
+
+#### How it was found: read the state, not the symptoms
+
+The Submit button's condition, from the **deployed bundle's own sourcemap** (the
+frontend image ships `.js.map` files, so the shipped source is readable and
+matches tag 3.2.2.0 exactly):
+
+```js
+disabled={ isSubmitting ||
+           Object.values(phoneValidation).some((item) => item.status === false) ||
+           errors?.errors?.length > 0 }
+```
+
+My first pass at reading the live React state mapped hooks by position and
+concluded all three terms were false — which was wrong, because hooks whose
+values were too large to serialise had been skipped, shifting everything after
+them. Re-reading **by shape** instead of by position found it immediately:
+
+```
+hook 4: obj keys=["name","value","path","type","errors","inner","message"]
+        ERRORS=["Sample Lab Number is required","Referring Site is required"]
+        name=ValidationError
+```
+
+`errors` holds a Yup `ValidationError`, populated **before Submit is ever
+clicked**, and nothing renders it — no `.cds--form-requirement`, no inline
+message. That is why the button looked arbitrarily dead. **When a control's state
+disagrees with the code you just read, suspect how you read the state.**
+
+#### The four conditions, all measured
+
+1. An organization of **org type 5** ("referring clinic") must exist, or the site
+   field has nothing to offer.
+2. An organization of **org type 11** ("dept") whose **parent is that clinic**, or
+   the required `#requesterDepartmentId` stays empty (12.27).
+3. The accession must be **generated**:
+   `GET /rest/SampleEntryGenerateScanProvider` → `{"status":true,"body":"DEV01260000000000002"}`.
+   An invented one is rejected: `400 sampleOrderItems.labNo: "Invalid accession
+   number format"`. That was the first of the two Yup errors.
+4. **`referringSiteId` must actually be set.** This was the trap. Clicking a list
+   item under the site field sets the *visible text* and leaves the id unset —
+   `#siteName` read `QARC - QA Referring Clinic` while Yup still said "Referring
+   Site is required". Selecting through the combobox properly (**ArrowDown then
+   Enter**) sets the id, and the validation error cleared to `none`.
+
+With those four, `POST /rest/SamplePatientEntry` → **200**, and the app renders
+**"Successfully saved"** with the accession `DEV01260000000000002`.
+
+Generalise (4), because it will bite again: **a filled-looking Carbon combobox
+proves nothing.** Assert on the id the form will submit, not on the text the
+field displays. A field whose display value and underlying value disagree is
+exactly the class of bug this file keeps finding from the other direction.
+
+#### `createOrderViaAPI` now works from the captured request
+
+Rewritten to build the accepted payload: it resolves the site from
+`SAMPLE_PATIENT_REFERRING_CLINIC`, its department from `departments-for-site`,
+generates the accession, and posts the captured shape — failing with a named
+reason at whichever of the four preconditions is missing rather than guessing.
+No hand-composed fields remain (12.4 satisfied).
+
+It still returns null on a stock install, and that is correct: the referring
+clinic and department are **configuration**, and seeding them is a deliberate act
+(12.27 has the captured Organization POST). What has changed is that the fixture
+now says which precondition failed, and works the moment they exist.
