@@ -2382,3 +2382,101 @@ Biochimique); `/rest/test-list` returns `[{id, value}]` and works;
 `POST /api/OpenELIS-Global/api/orderEntry/labelRequest` with
 `{"test_ids":[…],"samples":[{"sample_id_local":"0","sample_type":"2"}]}` — the
 label-preset call, not the order submit.
+
+
+### 12.27 Seeding a referring site and a department, and where order entry still stops
+
+**2026-09-09.** 12.26 said the unblock was "create an organization of org type 5
+and one of type 11". I did that, on the local 3.2.2.0 stack, and got further —
+but not to a submitted order. Recording exactly how far, because the next person
+should start from the wall rather than from the beginning.
+
+#### The Organization create payload (CAPTURED, per 12.4)
+
+`/MasterListsPage/organizationManagement` → **Add**. The form's own POST:
+
+```
+POST /api/OpenELIS-Global/rest/Organization?ID=0&startingRecNo=1
+{"organizationName":"QA Referring Clinic","shortName":"QARC","isActive":"Y",
+ "commune":"","village":"","department":"","formName":"organizationForm",
+ "formMethod":"POST","cancelAction":"CancelOrganization","submitOnCancel":false,
+ "cancelMethod":"POST","mlsSentinelLabFlag":"N","parentOrgName":"","state":"MN",
+ "selectedTypes":["5"]}
+-> 200 {"organizationName":"QA Referring Clinic","success":true,"id":"26","shortName":"QARC"}
+```
+
+`selectedTypes` carries the org-type ids, and the form exposes them as a checkbox
+table whose row ids **are** those ids: `input[id="5:select"]` is "referring
+clinic", `input[id="11:select"]` is "dept". Note the selector — an id starting
+with a digit is not a valid CSS id selector, so `#5\:select` throws
+`SyntaxError` in the browser and the attribute form `input[id="5:select"]` is
+required.
+
+(Also visible: `state` defaults to `"MN"` for every organization created this
+way.)
+
+#### It is SAMPLE_PATIENT_REFERRING_CLINIC, not REFERRAL_ORGANIZATIONS
+
+12.26 named `displayList/REFERRAL_ORGANIZATIONS` as the site field's source
+because that is the call the order page makes on load. It stayed `[]` even after
+the clinic existed. The list that actually picked it up:
+
+```
+GET /rest/displayList/SAMPLE_PATIENT_REFERRING_CLINIC
+  -> [{"id":"26","value":"QARC - QA Referring Clinic"}]
+```
+
+With that populated, the site field accepts a selection —
+`#siteName` reads `QARC - QA Referring Clinic`. So REFERRAL_ORGANIZATIONS is a
+different concept (referral labs, presumably type 6), and 12.26's attribution
+was wrong even though the observation of the call was right. Watching a page's
+traffic tells you what it *calls*, not what each call is *for*.
+
+#### A department is a type-11 org whose PARENT is the clinic
+
+Proven by changing one thing and re-reading:
+
+```
+before:  departments-for-site?refferingSiteId=26  ->  []
+set organization.org_id = 26 on the type-11 org
+after:   departments-for-site?refferingSiteId=26  ->  [{"id":"27","value":"QA Ward A"}]
+```
+
+**And this is a finding: the admin form does not set the parent.** All three
+organizations created through it came out with a null parent, whether the name
+was typed into `#parentOrgName` in the form or passed as
+`"parentOrgName":"QA Referring Clinic"` in the captured payload. Both returned
+**200 `success:true`** with no warning. The field is marked required in the DOM
+and yet saves empty. So a department created through the Organization admin is
+invisible to `departments-for-site`, and nothing tells the admin why.
+
+The `org_id` above was set with a direct SQL UPDATE **as a diagnostic**, to
+establish the mechanism. That is not the seeding recipe — it skips the app's
+bookkeeping, and the fhirUuid the create call generates suggests there is more
+to a real link than one column.
+
+#### Where it still stops
+
+With a site selected and a department chosen, all five required fields on Add
+Order hold values:
+
+```
+priorityId=Routine  siteName=QARC - QA Referring Clinic  requesterDepartmentId=27
+paymentOptionSelectionId=1120  testLocationCodeId=1303
+```
+
+**Submit is still disabled.** So the gate is not the required-field set, and
+12.26's "required field with no options" was necessary but not sufficient.
+Unverified next suspects, in the order I would test them: that the site must be
+chosen from the real suggestion list so an underlying id is set rather than just
+the visible text (the value read back is the display string, and my selection
+came from clicking a list item that may not be the component's own option); that
+`consentGiven` interacts with `consentRecordedBy`; that the empty `labNo` matters.
+
+One practical note for anyone driving this form: **selecting the site re-renders
+the panel and clears earlier selections.** Payment option had to be set *after*
+the site, or it came back empty.
+
+So `createOrderViaAPI` stays as it is — a named failure, no fabricated payload.
+Its message needs the update this section brings: the blocker is no longer "no
+referring clinic exists" on a stack where one has been seeded.

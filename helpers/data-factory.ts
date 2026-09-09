@@ -511,8 +511,16 @@ export async function createOrderViaAPI(
   // Both endpoints work. They are empty because on a stock install NO
   // organization is mapped to org type 5 ("referring clinic") or type 11
   // ("dept") — all 24 organizations belong to the Indonesian address hierarchy
-  // (types 13-16). So there is nothing to fix in the app: order entry cannot be
-  // completed by CONFIGURATION.
+  // (types 13-16). So on a stock install order entry cannot be completed by
+  // CONFIGURATION.
+  //
+  // 12.27 UPDATE: seeding those two organizations is necessary but NOT
+  // sufficient. With a referring clinic and a department seeded, a site can be
+  // selected and the department select populates — and Submit is STILL
+  // disabled with all five required fields holding values. The remaining gate
+  // is not yet identified, so this fixture still has no payload to capture.
+  // Read 12.27 before attempting it again; it records the wall, not just the
+  // starting point.
   //
   // So the honest state of this fixture is: no API path exists yet, because no
   // successful request exists to copy. Returning a named failure is worth more
@@ -521,13 +529,15 @@ export async function createOrderViaAPI(
   // weeks described as an unstable-row problem (12.21) rather than a
   // no-referring-sites-configured problem.
   //
-  // To make this work: create an organization of org type 5 and one of type 11,
-  // through the Organization admin rather than raw SQL, then submit one order by
-  // hand and capture the POST. Test locations already exist.
+  // To make this work, per 12.27: seed a type-5 organization and a type-11
+  // organization whose PARENT is the type-5 one (the admin form does not set
+  // that parent — it saves 200 with the field silently empty), then find what
+  // else gates Submit. Test locations already exist.
   state.setupErrors.push(
     `createOrder(${testName}): no captured API payload exists. A stock 3.2.2.0 install cannot ` +
-      `submit an order — no organization is typed as a referring clinic (org type 5) or dept ` +
-      `(type 11), so the required #requesterDepartmentId has no options. See harness 12.26.`
+      `submit an order. On a stock install no organization is typed as a referring clinic ` +
+      `(org type 5) or dept (type 11); seeding both is necessary but not sufficient — Submit ` +
+      `stays disabled even with every required field set. See harness 12.26 and 12.27.`
   );
   state[orderKey].status = 'blocked: no referring clinic / dept configured (12.26)';
   return null;
@@ -596,9 +606,9 @@ export async function runDataSetup(page: Page): Promise<TestDataState> {
       if (!acc) {
         console.warn(
           `[data-setup] ${slot}: not created. No order can be submitted on a stock install — ` +
-            `no organization is typed as a referring clinic (org type 5) or dept (type 11), so the ` +
-            `required #requesterDepartmentId has no options (harness 12.26). Create one of each ` +
-            `through the Organization admin to unblock order-dependent coverage.`
+            `order entry cannot be submitted (harness 12.26/12.27). A stock install has no ` +
+            `referring clinic or dept organization; seeding both gets the required fields filled ` +
+            `but Submit stays disabled, and that last gate is not yet identified.`
         );
       }
     }
