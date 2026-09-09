@@ -2551,3 +2551,69 @@ It still returns null on a stock install, and that is correct: the referring
 clinic and department are **configuration**, and seeding them is a deliberate act
 (12.27 has the captured Organization POST). What has changed is that the fixture
 now says which precondition failed, and works the moment they exist.
+
+### 12.29 The order fixture is validated against the UI's own output — and results entry is a separate problem
+
+**2026-09-09.** With orders creating (12.28), the next step was to enter and
+validate a result so patient history renders populated. It does not get that
+far, and the reason is worth more than the goal was.
+
+#### The control comparison
+
+`/AccessionResults` (Results → search by accession) returns **"There are no
+records to display"** for a fixture-created accession. The obvious inference is
+that the fixture built something subtly wrong. So the fixture was compared
+against the order created earlier **through the real UI wizard**
+(`DEV01260000000000002`), which is the only trustworthy control available:
+
+| | UI-created (002) | fixture-created (005/006) |
+|---|---|---|
+| `sample.status_id` | 1 (Test Entered) | 1 |
+| `sample_item.status_id` / `typeosamp_id` | 20 (SampleEntered) / 2 | 20 / 2 |
+| `analysis.status_id` | 4 (Not Tested) | 4 |
+| `sample_human.patient_id` | 2 | 2 |
+| `sample_human.provider_id` | **3** | **null** |
+
+And in `/AccessionResults`, **both** are invisible — the UI-created order shows
+"There are no records to display" exactly like the fixture's.
+
+Two conclusions, and the second only follows because of the control:
+
+1. **The captured payload is faithful.** Sample, sample item and analysis rows
+   match the UI's output exactly. The one real difference is
+   `sample_human.provider_id`: the wizard attached a requester (I typed provider
+   first/last name into it), the fixture sends none. That is a fidelity gap to
+   close, not the cause of anything here — 002 *has* a provider and is still
+   invisible.
+2. **Results entry not finding these orders is not a fixture problem.** It is
+   equally true of an order created by hand through the product's own wizard, so
+   it belongs to that screen or this instance's configuration, not to
+   `createOrderViaAPI`.
+
+Without the control I would have spent the night "fixing" a correct fixture. **A
+fixture is verified by comparing its output against the product's own, at the
+data layer — not by whether a downstream screen likes it.**
+
+#### Where to look next, unverified
+
+Analysis status 4 ("Not Tested") is the normal pre-result state, so the order is
+not in a dead state. Named suspects, in the order worth testing: the analysis's
+**test section** versus the logged-in user's assigned lab units (`/AccessionResults`
+plausibly scopes by section, and this instance's sections are Hematology,
+Biochemistry, Serology…); whether the sample must be **received or accepted**
+before it is enterable; and `/LogbookResults?type=` as the section-scoped
+alternative to the accession screen.
+
+I also probed several guessed REST paths here (`/rest/accession/<n>/results`,
+`/rest/analysis-by-accession/<n>`, `/rest/logbook-results`) and all 404'd. Per
+12.26's rule those tell us nothing — they are reports about my guesses. The
+evidence above is the UI comparison, not those statuses.
+
+#### Fidelity fix worth doing
+
+`createOrderViaAPI` should send a provider so `sample_human.provider_id` is
+populated as the wizard populates it. Left undone deliberately rather than
+guessed: the wizard sends `providerFirstName`/`providerLastName` free text and
+the server resolved that to provider id 3, and which of `providerId`,
+`providerPersonId` or the name pair drives that resolution has not been
+established. One captured request with a provider selected would settle it.
