@@ -2170,3 +2170,81 @@ Note also what caught this: the marker itself. A plain green test asserting
 `toHaveCount(0)` would have sailed through and been counted as coverage forever.
 `test.fail()` inverts the reporting, so a vacuous assertion becomes a loud
 "Expected to fail, but passed" instead of a silent pass.
+
+### 12.25 A local 3.2.2.0 QA target, so a shared instance can never block a run again
+
+**2026-09-09.** The nightly redeploy of `testing.openelis-global.org` left it
+serving a page with no login form for hours, which blocked verification of a
+finished branch. Casey: *"Don't we have a VM we run this stuff against anyway?"*
+
+There was one, and the honest answer was "yes, and it can't run this" — for two
+reasons I had to separate carefully:
+
+1. The stack up on this host is the `oe-catalog-import` distro bundle
+   (`~/dev/oe-catalog-import/bundle/distro`, project `distro`, images
+   `demo-silnas` / `3.2.1.10`), reporting **3.2.1.11**.
+2. **Its React frontend and proxy containers were not running at all** — only
+   webapp, db and fhir. So `https://localhost:8443` was Tomcat direct, which
+   serves the legacy JSP app. Every React route redirected to
+   `/OpenELIS-Global/Home`, and `patient-search-results` answered HTML.
+
+Point 2 matters: my first read was "wrong version, dead end". The version *was*
+wrong, but the missing frontend and proxy were doing most of the damage, and
+saying so precisely is the difference between "this can't work" and "this needs
+two containers and a tag bump".
+
+#### What now exists
+
+`~/dev/oe-322-qa` — a shallow clone of `DIGI-UW/OpenELIS-Global-2` at tag
+**3.2.2.0** (commit `aa00894`), plus `docker-compose.qa.yml`, forked from
+upstream's compose at that tag with four changes and nothing else:
+
+| Change | Why |
+|---|---|
+| all five images pinned to `3.2.2.0` | upstream pins `:develop`, a moving target; the point is to be the version the suite was verified against |
+| container names suffixed `-qa322`, ports remapped, subnet `172.21.1.0/24` | runs **alongside** the distro stack, which holds 80/443/8080/8443/8081/8444/15432 and `172.20.1.0/24` |
+| `./configuration` → `./volume/configuration` | upstream's path does not exist at the repo root at this tag |
+| healthcheck with `start_period: 900s` on the webapp | a cold boot can reseed the config catalog; without it Docker calls a healthy boot `unhealthy` |
+
+```
+cd ~/dev/oe-322-qa
+docker compose -p oe322qa -f docker-compose.qa.yml up -d
+```
+
+**Reach it at `https://localhost:9443` — through the proxy.** Not
+`https://localhost:18443`, which is Tomcat direct and serves the legacy JSP app.
+That distinction is the whole of point 2 above; a copy of the compose file lives
+at `openelis-work/docker-compose.qa-322.yml`.
+
+Two boot notes, both benign and both worth expecting:
+
+- The **proxy dies once** on first `up` — `host not found in upstream
+  "oe.openelis.org"`, a DNS race against a webapp that has not registered yet.
+  `restart: unless-stopped` recovers it. Do not debug this.
+- Webapp went healthy in **145s**, not the ~836s the distro bundle warns about.
+  That warning is about reseeding a large existing config catalog; a fresh
+  database has nothing to reseed.
+
+#### It works, and it is faster
+
+```
+BASE_URL=https://localhost:9443 npx playwright test --config=modules.config.ts tests/patient-management.spec.ts
+  20 passed (51.3s)
+```
+
+Against the shared instance the same file takes 1.3–1.7 minutes. And `data.setup`
+created the Abby Sebby fixture on the empty database by itself — which is the
+standing *"seed a known good"* instruction finally satisfied by construction
+rather than by hoping a shared instance still has the row.
+
+Note what this run also bought: **TC-MP-06 had never been executed.** It was
+written from a hand-driven browser probe and pushed unverified because the shared
+instance was down, and its wizard-advance assertion was the part I trusted least.
+It passed here. A version-matched local target is what turns "typechecks, should
+work" into a result.
+
+#### What it does not solve
+
+`createOrderViaAPI` still fails — the payload is hand-composed (12.4). A clean
+local instance is the ideal place to capture the real one, and that is now the
+obvious next piece of work rather than a vague backlog item.
