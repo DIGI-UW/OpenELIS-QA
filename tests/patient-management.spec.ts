@@ -589,38 +589,50 @@ test.describe('Suite AC — Merge Patient', () => {
       `TC-MP-04: merged ${pair.ids[1]} into ${pair.ids[0]}; nationalID search -> [${pair.ids[0]}] (consolidated). ` +
         (survivedByName
           ? `${pair.ids[1]} is still returned by a last-name search after being merged away — ` +
-            'confirmed defect, tracked by TC-MP-05/TC-MP-06.'
-          : `last-name search no longer returns ${pair.ids[1]} — if TC-MP-05 also went red, the defect is FIXED; ` +
-            'delete the test.fail markers.')
+            'expected on v3.2.2.0; TC-MP-05/TC-MP-06 are the tripwires for the version that filters.'
+          : `last-name search no longer returns ${pair.ids[1]} — the filter has LANDED. ` +
+            'TC-MP-05 should now be red; delete its test.fail marker and keep the assertion.')
     );
   });
 
   // ── The merge is only advisory outside the wizard ──────────────────────────
   //
-  // The two cases below assert what SHOULD happen and are marked test.fail(),
-  // so the suite tracks a confirmed defect instead of going quiet about it: they
-  // pass while the defect stands, and turn RED the moment the product is fixed,
-  // which is the signal to delete the marker. Both are deliberately MINIMAL —
-  // seed and merge through the API, then one assertion — because under
-  // test.fail() ANY failure counts as the expected one, so a case that also did
-  // elaborate setup could "pass" by being broken. That is the hollow-test trap
-  // wearing a different hat.
+  // NOT A DEFECT AGAINST THIS VERSION. Casey, 2026-09-09: "a newer version will
+  // have a filter. Keep this one as is." So on v3.2.2.0 a merged-away record
+  // still appearing in a name search is current expected behaviour, and nothing
+  // here should be filed or chased against it.
   //
-  // Confirmed 2026-09-08 on testing v3.2.2.0 against all three revalidation
-  // gates: 3x API repeat, a fresh browser context in each of two full runs, and
-  // a genuine logout + re-login. Reported to Casey; no ticket filed from here.
+  // The two cases below are therefore TRIPWIRES, not complaints. They assert the
+  // behaviour the newer version is expected to bring and are marked
+  // test.fail(), so they pass on v3.2.2.0 and turn RED the moment the filter
+  // lands — which is the signal to delete the marker and let the assertion stand
+  // as ordinary coverage. That is the whole point of writing them now: the
+  // change arrives with a test already waiting for it, rather than being noticed
+  // months later.
   //
-  // What IS enforced after a merge, and worth not regressing: a national-ID
-  // search returns only the primary (TC-MP-04 asserts that), the merged record
-  // is badged "Merged" in result rows, opening it shows "This patient record was
-  // merged / Active records are kept on Patient <nationalId>", and it cannot be
-  // edited — no Edit or Save control is rendered.
+  // Both are deliberately MINIMAL — seed and merge through the API, then one
+  // assertion — because under test.fail() ANY failure counts as the expected
+  // one, so a case that also did elaborate setup could "pass" by being broken.
+  // That is the hollow-test trap wearing a different hat.
+  //
+  // Behaviour recorded 2026-09-08 on testing v3.2.2.0 against all three
+  // revalidation gates (3x API repeat, a fresh browser context in each of two
+  // full runs, and a genuine logout + re-login), so what these cases encode is
+  // measured, not assumed.
+  //
+  // What IS already enforced after a merge, and worth not regressing: a
+  // national-ID search returns only the primary (TC-MP-04 asserts that), the
+  // merged record is badged "Merged" in result rows, opening it shows "This
+  // patient record was merged / Active records are kept on Patient
+  // <nationalId>", and it cannot be edited — no Edit or Save control is
+  // rendered.
 
   test('TC-MP-05: A merged-away record must not be returned by a name search', async ({ page }) => {
     test.fail(
       true,
-      'CONFIRMED DEFECT (v3.2.2.0): a name search still returns records that have been merged away. ' +
-        'The identifier search filters them; the name search does not. Delete this marker when fixed.'
+      'EXPECTED on v3.2.2.0: a name search still returns records that have been merged away — the ' +
+        'identifier search filters them, the name search does not. A newer version adds the filter; ' +
+        'when this goes red, that version has landed. Delete the marker and keep the assertion.'
     );
     const pair = await seedMergedPair(page);
     expect(
@@ -632,13 +644,17 @@ test.describe('Suite AC — Merge Patient', () => {
   test('TC-MP-06: A merged-away record must not be usable for a new order', async ({ page }) => {
     test.fail(
       true,
-      'CONFIRMED DEFECT (v3.2.2.0): order entry accepts a merged-away patient. The banner appears, ' +
-        'but Patient Info is marked Complete and the wizard advances. Delete this marker when fixed.'
+      'EXPECTED on v3.2.2.0: order entry accepts a merged-away patient — the banner appears, but ' +
+        'Patient Info is marked Complete and the wizard advances. OPEN QUESTION: the planned filter ' +
+        'covers search results; whether it also guards the order-entry wizard is unconfirmed, so this ' +
+        'case is kept separate from TC-MP-05 rather than folded into it.'
     );
-    // This is the consequential half. Editing a merged record is correctly
-    // locked, and the identifier search correctly hides it — but order entry
-    // will still build a requisition against it, which is how a result ends up
-    // attached to a record the lab has already declared dead.
+    // This is the half that is kept separate on purpose. A filter on search
+    // results and a guard on a write workflow are different changes, and the
+    // planned filter is described as the former. If the newer version turns
+    // TC-MP-05 red but leaves this one green, that is the useful answer: the
+    // list got cleaner and order entry can still build a requisition against a
+    // record the lab has already declared dead.
     const pair = await seedMergedPair(page, 'ORD');
     await page.goto(`${BASE}/SamplePatientEntry`, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#lastName')).toBeVisible({ timeout: 15_000 });

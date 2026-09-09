@@ -1999,17 +1999,27 @@ for `PatientManagement` and `patient/merge/execute` is exactly what that needs �
 drive the order wizard once in the browser with a request interceptor installed
 and keep what it actually sends. That remains its own piece of work.
 
-### 12.24 CONFIRMED: a merge is enforced for editing, advisory for search and order entry
+### 12.24 A merge is enforced for editing, advisory for search and order entry
 
 **2026-09-08.** Casey, on the 12.23 observation: *"for some reason, we don't remove
 the duplicated patient, which seems wrong, it should at least be a filter."* He is
 right, and chasing it into the UI turned a search-filter annoyance into a patient-safety
 finding.
 
-**All three revalidation gates now cleared** (12.23 owed the third): 3× API repeat,
-a fresh browser context in each of two consecutive full runs, and a genuine logout
-plus re-login. So this is a confirmed defect, not an observation. Reported; no
-ticket filed from here.
+**All three revalidation gates cleared** (12.23 owed the third): 3× API repeat, a
+fresh browser context in each of two consecutive full runs, and a genuine logout
+plus re-login. So the behaviour below is measured, not assumed.
+
+**Then the disposition changed, and it is worth recording why.** Casey, 2026-09-09:
+*"A newer version will have a filter. Keep this one as is."* So this is **not a
+defect against v3.2.2.0** — it is current expected behaviour, with the fix already
+coming. Nothing here is to be filed or chased.
+
+That does not make the work wasted; it changes what the work is *for*. A finding
+that is already scheduled to be fixed is exactly the finding worth encoding as a
+test, because the test becomes the thing that tells you the fix arrived and that it
+covered what you thought it covered. The alternative — noting it in prose and
+moving on — means noticing months later, by hand, if at all.
 
 #### What a merge actually does, feature by feature
 
@@ -2031,24 +2041,40 @@ So the merge is real where the record is written to, and advisory everywhere the
 record is *chosen*. That inversion is the problem: the guard is on the door nobody
 walks through.
 
-**Why the order-entry half is the serious one.** A filter on the name search is a
+**Why the order-entry half is worth separating.** A filter on the name search is a
 usability fix — the user sees a row they should not have to reason about. Order
 entry accepting a merged patient is different in kind: it will build a requisition
-against a record the lab has already declared dead and consolidated elsewhere, so
-a sample and eventually a result end up attached to it. The banner is present and
-says the right thing, but a banner is not a control. Nothing blocks Next.
+against a record the lab has already declared dead and consolidated elsewhere, so a
+sample and eventually a result end up attached to it. The banner is present and
+says the right thing, but a banner is not a control; nothing blocks Next.
+
+The planned filter is described as covering search results. Whether it also guards
+the order-entry wizard is **unconfirmed**, which is precisely why TC-MP-06 exists
+separately from TC-MP-05.
 
 Worth being precise about what is *not* broken, so a fix does not regress it: the
 identifier search filters correctly, the record is badged in results, the banner
 names where the active records went, and editing is locked. The gap is the name
 search and the order-entry guard.
 
-#### Tracked as two `test.fail()` cases
+#### Tracked as two `test.fail()` tripwires
 
-TC-MP-05 (name search) and TC-MP-06 (order entry) assert the CORRECT behaviour and
-carry `test.fail(true, '<why>')`. They pass while the defect stands and turn **red
-the moment the product is fixed**, which is the signal to delete the marker. A
-logged observation goes quiet; a tracked expectation does not.
+TC-MP-05 (name search) and TC-MP-06 (order entry) assert the behaviour the newer
+version is expected to bring, and carry `test.fail(true, '<why>')`. They pass on
+v3.2.2.0 and turn **red the moment the filter lands** — the signal to delete the
+marker and let the assertion stand as ordinary coverage. The change then arrives
+with a test already waiting for it.
+
+**They are kept as two cases on purpose.** A filter on search results and a guard
+on a write workflow are different changes, and the planned work is described as the
+former. If the new version turns TC-MP-05 red and leaves TC-MP-06 green, that is a
+useful answer rather than a loose end: the result list got cleaner and order entry
+can still build a requisition against a merged record. Folding them into one case
+would have thrown that distinction away.
+
+Generalising, because this keeps coming up: **a known-and-scheduled behaviour change
+is the best possible candidate for `test.fail()`.** Not a complaint, not a ticket —
+a tripwire that converts itself into coverage on the day the change ships.
 
 Both are deliberately **minimal** — seed and merge through the API, then one
 assertion. Under `test.fail()` *any* failure counts as the expected one, so a case
