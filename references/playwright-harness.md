@@ -2280,15 +2280,67 @@ characters into `#siteName` fires zero network requests.** That was the
 measurement worth taking, because "the autocomplete is slow" and "the field has
 no data" call for completely different work.
 
-`/rest/organization/list` answers **500** on this freshly seeded database — the
-same 500 seen on `testing` earlier in the session, now reproduced on a clean
-install, which is a much stronger signal than on a shared instance of unknown
-data. Two observations here plus one there. **What I am not claiming:** that the
-500 is *why* the department select is empty. Organizations and departments are
-different things, and I never successfully selected a site, so I cannot say site
-selection wouldn't populate the department list. The 500 is a reproducible fact;
-the causal chain to the empty select is a hypothesis.
+#### RETRACTED: the "organization/list 500"
 
+I reported `/rest/organization/list` answering **500** on a freshly seeded
+database, and treated it as a reproducible server fault feeding the empty site
+field. That was wrong, and the webapp log says so plainly:
+
+```
+ERROR -- java.lang.NumberFormatException: For input string: "list"
+```
+
+**There is no `/organization/list` endpoint.** The route is
+`/organization/{id}`, and `list` was being parsed as an id. The 500 was a
+report about my URL, not about the product. The same claim recorded earlier in
+this session against `testing` is equally void.
+
+This is the third instance of one pattern in one session: `?nationalId=` vs
+`?nationalID=` (12.14), a vacuous `toHaveCount(0)`, and now a guessed path.
+The rule, stated so it stops recurring: **a non-2xx on a path or parameter I
+guessed is evidence about my guess, not about the product.** Confirm the
+endpoint exists — from the app's own traffic — before any status code becomes a
+finding.
+
+#### The real mechanism, from the app's own traffic
+
+Capturing every request the wizard makes gives the actual chain:
+
+| Call | Result |
+|---|---|
+| `GET /rest/displayList/REFERRAL_ORGANIZATIONS` | **200 `[]`** |
+| `GET /rest/departments-for-site?refferingSiteId=` | **200 `[]`** |
+| `GET /rest/departments-for-site?refferingSiteId=2` | **200 `[]`** |
+
+Both endpoints work and correctly return nothing. `#siteName` is a plain
+`<input type="text" required>` — no combobox role, no listbox, and typing into
+it fires **zero** requests because its candidates come from that
+already-fetched (empty) referral-organizations list. With no site selectable,
+`departments-for-site` is never called with an id that has departments, so the
+required `#requesterDepartmentId` stays empty and Submit stays disabled.
+
+(Note the upstream spelling of the query parameter: `refferingSiteId`, two f's.
+Anything calling it needs the typo.)
+
+#### Why it is empty: nothing is typed as a referring clinic
+
+`organization` has **24 rows**, so this is not an empty table. The join table
+tells the story:
+
+```
+organization_type:                    5 = "referring clinic"  (org who can order lab tests)
+                                     11 = "dept"              (organisation department)
+                                     13-16 = Provinsi / Kabupaten / Kecamatan / Kelurahan
+
+organization_organization_type used:  13 -> 3,  14 -> 3,  15 -> 3,  16 -> 14
+```
+
+Every organization on a stock install is part of the **Indonesian address
+hierarchy**. **Not one is mapped to type 5 or type 11.** So there are no
+referring clinics and no departments, and order entry cannot be completed —
+by configuration, not by fault. No defect to file.
+
+#### What this changes about a backlog item
 #### What this changes about a backlog item
 
 12.21 recorded order creation as blocked by an unstable results row and a
@@ -2306,11 +2358,20 @@ worse than none: it hides the fact that nothing works.**
 
 #### To unblock order-dependent coverage
 
-Seed the config data — departments (`ward/dept/unit`), organizations, test
-locations — then submit one order by hand and capture the POST. That is a data
-task, not a test task, and it is the prerequisite for TC-PAT-04's history
-assertions ever seeing real orders, for `ACCESSION`-dependent cases, and for the
-chains suites.
+Precisely: create at least one organization mapped to **org type 5 ("referring
+clinic")** and at least one mapped to **org type 11 ("dept")**, so
+`displayList/REFERRAL_ORGANIZATIONS` and `departments-for-site` have something
+to return. Test locations already exist (`#testLocationCodeId` offers
+`1303=B1`…), so they are not part of this.
+
+Do it through the app's Organization admin rather than raw SQL: the LIMS rules
+about active/inactive and the app's own bookkeeping should apply, and the POST
+that creates it is itself the "seed a known good" mechanism worth capturing.
+Then submit one order by hand, capture that POST, and `createOrderViaAPI` has a
+real payload for the first time.
+
+This is the prerequisite for TC-PAT-04's history assertions ever seeing real
+orders, for the `ACCESSION`-dependent cases, and for the chains suites.
 
 Useful ids gathered while probing, so nobody repeats it: sample types are
 `#sampleId_0` (`2=Serum`, `4=Whole Blood`, `1=Urines`, 18 in all); test

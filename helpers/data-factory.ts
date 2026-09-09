@@ -502,25 +502,34 @@ export async function createOrderViaAPI(
   //   - Add Order has three required fields. `#requesterDepartmentId`
   //     ("ward/dept/unit") is required and offers ONLY the blank option, so it
   //     can never be satisfied and Submit stays disabled forever.
-  //   - Typing into `#siteName` fires ZERO network requests, so that field is
-  //     not a live lookup waiting on a slow endpoint — it has no data to offer.
-  //   - `/rest/organization/list` answers 500 on a freshly seeded database.
+  //   - `#siteName` is a plain <input type="text" required>. Typing into it
+  //     fires ZERO requests: its candidates come from an already-fetched
+  //     `displayList/REFERRAL_ORGANIZATIONS`, which returns 200 [].
+  //   - `departments-for-site?refferingSiteId=<id>` also returns 200 [] (yes,
+  //     two f's — that is upstream's spelling).
+  //
+  // Both endpoints work. They are empty because on a stock install NO
+  // organization is mapped to org type 5 ("referring clinic") or type 11
+  // ("dept") — all 24 organizations belong to the Indonesian address hierarchy
+  // (types 13-16). So there is nothing to fix in the app: order entry cannot be
+  // completed by CONFIGURATION.
   //
   // So the honest state of this fixture is: no API path exists yet, because no
   // successful request exists to copy. Returning a named failure is worth more
   // than a fabricated one — the old code made `data.setup` look like it had a
   // fallback, which is why "order creation is broken" sat in the backlog for
   // weeks described as an unstable-row problem (12.21) rather than a
-  // required-field-with-no-options problem.
+  // no-referring-sites-configured problem.
   //
-  // To make this work, seed the config data first (departments / organizations
-  // / test locations). That is a data task, not a test task. Once an order can
-  // be submitted by hand, capture the POST and put it here.
+  // To make this work: create an organization of org type 5 and one of type 11,
+  // through the Organization admin rather than raw SQL, then submit one order by
+  // hand and capture the POST. Test locations already exist.
   state.setupErrors.push(
     `createOrder(${testName}): no captured API payload exists. A stock 3.2.2.0 install cannot ` +
-      `submit an order — #requesterDepartmentId is required and has no options. See harness 12.26.`
+      `submit an order — no organization is typed as a referring clinic (org type 5) or dept ` +
+      `(type 11), so the required #requesterDepartmentId has no options. See harness 12.26.`
   );
-  state[orderKey].status = 'blocked: no submittable order on a stock install (12.26)';
+  state[orderKey].status = 'blocked: no referring clinic / dept configured (12.26)';
   return null;
 }
 
@@ -587,8 +596,9 @@ export async function runDataSetup(page: Page): Promise<TestDataState> {
       if (!acc) {
         console.warn(
           `[data-setup] ${slot}: not created. No order can be submitted on a stock install — ` +
-            `#requesterDepartmentId is required with no options (harness 12.26). Seed the config ` +
-            `data (departments/organizations/test locations) to unblock order-dependent coverage.`
+            `no organization is typed as a referring clinic (org type 5) or dept (type 11), so the ` +
+            `required #requesterDepartmentId has no options (harness 12.26). Create one of each ` +
+            `through the Organization admin to unblock order-dependent coverage.`
         );
       }
     }
