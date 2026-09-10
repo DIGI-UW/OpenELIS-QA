@@ -2921,3 +2921,125 @@ A step may not decide at runtime that it is excused. If the precondition is
 missing, either seed it, or fail, or route through the register where the excuse
 is written down and someone can review it. And a status that describes a problem
 must not be a passing status.
+
+---
+
+## §12.33 — Order entry on develop vs 3.2.2.0, and why the suite could not see it
+
+**Date:** 2026-09-10
+**Instances:** develop `5fe0ecb` (OGC-782, order-entry remediation #4196) on
+`https://localhost:10443`; release `3.2.2.0` on `https://localhost:9443`
+
+### The environment finding, which came first
+
+Every QA run to date has targeted either the local stack — pinned to release
+tag `3.2.2.0`, images built 2026-08-18 — or `testing.openelis-global.org`.
+Neither is develop. So the suite was structurally incapable of seeing a
+develop regression, which is where the client reports come from. A `develop`
+tag exists on Docker Hub and is rebuilt continuously.
+
+A second stack now runs develop in parallel (`../oe-develop-qa`,
+`docker-compose.develop.yml`, project `oedevqa`), with its own ports, subnet
+and volumes so the 3.2.2.0 database and its seeded QA data are untouched.
+Running both is what makes a failure attributable: red on develop and green on
+3.2.2.0 is a new regression; red on both is an older bug the suite had not
+covered.
+
+`:develop` moves, so record the digest with any result. At the time of writing:
+`itechuw/openelis-global-2@sha256:f664191b4954cf9e496dec2b2b560583c57b430b8f33c8112a4f5f362c050da5`.
+
+### Clinical order entry, field by field
+
+`/order/clinical/enter` on develop (29 controls) against `/order/enter` on
+3.2.2.0 (20 controls):
+
+| | 3.2.2.0 | develop |
+|---|---|---|
+| Department / Ward / Unit | absent | **`referringSiteDepartment`, present** |
+| Required By | absent | **`requiredBy`, `type=date`** |
+| Order date / Order time | absent | absent |
+| Clinic ID | absent | absent |
+| Site Name | `Site Name *` (required) | `Site Name` (not required) |
+| Organization Phone / Fax / Email | absent | present |
+| Provider first/last/phone/fax/email | absent (name + phone only) | present |
+
+Two things follow. The ward field is back on develop, so a suite running only
+against 3.2.2.0 would report it missing as a live defect. And `siteContactFax`
+now exists, which is the field the Clinic ID request asked about repurposing.
+
+### The order date and time already exist in the payload
+
+`GET /rest/SamplePatientEntry` returns, inside `sampleOrderItems`, and
+**identically on both builds**:
+
+```
+receivedDateForDisplay = "10/09/2026"
+receivedTime           = "20:26"
+requestDate            = "10/09/2026"
+```
+
+A received date, a received *time*, and a request date, all defaulted to now.
+Neither build surfaces an order date or order time as a form field. So the
+model already carries what an "order date and time defaulting to entry time,
+overwritable" requirement needs; what is missing is the UI binding, not the
+data. Worth knowing before that work is sized.
+
+### develop has three save buttons
+
+`Save`, `Save & Next`, `Save Draft` — plus a `Print Labels` accordion and an
+`Add Sample` button. Any spec that settles on a different set of save actions
+is changing what is already there, not adding to a blank slate.
+
+### What is NOT established: the two behavioural reports
+
+"Fields not clearing after submission" and "previous patient details persist"
+are **not reproduced and not refuted**. Three attempts, all inconclusive, and
+the reason is worth recording because the first attempt nearly reported a false
+positive.
+
+Filling the patient block, selecting a sample type, ticking a revealed test
+(`#test-0-6` Albumin, tick confirmed) and clicking Save produced, on both
+builds:
+
+```
+POSTs seen: []
+messages:   []
+6 of 6 filled controls kept their value
+```
+
+The first version of the probe called that REPRODUCED. It is not. With no POST,
+the form retaining its values means only that an incomplete form was refused
+client-side — which is correct behaviour. This is §12.30 again: no request, no
+evidence about the product. The probe now refuses to print a verdict unless a
+POST was seen.
+
+Two blockers, both real:
+
+1. **`#labNumber` loads empty and is the only control marked required** on the
+   base form. It stays empty at 2s, 5s, 10s and 15s, `readOnly=false`, and no
+   request resembling accession or lab-number generation is made on load — the
+   full list is `site-branding`, `open-configuration-properties`,
+   `supportedlocales/active`, `properties`, `menu`,
+   `database-cleaning/status`, `configuration-properties`, `notifications`,
+   `displayList/SAMPLE_PATIENT_PAYMENT_OPTIONS`, `user-programs`,
+   `user-sample-types`, `SamplePatientEntry`. And `SamplePatientEntry` returns
+   no accession-shaped key at any depth. **Identical on 3.2.2.0**, so this is
+   baseline behaviour and not a develop regression — but it does mean the form
+   as loaded cannot be saved, and nothing on screen says why.
+
+2. **The name fields on the entry form are patient SEARCH inputs**, sitting
+   beside `Search for Patient` and `New Patient`. Typing into them does not
+   bind a patient. `New Patient` reveals the real patient form, where
+   `nationalId`, `Gender` and `Date of Birth` are required. So a submit that
+   reaches the server needs that flow completed first.
+
+Blocker 2 also reframes the second client report: if those are search inputs
+that retain the previous patient, "previous patient details persist and can
+overwrite the wrong record" is a statement about the search block, which is a
+different defect from the order form failing to reset.
+
+### Rule
+
+Two instances, one release and one develop, and every result carries which one
+it came from plus the image digest. A suite with a single target that is not
+the branch under complaint cannot answer a complaint about that branch.
