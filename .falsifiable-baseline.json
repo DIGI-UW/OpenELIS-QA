@@ -1,7 +1,7 @@
 {
   "recorded": "2026-09-10",
   "total": 1157,
-  "hollowTotal": 339,
+  "hollowTotal": 325,
   "files": {
     "tests/accessibility.spec.ts": 1,
     "tests/admin-config.spec.ts": 1,
@@ -150,7 +150,7 @@
     "tests/order-entry.spec.ts": 8,
     "tests/order-search.spec.ts": 9,
     "tests/panel-sample-type-leak.spec.ts": 0,
-    "tests/pathology.spec.ts": 14,
+    "tests/pathology.spec.ts": 0,
     "tests/patient-history.spec.ts": 5,
     "tests/patient-management.spec.ts": 5,
     "tests/patient-merge.spec.ts": 5,
