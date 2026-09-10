@@ -1,7 +1,7 @@
 {
   "recorded": "2026-09-10",
   "total": 1157,
-  "hollowTotal": 353,
+  "hollowTotal": 339,
   "files": {
     "tests/accessibility.spec.ts": 1,
     "tests/admin-config.spec.ts": 1,
@@ -184,6 +184,6 @@
     "tests/validation.spec.ts": 3,
     "tests/workplan-by-unit-crash.spec.ts": 0,
     "tests/workplan-deep.spec.ts": 6,
-    "tests/workplan.spec.ts": 14
+    "tests/workplan.spec.ts": 0
   }
 }
