@@ -40,6 +40,7 @@ import {
   BASE,
   apiCall,
   markStep,
+  requireStep,
 } from './_common';
 
 interface CalcOperation {
@@ -139,7 +140,7 @@ test.describe.serial('Chain D — Calculated Value', () => {
   // Acceptance criterion: PERSIST
   // ---------------------------------------------------------------------------
   test('Step 2 — Seed an accession carrying all operand tests (PERSIST)', async ({ page }) => {
-    if (!rule) test.skip();
+    requireStep('D', 2, !!rule, '!rule');
     await page.goto(BASE);
 
     // Reuse a QA_AUTO_ patient. The standard findOrSeedOrder in _common.ts
@@ -208,7 +209,7 @@ test.describe.serial('Chain D — Calculated Value', () => {
   // Acceptance criterion: PERSIST
   // ---------------------------------------------------------------------------
   test('Step 3 — Enter every operand result via API (PERSIST, §11.5)', async ({ page }) => {
-    if (!testAccession) test.skip();
+    requireStep('D', 3, !!testAccession, '!testAccession');
     await page.goto(BASE);
 
     const resultList = operandTestIds.map(tid => ({
@@ -240,7 +241,7 @@ test.describe.serial('Chain D — Calculated Value', () => {
   // Acceptance criterion: ROUND-TRIP
   // ---------------------------------------------------------------------------
   test('Step 4 — Verify all operand results persisted (ROUND-TRIP)', async ({ page }) => {
-    if (!testAccession) test.skip();
+    requireStep('D', 4, !!testAccession, '!testAccession');
     await page.goto(BASE);
     const read = await apiCall<{ resultList?: Array<{ testId?: string; value?: string }> }>(
       page,
@@ -274,7 +275,7 @@ test.describe.serial('Chain D — Calculated Value', () => {
   // Acceptance criterion: CROSS-LINK
   // ---------------------------------------------------------------------------
   test('Step 5 — Calculated test present on accession (CROSS-LINK)', async ({ page }) => {
-    if (!testAccession || !rule) test.skip();
+    requireStep('D', 5, !(!testAccession || !rule), '!testAccession || !rule');
     await page.goto(BASE);
     await page.waitForTimeout(4000); // grace for async server-side calc (row appears after save, sometimes only on a later read)
 
@@ -319,7 +320,7 @@ test.describe.serial('Chain D — Calculated Value', () => {
   // Acceptance criterion: ROUND-TRIP
   // ---------------------------------------------------------------------------
   test('Step 6 — Calculated value has a result row (ROUND-TRIP)', async ({ page }) => {
-    if (!testAccession || !rule) test.skip();
+    requireStep('D', 6, !(!testAccession || !rule), '!testAccession || !rule');
     await page.goto(BASE);
 
     const read = await apiCall<{ resultList?: Array<{ testId?: string; value?: string }> }>(
@@ -366,18 +367,30 @@ test.describe.serial('Chain D — Calculated Value', () => {
   // open that question with the OpenELIS team.
   // ---------------------------------------------------------------------------
   test('Step 7 — Calc value math is plausible (REPORTABLE)', async ({ page }) => {
-    if (!testAccession || !rule) test.skip();
+    requireStep('D', 7, !(!testAccession || !rule), '!testAccession || !rule');
     await page.goto(BASE);
     const read = await apiCall<{ resultList?: Array<{ testId?: string; value?: string }> }>(
       page,
       `/api/OpenELIS-Global/rest/LogbookResults?accessionNumber=${encodeURIComponent(testAccession!)}`
     );
-    if (!read.ok) { test.skip(); return; }
+    if (!read.ok) {
+      markStep('D', 7, 'FAIL', `LogbookResults read returned HTTP ${read.status}`,
+        'The endpoint exists on this build, so a non-2xx is a failure and not a declarable gap ' +
+        '(known-gaps.ts, "WHAT DOES NOT [belong here]").');
+      return;
+    }
     const items = (typeof read.body === 'object' && read.body !== null)
       ? ((read.body as { resultList?: Array<{ testId?: string; value?: string }> }).resultList || [])
       : [];
     const calcRow = items.find(r => r.testId === rule!.testId);
-    if (!calcRow?.value) { test.skip(); return; }
+    if (!calcRow?.value) {
+      markStep('D', 7, 'FAIL',
+        `Calc engine wrote no value for output test ${rule!.testId} on ${testAccession}`,
+        `LogbookResults returned ${items.length} row(s), none of them the rule's output test with a ` +
+        `value. Steps 5-6 posted the trigger, so an empty output is the calculated-value gap this ` +
+        `chain exists to detect — not a reason to opt out.`);
+      return;
+    }
     const calcValue = Number(calcRow.value);
 
     // Select-list / dictionary calc outputs are non-numeric (e.g. "Positive",

@@ -20,7 +20,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { BASE, apiCall, findOrSeedOrder, markStep, ChainOrderRef } from './_common';
+import { BASE, apiCall, findOrSeedOrder, markStep, requireStep, ChainOrderRef } from './_common';
 
 const FHIR_BASES = [
   '/api/OpenELIS-Global/fhir',
@@ -60,7 +60,7 @@ test.describe.serial('Chain K — FHIR Round-trip', () => {
   });
 
   test('Step 2 — CapabilityStatement declares expected resources (FUNCTION)', async ({ page }) => {
-    if (!fhirBase) test.skip();
+    requireStep('K', 2, !!fhirBase, '!fhirBase');
     await page.goto(BASE);
     const r = await apiCall<{ rest?: Array<{ resource?: Array<{ type?: string }> }> }>(
       page, `${fhirBase}/metadata`, { accept: 'application/fhir+json' }
@@ -93,7 +93,7 @@ test.describe.serial('Chain K — FHIR Round-trip', () => {
   });
 
   test('Step 4 — Fetch UI-created patient as FHIR Patient (CROSS-LINK)', async ({ page }) => {
-    if (!fhirBase || !order) test.skip();
+    requireStep('K', 4, !(!fhirBase || !order), '!fhirBase || !order');
     await page.goto(BASE);
     const r = await apiCall<{ entry?: Array<{ resource?: { identifier?: Array<{ value?: string }>; name?: Array<{ family?: string }> } }> }>(
       page,
@@ -117,7 +117,7 @@ test.describe.serial('Chain K — FHIR Round-trip', () => {
   });
 
   test('Step 5 — POST a new Patient via FHIR (PERSIST, write surface)', async ({ page }) => {
-    if (!fhirBase) test.skip();
+    requireStep('K', 5, !!fhirBase, '!fhirBase');
     await page.goto(BASE);
     const nationalId = `QA_AUTO_FHIR_${Date.now()}`;
     const r = await apiCall<{ id?: string; resourceType?: string }>(
@@ -144,7 +144,7 @@ test.describe.serial('Chain K — FHIR Round-trip', () => {
   });
 
   test('Step 6 — FHIR-POSTed patient appears in UI patient search (CROSS-LINK, reverse direction)', async ({ page }) => {
-    if (!postedPatientId) test.skip();
+    requireStep('K', 6, !!postedPatientId, '!postedPatientId');
     await page.goto(BASE);
     // Search UI patient list for our QA_AUTO_FHIR_ prefix
     const r = await apiCall<{ patientSearchResults?: Array<{ nationalId?: string; lastName?: string }> }>(

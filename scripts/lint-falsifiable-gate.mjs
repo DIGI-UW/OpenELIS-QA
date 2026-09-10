@@ -53,12 +53,81 @@ const CANNOT_FAIL = [
   // 'no-expect' is deliberately absent: lint-assert-gate.mjs owns it. One
   // problem, one gate — two gates on one pattern means two baselines to
   // reconcile and a disagreement nobody arbitrates.
-  ['self-skip-return', (c) => /if\s*\(\s*![\s\S]{0,160}?\)\s*\{[\s\S]{0,400}?\breturn\s*;/.test(c)],
+  ['self-skip-return', (c) => hasSilentGuard(c)],
   ['gte-0',            (c) => /toBeGreaterThanOrEqual\(\s*0\s*\)/.test(c)],
   ['expect-true',      (c) => /expect\(\s*(true|1)\s*\)\s*\.toBe/.test(c)],
   ['zero-or-ok',       (c) => /===\s*0\s*\|\|/.test(c)],
   ['either-or-pass',   (c) => /\|\|[^;\n]{0,90}\)?\s*,?[^;]{0,120}\)\s*\.toBe\(\s*true\s*\)/.test(c)],
 ];
+
+/**
+ * Does this case contain a guard that leaves without failing?
+ *
+ * A "silent guard" is an `if` whose body exits the case (`return`, or a bare
+ * `test.skip()`) and which raises nothing on the way out. That is an opt-out:
+ * on any run where the condition holds, the case reports green having tested
+ * nothing.
+ *
+ * These exits are NOT silent, and are not flagged:
+ *   expect(...)          — fails outright
+ *   throw                — fails outright
+ *   requireStep(...)     — routes through known-gaps.ts; fails unless declared
+ *   markStep(..., 'FAIL'|'BLOCKED'|'GAP', ...)
+ *                        — FAIL fails; BLOCKED/GAP fail unless the reason is
+ *                          written down in known-gaps.ts. Both are reviewable.
+ *   test.skip(<reason>)  — a skip carrying a stated reason, which is visible
+ *                          in the report as not-run rather than as passed.
+ *
+ * markStep(..., 'PASS'|'PARTIAL', ...) IS silent: it logs and returns green.
+ *
+ * Why a walker rather than a regex: the thing that decides the answer is the
+ * CONTENT OF THE GUARDED BLOCK, and a block cannot be delimited by a regex.
+ * The previous regex approximated the block with "within 400 characters" and
+ * mistook the `{` of a generic type argument for the `{` of a block, which is
+ * how well-written chain guards came to be counted as hollow.
+ */
+function hasSilentGuard(code) {
+  const RAISES = /\bexpect\s*\(|\bthrow\b|\brequireStep\s*\(|\bmarkStep\s*\([^;]*?['"](FAIL|BLOCKED|GAP)['"]/;
+  const EXITS = /\breturn\s*[;}]|\btest\s*\.\s*skip\s*\(\s*\)/;
+
+  for (let i = 0; i < code.length; i++) {
+    // an `if` that starts a statement, not `elseif`-in-an-identifier
+    if (!/\bif\s*\($/.test(code.slice(Math.max(0, i - 12), i + 1))) continue;
+    if (code[i] !== '(') continue;
+
+    // bracket the condition
+    let depth = 0, j = i;
+    for (; j < code.length; j++) {
+      if (code[j] === '(') depth++;
+      else if (code[j] === ')') { depth--; if (depth === 0) break; }
+    }
+    if (depth !== 0) continue;
+
+    let k = j + 1;
+    while (k < code.length && /\s/.test(code[k])) k++;
+
+    let block;
+    if (code[k] === '{') {
+      // bracket the block. Only a real block: we are past the condition, so a
+      // `{` here cannot be a generic type argument.
+      let d = 0, e = k;
+      for (; e < code.length; e++) {
+        if (code[e] === '{') d++;
+        else if (code[e] === '}') { d--; if (d === 0) break; }
+      }
+      if (d !== 0) continue;
+      block = code.slice(k + 1, e);
+    } else {
+      // single-statement guard: `if (x) return;` / `if (x) test.skip();`
+      const semi = code.indexOf(';', k);
+      if (semi === -1) continue;
+      block = code.slice(k, semi + 1);
+    }
+
+    if (EXITS.test(block) && !RAISES.test(block)) return true;
+  }
+  return false;
+}
 
 function specFiles(dir, out = []) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -165,9 +234,12 @@ for (const [f, n] of added) {
 }
 console.error(`
 What each flag means, and the fix:
-  self-skip-return  \`if (!x) { console.log('SKIP'); return; }\` — a case that opts out
-                    when the precondition is missing. SEED the precondition instead, or
-                    assert that it exists. A skip that always fires is a case that never runs.
+  self-skip-return  a guard that leaves the case without failing — \`if (!x) { return; }\`,
+                    \`if (!x) test.skip();\`. On any run where the condition holds, the case
+                    reports green having tested nothing. SEED the precondition, or assert it
+                    exists, or exit through something that fails: expect(), throw,
+                    requireStep(), markStep(..., 'FAIL'|'BLOCKED'|'GAP'), or a test.skip()
+                    that at least states a reason.
   gte-0             \`expect(n).toBeGreaterThanOrEqual(0)\` is true of every count.
   expect-true       \`expect(true).toBe(true)\`.
   zero-or-ok        \`status === 0 || (status >= 200 && status < 300)\` passes when no

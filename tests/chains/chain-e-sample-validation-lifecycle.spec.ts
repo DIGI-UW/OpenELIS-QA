@@ -17,7 +17,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { BASE, apiCall, findOrSeedOrder, markStep, ChainOrderRef } from './_common';
+import { BASE, apiCall, findOrSeedOrder, markStep, requireStep, ChainOrderRef } from './_common';
 
 test.describe.serial('Chain E — Sample Validation Lifecycle', () => {
   let order: ChainOrderRef | null = null;
@@ -38,7 +38,7 @@ test.describe.serial('Chain E — Sample Validation Lifecycle', () => {
   });
 
   test('Step 2 — Enter initial (wrong) result via API (PERSIST, §11.5)', async ({ page }) => {
-    if (!order) test.skip();
+    requireStep('E', 2, !!order, '!order');
     await page.goto(BASE);
     const post = await apiCall<unknown>(page, '/api/OpenELIS-Global/rest/LogbookResults', {
       method: 'POST',
@@ -53,7 +53,7 @@ test.describe.serial('Chain E — Sample Validation Lifecycle', () => {
   });
 
   test('Step 3 — Reject result for re-test via Validation API (PERSIST)', async ({ page }) => {
-    if (!order) test.skip();
+    requireStep('E', 3, !!order, '!order');
     await page.goto(BASE);
     // Validation rejection is different from sample rejection: result is
     // marked retest=true via the ResultValidation POST.
@@ -70,7 +70,7 @@ test.describe.serial('Chain E — Sample Validation Lifecycle', () => {
   });
 
   test('Step 4 — Re-enter corrected result (PERSIST)', async ({ page }) => {
-    if (!order) test.skip();
+    requireStep('E', 4, !!order, '!order');
     await page.goto(BASE);
     const post = await apiCall<unknown>(page, '/api/OpenELIS-Global/rest/LogbookResults', {
       method: 'POST',
@@ -85,7 +85,7 @@ test.describe.serial('Chain E — Sample Validation Lifecycle', () => {
   });
 
   test('Step 5 — Validate the corrected result (PERSIST)', async ({ page }) => {
-    if (!order) test.skip();
+    requireStep('E', 5, !!order, '!order');
     await page.goto(BASE);
     const post = await apiCall<unknown>(page, '/api/OpenELIS-Global/rest/ResultValidation', {
       method: 'POST',
@@ -100,7 +100,7 @@ test.describe.serial('Chain E — Sample Validation Lifecycle', () => {
   });
 
   test('Step 6 — Patient report contains corrected value, not initial value (CROSS-LINK, ROUND-TRIP)', async ({ page }) => {
-    if (!order) test.skip();
+    requireStep('E', 6, !!order, '!order');
     await page.goto(BASE);
     const url = `/api/OpenELIS-Global/ReportPrint?report=patient&type=patient&accessionNumber=${encodeURIComponent(order!.accession)}`;
     const r = await apiCall<string>(page, url, { accept: 'application/pdf', expectBinary: true });

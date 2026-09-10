@@ -22,7 +22,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { BASE, apiCall, markStep } from './_common';
+import { BASE, apiCall, markStep, requireStep } from './_common';
 
 interface EqaProgram { id?: string; name?: string; active?: boolean; }
 interface EqaDistribution { id?: string; programId?: string; status?: string; }
@@ -95,7 +95,7 @@ test.describe.serial('Chain F — EQA Distribution', () => {
   // Step 2 — Find or create an EQA program (PERSIST)
   // ---------------------------------------------------------------------------
   test('Step 2 — Find or create EQA program (PERSIST)', async ({ page }) => {
-    if (!eqaEnabled) test.skip();
+    requireStep('F', 2, !!eqaEnabled, '!eqaEnabled');
     await page.goto(BASE);
 
     const list = await apiCall<EqaProgram[] | { programs?: EqaProgram[] }>(
@@ -129,7 +129,7 @@ test.describe.serial('Chain F — EQA Distribution', () => {
   // Step 3 — Create a distribution (shipment)
   // ---------------------------------------------------------------------------
   test('Step 3 — Create EQA distribution / shipment (PERSIST)', async ({ page }) => {
-    if (!program?.id) test.skip();
+    requireStep('F', 3, !(!program?.id), '!program?.id');
     await page.goto(BASE);
     const r = await apiCall<EqaDistribution>(page, '/api/OpenELIS-Global/rest/eqa/distributions', {
       method: 'POST',
@@ -150,7 +150,7 @@ test.describe.serial('Chain F — EQA Distribution', () => {
   // Step 4 — Round-trip read the distribution
   // ---------------------------------------------------------------------------
   test('Step 4 — Distribution round-trip read (ROUND-TRIP)', async ({ page }) => {
-    if (!distributionId) test.skip();
+    requireStep('F', 4, !!distributionId, '!distributionId');
     await page.goto(BASE);
     const r = await apiCall<EqaDistribution[] | { distributions?: EqaDistribution[] }>(
       page, '/api/OpenELIS-Global/rest/eqa/distributions'
@@ -172,7 +172,7 @@ test.describe.serial('Chain F — EQA Distribution', () => {
   // BUG-39: /rest/eqa/samples/dashboard returns 404 on most installs
   // ---------------------------------------------------------------------------
   test('Step 5 — EQA Management dashboard surfaces program (CROSS-LINK, BUG-39 catch)', async ({ page }) => {
-    if (!program?.id) test.skip();
+    requireStep('F', 5, !(!program?.id), '!program?.id');
     await page.goto(BASE);
     const r = await apiCall<unknown>(page, '/api/OpenELIS-Global/rest/eqa/samples/dashboard');
     if (!r.ok) {
@@ -189,7 +189,7 @@ test.describe.serial('Chain F — EQA Distribution', () => {
   // SKILL §11.5 — uses API path since UI is blocked by BUG-31 family
   // ---------------------------------------------------------------------------
   test('Step 6 — Participant submits EQA result via API (PERSIST, §11.5)', async ({ page }) => {
-    if (!distributionId) test.skip();
+    requireStep('F', 6, !!distributionId, '!distributionId');
     await page.goto(BASE);
     // The EQA Sample order flow is /SamplePatientEntry?isEQA=true with
     // patient fields locked. The API equivalent passes isEqaSample=true

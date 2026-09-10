@@ -2774,3 +2774,150 @@ instead — the first Search button FOLLOWING `#siteName` in document order,
 tagged with a data attribute so the click cannot drift. The fallback warning
 added in 12.30 is what made this diagnosable from the run log alone, which is
 the first time that warning paid for itself.
+
+---
+
+## §12.32 — The chains could not report a failure, and the gate could not see why
+
+**Date:** 2026-09-10
+**Files:** `tests/chains/_common.ts`, 12 chain specs, `scripts/lint-falsifiable-gate.mjs`
+
+### What was found
+
+The 26 regression chains are the suite's headline artifact. On audit, **122 of
+their 126 steps could not fail**. Two independent causes, pulling in opposite
+directions, and each hid the other.
+
+**Cause 1 — 64 bare `test.skip()` calls bypassed the declared-gap register.**
+
+`tests/chains/known-gaps.ts` exists to enforce one rule: a step may only excuse
+itself if a human wrote the excuse down in advance, with a reason, a ticket, and
+a condition that would retire it. `markStep(..., 'GAP'|'BLOCKED', ...)` honours
+that register and fails under `GAPS_STRICT=1`, which the nightly sets.
+
+But every chain opened its steps with
+
+```ts
+if (!order) test.skip();
+```
+
+which goes around the register completely. No annotation, no ticket, no
+retirement condition, and **no failure even in strict mode**. A step whose input
+is missing opted out silently, on every run, including the nightly. A chain
+whose Step 1 failed to seed reported seven green skips behind it.
+
+This is the same move the register was written to stop, one level down: not a
+gap decided in a catch block, but a gap decided in an `if` guard.
+
+**Cause 2 — the gate's `self-skip-return` detector was wrong in both directions,
+and never mentioned Cause 1.**
+
+The detector was one regex over the case body:
+
+```
+/if\s*\(\s*![\s\S]{0,160}?\)\s*\{[\s\S]{0,400}?\breturn\s*;/
+```
+
+It asks "is there a negated `if` followed within 400 characters by a `return`".
+
+*False positives.* It fires on `if (!r.ok) { markStep(..., 'FAIL', ...); return; }`
+— a guard that **fails** the case. And it takes the `{` of a generic type
+argument for the `{` of a block, which is how every chain step that reads
+`apiCall<{ ... }>` came to be counted hollow. 65 of the 122 chain flags were
+this.
+
+*False negatives.* A guard more than 400 characters from its `return`, or one
+whose condition is positive (`if (rows.length === 0) return;`), sailed straight
+past. It also never flagged the bare `test.skip()` shape — the actual problem.
+
+So the gate reported the chains as the worst files in the repo for a reason that
+was mostly artefact, while the reason they were genuinely broken went unnamed.
+
+### What changed
+
+**`requireStep(chain, n, ok, condition, detail?)`** in `_common.ts`. An unmet
+precondition now routes through `markStep(..., 'BLOCKED', ...)`, so the register
+governs it: fails unless `"<chain>:<n>"` is declared. 53 guards were rewritten
+mechanically; 10 were read individually and turned out to be three kinds:
+
+- **dead code** — `markStep(..., 'BLOCKED', ...); test.skip(); return;`. markStep
+  already skips-or-fails, so the trailing skip could never run, while reading as
+  an unconditional opt-out. Dropped.
+- **an HTTP failure treated as a gap** — three guards skipped on a non-2xx from
+  an endpoint that exists, which `known-gaps.ts` explicitly calls a failure.
+- **a missing result treated as a gap** — Chain D Step 7 skipped when the calc
+  engine had written no value; Chain J Step 5 skipped when no audit entry existed
+  for the action it had just performed. Those absences are the findings each step
+  exists to make. Both now fail. Chain J splits on whether any probed action
+  actually landed: if one did and no audit row carries its signature, that is a
+  FAIL; if none landed there is nothing to audit and the register decides.
+
+**A guard-walking detector** replaces the regex. It brackets each `if`
+condition and its block properly, then asks the question that matters: does this
+guard leave the case without raising anything? `expect()`, `throw`,
+`requireStep()`, and `markStep(..., 'FAIL'|'BLOCKED'|'GAP')` are reviewable
+exits and are not flagged. `markStep(..., 'PASS'|'PARTIAL')` is not.
+
+A block cannot be delimited by a regex. That is the whole lesson: the previous
+detector approximated a block with "within 400 characters" and could not tell a
+type argument from a body, so it was answering a different question than the one
+it printed.
+
+### The numbers, decomposed
+
+Two changes landed together, so they were measured apart deliberately — a
+detector change can manufacture an "improvement" that is only a change of ruler.
+
+| | total unfalsifiable | of which in chains |
+|---|---|---|
+| old detector, old chains | 325 | 122 |
+| **new detector**, old chains | 293 | 57 |
+| new detector, **new chains** | 244 | 8 |
+
+So the detector change accounts for 325 → 293, and the actual work accounts for
+293 → 244, all of it in the chains (57 → 8). The baseline was **re-recorded, not
+ratcheted**: the new detector found 34 real opt-outs in 15 non-chain files it had
+previously missed (`system-misc` 19→27, `reports` 11→16, `alerts-notifications`
+3→7, `results-entry` 7→10). Those are backlog, not regressions.
+
+### Verified
+
+Run against the local 3.2.2.0 stack, `chain-a/d/e/h/j`:
+
+- Non-strict: **4 failed, 11 skipped, 2 passed**. The skips now print the failed
+  condition and a cascade explanation. Previously all of these were silent green.
+- `GAPS_STRICT=1`: **9 failed**, each naming its register key
+  (`known-gaps.ts` key `"H:1"`, and so on). Before this change the same steps
+  passed silently in strict mode too, because a bare `test.skip()` never
+  consulted the register at all.
+
+The failures are honest and mostly environmental on this instance: no calculation
+rules configured (Chain D Step 1), `AuditTrail` 404 (Chain J Step 1),
+`UnifiedSystemUser` create returning 500 (Chain H Step 1). Those are now visible
+instead of absorbed.
+
+### Left open: PARTIAL reports green
+
+The 8 remaining chain flags are one shape: `markStep(..., 'PARTIAL', ...); return;`.
+`PARTIAL` is doing two different jobs, and only one of them is honest.
+
+- *"I could not determine the answer."* Chain H Step 3 gets a 401 with a dead
+  session, which genuinely cannot distinguish authz from session loss. Reporting
+  that as not-a-pass is right; it belongs in the register as BLOCKED.
+- *"I determined a degraded answer, and that is the finding."* Chain E Step 6
+  finds the corrected value **and** the superseded wrong value both present in a
+  patient report. Chain J Step 4 finds the audit count grew but no entry carries
+  the changed value — stated in the test's own words as a regulatory gap. Both
+  report green.
+
+The second kind is the same defect as the bare skip: a status that describes a
+problem and passes anyway. It is not fixed here because the fix needs a product
+answer, not a harness one — whether a patient report should show retest history
+at all is Casey's call, not the harness's.
+
+### Rule
+
+A step may not decide at runtime that it is excused. If the precondition is
+missing, either seed it, or fail, or route through the register where the excuse
+is written down and someone can review it. And a status that describes a problem
+must not be a passing status.

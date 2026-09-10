@@ -44,6 +44,7 @@ import {
   extractPdfText,
   markStep,
   ChainOrderRef,
+  requireStep,
 } from './_common';
 
 test.describe.serial('Chain B — Rejection → NCE → Report', () => {
@@ -82,7 +83,7 @@ test.describe.serial('Chain B — Rejection → NCE → Report', () => {
   // Acceptance criterion: FUNCTION
   // ---------------------------------------------------------------------------
   test('Step 2 — Capture baseline ordersRejectedToday (FUNCTION)', async ({ page }) => {
-    if (!order) test.skip();
+    requireStep('B', 2, !!order, '!order');
     await page.goto(BASE);
 
     const m = await apiCall<{ ordersRejectedToday?: number }>(
@@ -109,7 +110,7 @@ test.describe.serial('Chain B — Rejection → NCE → Report', () => {
   // Acceptance criterion: PERSIST
   // ---------------------------------------------------------------------------
   test('Step 3 — Reject the sample via API substitute (PERSIST)', async ({ page }) => {
-    if (!order) test.skip();
+    requireStep('B', 3, !!order, '!order');
     await page.goto(BASE);
 
     // Payload shape inferred from Phase 23 BUG-29 evidence and the
@@ -150,7 +151,7 @@ test.describe.serial('Chain B — Rejection → NCE → Report', () => {
   // Acceptance criterion: ROUND-TRIP
   // ---------------------------------------------------------------------------
   test('Step 4 — Verify rejection persisted (ROUND-TRIP)', async ({ page }) => {
-    if (!order) test.skip();
+    requireStep('B', 4, !!order, '!order');
     await page.goto(BASE);
 
     const read = await apiCall<{
@@ -185,7 +186,7 @@ test.describe.serial('Chain B — Rejection → NCE → Report', () => {
   // Acceptance criterion: CROSS-LINK
   // ---------------------------------------------------------------------------
   test('Step 5 — NCE list contains accession (CROSS-LINK, BUG-29 Symptom A)', async ({ page }) => {
-    if (!order) test.skip();
+    requireStep('B', 5, !!order, '!order');
     await page.goto(BASE);
 
     const nce = await apiCall<{ events?: Array<{ labNumber?: string }> } | Array<{ labNumber?: string }>>(
@@ -226,7 +227,7 @@ test.describe.serial('Chain B — Rejection → NCE → Report', () => {
   // Acceptance criterion: CROSS-LINK (different endpoint than Step 5)
   // ---------------------------------------------------------------------------
   test('Step 6 — View NCE search finds accession (CROSS-LINK, BUG-29 Symptom D)', async ({ page }) => {
-    if (!order) test.skip();
+    requireStep('B', 6, !!order, '!order');
     await page.goto(BASE);
 
     // The View NCE page uses the same /rest/nonconformevents endpoint with
@@ -266,7 +267,7 @@ test.describe.serial('Chain B — Rejection → NCE → Report', () => {
   // Acceptance criterion: REPORTABLE
   // ---------------------------------------------------------------------------
   test('Step 7 — Rejection Report PDF generates (REPORTABLE, BUG-29 Symptom B)', async ({ page }) => {
-    if (!order) test.skip();
+    requireStep('B', 7, !!order, '!order');
     await page.goto(BASE);
 
     // Date range = today only (dd/mm/yyyy format expected by ReportPrint)
@@ -320,7 +321,7 @@ test.describe.serial('Chain B — Rejection → NCE → Report', () => {
   // Acceptance criterion: CROSS-LINK
   // ---------------------------------------------------------------------------
   test('Step 8 — Dashboard counter incremented (CROSS-LINK, BUG-29 Symptom C, §13 Y-RECON)', async ({ page }) => {
-    if (!order || baselineRejectedCount === null) test.skip();
+    requireStep('B', 8, !(!order || baselineRejectedCount === null), '!order || baselineRejectedCount === null');
     await page.goto(BASE);
 
     const m = await apiCall<{ ordersRejectedToday?: number }>(

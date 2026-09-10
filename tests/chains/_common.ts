@@ -427,6 +427,57 @@ export function markStep(chain: string, n: number, status: StepStatus, descripti
   }
 }
 
+// -----------------------------------------------------------------------------
+// Step preconditions
+// -----------------------------------------------------------------------------
+
+/**
+ * Assert a step's precondition, routed through the declared-gap register.
+ *
+ * WHY THIS EXISTS. `known-gaps.ts` is the rule that a step may only excuse
+ * itself if someone wrote the excuse down in advance, and `markStep(...,
+ * 'BLOCKED', ...)` enforces it. But the chains opened their steps with a bare
+ *
+ *     if (!order) test.skip();
+ *
+ * which goes around the register completely: no annotation, no ticket, no
+ * retirement condition, and no failure under GAPS_STRICT=1. A step that skips
+ * whenever its input is missing is a step that reports green on a build where
+ * nothing upstream worked. An audit on 2026-09-10 found 122 of 126 chain steps
+ * unfalsifiable, and this pattern was the whole reason.
+ *
+ * `requireStep` puts the same situation back under the register. `ok` false is
+ * a BLOCKED with the failed condition quoted, so it fails unless "<chain>:<n>"
+ * is declared in known-gaps.ts with a reason and a retirement condition.
+ *
+ * A cascade is not a gap. If the precondition is missing because an EARLIER
+ * step of this chain failed, the honest fix is to make that step pass or to
+ * seed this step's input independently — not to declare a gap here. Declared
+ * gaps are for capabilities this build genuinely lacks (an undeployed module, a
+ * flag that is off), which is what known-gaps.ts already says.
+ *
+ * Never returns normally when `ok` is false.
+ */
+export function requireStep(
+  chain: string,
+  n: number,
+  ok: unknown,
+  condition: string,
+  detail?: string,
+): void {
+  if (ok) return;
+  markStep(
+    chain,
+    n,
+    'BLOCKED',
+    `precondition unmet: \`${condition}\``,
+    detail ??
+      'The step cannot run because its input is absent. If an earlier step of this chain ' +
+      'produces that input, this is a cascade — fix the earlier step or seed this input ' +
+      'directly. Only declare it in known-gaps.ts if this build genuinely lacks the feature.',
+  );
+}
+
 // =============================================================================
 // v6.13 — Folded from helpers/_common-v612-patch.ts (live-pilot grounded)
 // =============================================================================
