@@ -51,6 +51,14 @@ jobs:
       - name: No new assertion-free tests
         run: npm run lint:assert
 
+      # Companion to the step above, covering what ESLint's expect-expect rule
+      # cannot see: assertions that are present but can never fail. Chiefly the
+      # `if (!x) { console.log('SKIP'); return; }` opt-out, which carries an
+      # expect further down that never runs — 319 of the 482 unfalsifiable cases
+      # found in the 2026-09-10 audit, all of them invisible to lint:assert.
+      - name: No new tests whose assertions cannot fail
+        run: npm run lint:falsifiable
+
       # BLOCKING: every spec file must be runnable by at least one config. An
       # audit on 2026-09-04 found 46 spec files (866 tests — the bulk of the
       # module coverage) that no config could run; they had been dead a long
