@@ -2967,22 +2967,37 @@ Two things follow. The ward field is back on develop, so a suite running only
 against 3.2.2.0 would report it missing as a live defect. And `siteContactFax`
 now exists, which is the field the Clinic ID request asked about repurposing.
 
-### The order date and time already exist in the payload
+### The order date exists; the order TIME does not
+
+**Corrected 2026-09-10, same day, by Casey.** This section first read "the
+order date and time already exist in the payload" and concluded that only a UI
+binding was missing. That was wrong, and wrong in the direction that
+under-sizes the work.
 
 `GET /rest/SamplePatientEntry` returns, inside `sampleOrderItems`, and
-**identically on both builds**:
+identically on both builds:
 
 ```
-receivedDateForDisplay = "10/09/2026"
-receivedTime           = "20:26"
-requestDate            = "10/09/2026"
+receivedDateForDisplay = "10/09/2026"   <- when the sample was RECEIVED AT THE LAB
+receivedTime           = "20:26"        <- likewise. NOT the order time.
+requestDate            = "10/09/2026"   <- this IS the order date. No time component.
 ```
 
-A received date, a received *time*, and a request date, all defaulted to now.
-Neither build surfaces an order date or order time as a form field. So the
-model already carries what an "order date and time defaulting to entry time,
-overwritable" requirement needs; what is missing is the UI binding, not the
-data. Worth knowing before that work is sized.
+Received date and time are lab receipt: a different event from order entry,
+and not a substitute for it. `requestDate` is the order date, and it carries
+no time.
+
+So an "order date and time, defaulting to entry time and overwritable"
+requirement splits: the **date** has a home in `requestDate` and needs a UI
+binding, while the **time** does not exist anywhere in the payload and needs
+new data. Do not read a `receivedTime` in the response as evidence that an
+order time is available.
+
+The lesson for this file: a field whose name contains the right noun is not
+the field you want. `receivedTime` matched a grep for time-ish keys, and being
+in the payload alongside the order data made it look like part of the same
+concept. Only someone who knows the lab workflow could say otherwise, which
+is why a payload key is a lead and not a finding.
 
 ### develop has three save buttons
 
@@ -3037,6 +3052,58 @@ Blocker 2 also reframes the second client report: if those are search inputs
 that retain the previous patient, "previous patient details persist and can
 overwrite the wrong record" is a statement about the search block, which is a
 different defect from the order form failing to reset.
+
+### Why the lab number is empty at load: nothing generates it on mount
+
+The form loads with `#labNumber` empty, and it is the only control marked
+required, so the form as loaded cannot be saved. The cause is not a missing
+generator — the generator works. It is that nothing calls it until a human
+clicks.
+
+`ClinicalOrderEnter.jsx` wires generation to
+`GET /rest/SampleEntryGenerateScanProvider` through `handleGenerateLabNumber`.
+There is no `useEffect` that calls it on mount; the only caller is a click
+handler. Verified live on develop:
+
+```
+labNumber at load:        (EMPTY)
+generator called on load: NO
+click "Generate Lab Number"
+  -> GET 200 /api/OpenELIS-Global/rest/SampleEntryGenerateScanProvider
+  -> labNumber = DEV01260000000000001
+manual typing also works  -> QA-MANUAL-0001
+```
+
+So generation is click-only and functions correctly. Three separate defects
+sit around it:
+
+1. **The trigger is unreachable by keyboard.** It is a Carbon `<Link>`, which
+   renders `<a class="cds--link generate-link">` with `href=null` and
+   `tabindex=null`. An anchor with no href is not focusable, so a keyboard-only
+   user cannot reach Generate at all — and the field it fills is the one
+   required control on the form. WCAG 2.1.1.
+
+2. **Its disabled state is not conveyed.** The JSX passes
+   `disabled={isGeneratingLabNo || (isReadOnly && !isEditMode)}` to `<Link>`,
+   and the live element carries neither `disabled` nor `aria-disabled`. So the
+   link stays clickable during the in-flight generate, and in read-only mode.
+
+3. **The save-blocked message names the wrong things.** The gate is
+   `canSave = localLabNumber && hasPatientOrSite && hasSampleTypes`, but the
+   notification reads "Please add a patient and at least one sample type before
+   saving" — it never mentions the lab number. A user who has a patient and a
+   sample type but no lab number is told to add a patient and a sample type.
+
+Note also that `hasPatientOrSite` reads `orderData.patientProperties`, i.e.
+the context, not the DOM. Typing into the `#lastName` / `#firstName` inputs on
+this form sets neither, because those are the patient SEARCH inputs. That is
+why the earlier submit attempts never POSTed, and it is the same observation
+that reframes the "previous patient persists" report as a search-block defect.
+
+One more caution about reading behaviour out of source: the JSX default for
+`order.labNumber.helper` is "Auto-generated per existing lab number rules",
+but the running app shows "Unique identifier for this order" — a message
+bundle overrides it. Quote the live string, not the `defaultMessage`.
 
 ### Rule
 
