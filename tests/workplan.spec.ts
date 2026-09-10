@@ -1,529 +1,404 @@
 import { test, expect, type Page } from '@playwright/test';
-import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, navigateViaMenu, tryNavigateToURL } from '../helpers/test-helpers';
+import { BASE, ADMIN, login } from '../helpers/test-helpers';
+import { seedOrder } from '../helpers/data-factory';
 
 /**
- * Workplan and Sample Tracking Test Suite
- * Covers workplan features by test type, panel, and priority
- * Suite IDs: WP, AI, J-DEEP, N-DEEP
- * Test Count: 16
+ * tests/workplan.spec.ts — Workplan by Test / Panel / Unit / Priority
+ *
+ * REWRITTEN 2026-09-10. What this replaced.
+ *
+ * Every case in this file went through a `goToWorkplan()` helper that tried
+ * four GUESSED urls in turn and returned '' if none answered, followed by
+ *
+ *     if (!url) { console.log('TC-WP-0n: GAP — no workplan URL accessible'); return; }
+ *
+ * Fourteen of the eighteen cases were structurally incapable of failing
+ * (falsifiable-gate flags: self-skip-return, no-expect). The assertions that
+ * did exist were no better: TC-WP-01 closed with
+ *
+ *     const hasFilter = await page.locator('select, input[type="text"]').count() > 0;
+ *     expect(hasFilter).toBe(true);
+ *
+ * which is true of the login page.
+ *
+ * THE ROUTES ARE NOT A GUESS. They come from `/rest/menu`, the same list the
+ * application's own navigation is built from (read 2026-09-10 on the local
+ * 3.2.2.0 stack):
+ *
+ *   banner.menu.workplan.test      -> /WorkPlanByTest?type=test
+ *   banner.menu.workplan.panel     -> /WorkPlanByPanel?type=panel
+ *   banner.menu.workplan.bench     -> /WorkPlanByTestSection?type=
+ *   banner.menu.workplan.priority  -> /WorkPlanByPriority?type=priority
+ *
+ * Note there is NO bare `/WorkPlan` in the menu, though the old helper listed
+ * it first and it answers 200 — the SPA serves its shell for any unmatched
+ * path, so a status check on a wrong route passes while rendering nothing. That
+ * is the same trap that made a missing gallery mockup look fine (harness 12.30):
+ * a 200 is not evidence that a screen exists.
+ *
+ * Each screen is one Carbon `select#select-1` feeding one endpoint:
+ *
+ *   By Test      displayList/ALL_TESTS      -> WorkPlanByTest?test_id=
+ *   By Panel     displayList/PANELS         -> WorkPlanByPanel?panel_id=
+ *   By Priority  displayList/ORDER_PRIORITY -> WorkPlanByPriority?priority=
+ *
+ * TC-WP-03 and TC-WP-04 need work actually sitting in a queue, so they SEED an
+ * order rather than skipping when the instance happens to be empty. That is the
+ * rule the gate's failure message states: seed the precondition, don't opt out
+ * on it.
  */
 
+/** The four routes the application itself advertises, and what each drives. */
+const SCREENS = [
+  { key: 'test',     route: '/WorkPlanByTest?type=test',         label: /Select Test Type/i,  list: 'ALL_TESTS',      api: 'WorkPlanByTest',        param: 'test_id',  minOptions: 100 },
+  { key: 'panel',    route: '/WorkPlanByPanel?type=panel',       label: /Select Panel/i,      list: 'PANELS',         api: 'WorkPlanByPanel',       param: 'panel_id', minOptions: 2 },
+  { key: 'priority', route: '/WorkPlanByPriority?type=priority', label: /Select Priority/i,   list: 'ORDER_PRIORITY', api: 'WorkPlanByPriority',    param: 'priority', minOptions: 2 },
+] as const;
+
+const BENCH = { key: 'bench', route: '/WorkPlanByTestSection?type=' } as const;
+
+/** Go to a workplan screen and prove it actually rendered, not the SPA shell. */
+async function openWorkplan(page: Page, route: string, label: RegExp): Promise<void> {
+  await page.goto(`${BASE}${route}`);
+  const select = page.locator('#select-1');
+  await expect(select, `${route} must render its selector, not the SPA shell`).toBeAttached({ timeout: 20_000 });
+  await expect(page.locator('body'), `${route} must show its own heading`).toContainText(/Workplan/i, { timeout: 15_000 });
+  await expect(select, `${route}'s selector must be labelled`).toContainText(label, { timeout: 10_000 });
+}
+
+/** Options on the screen's single select, minus the "Select ..." placeholder. */
+async function realOptions(page: Page): Promise<{ value: string; text: string }[]> {
+  return page.locator('#select-1').evaluate((el) =>
+    Array.from((el as HTMLSelectElement).options)
+      .filter((o) => o.value && !/^select /i.test(o.text))
+      .map((o) => ({ value: o.value, text: o.text.trim() })));
+}
+
+/** Call a workplan endpoint directly and report what came back. */
+async function queryWorkplan(page: Page, api: string, param: string, value: string) {
+  return page.evaluate(
+    async ([a, p, v]) => {
+      const r = await fetch(`/api/OpenELIS-Global/rest/${a}?${p}=${encodeURIComponent(v)}`, {
+        headers: { Accept: 'application/json' },
+      });
+      const text = await r.text();
+      let body: unknown = null;
+      try { body = JSON.parse(text); } catch { /* not json */ }
+      const b = body as { workplanTests?: unknown[]; testResult?: unknown[] } | null;
+      const rows = b?.workplanTests ?? b?.testResult ?? null;
+      return { status: r.status, rows: Array.isArray(rows) ? rows.length : null, keys: b ? Object.keys(b).slice(0, 8) : null, raw: text.slice(0, 160) };
+    },
+    [api, param, value] as const,
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 test.describe('Workplan and Sample Tracking (TC-WP)', () => {
   test.beforeEach(async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
   });
 
-  const WP_URLS = [
-    '/WorkPlan',
-    '/WorkPlanByTestSection',
-    '/WorkPlanByTest',
-    '/WorkPlanByPanel',
-  ];
-
-  async function goToWorkplan(page: Page): Promise<string> {
-    for (const u of WP_URLS) {
-      const res = await page.goto(`${BASE}${u}`).catch(() => null);
-      if (res && res.ok() && !page.url().includes('LoginPage')) {
-        return page.url();
-      }
-    }
-    return '';
-  }
-
-  test('TC-WP-01: Workplan screen loads', async ({ page }) => {
-    const url = await goToWorkplan(page);
-    if (!url) {
-      console.log('TC-WP-01: GAP — no workplan URL accessible');
-      return;
-    }
-    console.log(`TC-WP-01: PASS — workplan at ${url}`);
-    const hasFilter = await page.locator('select, input[type="text"]').count() > 0;
-    expect(hasFilter).toBe(true);
-  });
-
-  test('TC-WP-02: Filter workplan by test type (Hematology)', async ({ page }) => {
-    const url = await goToWorkplan(page);
-    if (!url) {
-      console.log('TC-WP-02: SKIP — workplan not accessible');
-      return;
-    }
-
-    const sectionSelect = page.locator('select').first();
-    if (!(await sectionSelect.isVisible({ timeout: 3000 }).catch(() => false))) {
-      console.log('TC-WP-02: GAP — no section filter dropdown on workplan');
-      return;
-    }
-
-    // Select Hematology via Carbon workaround
-    await page.evaluate(() => {
-      const sel = document.querySelector<HTMLSelectElement>('select');
-      if (!sel) return;
-      const hemaOption = Array.from(sel.options).find(o => /hematol/i.test(o.text));
-      if (!hemaOption) return;
-      const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!;
-      setter.call(sel, hemaOption.value);
-      sel.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-    await page.waitForTimeout(2000);
-
-    const tableRows = await page.getByRole('row').count();
-    console.log(`TC-WP-02: Hematology filter — ${tableRows} pending row(s) visible`);
-    // Non-failing: 0 rows is acceptable if no pending Hematology work
-  });
-
-  test('TC-WP-03: Enter result from workplan and verify persistence', async ({ page }) => {
-    const url = await goToWorkplan(page);
-    if (!url) {
-      console.log('TC-WP-03: SKIP — workplan not accessible');
-      return;
-    }
-
-    // Find first editable result input in the workplan table
-    await page.waitForTimeout(1000);
-    const resultInput = page.locator('table input[type="text"], table input[type="number"]').first();
-    if (!(await resultInput.isVisible({ timeout: 3000 }).catch(() => false))) {
-      console.log('TC-WP-03: SKIP — no editable result inputs in workplan (empty queue or different layout)');
-      return;
-    }
-
-    // Get the accession for this row (for cross-check)
-    const rowAccession = await page.getByRole('row').first().textContent().catch(() => '');
-
-    // Enter result
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-    await page.evaluate(() => {
-      const inp = document.querySelector<HTMLInputElement>('table input[type="text"], table input[type="number"]');
-      if (!inp) return;
-      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-      setter.call(inp, '13.5');
-      inp.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-    await page.waitForTimeout(500);
-
-    // Save
-    let saveStatus = 0;
-    page.on('response', (r) => {
-      if (r.request().method() === 'POST') saveStatus = r.status();
-    });
-
-    const saveBtn = page.getByRole('button', { name: /save|submit/i }).first();
-    if (await saveBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await saveBtn.click();
-      await page.waitForTimeout(2000);
-    }
-
-    console.log(`TC-WP-03: Save POST status = ${saveStatus}; accession context: ${rowAccession!.trim().slice(0, 30)}`);
-    if (saveStatus >= 200 && saveStatus < 300) {
-      console.log('TC-WP-03: PASS — result saved from workplan');
-    } else if (saveStatus === 0) {
-      console.log('TC-WP-03: INDETERMINATE — could not confirm POST (may be SPA non-POST save)');
-    }
-  });
-
-  test('TC-WP-04: Completed tests leave workplan pending queue', async ({ page }) => {
-    // This test depends on TC-WP-03 having run; we check the queue state
-    const url = await goToWorkplan(page);
-    if (!url) return;
-
-    await page.evaluate(() => {
-      const sel = document.querySelector<HTMLSelectElement>('select');
-      if (!sel) return;
-      const hema = Array.from(sel.options).find(o => /hematol/i.test(o.text));
-      if (hema) {
-        const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!;
-        setter.call(sel, hema.value);
-        sel.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-    });
-    await page.waitForTimeout(2000);
-
-    const pendingRows = await page.getByRole('row').count();
-    console.log(`TC-WP-04: ${pendingRows} pending row(s) after prior save. Behavior documented (queue may or may not auto-remove).`);
-    // Non-failing: just document the behavior
-  });
-
-  test('TC-WP-05: Sample reception screen accessible', async ({ page }) => {
-    const receptionUrls = [
-      '/SampleLogin',
-      '/SpecimenEntry',
-      '/BarcodedSamples',
-      '/SampleBatchEntry',
-    ];
-
-    let found = false;
-    for (const u of receptionUrls) {
-      const res = await page.goto(`${BASE}${u}`).catch(() => null);
-      if (res && res.ok() && !page.url().includes('LoginPage')) {
-        const text = await page.textContent('body') ?? '';
-        if (/accession|barcode|sample|receive/i.test(text)) {
-          found = true;
-          console.log(`TC-WP-05: PASS — sample reception at ${page.url()}`);
-          break;
+  // CANARY. If the app moves or renames these routes, this fails first and the
+  // rest of the file's failures are explained rather than mysterious.
+  test('TC-WP-01: the application advertises the four workplan routes, and each renders', async ({ page }) => {
+    await page.goto(`${BASE}/`);
+    const advertised = await page.evaluate(async () => {
+      const r = await fetch('/api/OpenELIS-Global/rest/menu', { headers: { Accept: 'application/json' } });
+      const j = await r.json().catch(() => null);
+      const urls: string[] = [];
+      const walk = (n: unknown[]) => {
+        for (const it of (n || []) as Record<string, unknown>[]) {
+          const m = (it.menu ?? it) as Record<string, unknown>;
+          if (typeof m.actionURL === 'string' && /WorkPlan/i.test(m.actionURL)) urls.push(m.actionURL);
+          walk((it.childMenus ?? m.childMenus ?? []) as unknown[]);
         }
-      }
-    }
+      };
+      walk(j as unknown[]);
+      return urls;
+    });
+    console.log(`TC-WP-01: menu advertises ${JSON.stringify(advertised)}`);
 
-    if (!found) {
-      console.log('TC-WP-05: GAP — sample reception screen not found at known URLs');
+    for (const s of [...SCREENS, BENCH]) {
+      const bare = s.route.split('?')[0];
+      expect(advertised.some((u) => u.startsWith(bare)),
+        `the menu must still advertise ${bare}; it offered ${advertised.join(', ')}`).toBe(true);
+    }
+    for (const s of SCREENS) await openWorkplan(page, s.route, s.label);
+  });
+
+  test('TC-WP-02: each workplan selector is populated from its own display list', async ({ page }) => {
+    for (const s of SCREENS) {
+      await openWorkplan(page, s.route, s.label);
+      const opts = await realOptions(page);
+      console.log(`TC-WP-02: ${s.key} -> ${opts.length} options (min ${s.minOptions}), first "${opts[0]?.text}"`);
+      expect(opts.length, `${s.route} selector must offer at least ${s.minOptions} real options`)
+        .toBeGreaterThanOrEqual(s.minOptions);
+      // and the list must come from the server, not be hardcoded in the bundle
+      const list = await page.evaluate(async (name) => {
+        const r = await fetch(`/api/OpenELIS-Global/rest/displayList/${name}`, { headers: { Accept: 'application/json' } });
+        return { status: r.status, n: ((await r.json().catch(() => [])) as unknown[]).length };
+      }, s.list);
+      expect(list.status, `displayList/${s.list} must answer`).toBe(200);
+      expect(list.n, `displayList/${s.list} must be non-empty`).toBeGreaterThan(0);
     }
   });
 
-  test('TC-WP-06: Workplan pending count roughly matches dashboard KPI', async ({ page }) => {
-    // Read dashboard count
-    await page.goto(`${BASE}`);
-    await page.waitForTimeout(2000);
-    const dashText = await page.textContent('body') ?? '';
-    const dashMatch = dashText.match(/awaiting.*?(\d+)|(\d+).*?awaiting/i);
-    const dashCount = parseInt(dashMatch?.[1] ?? dashMatch?.[2] ?? '-1', 10);
+  test('TC-WP-03: a seeded order appears in the workplan for the test it ordered', async ({ page }) => {
+    // Seeded, not skipped. The old case opened with
+    //   if (!url) { console.log('GAP'); return; }
+    // and asserted nothing about queue contents at all.
+    const seeded = await seedOrder(page, 'WP03');
+    console.log(`TC-WP-03: seeded ${seeded.accession}`);
 
-    // Count workplan rows
-    const wpUrl = await goToWorkplan(page);
-    if (!wpUrl) {
-      console.log('TC-WP-06: SKIP — workplan not accessible');
-      return;
-    }
-    await page.waitForTimeout(1500);
-    const wpRows = await page.getByRole('row').count();
+    await openWorkplan(page, SCREENS[0].route, SCREENS[0].label);
+    const opts = await realOptions(page);
+    // QA_TEST_ID defaults to 3 (Glucose) — the test the fixture orders.
+    const testId = process.env.QA_TEST_ID || '3';
+    const match = opts.find((o) => o.value === testId);
+    expect(match, `test id ${testId} must be selectable in the By Test workplan`).toBeTruthy();
 
-    console.log(`TC-WP-06: Dashboard "awaiting" KPI = ${dashCount}, workplan pending rows = ${wpRows}`);
-    if (dashCount >= 0) {
-      const delta = Math.abs(dashCount - wpRows);
-      console.log(delta <= 5
-        ? `TC-WP-06: PASS — counts consistent (delta = ${delta})`
-        : `TC-WP-06: FAIL — large discrepancy between dashboard (${dashCount}) and workplan (${wpRows})`);
-    }
+    const res = await queryWorkplan(page, SCREENS[0].api, SCREENS[0].param, testId);
+    console.log(`TC-WP-03: WorkPlanByTest?test_id=${testId} -> ${res.status}, rows=${res.rows}, keys=${JSON.stringify(res.keys)}`);
+    expect(res.status, 'the workplan endpoint must answer').toBe(200);
+    expect(res.rows, `the workplan for test ${testId} must list the work just seeded, not an empty queue`)
+      .not.toBeNull();
+    expect(res.rows as number, `expected at least one pending item for test ${testId}`).toBeGreaterThan(0);
+  });
+
+  test('TC-WP-04: the workplan queue is scoped to the selection, not the whole lab', async ({ page }) => {
+    // The old TC-WP-04 claimed to prove "completed tests leave the pending
+    // queue" and asserted nothing. Proving a departure needs a validated result
+    // and a second observation, which belongs with results/validation. What IS
+    // checkable here, and what the screen exists to do, is that the queue
+    // answers per selection rather than returning one global list.
+    await seedOrder(page, 'WP04');
+    await openWorkplan(page, SCREENS[0].route, SCREENS[0].label);
+    const opts = await realOptions(page);
+    const a = process.env.QA_TEST_ID || '3';
+    const b = opts.find((o) => o.value !== a)?.value;
+    expect(b, 'the By Test workplan needs at least two selectable tests to compare').toBeTruthy();
+
+    const ra = await queryWorkplan(page, SCREENS[0].api, SCREENS[0].param, a);
+    const rb = await queryWorkplan(page, SCREENS[0].api, SCREENS[0].param, b as string);
+    console.log(`TC-WP-04: test ${a} -> ${ra.rows} rows; test ${b} -> ${rb.rows} rows`);
+    expect(ra.status).toBe(200);
+    expect(rb.status).toBe(200);
+    expect(ra.rows as number, `test ${a} must have pending work after seeding`).toBeGreaterThan(0);
+    expect(ra.rows === rb.rows && (ra.rows as number) > 0 ? 'identical' : 'scoped',
+      `both selections returned ${ra.rows} rows — the queue looks unscoped`).toBe('scoped');
+  });
+
+  test('TC-WP-05: sample reception is reachable and offers a receive action', async ({ page }) => {
+    // Reception is not a workplan screen; it lives on the Generic Sample order
+    // page, verified 2026-09-10. Asserted on the affordance rather than a
+    // guessed /SampleReceive route.
+    await page.goto(`${BASE}/GenericSample/Order`);
+    await expect(page.locator('body'), 'the Generic Sample order screen must offer sample reception')
+      .toContainText(/Receive Sample/i, { timeout: 20_000 });
+    await expect(page.locator('#labNo'), 'reception must offer a lab number field').toBeAttached({ timeout: 15_000 });
+    console.log('TC-WP-05: reception affordance present on /GenericSample/Order');
+  });
+
+  test('TC-WP-06: the bench (by unit) workplan renders and scopes by lab unit', async ({ page }) => {
+    // Replaces a case that compared a workplan count to a dashboard KPI without
+    // asserting either. The bench screen takes its units from the user's own
+    // assignments, so it is checked against the same endpoint the app uses.
+    await page.goto(`${BASE}${BENCH.route}`);
+    await expect(page.locator('body'), 'the by-unit workplan must render').toContainText(/Workplan/i, { timeout: 20_000 });
+    const units = await page.evaluate(async () => {
+      const r = await fetch('/api/OpenELIS-Global/rest/user-test-sections/Results', { headers: { Accept: 'application/json' } });
+      return { status: r.status, n: ((await r.json().catch(() => [])) as unknown[]).length };
+    });
+    console.log(`TC-WP-06: user test sections -> ${units.status}, ${units.n} units`);
+    expect(units.status, 'the lab-unit list must answer').toBe(200);
+    expect(units.n, 'an admin must have at least one assigned lab unit for the bench workplan to scope by')
+      .toBeGreaterThan(0);
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
 test.describe('Suite AI — Workplan By Panel & By Priority', () => {
   test.beforeEach(async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
   });
 
-  // Local URL discovery helper (matches pattern in results-entry.spec.ts)
-  async function goToWorkplanByPanel(page: any): Promise<boolean> {
-    const candidates = ['/WorkplanByPanel', '/WorkPlanByPanel', '/PanelWorkplan', '/workplan/panel'];
-    for (const u of candidates) {
-      const res = await page.goto(`${BASE}${u}`).catch(() => null);
-      if (res && res.ok() && !page.url().includes('login')) return true;
-    }
-    return false;
-  }
-
-  async function goToWorkplanByPriority(page: any): Promise<boolean> {
-    const candidates = ['/WorkplanByPriority', '/WorkPlanByPriority', '/PriorityWorkplan', '/workplan/priority'];
-    for (const u of candidates) {
-      const res = await page.goto(`${BASE}${u}`).catch(() => null);
-      if (res && res.ok() && !page.url().includes('login')) return true;
-    }
-    return false;
-  }
-
-  test('TC-WPP-01: Workplan > By Panel screen loads', async ({ page }) => {
-    const found = await goToWorkplanByPanel(page);
-    if (!found) {
-      console.log('TC-WPP-01: GAP — By Panel URL not accessible');
-      test.skip();
-      return;
-    }
-
-    expect(page.url(), 'Must not redirect to login').not.toContain('login');
-
-    // Either a dropdown selector or heading must be present
-    const selector = await page.locator('select, [role="listbox"], .cds--dropdown').first()
-      .isVisible({ timeout: 3000 }).catch(() => false);
-    const heading = await page.locator('h1, h2, [role="heading"]').first()
-      .isVisible({ timeout: 3000 }).catch(() => false);
-
-    expect(selector || heading, 'By Panel workplan must show a selector or heading').toBe(true);
+  test('TC-WPP-01: By Panel renders its own screen', async ({ page }) => {
+    await openWorkplan(page, SCREENS[1].route, SCREENS[1].label);
   });
 
-  test('TC-WPP-02: Panel selector has at least one panel option', async ({ page }) => {
-    const found = await goToWorkplanByPanel(page);
-    if (!found) { test.skip(); return; }
-
-    const selector = page.locator('select').first();
-    if (!(await selector.isVisible({ timeout: 3000 }).catch(() => false))) {
-      console.log('TC-WPP-02: SKIP — no select dropdown found');
-      return;
-    }
-
-    const optionCount = await selector.locator('option').count();
-    // At minimum there should be a placeholder option
-    expect(optionCount, 'Panel selector must have at least one option').toBeGreaterThanOrEqual(1);
-    console.log(`TC-WPP-02: Panel selector has ${optionCount} options`);
+  test('TC-WPP-02: the panel selector offers real panels from PANELS', async ({ page }) => {
+    await openWorkplan(page, SCREENS[1].route, SCREENS[1].label);
+    const opts = await realOptions(page);
+    console.log(`TC-WPP-02: ${opts.length} panels, e.g. ${opts.slice(0, 3).map((o) => o.text).join(' / ')}`);
+    expect(opts.length, 'at least two panels must be selectable').toBeGreaterThanOrEqual(2);
+    expect(opts.every((o) => /^\d+$/.test(o.value)),
+      `every panel option must carry a numeric id; got ${JSON.stringify(opts.slice(0, 3))}`).toBe(true);
   });
 
-  test('TC-WPP-03: Selecting a panel loads the workplan table', async ({ page }) => {
-    const found = await goToWorkplanByPanel(page);
-    if (!found) { test.skip(); return; }
-
-    const selector = page.locator('select').first();
-    if (!(await selector.isVisible({ timeout: 3000 }).catch(() => false))) {
-      console.log('TC-WPP-03: SKIP — no select dropdown found');
-      return;
-    }
-
-    await selector.selectOption({ index: 1 }).catch(() => null);
-    await page.waitForTimeout(1500);
-
-    // After selecting, a table or result area must appear
-    const tableVisible = await page.locator('table, [role="table"]').first()
-      .isVisible({ timeout: 5000 }).catch(() => false);
-    const bodyText = await page.locator('body').innerText();
-    const hasNoData = /no.*test|no.*data|empty/i.test(bodyText);
-
-    expect(tableVisible || hasNoData,
-      'Selecting a panel must show a workplan table or empty-state message'
-    ).toBe(true);
+  test('TC-WPP-03: selecting a panel queries that panel', async ({ page }) => {
+    await openWorkplan(page, SCREENS[1].route, SCREENS[1].label);
+    const opts = await realOptions(page);
+    const res = await queryWorkplan(page, SCREENS[1].api, SCREENS[1].param, opts[0].value);
+    console.log(`TC-WPP-03: panel ${opts[0].text} (${opts[0].value}) -> ${res.status}, rows=${res.rows}`);
+    expect(res.status, `WorkPlanByPanel must answer for panel ${opts[0].value}`).toBe(200);
+    expect(res.rows, 'the response must carry a row collection, empty or not').not.toBeNull();
   });
 
-  test('TC-WPP-04: Workplan > By Priority screen loads', async ({ page }) => {
-    const found = await goToWorkplanByPriority(page);
-    if (!found) {
-      console.log('TC-WPP-04: GAP — By Priority URL not accessible');
-      test.skip();
-      return;
-    }
-
-    expect(page.url(), 'Must not redirect to login').not.toContain('login');
-
-    const filter = await page.locator('select, [role="listbox"], .cds--dropdown').first()
-      .isVisible({ timeout: 3000 }).catch(() => false);
-    expect(filter, 'By Priority workplan must show a priority filter').toBe(true);
+  test('TC-WPP-04: By Priority renders its own screen', async ({ page }) => {
+    await openWorkplan(page, SCREENS[2].route, SCREENS[2].label);
   });
 
-  test('TC-WPP-05: Selecting priority level loads filtered workplan', async ({ page }) => {
-    const found = await goToWorkplanByPriority(page);
-    if (!found) { test.skip(); return; }
-
-    const filter = page.locator('select').first();
-    if (!(await filter.isVisible({ timeout: 3000 }).catch(() => false))) {
-      console.log('TC-WPP-05: SKIP — no priority filter dropdown found');
-      return;
+  test('TC-WPP-05: every priority level can be queried', async ({ page }) => {
+    await openWorkplan(page, SCREENS[2].route, SCREENS[2].label);
+    const opts = await realOptions(page);
+    expect(opts.length, 'priority must offer more than one level').toBeGreaterThanOrEqual(2);
+    for (const o of opts) {
+      const res = await queryWorkplan(page, SCREENS[2].api, SCREENS[2].param, o.value);
+      console.log(`TC-WPP-05: priority ${o.text} -> ${res.status}, rows=${res.rows}`);
+      expect(res.status, `priority "${o.text}" must not error`).toBe(200);
+      expect(res.rows, `priority "${o.text}" must return a row collection`).not.toBeNull();
     }
-
-    await filter.selectOption({ index: 1 }).catch(() => null);
-    await page.waitForTimeout(1500);
-
-    // Table must appear after filtering
-    const tableVisible = await page.locator('table, [role="table"]').first()
-      .isVisible({ timeout: 5000 }).catch(() => false);
-    const bodyText = await page.locator('body').innerText();
-    const hasNoData = /no.*test|no.*data|empty/i.test(bodyText);
-
-    expect(tableVisible || hasNoData,
-      'Selecting a priority must show workplan rows or empty-state'
-    ).toBe(true);
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
 test.describe('Phase 4 — J-DEEP: Workplan Interaction Tests', () => {
   test.beforeEach(async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
   });
 
-  test('TC-J-DEEP-01: Workplan By Test — dropdown has test types and selecting one loads data', async ({ page }) => {
-    // Navigate directly — more reliable than menu clicks
-    const candidates = ['/WorkPlanByTest', '/WorkplanByTest', '/WorkPlanByTestSection'];
-    let found = false;
-    for (const u of candidates) {
-      const res = await page.goto(`${BASE}${u}`).catch(() => null);
-      if (res && res.ok() && !page.url().includes('login')) { found = true; break; }
-    }
-    if (!found) { console.log('TC-J-DEEP-01: SKIP — By Test URL not found'); return; }
+  test('TC-J-DEEP-01: By Test — the selection drives the query parameter', async ({ page }) => {
+    // The point is that the screen sends the id the user chose. A screen that
+    // renders a populated dropdown but queries a fixed id looks correct and is
+    // not, and nothing in the old file would have noticed.
+    await openWorkplan(page, SCREENS[0].route, SCREENS[0].label);
+    const opts = await realOptions(page);
+    const target = opts[Math.min(5, opts.length - 1)];
 
-    await page.waitForLoadState('networkidle');
-
-    const dropdown = page.locator('select, [role="listbox"]').first();
-    await expect(dropdown, 'Test type dropdown must be visible').toBeVisible({ timeout: TIMEOUT });
-
-    const optionCount = await dropdown.locator('option').count();
-    expect(optionCount, 'Must have at least 2 test type options (placeholder + one real type)').toBeGreaterThan(1);
-
-    // Select first real option and verify page responds
-    await dropdown.selectOption({ index: 1 });
-    await page.waitForTimeout(1500);
-
-    // Either a data table or empty-state must appear
-    const hasData = await page.locator('table, [role="table"], [class*="data" i]').first()
-      .isVisible({ timeout: 5000 }).catch(() => false);
-    const hasNoData = await page.locator('text=/no.*test|no.*data|empty/i').first()
-      .isVisible({ timeout: 3000 }).catch(() => false);
-    expect(hasData || hasNoData, 'Selecting a test type must load data or show empty state').toBe(true);
+    const sent: string[] = [];
+    page.on('request', (r) => {
+      const m = r.url().match(/WorkPlanByTest\?test_id=([^&]*)/);
+      if (m) sent.push(m[1]);
+    });
+    await page.selectOption('#select-1', target.value);
+    await page.waitForTimeout(4_000);
+    console.log(`TC-J-DEEP-01: chose ${target.text} (${target.value}); requests carried ${JSON.stringify(sent)}`);
+    expect(sent.length, `selecting a test must issue a WorkPlanByTest request; none was sent`).toBeGreaterThan(0);
+    expect(sent, `the request must carry the chosen id ${target.value}`).toContain(target.value);
   });
 
-  test('TC-J-DEEP-02: Workplan By Panel — dropdown has panel options', async ({ page }) => {
-    const candidates = ['/WorkPlanByPanel', '/WorkplanByPanel', '/PanelWorkplan'];
-    let found = false;
-    for (const u of candidates) {
-      const res = await page.goto(`${BASE}${u}`).catch(() => null);
-      if (res && res.ok() && !page.url().includes('login')) { found = true; break; }
-    }
-    if (!found) { console.log('TC-J-DEEP-02: SKIP — By Panel URL not found'); return; }
+  test('TC-J-DEEP-02: By Panel — the selection drives the query parameter', async ({ page }) => {
+    await openWorkplan(page, SCREENS[1].route, SCREENS[1].label);
+    const opts = await realOptions(page);
+    const target = opts[opts.length - 1];
 
-    await page.waitForLoadState('networkidle');
-
-    const dropdown = page.locator('select, [role="listbox"]').first();
-    await expect(dropdown, 'Panel dropdown must be visible').toBeVisible({ timeout: TIMEOUT });
-
-    const optionCount = await dropdown.locator('option').count();
-    expect(optionCount, 'Panel dropdown must have at least one option').toBeGreaterThanOrEqual(1);
-    console.log(`TC-J-DEEP-02: Panel dropdown has ${optionCount} options`);
+    const sent: string[] = [];
+    page.on('request', (r) => {
+      const m = r.url().match(/WorkPlanByPanel\?panel_id=([^&]*)/);
+      if (m) sent.push(m[1]);
+    });
+    await page.selectOption('#select-1', target.value);
+    await page.waitForTimeout(4_000);
+    console.log(`TC-J-DEEP-02: chose ${target.text} (${target.value}); requests carried ${JSON.stringify(sent)}`);
+    expect(sent.length, 'selecting a panel must issue a WorkPlanByPanel request').toBeGreaterThan(0);
+    expect(sent, `the request must carry the chosen id ${target.value}`).toContain(target.value);
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
 test.describe('Phase 5 — N-DEEP: Workplan Interaction Tests', () => {
   test.beforeEach(async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
   });
 
-  test('TC-N-DEEP-01: Workplan By Test — has 100+ test types', async ({ page }) => {
-    const candidates = ['/WorkPlanByTest', '/WorkplanByTest', '/WorkPlanByTestSection'];
-    let found = false;
-    for (const u of candidates) {
-      const res = await page.goto(`${BASE}${u}`).catch(() => null);
-      if (res && res.ok() && !page.url().includes('login')) { found = true; break; }
-    }
-    if (!found) { console.log('TC-N-DEEP-01: SKIP'); return; }
-
-    await page.waitForLoadState('networkidle');
-    const dropdown = page.locator('select').first();
-    await expect(dropdown).toBeVisible({ timeout: TIMEOUT });
-
-    const options = await dropdown.locator('option').count();
-    // Known: 200+ test types in this instance
-    expect(options, 'Should have 100+ test types in dropdown').toBeGreaterThan(100);
-    console.log(`TC-N-DEEP-01: ${options} test types in dropdown`);
-
-    // Try selecting a known test type
-    const selectSuccess = await page.evaluate(() => {
-      const sel = document.querySelector<HTMLSelectElement>('select');
-      if (!sel) return false;
-      const wbc = Array.from(sel.options).find(o => o.text.includes('WBC') || o.text.includes('Hematol'));
-      if (!wbc) return false;
-      const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!;
-      setter.call(sel, wbc.value);
-      sel.dispatchEvent(new Event('change', { bubbles: true }));
-      return true;
+  test('TC-N-DEEP-01: By Test offers the full catalogue, not a truncated list', async ({ page }) => {
+    // 202 options on the local 3.2.2.0 stack. The threshold is 100 rather than
+    // an exact count so a catalogue edit does not fail the suite, but a
+    // silently truncated or paginated list still does.
+    await openWorkplan(page, SCREENS[0].route, SCREENS[0].label);
+    const opts = await realOptions(page);
+    const catalogue = await page.evaluate(async () => {
+      const r = await fetch('/api/OpenELIS-Global/rest/displayList/ALL_TESTS', { headers: { Accept: 'application/json' } });
+      return ((await r.json().catch(() => [])) as unknown[]).length;
     });
-
-    if (selectSuccess) {
-      await page.waitForTimeout(3000);
-      // Either print option or total count appears after data loads
-      const hasContent = await page.locator('text=/Print Workplan|Total Tests|pending/i').first()
-        .isVisible({ timeout: 5000 }).catch(() => false);
-      console.log(`TC-N-DEEP-01: data loaded after selection = ${hasContent}`);
-    }
+    console.log(`TC-N-DEEP-01: selector ${opts.length} options, ALL_TESTS ${catalogue}`);
+    expect(opts.length, 'the By Test selector must offer 100+ tests').toBeGreaterThanOrEqual(100);
+    expect(opts.length, `the selector (${opts.length}) must not silently drop tests the catalogue serves (${catalogue})`)
+      .toBeGreaterThanOrEqual(catalogue - 1);
   });
 
-  test('TC-N-DEEP-02: Workplan By Panel — selecting a panel shows result or empty state', async ({ page }) => {
-    const candidates = ['/WorkPlanByPanel', '/WorkplanByPanel'];
-    let found = false;
-    for (const u of candidates) {
-      const res = await page.goto(`${BASE}${u}`).catch(() => null);
-      if (res && res.ok() && !page.url().includes('login')) { found = true; break; }
+  test('TC-N-DEEP-02: By Panel renders what the endpoint actually returned', async ({ page }) => {
+    // NOT "rows or an empty state, either is fine" — that was the first draft of
+    // this case and the falsifiability gate flagged it as either-or-pass, which
+    // it was: any screen showing anything satisfies it. Ask the endpoint what is
+    // true FIRST, then hold the screen to it. That turns a tautology into a real
+    // UI-versus-API consistency check: a screen that renders an empty state over
+    // 29 rows, or a row count over nothing, now fails.
+    await openWorkplan(page, SCREENS[1].route, SCREENS[1].label);
+    const opts = await realOptions(page);
+    const panel = opts[0];
+
+    const api = await queryWorkplan(page, SCREENS[1].api, SCREENS[1].param, panel.value);
+    expect(api.status, `WorkPlanByPanel must answer for panel ${panel.value}`).toBe(200);
+    expect(api.rows, 'the endpoint must return a row collection').not.toBeNull();
+    const expected = api.rows as number;
+
+    await page.selectOption('#select-1', panel.value);
+    await page.waitForTimeout(5_000);
+    const body = (await page.locator('body').innerText()).replace(/\s+/g, ' ');
+    const counted = body.match(/\b\d+\s*-\s*\d+\s+of\s+(\d+)\s+items\b/i);
+    const hasEmpty = /no records to display|no data|nothing to show/i.test(body);
+    console.log(`TC-N-DEEP-02: panel ${panel.text} -> api ${expected} rows; screen count ${counted?.[1] ?? 'none'}, empty=${hasEmpty}`);
+
+    if (expected > 0) {
+      expect(counted,
+        `the endpoint returned ${expected} rows for "${panel.text}", so the screen must show a row count`).not.toBeNull();
+      expect(Number(counted![1]),
+        `the screen's total must match the ${expected} rows the endpoint returned`).toBe(expected);
+    } else {
+      expect(hasEmpty,
+        `the endpoint returned no rows for "${panel.text}", so the screen must say so explicitly`).toBe(true);
     }
-    if (!found) { console.log('TC-N-DEEP-02: SKIP'); return; }
-
-    await page.waitForLoadState('networkidle');
-    const dropdown = page.locator('select').first();
-    await expect(dropdown).toBeVisible({ timeout: TIMEOUT });
-
-    // Select first available panel
-    const optCount = await dropdown.locator('option').count();
-    if (optCount < 2) { console.log('TC-N-DEEP-02: No panels available'); return; }
-
-    await dropdown.selectOption({ index: 1 });
-    await page.waitForTimeout(3000);
-
-    // Expect either data or an appropriate empty state
-    const hasContent = await page.locator(
-      'text=/No appropriate tests|Total Tests|Print Workplan|pending/i'
-    ).first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasTable = await page.locator('table, [role="table"]').first()
-      .isVisible({ timeout: 3000 }).catch(() => false);
-
-    expect(hasContent || hasTable,
-      'Selecting a panel must show workplan data or an appropriate empty state'
-    ).toBe(true);
   });
 });
 
-/**
- * Relocated from the retired gap-suites (2026-09-08) — see harness ref 12.16.
- * These are the cases the gap suites uniquely carried; the rest of those files
- * duplicated tests that already lived here.
- *   TC-WPP-02 -> TC-WPP-06   (renumbered: TC-WPP-02 already meant a different test)
- *   TC-WPP-03 -> TC-WPP-07   (renumbered: TC-WPP-03 already meant a different test)
- *   TC-WPP-05 -> TC-WPP-08   (renumbered: TC-WPP-05 already meant a different test)
- */
+// ─────────────────────────────────────────────────────────────────────────────
 test.describe('Relocated from gap-suites', () => {
   test.beforeEach(async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
   });
 
-  test('TC-WPP-06: Panel selector populates with panels', async ({ page }) => {
-      await login(page, ADMIN.user, ADMIN.pass);
-  
-      try {
-        await navigateViaMenu(page, ['Workplan', 'By Panel']);
-      } catch (e) {
-        await tryNavigateToURL(page, ['/WorkplanByPanel', '/PanelWorkplan', '/workplan/panel']);
-      }
-  
-      await page.waitForTimeout(1000);
-  
-      const selector = await page.$('select');
-      if (!selector) {
-        test.skip();
-        return;
-      }
-  
-      const options = await page.$$('option, [role="option"]');
-      expect(options.length).toBeGreaterThanOrEqual(0);
+  test('TC-WPP-06: the panel selector matches the PANELS display list exactly', async ({ page }) => {
+    await openWorkplan(page, SCREENS[1].route, SCREENS[1].label);
+    const opts = await realOptions(page);
+    const served = await page.evaluate(async () => {
+      const r = await fetch('/api/OpenELIS-Global/rest/displayList/PANELS', { headers: { Accept: 'application/json' } });
+      return ((await r.json().catch(() => [])) as { id: string; value: string }[]).map((x) => String(x.id));
     });
+    console.log(`TC-WPP-06: selector ${opts.length}, PANELS ${served.length}`);
+    expect(opts.map((o) => o.value).sort(),
+      'the selector must offer exactly the panels the server serves').toEqual(served.sort());
+  });
 
-  test('TC-WPP-07: Select panel shows filtered workplan items', async ({ page }) => {
-      await login(page, ADMIN.user, ADMIN.pass);
-  
-      try {
-        await navigateViaMenu(page, ['Workplan', 'By Panel']);
-      } catch (e) {
-        await tryNavigateToURL(page, ['/WorkplanByPanel', '/PanelWorkplan', '/workplan/panel']);
-      }
-  
-      await page.waitForTimeout(1000);
-  
-      const selector = await page.$('select');
-      if (selector) {
-        await selector.selectOption({ index: 1 }).catch(() => null);
-        await page.waitForTimeout(1000);
-      }
-  
-      const table = await page.$('table, [role="table"]');
-      expect(table).toBeTruthy();
-    });
+  test('TC-WPP-07: a seeded order reaches a panel or test queue', async ({ page }) => {
+    const seeded = await seedOrder(page, 'WP07');
+    const testId = process.env.QA_TEST_ID || '3';
+    await page.goto(`${BASE}${SCREENS[0].route}`);
+    const res = await queryWorkplan(page, SCREENS[0].api, SCREENS[0].param, testId);
+    console.log(`TC-WPP-07: ${seeded.accession} seeded; test ${testId} queue = ${res.rows} rows`);
+    expect(res.status).toBe(200);
+    expect(res.rows as number, `the order just seeded must be countable in the test ${testId} queue`).toBeGreaterThan(0);
+  });
 
-  test('TC-WPP-08: Priority filter shows urgent and routine items', async ({ page }) => {
-      await login(page, ADMIN.user, ADMIN.pass);
-  
-      try {
-        await navigateViaMenu(page, ['Workplan', 'By Priority']);
-      } catch (e) {
-        await tryNavigateToURL(page, ['/WorkplanByPriority', '/PriorityWorkplan', '/workplan/priority']);
-      }
-  
-      await page.waitForTimeout(1000);
-  
-      const filter = await page.$('select, [role="listbox"]');
-      if (filter) {
-        await filter.selectOption({ index: 1 }).catch(() => null);
-        await page.waitForTimeout(1000);
-      }
-  
-      const table = await page.$('table, [role="table"]');
-      expect(table).toBeTruthy();
-    });
-
+  test('TC-WPP-08: priority levels are distinct values, not one repeated label', async ({ page }) => {
+    await openWorkplan(page, SCREENS[2].route, SCREENS[2].label);
+    const opts = await realOptions(page);
+    const values = opts.map((o) => o.value);
+    const labels = opts.map((o) => o.text);
+    console.log(`TC-WPP-08: ${JSON.stringify(labels)}`);
+    expect(new Set(values).size, `priority values must be distinct; got ${JSON.stringify(values)}`).toBe(values.length);
+    expect(labels.some((l) => /routine/i.test(l)), `expected a Routine priority; got ${JSON.stringify(labels)}`).toBe(true);
+    expect(labels.some((l) => /stat|urgent|asap/i.test(l)),
+      `expected an urgent priority; got ${JSON.stringify(labels)}`).toBe(true);
+  });
 });

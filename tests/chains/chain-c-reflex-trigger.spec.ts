@@ -38,6 +38,7 @@ import {
   findOrSeedOrder,
   markStep,
   ChainOrderRef,
+  requireStep,
 } from './_common';
 
 interface ReflexRule {
@@ -84,7 +85,7 @@ test.describe.serial('Chain C — Reflex Trigger', () => {
   // Acceptance criterion: FUNCTION (rule exists and has a usable condition)
   // ---------------------------------------------------------------------------
   test('Step 2 — Find matching reflex rule (FUNCTION)', async ({ page }) => {
-    if (!order) test.skip();
+    requireStep('C', 2, !!order, '!order');
     await page.goto(BASE);
 
     const rulesResp = await apiCall<{ rules?: ReflexRule[] } | ReflexRule[]>(
@@ -141,7 +142,7 @@ test.describe.serial('Chain C — Reflex Trigger', () => {
   // Acceptance criterion: PERSIST
   // ---------------------------------------------------------------------------
   test('Step 3 — Enter triggering result via API substitute (PERSIST, §11.5)', async ({ page }) => {
-    if (!order || !rule || !triggerValue) test.skip();
+    requireStep('C', 3, !(!order || !rule || !triggerValue), '!order || !rule || !triggerValue');
     await page.goto(BASE);
 
     const payload = {
@@ -182,7 +183,7 @@ test.describe.serial('Chain C — Reflex Trigger', () => {
     // check a null triggerValue reaches the comparison below and reports
     // "Entered result not found in read-back" — a misleading FAIL that blames the
     // write instead of the missing rule. Found in the 2026-09-05 serial audit.
-    if (!order || !triggerValue) test.skip();
+    requireStep('C', 4, !(!order || !triggerValue), '!order || !triggerValue');
     await page.goto(BASE);
     const read = await apiCall<{ resultList?: Array<{ testId?: string; value?: string }> }>(
       page,
@@ -215,7 +216,7 @@ test.describe.serial('Chain C — Reflex Trigger', () => {
   // Acceptance criterion: CROSS-LINK
   // ---------------------------------------------------------------------------
   test('Step 5 — Reflex target test auto-added (CROSS-LINK)', async ({ page }) => {
-    if (!order || !rule) test.skip();
+    requireStep('C', 5, !(!order || !rule), '!order || !rule');
     await page.goto(BASE);
 
     const expectedReflexTestId = rule!.actions?.[0]?.reflexTestId;
@@ -276,11 +277,11 @@ test.describe.serial('Chain C — Reflex Trigger', () => {
   // Acceptance criterion: CROSS-LINK (different surface than Step 5)
   // ---------------------------------------------------------------------------
   test('Step 6 — Reflex test appears in Logbook for the patient (CROSS-LINK)', async ({ page }) => {
-    if (!order || !rule) test.skip();
+    requireStep('C', 6, !(!order || !rule), '!order || !rule');
     await page.goto(BASE);
 
     const expectedReflexTestId = rule!.actions?.[0]?.reflexTestId;
-    if (!expectedReflexTestId) test.skip();
+    requireStep('C', 6, !!expectedReflexTestId, '!expectedReflexTestId');
 
     const list = await apiCall<{ logbookList?: Array<{ accessionNumber?: string; testId?: string }> }>(
       page,

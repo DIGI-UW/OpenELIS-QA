@@ -84,7 +84,7 @@ test.describe('Suite AP — Aliquot Management Core (TC-ALQ)', () => {
      * can look up a primary sample by accession number.
      */
     const loaded = await goToAliquot(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -103,7 +103,7 @@ test.describe('Suite AP — Aliquot Management Core (TC-ALQ)', () => {
      * aliquot data or empty state — never a server error.
      */
     const loaded = await goToAliquot(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -148,7 +148,7 @@ test.describe('Suite AP — Aliquot Management Core (TC-ALQ)', () => {
      * (button, form, or link). Without this, the page is read-only and useless.
      */
     const loaded = await goToAliquot(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -171,7 +171,7 @@ test.describe('Suite AP — Aliquot Management Core (TC-ALQ)', () => {
      * empty state, not a Java NullPointerException or 500 error.
      */
     const loaded = await goToAliquot(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -267,7 +267,7 @@ test.describe('Suite AP-DEEP — Aliquot Deep Validation (TC-ALQ-09–16)', () =
      * even when an error occurs internally.
      */
     const loaded = await goToAliquot(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
     const bodyText = await page.locator('body').innerText();
@@ -328,7 +328,7 @@ test.describe('Suite AP-DEEP — Aliquot Deep Validation (TC-ALQ-09–16)', () =
      * must show a validation message, not an Internal Server Error.
      */
     const loaded = await goToAliquot(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -371,7 +371,7 @@ test.describe('Suite AP-DEEP — Aliquot Deep Validation (TC-ALQ-09–16)', () =
      * sub-sample amount is tracked. A missing volume field is a data quality gap.
      */
     const loaded = await goToAliquot(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 

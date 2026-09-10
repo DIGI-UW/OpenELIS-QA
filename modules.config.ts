@@ -135,10 +135,10 @@ export default defineConfig({
       // is not a check — this one drives the UI to create a patient and two
       // orders, which legitimately takes minutes. Giving it its own budget
       // respects the policy rather than routing around it.
-      // 120s, not 300s: patient creation takes ~40s, and order creation is
-      // currently BROKEN (see below), so a larger budget just adds ten minutes
-      // of doomed clicking to every sweep. Raise it via PW_SETUP_TIMEOUT if the
-      // order step is fixed and needs longer.
+      // 120s, not 300s: patient creation takes ~40s. Order creation used to be
+      // broken and this comment used to say so; it works as of 2026-09-09 (four
+      // conditions, harness ref 12.28) and the API path is fast. Raise it via
+      // PW_SETUP_TIMEOUT if the UI path is reinstated and needs longer.
       timeout: Number(process.env.PW_SETUP_TIMEOUT ?? 120_000),
       retries: 0,
     },

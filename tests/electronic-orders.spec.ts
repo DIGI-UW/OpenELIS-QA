@@ -86,7 +86,7 @@ test.describe('Suite AH — Electronic / Incoming Orders Core (TC-IO)', () => {
      * (pending, accepted, rejected) to manage the order queue effectively.
      */
     const loaded = await goToIncomingOrders(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
     const bodyText = await page.locator('body').innerText();
@@ -104,7 +104,7 @@ test.describe('Suite AH — Electronic / Incoming Orders Core (TC-IO)', () => {
      * statuses: ENTERED, RELEASED, CANCELLED (confirmed BC-DEEP Phase 6).
      */
     const loaded = await goToIncomingOrders(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
     const bodyText = await page.locator('body').innerText();
@@ -131,7 +131,7 @@ test.describe('Suite AH — Electronic / Incoming Orders Core (TC-IO)', () => {
      * to locate orders from a specific period.
      */
     const loaded = await goToIncomingOrders(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 

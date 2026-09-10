@@ -29,7 +29,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { BASE, apiCall, markStep } from './_common';
+import { BASE, apiCall, markStep, requireStep } from './_common';
 import {
   SESSION_ENDPOINT,
   SessionResponse,
@@ -169,7 +169,7 @@ test.describe.serial('Chain H — Permission Enforcement', () => {
         `None of [${RESTRICTED_USER.roleCandidates.join(", ")}] configured on this instance`,
         `Available lab-unit roles: ${(preBody.labUnitRoles ?? []).map(x => String(x.roleName ?? '').trim()).join(', ')}. ` +
         `Add the correct name to RESTRICTED_USER.roleCandidates.`);
-      test.skip(); return;
+      return; // unreachable: the markStep BLOCKED above skips (declared gap) or fails.
     }
 
     const r = await apiCall<{ forward?: string }>(
@@ -215,7 +215,7 @@ test.describe.serial('Chain H — Permission Enforcement', () => {
   });
 
   test('Step 2 — Login as restricted user in fresh browser context (FUNCTION)', async ({ browser }) => {
-    if (!activeLogin) test.skip();
+    requireStep('H', 2, !!activeLogin, '!activeLogin');
     // Explicit override — see canAuthenticate: newContext() must not inherit
     // the project's admin storageState or this 'fresh login' is not fresh.
     const ctx = await browser.newContext({ storageState: undefined });
@@ -255,13 +255,14 @@ test.describe.serial('Chain H — Permission Enforcement', () => {
   });
 
   test('Step 3 — Restricted user CANNOT access admin (CROSS-LINK)', async ({ browser }) => {
-    if (!activeLogin) test.skip();
+    requireStep('H', 3, !!activeLogin, '!activeLogin');
     let ctx;
     try {
       ctx = await browser.newContext({ storageState: '.auth/qa-auto-restricted.json' });
     } catch {
-      markStep('H', 3, 'BLOCKED', 'Restricted-user storage state not available; Step 2 must have failed');
-      test.skip(); return;
+      markStep('H', 3, 'BLOCKED', 'Restricted-user storage state not available; Step 2 must have failed',
+        'Step 2 must write .auth/qa-auto-restricted.json. A cascade, not a gap: fix Step 2.');
+      return; // unreachable: the markStep BLOCKED above skips (declared gap) or fails.
     }
     const page2 = await ctx.newPage();
     await page2.goto(BASE);
@@ -303,11 +304,15 @@ test.describe.serial('Chain H — Permission Enforcement', () => {
   });
 
   test('Step 4 — Restricted user CAN access non-restricted endpoint (sanity)', async ({ browser }) => {
-    if (!activeLogin) test.skip();
+    requireStep('H', 4, !!activeLogin, '!activeLogin');
     let ctx;
     try {
       ctx = await browser.newContext({ storageState: '.auth/qa-auto-restricted.json' });
-    } catch { test.skip(); return; }
+    } catch {
+      markStep('H', 4, 'BLOCKED', 'Restricted-user storage state not available; Step 2 must have failed',
+        'Step 2 must write .auth/qa-auto-restricted.json. A cascade, not a gap: fix Step 2.');
+      return; // unreachable: the markStep BLOCKED above skips (declared gap) or fails.
+    }
     const page = await ctx.newPage();
     // Patient search is open to most roles including Receptionist
     const r = await apiCall<unknown>(

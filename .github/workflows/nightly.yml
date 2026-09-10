@@ -36,7 +36,7 @@ on:
         required: false
         default: 'core'
         type: choice
-        options: [core, chains, ogc1192, modules, all]
+        options: [core, chains, ogc1192, modules, patient, all]
       order_path:
         description: 'Which order-entry path the chain seeder uses'
         required: false
@@ -103,15 +103,25 @@ jobs:
 
       - name: Run suites
         id: run
-        continue-on-error: true
+        # `continue-on-error: true` was removed 2026-09-10 together with the
+        # `exit 0` below. Between them the nightly could not report a failure:
+        # eight consecutive scheduled runs reported success, and the last one
+        # took 2m41s with `1 failed` (auth.setup itself) and `2 failed` in its
+        # own log. A scheduled suite that is green by construction is watching
+        # nothing, and it is why five order entry defects reached a client with
+        # the suite passing. The summary step below is `if: always()`, so the
+        # per-suite report still publishes on a red run.
         run: |
           set +e
           mkdir -p nightly-out
           STATUS=0
+          # Extra args after the config are passed to playwright, so a single
+          # spec can be verified without dispatching the whole 866-test module
+          # sweep. That gap is why a one-file fix used to have no run path.
           run_cfg () {
-            local name="$1" cfg="$2"
+            local name="$1" cfg="$2"; shift 2
             echo "::group::$name"
-            npx playwright test --config="$cfg" --reporter=line > "nightly-out/$name.txt" 2>&1
+            npx playwright test --config="$cfg" "$@" --reporter=line > "nightly-out/$name.txt" 2>&1
             local rc=$?
             [ $rc -ne 0 ] && STATUS=1
             tail -25 "nightly-out/$name.txt"
@@ -129,13 +139,18 @@ jobs:
               run_cfg all-tc all-tc.config.ts
               run_cfg modules modules.config.ts
               ;;
+            patient)
+              run_cfg patient modules.config.ts tests/patient-management.spec.ts
+              ;;
             *)  # core
               run_cfg ogc1192 ogc1192.config.ts
               run_cfg chains regression-chains.config.ts
               ;;
           esac
           echo "status=$STATUS" >> "$GITHUB_OUTPUT"
-          exit 0
+          # Exit with the suites' own verdict. STATUS is set to 1 by run_cfg
+          # whenever any playwright invocation returns non-zero.
+          exit $STATUS
 
       - name: Summarise
         if: always()
@@ -236,6 +251,24 @@ jobs:
           fi
 
       - name: Module sweep shard ${{ matrix.shard }}/6
+        # DELIBERATELY still continue-on-error, unlike the core `run` job above
+        # which was un-masked on 2026-09-10. The asymmetry is the point, so
+        # please do not "fix" this one to match:
+        #
+        #   core suite  — small, curated, expected GREEN. A failure here is a
+        #                 regression and must fail the run.
+        #   module sweep — 866 tests that had not run in any tier for a long
+        #                 time and were never gated. modules.config.ts says so
+        #                 in its own header: "EXPECT RED ... a large fraction
+        #                 will fail on first contact. That is information, not a
+        #                 regression."
+        #
+        # Hard-failing the sweep would make the weekly run permanently red,
+        # which carries no more signal than permanently green. The counts still
+        # publish through the `if: always()` summary. The route to gating this
+        # properly is the same ratchet the repo already uses for assertions
+        # (.assert-baseline.json, .falsifiable-baseline.json): record the
+        # per-suite failure count and fail only when it grows.
         continue-on-error: true
         id: sweep
         run: |

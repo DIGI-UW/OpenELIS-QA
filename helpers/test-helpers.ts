@@ -6,7 +6,7 @@
  * to support split feature-specific test files.
  */
 
-import { Page } from '@playwright/test';
+import { Page, Locator } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -705,7 +705,27 @@ export async function clickFormSearch(page: Page, fieldSelector: string): Promis
     await page.waitForTimeout(600);
   }
 
-  const candidates = page.getByRole('button', { name: /^\s*Search\s*$/i });
+  // EXCLUDE THE CARBON HEADER'S "Search" ACTION.
+  //
+  // Measured 2026-09-10 on the local 3.2.2.0 stack, on /AccessionResults:
+  // exactly two elements match /^Search$/. The header's is
+  //   BUTTON .cds--header__action   closest('header') !== null
+  // and the form's is
+  //   BUTTON .cds--btn--primary     closest('form')   !== null
+  // Clicking the header one fires NO request and leaves the mount-time empty
+  // result on screen, so the table still reads "There are no records to
+  // display / 0-0 of 0 items" — indistinguishable from a genuine no-match.
+  //
+  // That false negative cost three separate investigations in this repo
+  // (harness ref 12.22, 12.26, 12.30), the last of which concluded that
+  // results entry could not see created orders at all. It could; the probe
+  // was clicking the wrong button. Excluding header buttons structurally is
+  // cheaper than remembering not to hit them.
+  // This exact selector was the one measured working (lb3 probe, 2026-09-10):
+  // it returned 1 candidate on /AccessionResults where getByRole returned 2.
+  const candidates = page
+    .locator('button:not(header button):not(.cds--header__action), input[type="submit"]')
+    .filter({ hasText: /^\s*Search\s*$/ });
   const n = await candidates.count();
   for (let i = 0; i < n; i++) {
     const owns = await candidates
@@ -725,9 +745,58 @@ export async function clickFormSearch(page: Page, fieldSelector: string): Promis
   // the better guess — but say so, because a silent fallback is how the
   // original bug survived.
   if (n > 0) {
-    console.warn(`clickFormSearch: no Search button shares a form with ${fieldSelector}; using last() of ${n}`);
+    // Last resort. last() is a guess, so say so at a level that shows up in
+    // CI output — a wrong guess here reports an empty table, not an error.
+    console.warn(
+      `clickFormSearch: NO Search button shares a container with ${fieldSelector} ` +
+      `(${n} candidates after excluding the Carbon header). Falling back to last(); ` +
+      `if this test reports an empty result set, suspect THIS line first.`,
+    );
     await candidates.last().click();
     return true;
   }
   return false;
+}
+
+/**
+ * Check a Carbon radio button.
+ *
+ * Verified 2026-09-08 on testing v3.2.2.0. Carbon renders a radio as a real
+ * <input type="radio"> plus a sibling <label> containing a
+ * <span class="cds--radio-button__appearance"> that draws the control. The
+ * input is visible and enabled, but the span sits on top of it, so
+ * locator.check() and locator.click() both retry forever with
+ * "…__appearance from <label> subtree intercepts pointer events" until the
+ * test times out. That is what a 30s timeout on a radio always means here.
+ *
+ * The label is also the correct user gesture: a person clicks the visible
+ * control, not the hidden input underneath it.
+ *
+ * Pass the INPUT locator. This resolves its id and clicks the label bound to
+ * it, falling back to a label inside the same row/group when the input has no
+ * id.
+ */
+export async function checkCarbonRadio(page: Page, radioInput: Locator): Promise<void> {
+  const id = await radioInput.getAttribute('id');
+  if (id) {
+    const label = page.locator(`label[for="${cssEscapeId(id)}"]`);
+    if (await label.count() > 0) {
+      await label.first().click();
+      return;
+    }
+  }
+  // No usable id — click the label next to the input within its own group.
+  const sibling = radioInput.locator('xpath=following-sibling::label[1]');
+  if (await sibling.count() > 0) {
+    await sibling.first().click();
+    return;
+  }
+  // Last resort: bypass the interception rather than time out on it.
+  await radioInput.click({ force: true });
+}
+
+/** Carbon uses the record's own id (e.g. "503") as the input id, so this only
+ *  has to survive ids that are not valid bare CSS identifiers. */
+function cssEscapeId(id: string): string {
+  return id.replace(/(["\\])/g, '\\$1');
 }

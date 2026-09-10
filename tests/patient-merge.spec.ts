@@ -81,7 +81,7 @@ test.describe('Suite AC — Patient Merge Core (TC-MERGE)', () => {
      * (duplicate to delete) and target (survivor to keep). Both must exist.
      */
     const loaded = await goToMergeScreen(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -103,7 +103,7 @@ test.describe('Suite AC — Patient Merge Core (TC-MERGE)', () => {
      * surface matching patient records to select from.
      */
     const loaded = await goToMergeScreen(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -135,7 +135,7 @@ test.describe('Suite AC — Patient Merge Core (TC-MERGE)', () => {
      * before the confirm/merge button becomes active. Guards against accidents.
      */
     const loaded = await goToMergeScreen(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -271,7 +271,7 @@ test.describe('Suite AC-DEEP — Patient Merge API & Validation (TC-MERGE-06–1
      * state, not an Internal Server Error.
      */
     const loaded = await goToMergeScreen(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -296,7 +296,7 @@ test.describe('Suite AC-DEEP — Patient Merge API & Validation (TC-MERGE-06–1
      * selected the right patients.
      */
     const loaded = await goToMergeScreen(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 

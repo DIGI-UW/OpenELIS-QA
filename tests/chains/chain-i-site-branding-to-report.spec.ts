@@ -45,7 +45,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { BASE, apiCall, markStep } from './_common';
+import { BASE, apiCall, markStep, requireStep } from './_common';
 import type { SiteBrandingResponse } from '../../helpers/apiShapes';
 
 test.describe.serial('Chain I — Site Branding → Report (v6.13 rewritten)', () => {
@@ -82,7 +82,7 @@ test.describe.serial('Chain I — Site Branding → Report (v6.13 rewritten)', (
   });
 
   test('Step 2 — PUT modified primaryColor (PERSIST)', async ({ page }) => {
-    if (!original) test.skip();
+    requireStep('I', 2, !!original, '!original');
     await page.goto(BASE);
     const r = await apiCall<unknown>(page, '/api/OpenELIS-Global/rest/site-branding', {
       method: 'PUT', body: { ...original!, primaryColor: testColor },
@@ -95,7 +95,7 @@ test.describe.serial('Chain I — Site Branding → Report (v6.13 rewritten)', (
   });
 
   test('Step 3 — Round-trip confirms modified value (ROUND-TRIP)', async ({ page }) => {
-    if (!original) test.skip();
+    requireStep('I', 3, !!original, '!original');
     await page.goto(BASE);
     const r = await apiCall<SiteBrandingResponse>(page, '/api/OpenELIS-Global/rest/site-branding');
     if (!r.ok || typeof r.body !== 'object' || r.body === null) {
@@ -113,7 +113,7 @@ test.describe.serial('Chain I — Site Branding → Report (v6.13 rewritten)', (
   });
 
   test('Step 4 — Restore original; round-trip confirms (PERSIST + cleanup)', async ({ page }) => {
-    if (!original) test.skip();
+    requireStep('I', 4, !!original, '!original');
     await page.goto(BASE);
     const r = await apiCall<unknown>(page, '/api/OpenELIS-Global/rest/site-branding', {
       method: 'PUT', body: original!,

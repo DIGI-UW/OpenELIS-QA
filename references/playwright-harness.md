@@ -1742,3 +1742,1448 @@ Order creation is therefore left broken deliberately rather than half-fixed. It
 is a multi-step wizard, its first step exceeds the test budget, and the fixture's
 API fallback needs a captured payload — three separate pieces of work, none of
 which should be rushed at the end of a long session.
+
+### 12.22 Patient history and patient merge: four hollow cases, and two traps I walked into
+
+**2026-09-08.** `patient-management.spec.ts` went from 15/3 to **18/18**, and
+the interesting part is that not one of the six cases fixed here was blocked by
+a product defect. Every one of them was a test that could not see the screen it
+claimed to test.
+
+**TC-PAT-04 was never on the history screen.** It searched with
+`getByRole('textbox', { name: /id|patient|national/i }).first()` — the loose
+regex plus `.first()` trap for the fourth time in this file — and there is no
+national-ID input on any patient search screen, so it typed a national ID into
+whichever textbox came first. Then it pressed Enter (no submit), clicked
+`getByText(/Sebby/i).first()` on the table that re-renders per row (12.21), and
+asserted only `/Abby|Sebby/i`, which the still-visible *search* screen satisfies.
+The history half of the case was a `console.log`.
+
+**The four TC-MP merge cases were written against a UI that does not exist.**
+All of them looked for `input[placeholder*="patient"]`, `[role="option"]` and an
+autocomplete dropdown. The real screen is a three-step wizard with two full
+search panels. Every assertion in all four was `.catch(() => console.log(...))`,
+so the suite reported four green merge cases while never selecting a patient.
+
+**And that mattered more than a false green.** Had those locators ever matched,
+TC-MP-04 would have clicked `/Merge|Submit|Confirm/i` and merged two real
+patient records on the shared instance. It was a destructive test; only a broken
+locator kept it from doing damage. Worth generalising: *a hollow test is not
+merely uninformative — a hollow test whose real actions are destructive is a
+loaded gun with the safety taped down.* TC-MP-04 now walks to the confirmation
+gate and cancels, and says in a comment why it stops.
+
+#### What the screens actually offer
+
+| Screen | Hook | Behaviour |
+|---|---|---|
+| `/PatientHistory` results | `tr[data-cy="patient-result-row-<patientId>"]` | **Checking the row radio IS the navigation** — no submit button; it goes to `/PatientResults/<patientId>` |
+| `/PatientMerge` panels | `#patient1-*`, `#patient2-*` | one Search per panel, each enabled only once its own panel has input |
+| `/PatientMerge` results | `input#patient<N>-select-<patientId>` | radio per candidate |
+| `/PatientMerge` step 2 | `#patient-1`, `#patient-2` | warns "marked as merged and inactive", asks which record is primary, Next Step disabled until one is chosen |
+
+Note `/PatientHistory` has **no** "Search for Patient" mode control, while
+`/PatientManagement` does. The same-looking panel is not the same panel.
+
+#### Trap 1: Carbon radios cannot be `.check()`ed
+
+Carbon draws a radio as a real `<input type="radio">` plus a `<label>`
+containing a `<span class="cds--radio-button__appearance">`. The input is
+visible and enabled, but the span sits on top of it, so both `.check()` and
+`.click()` retry until the test times out with:
+
+```
+<span class="cds--radio-button__appearance"> from <label for="503"> subtree intercepts pointer events
+```
+
+**A 30-second timeout on a radio in this app always means this.** New helper
+`checkCarbonRadio(page, inputLocator)` clicks the bound label, which is also
+the correct user gesture. Use it everywhere; the gender radios and the search
+radios are the same shape.
+
+#### Trap 2: there is a THIRD button named "Search"
+
+My first merge fix used `getByRole('button', { name: /^Search$/ }).nth(panel - 1)`,
+reasoning that there is one Search per panel in panel order. There are three:
+the Carbon header's search action has the accessible name "Search" too, and it
+renders before page content. So `nth(0)` clicked the header icon and both panels
+came back empty.
+
+This is the *same* trap `clickFormSearch` was written to close in 12.20, and I
+walked straight back into it one section later. The lesson is not "remember the
+header button" — it is that **any name-based button lookup on this app must be
+scoped to the field it belongs to**, and `clickFormSearch(page, fieldSelector)`
+is that scoping. Reach for the helper, not for `nth()`.
+
+#### One more retracted measurement
+
+TC-PAT-03's empty-state probe used `/no.*(found|result|patient)/i` and reported
+"message present" on a screen that has no empty-state message. `.*` spans any
+amount of intervening text, so it matched unrelated copy. Anchored to an actual
+empty-state shape, it correctly reports the gap: **zero results are communicated
+only by the pager reading "0-0 of 0 items"**. That is a sixth finding for the
+patient-search UX work item.
+
+Also fixed: TC-PAT-04's identity assertion first failed because it read
+`body.innerText()` immediately after `waitForURL`. The URL changes before the
+patient header renders, so it captured the SideNav and nothing else. Use
+`expect(locator).toContainText(...)`, which retries; a one-shot `innerText()`
+snapshot is a race dressed up as an assertion.
+
+### 12.23 The merge case now really merges, and seeds its own victim
+
+**2026-09-08, after Casey's ruling:** *"destructive tests are fine, this will only
+be run against a testing instance."* So TC-MP-04 executes the merge. The
+interesting problem was never permission — it was **repeatability**.
+
+The merge cases used to lean on the five duplicate "Abby Sebby" records that
+happen to exist on `testing`. A merge case that actually merges *consumes* them.
+After one or two runs there would be nothing left to merge, and the case would
+start failing for a reason that has nothing to do with the product: it would have
+destroyed its own precondition. Generalising: **a destructive test must create
+what it destroys.** TC-MP-04 seeds a fresh duplicate pair, merges that, and the
+merge is the pair's cleanup.
+
+#### Both payloads, captured (12.4)
+
+Patient creation — off the wire from the Add Patient form:
+
+```
+POST /api/OpenELIS-Global/rest/PatientManagement
+Content-Type: application/json   Accept-Language: en   X-CSRF-Token: <localStorage['CSRF']>
+{"patientUpdateStatus":"ADD","nationalId":…,"lastName":…,"firstName":…,
+ "gender":"F","birthDateForDisplay":"01/01/1990", …all-empty rest…}
+-> 200 {"patientId":"515","status":"success"}
+```
+
+The captured request also carried a stray `"date-picker-default-id"` key next to
+`birthDateForDisplay` — the form's own field id leaking into its payload. Omitting
+it is verified good (200, patient created), so `createPatientViaAPI` omits it.
+Two POSTs seed a duplicate pair in about a second, which is what makes per-test
+seeding affordable inside the 30-second policy.
+
+Merge execution:
+
+```
+POST /api/OpenELIS-Global/rest/patient/merge/execute
+{"patient1Id":"514","patient2Id":"515","primaryPatientId":"514","reason":"…","confirmed":true}
+```
+
+After it succeeds the app navigates to `/PatientManagement/<primaryId>`.
+
+#### What the merge wizard gates, and how it is id'd
+
+| Step | Hooks | Gate |
+|---|---|---|
+| 1 Select Patients | `#patient<N>-lastName`, `input#patient<N>-select-<patientId>` | Next Step disabled until two distinct records; panel 2 excludes panel 1's pick |
+| 2 Select Primary | `#patient-1`, `#patient-2` | Next Step disabled until a primary is chosen; warns "marked as merged and inactive" |
+| 3 Confirm Merge | `#mergeReason`, `label[for="confirmMerge"]`, `button.cds--btn--danger` | **two independent gates** — a reason AND the acknowledgement; states "cannot be undone" |
+
+This is a well-built destructive flow, which is worth saying out loud given the
+state of the tests that were pointed at it. TC-MP-04 asserts all three gates,
+including that a reason *alone* does not unlock the danger button.
+
+#### Duplicate id on the create form
+
+`/PatientManagement/new` renders **two** elements with `id="date-picker-default-id"`
+— a `div.cds--form-item` wrapper and the input inside it. `document.querySelector`
+returns the div, so a naive value-setter throws. Use `input#date-picker-default-id`
+(the factory's existing `.last()` works for the same reason). Duplicate ids are an
+HTML validity error and a screen-reader hazard; noted for the product, not claimed
+as a defect here. The same screen also renders **two** buttons named `Save`, only
+one visible — another reason never to use `.first()` on a name (12.22).
+
+#### The last-name search is FUZZY — never assert an exact result set from it
+
+Found while reading TC-MP-04's own log output. A query for `lastName=QA AUTO Smith`
+returns **every** `qa-auto-*` record on the instance: `QA-AUTO Chain`,
+`qa-auto-probe`, `QaautoSmith`, `QA-AUTO-Davis`… The endpoint normalises case and
+punctuation and matches loosely, so it is not prefix matching and not exact
+matching.
+
+This bit immediately. TC-MP-02 first asserted that the merge search returned
+**exactly** its seeded pair. It passed — because it runs before the other two
+merge cases seed theirs. On the *second* run it would have found the first run's
+leftovers and failed, and the failure would have looked like a product
+regression. A test that passes only on a clean instance is a test that will lie
+to you later. The assertion is now a subset check per seeded id.
+
+It is soundex-like, not merely case-insensitive. Two consecutive attempts at a
+"unique" seeded last name both failed:
+
+1. `QAAutoMRG1788898067465248` → **400** `{"error":"lastName: invalid name format,
+   possibly illegal character"}`. Names reject digits.
+2. Transliterating the stamp into letters (`QAAutoMRGBHIIJ…`) made the name unique
+   but not unique *to the search*. Every `QAAuto…` name matched every other one,
+   so each run's panel search returned all previous runs' seeds, the pair got
+   pushed onto page 2 of the results, and its radio was never rendered. That is
+   what a 30-second `waiting for #patient1-select-530` timeout meant — not a
+   Carbon interception (12.22), not a slow server, just a result set the pair had
+   fallen out of.
+
+**How a destructive test identifies its own records here.** The merge panel's
+"Patient Id" field does not search the internal patient id — it matches the
+**subject number (Unique Health ID) by substring**. Verified: searching `530`
+returned patient 439, whose subject number merely *contains* `530`. So the seeder
+sets a fresh long digit subject number (`99<timestamp>`) on both records, and the
+panels search on that. It returned exactly the seeded pair and nothing else, and
+it is immune to both soundex and accumulation. The last name is now a constant,
+used for display only.
+
+General rule: **identify seeded records by a field that is matched exactly (or by
+a long unique substring), never by name.** Names on this app are for driving the
+UI.
+
+#### Finding: the primary-selection step labels both candidates identically
+
+Step 2 labels each candidate with its **subject number** when it has one, and
+falls back to the internal patient id when it does not — so the same screen reads
+`Patient 1: 514 - Alpha QAMergeProbe` for a record with no subject number and
+`Patient 1: 991788898821595883 - Alpha QaautoMRG` for one with.
+
+The consequence lands exactly where it hurts: a duplicate pair usually *shares*
+its identifier — that is generally why someone is merging it — so step 2 shows
+both candidates prefixed with the **same** string. On a real pair the only thing
+distinguishing "Patient 1" from "Patient 2" is the given name, on the screen where
+the user decides which record survives and which is marked inactive. Worth raising
+with the merge UX; it is what forced this case to assert on
+`Patient 1: <subjectNumber> - Alpha` rather than on an id.
+
+(Step 2 also shows a useful per-candidate summary — Active Orders / Total Results
+/ Samples, and an Identifiers block — so the data needed to choose is there. It is
+the label that does not distinguish.)
+
+#### Observation from the merge, NOT a defect claim
+
+After a successful merge of 515 into 514, on the same endpoint:
+
+- `?nationalID=<shared id>` returns **`[514]`** — correctly consolidated.
+- `?lastName=<shared name>` returns **`[514, 515]`** — the merged-away record is
+  still there.
+
+Stable across three consecutive repeats, on a pair with no other similar records
+present — which matters, because the fuzzy matching above means a longer result
+list proves nothing on its own. If 515 is "merged and inactive", a user searching
+by name can still find and select it, which defeats the merge.
+
+Revalidation status: **two of three gates cleared.** 3× API on a clean pair, and
+reproduced on a different pair in each of two consecutive full runs, every one of
+which uses a fresh browser context — that is the fresh-tab gate. What is still
+owed is a genuine **re-login**: the suite authenticates from saved storage state,
+so no run so far has actually re-authenticated. Until that third gate is cleared
+this stays an observation, because 12.14's lesson stands — I have called a search
+parameter a defect before and been wrong twice over. TC-MP-04 asserts the
+national-ID outcome and *logs* the last-name result with an `OBSERVATION` marker,
+naming only its own pair's record rather than quoting the raw list. Promote it to
+an assertion once the re-login gate is cleared.
+
+#### Repeatability, demonstrated rather than asserted
+
+The seeding design exists to make a destructive case re-runnable, so it was worth
+proving rather than reasoning about. Two consecutive full runs of the file:
+
+```
+pass 1   TC-MP-04: merged 558 into 557; nationalID search -> [557]     18 passed (1.3m)
+pass 2   TC-MP-04: merged 565 into 564; nationalID search -> [564]     18 passed (1.3m)
+```
+
+Different pair each pass, merge executed each pass, no state carried between them.
+A destructive test that has only ever been run once is not a verified test.
+
+#### Still open: order creation in the fixture
+
+Both runs logged `[data-setup] primaryOrder API creation failed`. That is the
+known 12.21 item, not a regression from this work: `createOrderViaAPI` composes
+its payload by hand, which 12.4 says not to do. The capture technique used above
+for `PatientManagement` and `patient/merge/execute` is exactly what that needs —
+drive the order wizard once in the browser with a request interceptor installed
+and keep what it actually sends. That remains its own piece of work.
+
+### 12.24 A merge is enforced for editing, advisory for search and order entry
+
+**2026-09-08.** Casey, on the 12.23 observation: *"for some reason, we don't remove
+the duplicated patient, which seems wrong, it should at least be a filter."* He is
+right, and chasing it into the UI turned a search-filter annoyance into a patient-safety
+finding.
+
+**All three revalidation gates cleared** (12.23 owed the third): 3× API repeat, a
+fresh browser context in each of two consecutive full runs, and a genuine logout
+plus re-login. So the behaviour below is measured, not assumed.
+
+**Then the disposition changed twice, and the sequence is the lesson.** Casey:
+
+1. *"A newer version will have a filter. Keep this one as is."*
+2. *"which will show the merged patients."*
+3. *"Wait. That filter isn't built yet. They will show up right now."*
+
+I ran ahead on both of the first two. After (1) I wrote that the search-results
+half was "handled"; after (2) I wrote that the result-list question was "settled"
+and started deriving second-order consequences from a default state that does not
+exist. (3) is the correction, and it is the state to hold:
+
+- **Today, on v3.2.2.0:** merged-away records **do** appear in name searches and
+  in order entry. Measured, and it is what these tests run against. Not a defect
+  against this version — nothing to file or chase.
+- **Planned, not built:** a filter, *intended* to show merged patients, which
+  would imply hidden becomes the default. **Intended, not settled.** There is no
+  control to look at, so its shape is not knowable from here.
+
+The generalisable bit, since I did it twice in two turns: **a one-line answer
+about future work is not a specification.** "A newer version will have a filter"
+licenses a tripwire. It does not license writing up a default state, a toggle
+semantics, or knock-on requirements as decided — and a QA reference that states
+unbuilt behaviour as fact is worse than one that says nothing, because the next
+reader cannot tell which parts were measured.
+
+So: no TC-MP-08 for a filter-ON state. Not "not yet written" — **not written**,
+because there is nothing to write it against, and inventing locators for
+unbuilt controls is exactly how the four hollow TC-MP cases this file replaced
+came to exist (12.22).
+
+That does not make the work wasted; it changes what the work is *for*. A finding
+that is already scheduled to be fixed is exactly the finding worth encoding as a
+test, because the test becomes the thing that tells you the fix arrived and that it
+covered what you thought it covered. The alternative — noting it in prose and
+moving on — means noticing months later, by hand, if at all.
+
+#### What a merge actually does, feature by feature
+
+Seeded pair 566 (primary) / 567 (merged away), merged via
+`POST /rest/patient/merge/execute` →
+`{"success":true,"mergeAuditId":"6","primaryPatientId":"566","mergedPatientId":"567","mergeDurationMs":156}`.
+
+| Surface | Behaviour after merge | Verdict |
+|---|---|---|
+| `?nationalID=` search | returns `[566]` only | **enforced** |
+| `?lastName=` search | returns `[566, 567]` | **advisory** |
+| Result row for 567 | badged `Merged` in the leading column | marked, not hidden |
+| Opening 567 | banner: "This patient record was merged / Active records are kept on Patient `<nationalId>`" | good |
+| Editing 567 | no Edit and no Save control rendered | **enforced** |
+| `/SamplePatientEntry` search | offers 567, radio **enabled** | **by design** |
+| Selecting 567 for an order | banner shows, Patient Info marks Complete, wizard advances to Program Selection | **by design** |
+
+So the merge is enforced where the record is written to, and advisory where the
+record is *chosen*.
+
+**And the order-entry half is settled, the other way from how I read it.** Casey,
+2026-09-09: *"Order entry should not block a merged patient."*
+
+I had argued the opposite, and the argument is worth writing down because the shape
+of the mistake recurs. I reasoned: a requisition against a consolidated record is
+how a result ends up attached to a patient the lab has declared dead, therefore the
+absence of a block is a safety gap, therefore the banner is insufficient because
+"a banner is not a control". Every step follows, and the conclusion was still
+wrong — because the premise it rests on is a clinical-workflow judgement I am not
+the one making. The record still exists. Someone may be standing at the counter
+with a sample labelled with it. Blocking there strands real work, and disclosing
+plus allowing is a legitimate choice.
+
+**The lesson: measuring a behaviour correctly does not make me the one who decides
+whether it is wrong.** I can say what the app does and what the consequence would
+be; whether that consequence is acceptable is the product's call. In the same
+session I also read "a newer version will have a filter" as a finished spec. Same
+error twice — reasoning past the edge of what was actually established.
+
+So TC-MP-06 is now **ordinary green coverage** of allow-plus-disclose, not a
+tripwire. What it protects is the **disclosure**: the banner must appear and must
+name where the active records live (the surviving identifier), because a future
+change that quietly drops the banner while still allowing the order is the real
+remaining risk. TC-MP-07 has been **deleted** — it existed only as a canary for a
+`test.fail()`-marked TC-MP-06, and with that marker gone its rationale went with
+it. A duplicate assertion with no stated reason is how files rot.
+
+One question only the real filter can answer, noted rather than guessed at: if
+merged records are hidden from search results by default, how does a user reach
+one in order entry — through the filter, or not at all?
+
+Worth being precise about what is *not* broken, so a fix does not regress it: the
+identifier search filters correctly, the record is badged in results, the banner
+names where the active records went, and editing is locked. The gap is the name
+search and the order-entry guard.
+
+#### Tracked as one `test.fail()` tripwire
+
+TC-MP-05 (name search) asserts the behaviour the planned work is *intended* to
+bring, and carries `test.fail(true, '<why>')`. It passes on v3.2.2.0 and turns
+**red when something changes on the instance** — at which point
+the job is to look at what actually shipped, not to reflexively delete the marker.
+The assertion may need rewriting rather than unmarking.
+
+This is the cheapest possible bet on an unbuilt feature: if the filter lands as
+described, one marker comes off and the case becomes ordinary coverage; if it
+lands differently, one marker and one assertion get rewritten. Either way the
+change cannot land unnoticed. That is the whole claim being made for it — nothing
+stronger.
+
+It was two tripwires until order entry was settled. Keeping them separate is what
+made that cheap to correct: inverting TC-MP-06 touched one case and left TC-MP-05
+untouched. Had they been folded into one "merged records are excluded everywhere"
+assertion, the correction would have meant unpicking a case that was half right.
+
+Generalising, because this keeps coming up: **a known-and-scheduled behaviour change
+is the best possible candidate for `test.fail()`.** Not a complaint, not a ticket —
+a tripwire that converts itself into coverage on the day the change ships.
+
+Both are deliberately **minimal** — seed and merge through the API, then one
+assertion. Under `test.fail()` *any* failure counts as the expected one, so a case
+that also did elaborate setup could "pass" by being broken. That is the hollow-test
+trap (12.22) wearing a different hat, and it is the rule for every `test.fail()`
+case in this repo: **one assertion, API setup, nothing else.**
+
+Setup for these uses `seedMergedPair` → `mergePatientsViaAPI`, not the wizard.
+Driving the merge UI to reach a merged state would put the wizard's own defects
+inside another case's precondition.
+
+#### `toHaveCount(0)` after an async action is vacuously true
+
+*(Found in the first TC-MP-06, which has since been rewritten as green coverage —
+the lesson outlives the case.)*
+
+The first TC-MP-06 was one line after the search:
+
+```ts
+await expect(mergedRow).toHaveCount(0, { timeout: 15_000 });
+```
+
+The run reported **"Expected to fail, but passed"** — and not because order entry
+filters merged records. `expect()` polls until the assertion PASSES, and
+`toHaveCount(0)` is satisfied the instant it is first evaluated, before the search
+has rendered anything. The 15-second timeout never came into play. **Any
+"must not exist" assertion placed straight after an async action is always
+vacuously true**, and it will keep being true when the thing it forbids is right
+there on screen a second later.
+
+The fix is to wait for evidence that the action completed, then assert the absence:
+
+```ts
+await expect(page.locator(`[data-cy="patient-result-row-${primaryId}"]`)).toBeAttached({ timeout: 15_000 });
+await expect(page.locator(`[data-cy="patient-result-row-${mergedId}"]`)).toHaveCount(0);
+```
+
+That guard sat inside a `test.fail()` case, where a failure would read as the
+expected one — so TC-MP-07 asserted the same precondition unmarked, as a canary.
+**The rule still stands: pair every `test.fail()` case with an unmarked canary for
+its preconditions.** TC-MP-07 itself is gone, because TC-MP-06 stopped being
+`test.fail()`-marked and a canary for an ordinary green case is just a duplicate.
+
+Note also what caught this: the marker itself. A plain green test asserting
+`toHaveCount(0)` would have sailed through and been counted as coverage forever.
+`test.fail()` inverts the reporting, so a vacuous assertion becomes a loud
+"Expected to fail, but passed" instead of a silent pass.
+
+### 12.25 A local 3.2.2.0 QA target, so a shared instance can never block a run again
+
+**2026-09-09.** The nightly redeploy of `testing.openelis-global.org` left it
+serving a page with no login form for hours, which blocked verification of a
+finished branch. Casey: *"Don't we have a VM we run this stuff against anyway?"*
+
+There was one, and the honest answer was "yes, and it can't run this" — for two
+reasons I had to separate carefully:
+
+1. The stack up on this host is the `oe-catalog-import` distro bundle
+   (`~/dev/oe-catalog-import/bundle/distro`, project `distro`, images
+   `demo-silnas` / `3.2.1.10`), reporting **3.2.1.11**.
+2. **Its React frontend and proxy containers were not running at all** — only
+   webapp, db and fhir. So `https://localhost:8443` was Tomcat direct, which
+   serves the legacy JSP app. Every React route redirected to
+   `/OpenELIS-Global/Home`, and `patient-search-results` answered HTML.
+
+Point 2 matters: my first read was "wrong version, dead end". The version *was*
+wrong, but the missing frontend and proxy were doing most of the damage, and
+saying so precisely is the difference between "this can't work" and "this needs
+two containers and a tag bump".
+
+#### What now exists
+
+`~/dev/oe-322-qa` — a shallow clone of `DIGI-UW/OpenELIS-Global-2` at tag
+**3.2.2.0** (commit `aa00894`), plus `docker-compose.qa.yml`, forked from
+upstream's compose at that tag with four changes and nothing else:
+
+| Change | Why |
+|---|---|
+| all five images pinned to `3.2.2.0` | upstream pins `:develop`, a moving target; the point is to be the version the suite was verified against |
+| container names suffixed `-qa322`, ports remapped, subnet `172.21.1.0/24` | runs **alongside** the distro stack, which holds 80/443/8080/8443/8081/8444/15432 and `172.20.1.0/24` |
+| `./configuration` → `./volume/configuration` | upstream's path does not exist at the repo root at this tag |
+| healthcheck with `start_period: 900s` on the webapp | a cold boot can reseed the config catalog; without it Docker calls a healthy boot `unhealthy` |
+
+```
+cd ~/dev/oe-322-qa
+docker compose -p oe322qa -f docker-compose.qa.yml up -d
+```
+
+**Reach it at `https://localhost:9443` — through the proxy.** Not
+`https://localhost:18443`, which is Tomcat direct and serves the legacy JSP app.
+That distinction is the whole of point 2 above; a copy of the compose file lives
+at `openelis-work/docker-compose.qa-322.yml`.
+
+Two boot notes, both benign and both worth expecting:
+
+- The **proxy dies once** on first `up` — `host not found in upstream
+  "oe.openelis.org"`, a DNS race against a webapp that has not registered yet.
+  `restart: unless-stopped` recovers it. Do not debug this.
+- Webapp went healthy in **145s**, not the ~836s the distro bundle warns about.
+  That warning is about reseeding a large existing config catalog; a fresh
+  database has nothing to reseed.
+
+#### It works, and it is faster
+
+```
+BASE_URL=https://localhost:9443 npx playwright test --config=modules.config.ts tests/patient-management.spec.ts
+  20 passed (51.3s)
+```
+
+Against the shared instance the same file takes 1.3–1.7 minutes. And `data.setup`
+created the Abby Sebby fixture on the empty database by itself — which is the
+standing *"seed a known good"* instruction finally satisfied by construction
+rather than by hoping a shared instance still has the row.
+
+Note what this run also bought: **TC-MP-06 had never been executed.** It was
+written from a hand-driven browser probe and pushed unverified because the shared
+instance was down, and its wizard-advance assertion was the part I trusted least.
+It passed here. A version-matched local target is what turns "typechecks, should
+work" into a result.
+
+#### What it does not solve
+
+`createOrderViaAPI` still fails — the payload is hand-composed (12.4). A clean
+local instance is the ideal place to capture the real one, and that is now the
+obvious next piece of work rather than a vague backlog item.
+
+### 12.26 Order creation: there is no payload to capture, because a stock install cannot submit an order
+
+**2026-09-09.** With a local 3.2.2.0 target in place (12.25), the obvious next
+piece was to capture the real order-entry payload and retire
+`createOrderViaAPI`'s hand-composed one (12.4). I drove the Add Order wizard to
+its final step on a freshly seeded install to record the POST. There is no POST
+to record.
+
+#### The wizard walks fine. It just cannot be submitted.
+
+All four steps advance in one pass on a clean instance — Patient Info → Program
+Selection → Add Sample → Add Order — in about a minute, not the 3.2 minutes
+12.21 measured against the shared instance. The blocker is at the end:
+
+| Add Order field | Required | State |
+|---|---|---|
+| `#priorityId` | yes | defaults to `Routine` — fine |
+| `#paymentOptionSelectionId` | yes | 4 options — fine |
+| `#testLocationCodeId` | yes | options `1303=B1`… — fine |
+| `#siteName` | yes | free text, **no data behind it** |
+| `#requesterDepartmentId` | yes | **only the blank option, `["="]`** |
+
+`#requesterDepartmentId` is a required select with nothing selectable in it, so
+it can never be satisfied and **Submit stays disabled permanently**. Confirmed on
+two separate runs.
+
+And the site field is not a slow lookup that needed more patience: **typing five
+characters into `#siteName` fires zero network requests.** That was the
+measurement worth taking, because "the autocomplete is slow" and "the field has
+no data" call for completely different work.
+
+#### RETRACTED: the "organization/list 500"
+
+I reported `/rest/organization/list` answering **500** on a freshly seeded
+database, and treated it as a reproducible server fault feeding the empty site
+field. That was wrong, and the webapp log says so plainly:
+
+```
+ERROR -- java.lang.NumberFormatException: For input string: "list"
+```
+
+**There is no `/organization/list` endpoint.** The route is
+`/organization/{id}`, and `list` was being parsed as an id. The 500 was a
+report about my URL, not about the product. The same claim recorded earlier in
+this session against `testing` is equally void.
+
+This is the third instance of one pattern in one session: `?nationalId=` vs
+`?nationalID=` (12.14), a vacuous `toHaveCount(0)`, and now a guessed path.
+The rule, stated so it stops recurring: **a non-2xx on a path or parameter I
+guessed is evidence about my guess, not about the product.** Confirm the
+endpoint exists — from the app's own traffic — before any status code becomes a
+finding.
+
+#### The real mechanism, from the app's own traffic
+
+Capturing every request the wizard makes gives the actual chain:
+
+| Call | Result |
+|---|---|
+| `GET /rest/displayList/REFERRAL_ORGANIZATIONS` | **200 `[]`** |
+| `GET /rest/departments-for-site?refferingSiteId=` | **200 `[]`** |
+| `GET /rest/departments-for-site?refferingSiteId=2` | **200 `[]`** |
+
+Both endpoints work and correctly return nothing. `#siteName` is a plain
+`<input type="text" required>` — no combobox role, no listbox, and typing into
+it fires **zero** requests because its candidates come from that
+already-fetched (empty) referral-organizations list. With no site selectable,
+`departments-for-site` is never called with an id that has departments, so the
+required `#requesterDepartmentId` stays empty and Submit stays disabled.
+
+(Note the upstream spelling of the query parameter: `refferingSiteId`, two f's.
+Anything calling it needs the typo.)
+
+#### Why it is empty: nothing is typed as a referring clinic
+
+`organization` has **24 rows**, so this is not an empty table. The join table
+tells the story:
+
+```
+organization_type:                    5 = "referring clinic"  (org who can order lab tests)
+                                     11 = "dept"              (organisation department)
+                                     13-16 = Provinsi / Kabupaten / Kecamatan / Kelurahan
+
+organization_organization_type used:  13 -> 3,  14 -> 3,  15 -> 3,  16 -> 14
+```
+
+Every organization on a stock install is part of the **Indonesian address
+hierarchy**. **Not one is mapped to type 5 or type 11.** So there are no
+referring clinics and no departments, and order entry cannot be completed —
+by configuration, not by fault. No defect to file.
+
+#### What this changes about a backlog item
+#### What this changes about a backlog item
+
+12.21 recorded order creation as blocked by an unstable results row and a
+3.2-minute step 1, and proposed "the API, once a payload has been CAPTURED". Both
+halves were about *cost*. The real blocker is *possibility*: on a stock install
+the form cannot be completed at all. That reframing matters because the two
+diagnoses buy different work — waiting-and-retrying versus seeding config data.
+
+So `createOrderViaAPI` no longer fabricates a payload. It now fails with a named
+reason pointing here. The old body was ~50 guessed fields and a `sampleXML`
+string that put a test NAME where an id belongs
+(`<test><id>HGB</id></test>`); it never once succeeded, and its real cost was
+making `data.setup` look like it had an API fallback. **A fabricated fallback is
+worse than none: it hides the fact that nothing works.**
+
+#### To unblock order-dependent coverage
+
+Precisely: create at least one organization mapped to **org type 5 ("referring
+clinic")** and at least one mapped to **org type 11 ("dept")**, so
+`displayList/REFERRAL_ORGANIZATIONS` and `departments-for-site` have something
+to return. Test locations already exist (`#testLocationCodeId` offers
+`1303=B1`…), so they are not part of this.
+
+Do it through the app's Organization admin rather than raw SQL: the LIMS rules
+about active/inactive and the app's own bookkeeping should apply, and the POST
+that creates it is itself the "seed a known good" mechanism worth capturing.
+Then submit one order by hand, capture that POST, and `createOrderViaAPI` has a
+real payload for the first time.
+
+This is the prerequisite for TC-PAT-04's history assertions ever seeing real
+orders, for the `ACCESSION`-dependent cases, and for the chains suites.
+
+Useful ids gathered while probing, so nobody repeats it: sample types are
+`#sampleId_0` (`2=Serum`, `4=Whole Blood`, `1=Urines`, 18 in all); test
+checkboxes are `test_0_<testId>` and panels `panel_0_<panelId>` (e.g.
+`test_0_15` = Hemoglobin, `test_0_3` = Glucose, `panel_0_1` = Bilan
+Biochimique); `/rest/test-list` returns `[{id, value}]` and works;
+`/rest/sample-type-tests` answers 500. Selecting a panel fires
+`POST /api/OpenELIS-Global/api/orderEntry/labelRequest` with
+`{"test_ids":[…],"samples":[{"sample_id_local":"0","sample_type":"2"}]}` — the
+label-preset call, not the order submit.
+
+
+### 12.27 Seeding a referring site and a department, and where order entry still stops
+
+**2026-09-09.** 12.26 said the unblock was "create an organization of org type 5
+and one of type 11". I did that, on the local 3.2.2.0 stack, and got further —
+but not to a submitted order. Recording exactly how far, because the next person
+should start from the wall rather than from the beginning.
+
+#### The Organization create payload (CAPTURED, per 12.4)
+
+`/MasterListsPage/organizationManagement` → **Add**. The form's own POST:
+
+```
+POST /api/OpenELIS-Global/rest/Organization?ID=0&startingRecNo=1
+{"organizationName":"QA Referring Clinic","shortName":"QARC","isActive":"Y",
+ "commune":"","village":"","department":"","formName":"organizationForm",
+ "formMethod":"POST","cancelAction":"CancelOrganization","submitOnCancel":false,
+ "cancelMethod":"POST","mlsSentinelLabFlag":"N","parentOrgName":"","state":"MN",
+ "selectedTypes":["5"]}
+-> 200 {"organizationName":"QA Referring Clinic","success":true,"id":"26","shortName":"QARC"}
+```
+
+`selectedTypes` carries the org-type ids, and the form exposes them as a checkbox
+table whose row ids **are** those ids: `input[id="5:select"]` is "referring
+clinic", `input[id="11:select"]` is "dept". Note the selector — an id starting
+with a digit is not a valid CSS id selector, so `#5\:select` throws
+`SyntaxError` in the browser and the attribute form `input[id="5:select"]` is
+required.
+
+(Also visible: `state` defaults to `"MN"` for every organization created this
+way.)
+
+#### It is SAMPLE_PATIENT_REFERRING_CLINIC, not REFERRAL_ORGANIZATIONS
+
+12.26 named `displayList/REFERRAL_ORGANIZATIONS` as the site field's source
+because that is the call the order page makes on load. It stayed `[]` even after
+the clinic existed. The list that actually picked it up:
+
+```
+GET /rest/displayList/SAMPLE_PATIENT_REFERRING_CLINIC
+  -> [{"id":"26","value":"QARC - QA Referring Clinic"}]
+```
+
+With that populated, the site field accepts a selection —
+`#siteName` reads `QARC - QA Referring Clinic`. So REFERRAL_ORGANIZATIONS is a
+different concept (referral labs, presumably type 6), and 12.26's attribution
+was wrong even though the observation of the call was right. Watching a page's
+traffic tells you what it *calls*, not what each call is *for*.
+
+#### A department is a type-11 org whose PARENT is the clinic
+
+Proven by changing one thing and re-reading:
+
+```
+before:  departments-for-site?refferingSiteId=26  ->  []
+set organization.org_id = 26 on the type-11 org
+after:   departments-for-site?refferingSiteId=26  ->  [{"id":"27","value":"QA Ward A"}]
+```
+
+**And this is a finding: the admin form does not set the parent.** All three
+organizations created through it came out with a null parent, whether the name
+was typed into `#parentOrgName` in the form or passed as
+`"parentOrgName":"QA Referring Clinic"` in the captured payload. Both returned
+**200 `success:true`** with no warning. The field is marked required in the DOM
+and yet saves empty. So a department created through the Organization admin is
+invisible to `departments-for-site`, and nothing tells the admin why.
+
+The `org_id` above was set with a direct SQL UPDATE **as a diagnostic**, to
+establish the mechanism. That is not the seeding recipe — it skips the app's
+bookkeeping, and the fhirUuid the create call generates suggests there is more
+to a real link than one column.
+
+#### Where it still stops
+
+With a site selected and a department chosen, all five required fields on Add
+Order hold values:
+
+```
+priorityId=Routine  siteName=QARC - QA Referring Clinic  requesterDepartmentId=27
+paymentOptionSelectionId=1120  testLocationCodeId=1303
+```
+
+**Submit is still disabled.** So the gate is not the required-field set, and
+12.26's "required field with no options" was necessary but not sufficient.
+Unverified next suspects, in the order I would test them: that the site must be
+chosen from the real suggestion list so an underlying id is set rather than just
+the visible text (the value read back is the display string, and my selection
+came from clicking a list item that may not be the component's own option); that
+`consentGiven` interacts with `consentRecordedBy`; that the empty `labNo` matters.
+
+One practical note for anyone driving this form: **selecting the site re-renders
+the panel and clears earlier selections.** Payment option had to be set *after*
+the site, or it came back empty.
+
+So `createOrderViaAPI` stays as it is — a named failure, no fabricated payload.
+Its message needs the update this section brings: the blocker is no longer "no
+referring clinic exists" on a stack where one has been seeded.
+
+### 12.28 SOLVED: an order can be created, and what four things it took
+
+**2026-09-09.** 12.27 stopped at "all five required fields hold values and Submit
+is still disabled". Casey: *"let's figure this out now."* Here is the answer, and
+the method matters more than the answer.
+
+#### How it was found: read the state, not the symptoms
+
+The Submit button's condition, from the **deployed bundle's own sourcemap** (the
+frontend image ships `.js.map` files, so the shipped source is readable and
+matches tag 3.2.2.0 exactly):
+
+```js
+disabled={ isSubmitting ||
+           Object.values(phoneValidation).some((item) => item.status === false) ||
+           errors?.errors?.length > 0 }
+```
+
+My first pass at reading the live React state mapped hooks by position and
+concluded all three terms were false — which was wrong, because hooks whose
+values were too large to serialise had been skipped, shifting everything after
+them. Re-reading **by shape** instead of by position found it immediately:
+
+```
+hook 4: obj keys=["name","value","path","type","errors","inner","message"]
+        ERRORS=["Sample Lab Number is required","Referring Site is required"]
+        name=ValidationError
+```
+
+`errors` holds a Yup `ValidationError`, populated **before Submit is ever
+clicked**, and nothing renders it — no `.cds--form-requirement`, no inline
+message. That is why the button looked arbitrarily dead. **When a control's state
+disagrees with the code you just read, suspect how you read the state.**
+
+#### The four conditions, all measured
+
+1. An organization of **org type 5** ("referring clinic") must exist, or the site
+   field has nothing to offer.
+2. An organization of **org type 11** ("dept") whose **parent is that clinic**, or
+   the required `#requesterDepartmentId` stays empty (12.27).
+3. The accession must be **generated**:
+   `GET /rest/SampleEntryGenerateScanProvider` → `{"status":true,"body":"DEV01260000000000002"}`.
+   An invented one is rejected: `400 sampleOrderItems.labNo: "Invalid accession
+   number format"`. That was the first of the two Yup errors.
+4. **`referringSiteId` must actually be set.** This was the trap. Clicking a list
+   item under the site field sets the *visible text* and leaves the id unset —
+   `#siteName` read `QARC - QA Referring Clinic` while Yup still said "Referring
+   Site is required". Selecting through the combobox properly (**ArrowDown then
+   Enter**) sets the id, and the validation error cleared to `none`.
+
+With those four, `POST /rest/SamplePatientEntry` → **200**, and the app renders
+**"Successfully saved"** with the accession `DEV01260000000000002`.
+
+Generalise (4), because it will bite again: **a filled-looking Carbon combobox
+proves nothing.** Assert on the id the form will submit, not on the text the
+field displays. A field whose display value and underlying value disagree is
+exactly the class of bug this file keeps finding from the other direction.
+
+#### `createOrderViaAPI` now works from the captured request
+
+Rewritten to build the accepted payload: it resolves the site from
+`SAMPLE_PATIENT_REFERRING_CLINIC`, its department from `departments-for-site`,
+generates the accession, and posts the captured shape — failing with a named
+reason at whichever of the four preconditions is missing rather than guessing.
+No hand-composed fields remain (12.4 satisfied).
+
+It still returns null on a stock install, and that is correct: the referring
+clinic and department are **configuration**, and seeding them is a deliberate act
+(12.27 has the captured Organization POST). What has changed is that the fixture
+now says which precondition failed, and works the moment they exist.
+
+### 12.29 The order fixture is validated against the UI's own output — and results entry is a separate problem
+
+**2026-09-09.** With orders creating (12.28), the next step was to enter and
+validate a result so patient history renders populated. It does not get that
+far, and the reason is worth more than the goal was.
+
+#### The control comparison
+
+`/AccessionResults` (Results → search by accession) returns **"There are no
+records to display"** for a fixture-created accession. The obvious inference is
+that the fixture built something subtly wrong. So the fixture was compared
+against the order created earlier **through the real UI wizard**
+(`DEV01260000000000002`), which is the only trustworthy control available:
+
+| | UI-created (002) | fixture-created (005/006) |
+|---|---|---|
+| `sample.status_id` | 1 (Test Entered) | 1 |
+| `sample_item.status_id` / `typeosamp_id` | 20 (SampleEntered) / 2 | 20 / 2 |
+| `analysis.status_id` | 4 (Not Tested) | 4 |
+| `sample_human.patient_id` | 2 | 2 |
+| `sample_human.provider_id` | **3** | **null** |
+
+And in `/AccessionResults`, **both** are invisible — the UI-created order shows
+"There are no records to display" exactly like the fixture's.
+
+Two conclusions, and the second only follows because of the control:
+
+1. **The captured payload is faithful.** Sample, sample item and analysis rows
+   match the UI's output exactly. The one real difference is
+   `sample_human.provider_id`: the wizard attached a requester (I typed provider
+   first/last name into it), the fixture sends none. That is a fidelity gap to
+   close, not the cause of anything here — 002 *has* a provider and is still
+   invisible.
+2. **Results entry not finding these orders is not a fixture problem.** It is
+   equally true of an order created by hand through the product's own wizard, so
+   it belongs to that screen or this instance's configuration, not to
+   `createOrderViaAPI`.
+
+Without the control I would have spent the night "fixing" a correct fixture. **A
+fixture is verified by comparing its output against the product's own, at the
+data layer — not by whether a downstream screen likes it.**
+
+#### Where to look next, unverified
+
+Analysis status 4 ("Not Tested") is the normal pre-result state, so the order is
+not in a dead state. Named suspects, in the order worth testing: the analysis's
+**test section** versus the logged-in user's assigned lab units (`/AccessionResults`
+plausibly scopes by section, and this instance's sections are Hematology,
+Biochemistry, Serology…); whether the sample must be **received or accepted**
+before it is enterable; and `/LogbookResults?type=` as the section-scoped
+alternative to the accession screen.
+
+I also probed several guessed REST paths here (`/rest/accession/<n>/results`,
+`/rest/analysis-by-accession/<n>`, `/rest/logbook-results`) and all 404'd. Per
+12.26's rule those tell us nothing — they are reports about my guesses. The
+evidence above is the UI comparison, not those statuses.
+
+#### Fidelity fix worth doing
+
+`createOrderViaAPI` should send a provider so `sample_human.provider_id` is
+populated as the wizard populates it. Left undone deliberately rather than
+guessed: the wizard sends `providerFirstName`/`providerLastName` free text and
+the server resolved that to provider id 3, and which of `providerId`,
+`providerPersonId` or the name pair drives that resolution has not been
+established. One captured request with a provider selected would settle it.
+
+### 12.30 Results entry was never broken. I was clicking the wrong Search button.
+
+**Retraction.** §12.26 and the investigation that followed it concluded that
+orders created by the fixture were invisible to results entry, and named three
+suspects: the analysis's test section versus the user's assigned lab units,
+whether the sample must be received/accepted first, and a section-scoped
+`/LogbookResults?type=`. All three were wrong, and so was the premise. The
+orders were visible the whole time.
+
+**What actually happened.** `/AccessionResults` has exactly two elements whose
+accessible name is exactly "Search":
+
+| | element | class | container |
+|---|---|---|---|
+| header action | `BUTTON` | `cds--header__action` | `closest('header')` |
+| form submit | `BUTTON` | `cds--btn--primary` | `closest('form')` |
+
+My probe used `getByRole('button', { name: /^search$/i }).first()`, which is the
+header one. Clicking it fires **no request at all**. The table therefore still
+shows its mount-time state, which renders as:
+
+```
+There are no records to display
+0-0 of 0 items
+```
+
+That is byte-identical to a genuine no-match. So a mis-click reports "the
+product cannot find this order" and nothing in the output distinguishes it from
+"the product has no such order".
+
+**The measurement that settled it.** Calling the endpoint the screen itself
+issues, read out of `SearchResultForm.jsx`:
+
+```
+/rest/LogbookResults?labNumber=DEV01260000000000005&upperRangeAccessionNumber=
+  &patientPK=&testSectionId=&collectionDate=&recievedDate=&selectedTest=
+  &selectedSampleStatus=&selectedAnalysisStatus=&doRange=false&finished=false
+```
+
+returned `testResult.length === 1` for both the fixture-created and the
+UI-created accession, with a complete row (`Glucose(Serum)`, `Sebby, Abby`,
+`analysisStatusId: 4`, `sampleItemExternalId: DEV01260000000000005-1`). Driving
+the screen with the **form's** Search then rendered that row and reported
+`1-1 of 1 items`. No test-section condition, no receipt step, no `?type=`.
+
+**Third occurrence.** §12.22 and §12.26 are the same mistake. The fix is
+structural rather than a thing to remember: `clickFormSearch` now excludes
+`header button` and `.cds--header__action` from its candidate set, and its
+last-resort `last()` fallback warns loudly that a following empty result should
+be blamed on the fallback first.
+
+**The generalisation, which is the part worth keeping.** An empty-state render
+is not evidence about the product until the request that would have filled it
+is known to have been sent. Before reporting "X cannot find Y", check the
+network: no request means the harness failed, not the product. Two prior
+retractions in this file (§12.26's order-entry impossibility, and the
+`/organization/list` 500) are the same error in a different coat — a non-result
+from an action I only assumed I performed.
+
+**Also measured, incidentally.** Two things worth knowing about the row:
+
+- The result field is `input#ResultValue0`, `name="testResult[0].resultValue"`,
+  `type=number`. The id has a **capital R**, and CSS attribute matching is
+  case-sensitive, so `input[id*="result"]` matches nothing. Select on
+  `input[name$=".resultValue"]`.
+- The field **rounds on entry** to the test's `significantDigits`. For testId 3
+  (Glucose/Serum) that is `0`, so typing `14.5` leaves `15` in the field. Worth
+  its own case; do not let it ride along inside a "does a result save" test.
+- Saving **navigates away**. Evaluating in the page straight after the POST
+  response dies with "Execution context was destroyed". Wait the navigation out.
+
+**What this unblocks.** `TC-RE-03` was hollow: it typed accession
+`26CPHL00008T` (a record from a different instance) into
+`page.locator('input').first()` (the header search box), pressed Enter (which
+does not submit), and then took an unconditional `if (!hasResultInput) return`
+skip every run. Its final assertion, `saveStatus === 0 || 2xx`, passed when no
+POST fired — it could not fail. It now seeds its own order via
+`seedOrder()`, finds it, enters a result, requires a 2xx POST, and reads the
+value back from the server. Verified green on the local 3.2.2.0 stack:
+`DEV01260000000000026 saved 200; resultValue="15" analysisStatusId=15` — the
+analysis moved off status 4 as a consequence of the save.
+
+### 12.31 `test.fail()` at describe scope is a SUITE modifier, and it blessed the canaries
+
+**What happened.** `tests/order-entry-state.spec.ts` was written with five
+tripwires and three canaries. The modifiers were placed like this:
+
+```ts
+test.fail();
+test('TC-OE-02: ...', async ({ page }) => { ... });
+```
+
+which reads as "the next test is expected to fail" and is not what it means.
+A `test.fail()` call outside a test body is a **suite-level modifier**: it marks
+**every case in the enclosing `describe`**, regardless of the line it sits on,
+including cases declared above it. All eight were marked.
+
+The run then reported:
+
+```
+3 failed
+  TC-OE-01  Expected to fail, but passed.
+  TC-OE-03  Expected to fail, but passed.
+  TC-OE-06  Expected to fail, but passed.
+7 passed
+```
+
+Read quickly, that looks like three real failures and a mostly-green file. It
+is the exact inverse: the three "failures" are the **canaries passing**, and
+the seven "passes" include five tripwires whose trustworthiness the canaries
+were there to establish. `Expected to fail, but passed` on a case you never
+marked is the signature of this mistake.
+
+**The fix.** The modifier must sit INSIDE the body, as the first statement:
+
+```ts
+test('TC-OE-02: ...', async ({ page }) => {
+  test.fail();
+  ...
+});
+```
+
+**Second trap, distinct from the first, and the reason canaries exist at all.**
+A tripwire counts *any* throw as its expected failure, including a locator that
+never matched because the harness never reached the screen. So a broken route
+reads as a confirmed defect. A precondition asserted *inside* a tripwire cannot
+protect it — that assertion failing is just another way for the tripwire to
+"pass". Preconditions therefore have to be **their own ordinary tests**.
+
+That is what TC-OE-09 is for. TC-OE-07 claims the department control is absent
+once a referring site is selected; the first manual pass at that finding was
+wrong because no site had actually been selected (12.30). Putting
+`expect(picked).toBe(true)` inside TC-OE-07 would have been worthless. As a
+separate green test, it is worth something.
+
+**Rule.** Every tripwire in this repo needs at least one ordinary test covering
+the path it walks and the preconditions it depends on. If the canary is red,
+the tripwire tells you nothing. The four in this file:
+
+| Canary | Establishes | Protects |
+|---|---|---|
+| TC-OE-01 | dashboard -> Continue -> in-app Enter Order works | TC-OE-02, 04, 05 |
+| TC-OE-03 | the lab number generator answers and reserves | TC-OE-02 |
+| TC-OE-06 | `departments-for-site` serves wards for the site | TC-OE-07 |
+| TC-OE-09 | a referring site can actually be selected | TC-OE-07 |
+
+**Also recorded: `clickFormSearch` does not cover this form.** On
+`/order/enter` it logs `NO Search button shares a container with #siteName
+(3 candidates after excluding the Carbon header)` and falls back to `last()`,
+which is the *Provider* block's Search. Three Search buttons live on that
+screen and the site one is not related to `#siteName` by any ancestor the
+helper inspects. `selectFirstSite` in this spec targets it positionally
+instead — the first Search button FOLLOWING `#siteName` in document order,
+tagged with a data attribute so the click cannot drift. The fallback warning
+added in 12.30 is what made this diagnosable from the run log alone, which is
+the first time that warning paid for itself.
+
+---
+
+## §12.32 — The chains could not report a failure, and the gate could not see why
+
+**Date:** 2026-09-10
+**Files:** `tests/chains/_common.ts`, 12 chain specs, `scripts/lint-falsifiable-gate.mjs`
+
+### What was found
+
+The 26 regression chains are the suite's headline artifact. On audit, **122 of
+their 126 steps could not fail**. Two independent causes, pulling in opposite
+directions, and each hid the other.
+
+**Cause 1 — 64 bare `test.skip()` calls bypassed the declared-gap register.**
+
+`tests/chains/known-gaps.ts` exists to enforce one rule: a step may only excuse
+itself if a human wrote the excuse down in advance, with a reason, a ticket, and
+a condition that would retire it. `markStep(..., 'GAP'|'BLOCKED', ...)` honours
+that register and fails under `GAPS_STRICT=1`, which the nightly sets.
+
+But every chain opened its steps with
+
+```ts
+if (!order) test.skip();
+```
+
+which goes around the register completely. No annotation, no ticket, no
+retirement condition, and **no failure even in strict mode**. A step whose input
+is missing opted out silently, on every run, including the nightly. A chain
+whose Step 1 failed to seed reported seven green skips behind it.
+
+This is the same move the register was written to stop, one level down: not a
+gap decided in a catch block, but a gap decided in an `if` guard.
+
+**Cause 2 — the gate's `self-skip-return` detector was wrong in both directions,
+and never mentioned Cause 1.**
+
+The detector was one regex over the case body:
+
+```
+/if\s*\(\s*![\s\S]{0,160}?\)\s*\{[\s\S]{0,400}?\breturn\s*;/
+```
+
+It asks "is there a negated `if` followed within 400 characters by a `return`".
+
+*False positives.* It fires on `if (!r.ok) { markStep(..., 'FAIL', ...); return; }`
+— a guard that **fails** the case. And it takes the `{` of a generic type
+argument for the `{` of a block, which is how every chain step that reads
+`apiCall<{ ... }>` came to be counted hollow. 65 of the 122 chain flags were
+this.
+
+*False negatives.* A guard more than 400 characters from its `return`, or one
+whose condition is positive (`if (rows.length === 0) return;`), sailed straight
+past. It also never flagged the bare `test.skip()` shape — the actual problem.
+
+So the gate reported the chains as the worst files in the repo for a reason that
+was mostly artefact, while the reason they were genuinely broken went unnamed.
+
+### What changed
+
+**`requireStep(chain, n, ok, condition, detail?)`** in `_common.ts`. An unmet
+precondition now routes through `markStep(..., 'BLOCKED', ...)`, so the register
+governs it: fails unless `"<chain>:<n>"` is declared. 53 guards were rewritten
+mechanically; 10 were read individually and turned out to be three kinds:
+
+- **dead code** — `markStep(..., 'BLOCKED', ...); test.skip(); return;`. markStep
+  already skips-or-fails, so the trailing skip could never run, while reading as
+  an unconditional opt-out. Dropped.
+- **an HTTP failure treated as a gap** — three guards skipped on a non-2xx from
+  an endpoint that exists, which `known-gaps.ts` explicitly calls a failure.
+- **a missing result treated as a gap** — Chain D Step 7 skipped when the calc
+  engine had written no value; Chain J Step 5 skipped when no audit entry existed
+  for the action it had just performed. Those absences are the findings each step
+  exists to make. Both now fail. Chain J splits on whether any probed action
+  actually landed: if one did and no audit row carries its signature, that is a
+  FAIL; if none landed there is nothing to audit and the register decides.
+
+**A guard-walking detector** replaces the regex. It brackets each `if`
+condition and its block properly, then asks the question that matters: does this
+guard leave the case without raising anything? `expect()`, `throw`,
+`requireStep()`, and `markStep(..., 'FAIL'|'BLOCKED'|'GAP')` are reviewable
+exits and are not flagged. `markStep(..., 'PASS'|'PARTIAL')` is not.
+
+A block cannot be delimited by a regex. That is the whole lesson: the previous
+detector approximated a block with "within 400 characters" and could not tell a
+type argument from a body, so it was answering a different question than the one
+it printed.
+
+### The numbers, decomposed
+
+Two changes landed together, so they were measured apart deliberately — a
+detector change can manufacture an "improvement" that is only a change of ruler.
+
+| | total unfalsifiable | of which in chains |
+|---|---|---|
+| old detector, old chains | 325 | 122 |
+| **new detector**, old chains | 293 | 57 |
+| new detector, **new chains** | 244 | 8 |
+
+So the detector change accounts for 325 → 293, and the actual work accounts for
+293 → 244, all of it in the chains (57 → 8). The baseline was **re-recorded, not
+ratcheted**: the new detector found 34 real opt-outs in 15 non-chain files it had
+previously missed (`system-misc` 19→27, `reports` 11→16, `alerts-notifications`
+3→7, `results-entry` 7→10). Those are backlog, not regressions.
+
+### Verified
+
+Run against the local 3.2.2.0 stack, `chain-a/d/e/h/j`:
+
+- Non-strict: **4 failed, 11 skipped, 2 passed**. The skips now print the failed
+  condition and a cascade explanation. Previously all of these were silent green.
+- `GAPS_STRICT=1`: **9 failed**, each naming its register key
+  (`known-gaps.ts` key `"H:1"`, and so on). Before this change the same steps
+  passed silently in strict mode too, because a bare `test.skip()` never
+  consulted the register at all.
+
+The failures are honest and mostly environmental on this instance: no calculation
+rules configured (Chain D Step 1), `AuditTrail` 404 (Chain J Step 1),
+`UnifiedSystemUser` create returning 500 (Chain H Step 1). Those are now visible
+instead of absorbed.
+
+### Left open: PARTIAL reports green
+
+The 8 remaining chain flags are one shape: `markStep(..., 'PARTIAL', ...); return;`.
+`PARTIAL` is doing two different jobs, and only one of them is honest.
+
+- *"I could not determine the answer."* Chain H Step 3 gets a 401 with a dead
+  session, which genuinely cannot distinguish authz from session loss. Reporting
+  that as not-a-pass is right; it belongs in the register as BLOCKED.
+- *"I determined a degraded answer, and that is the finding."* Chain E Step 6
+  finds the corrected value **and** the superseded wrong value both present in a
+  patient report. Chain J Step 4 finds the audit count grew but no entry carries
+  the changed value — stated in the test's own words as a regulatory gap. Both
+  report green.
+
+The second kind is the same defect as the bare skip: a status that describes a
+problem and passes anyway. It is not fixed here because the fix needs a product
+answer, not a harness one — whether a patient report should show retest history
+at all is Casey's call, not the harness's.
+
+### Rule
+
+A step may not decide at runtime that it is excused. If the precondition is
+missing, either seed it, or fail, or route through the register where the excuse
+is written down and someone can review it. And a status that describes a problem
+must not be a passing status.
+
+---
+
+## §12.33 — Order entry on develop vs 3.2.2.0, and why the suite could not see it
+
+**Date:** 2026-09-10
+**Instances:** develop `5fe0ecb` (OGC-782, order-entry remediation #4196) on
+`https://localhost:10443`; release `3.2.2.0` on `https://localhost:9443`
+
+### The environment finding, which came first
+
+Every QA run to date has targeted either the local stack — pinned to release
+tag `3.2.2.0`, images built 2026-08-18 — or `testing.openelis-global.org`.
+Neither is develop. So the suite was structurally incapable of seeing a
+develop regression, which is where the client reports come from. A `develop`
+tag exists on Docker Hub and is rebuilt continuously.
+
+A second stack now runs develop in parallel (`../oe-develop-qa`,
+`docker-compose.develop.yml`, project `oedevqa`), with its own ports, subnet
+and volumes so the 3.2.2.0 database and its seeded QA data are untouched.
+Running both is what makes a failure attributable: red on develop and green on
+3.2.2.0 is a new regression; red on both is an older bug the suite had not
+covered.
+
+`:develop` moves, so record the digest with any result. At the time of writing:
+`itechuw/openelis-global-2@sha256:f664191b4954cf9e496dec2b2b560583c57b430b8f33c8112a4f5f362c050da5`.
+
+### Clinical order entry, field by field
+
+`/order/clinical/enter` on develop (29 controls) against `/order/enter` on
+3.2.2.0 (20 controls):
+
+| | 3.2.2.0 | develop |
+|---|---|---|
+| Department / Ward / Unit | absent | **`referringSiteDepartment`, present** |
+| Required By | absent | **`requiredBy`, `type=date`** |
+| Order date / Order time | absent | absent |
+| Clinic ID | absent | absent |
+| Site Name | `Site Name *` (required) | `Site Name` (not required) |
+| Organization Phone / Fax / Email | absent | present |
+| Provider first/last/phone/fax/email | absent (name + phone only) | present |
+
+Two things follow. The ward field is back on develop, so a suite running only
+against 3.2.2.0 would report it missing as a live defect. And `siteContactFax`
+now exists, which is the field the Clinic ID request asked about repurposing.
+
+### The order date exists; the order TIME does not
+
+**Corrected 2026-09-10, same day, by Casey.** This section first read "the
+order date and time already exist in the payload" and concluded that only a UI
+binding was missing. That was wrong, and wrong in the direction that
+under-sizes the work.
+
+`GET /rest/SamplePatientEntry` returns, inside `sampleOrderItems`, and
+identically on both builds:
+
+```
+receivedDateForDisplay = "10/09/2026"   <- when the sample was RECEIVED AT THE LAB
+receivedTime           = "20:26"        <- likewise. NOT the order time.
+requestDate            = "10/09/2026"   <- this IS the order date. No time component.
+```
+
+Received date and time are lab receipt: a different event from order entry,
+and not a substitute for it. `requestDate` is the order date, and it carries
+no time.
+
+So an "order date and time, defaulting to entry time and overwritable"
+requirement splits: the **date** has a home in `requestDate` and needs a UI
+binding, while the **time** does not exist anywhere in the payload and needs
+new data. Do not read a `receivedTime` in the response as evidence that an
+order time is available.
+
+The lesson for this file: a field whose name contains the right noun is not
+the field you want. `receivedTime` matched a grep for time-ish keys, and being
+in the payload alongside the order data made it look like part of the same
+concept. Only someone who knows the lab workflow could say otherwise, which
+is why a payload key is a lead and not a finding.
+
+### develop has three save buttons
+
+`Save`, `Save & Next`, `Save Draft` — plus a `Print Labels` accordion and an
+`Add Sample` button. Any spec that settles on a different set of save actions
+is changing what is already there, not adding to a blank slate.
+
+### What is NOT established: the two behavioural reports
+
+"Fields not clearing after submission" and "previous patient details persist"
+are **not reproduced and not refuted**. Three attempts, all inconclusive, and
+the reason is worth recording because the first attempt nearly reported a false
+positive.
+
+Filling the patient block, selecting a sample type, ticking a revealed test
+(`#test-0-6` Albumin, tick confirmed) and clicking Save produced, on both
+builds:
+
+```
+POSTs seen: []
+messages:   []
+6 of 6 filled controls kept their value
+```
+
+The first version of the probe called that REPRODUCED. It is not. With no POST,
+the form retaining its values means only that an incomplete form was refused
+client-side — which is correct behaviour. This is §12.30 again: no request, no
+evidence about the product. The probe now refuses to print a verdict unless a
+POST was seen.
+
+Two blockers, both real:
+
+1. **`#labNumber` loads empty and is the only control marked required** on the
+   base form. It stays empty at 2s, 5s, 10s and 15s, `readOnly=false`, and no
+   request resembling accession or lab-number generation is made on load — the
+   full list is `site-branding`, `open-configuration-properties`,
+   `supportedlocales/active`, `properties`, `menu`,
+   `database-cleaning/status`, `configuration-properties`, `notifications`,
+   `displayList/SAMPLE_PATIENT_PAYMENT_OPTIONS`, `user-programs`,
+   `user-sample-types`, `SamplePatientEntry`. And `SamplePatientEntry` returns
+   no accession-shaped key at any depth. **Identical on 3.2.2.0**, so this is
+   baseline behaviour and not a develop regression — but it does mean the form
+   as loaded cannot be saved, and nothing on screen says why.
+
+2. **The name fields on the entry form are patient SEARCH inputs**, sitting
+   beside `Search for Patient` and `New Patient`. Typing into them does not
+   bind a patient. `New Patient` reveals the real patient form, where
+   `nationalId`, `Gender` and `Date of Birth` are required. So a submit that
+   reaches the server needs that flow completed first.
+
+Blocker 2 also reframes the second client report: if those are search inputs
+that retain the previous patient, "previous patient details persist and can
+overwrite the wrong record" is a statement about the search block, which is a
+different defect from the order form failing to reset.
+
+### Why the lab number is empty at load: nothing generates it on mount
+
+The form loads with `#labNumber` empty, and it is the only control marked
+required, so the form as loaded cannot be saved. The cause is not a missing
+generator — the generator works. It is that nothing calls it until a human
+clicks.
+
+`ClinicalOrderEnter.jsx` wires generation to
+`GET /rest/SampleEntryGenerateScanProvider` through `handleGenerateLabNumber`.
+There is no `useEffect` that calls it on mount; the only caller is a click
+handler. Verified live on develop:
+
+```
+labNumber at load:        (EMPTY)
+generator called on load: NO
+click "Generate Lab Number"
+  -> GET 200 /api/OpenELIS-Global/rest/SampleEntryGenerateScanProvider
+  -> labNumber = DEV01260000000000001
+manual typing also works  -> QA-MANUAL-0001
+```
+
+So generation is click-only and functions correctly. Three separate defects
+sit around it:
+
+1. **The trigger is unreachable by keyboard.** It is a Carbon `<Link>`, which
+   renders `<a class="cds--link generate-link">` with `href=null` and
+   `tabindex=null`. An anchor with no href is not focusable, so a keyboard-only
+   user cannot reach Generate at all — and the field it fills is the one
+   required control on the form. WCAG 2.1.1.
+
+2. **Its disabled state is not conveyed.** The JSX passes
+   `disabled={isGeneratingLabNo || (isReadOnly && !isEditMode)}` to `<Link>`,
+   and the live element carries neither `disabled` nor `aria-disabled`. So the
+   link stays clickable during the in-flight generate, and in read-only mode.
+
+3. **The save-blocked message names the wrong things.** The gate is
+   `canSave = localLabNumber && hasPatientOrSite && hasSampleTypes`, but the
+   notification reads "Please add a patient and at least one sample type before
+   saving" — it never mentions the lab number. A user who has a patient and a
+   sample type but no lab number is told to add a patient and a sample type.
+
+Note also that `hasPatientOrSite` reads `orderData.patientProperties`, i.e.
+the context, not the DOM. Typing into the `#lastName` / `#firstName` inputs on
+this form sets neither, because those are the patient SEARCH inputs. That is
+why the earlier submit attempts never POSTed, and it is the same observation
+that reframes the "previous patient persists" report as a search-block defect.
+
+One more caution about reading behaviour out of source: the JSX default for
+`order.labNumber.helper` is "Auto-generated per existing lab number rules",
+but the running app shows "Unique identifier for this order" — a message
+bundle overrides it. Quote the live string, not the `defaultMessage`.
+
+### Rule
+
+Two instances, one release and one develop, and every result carries which one
+it came from plus the image digest. A suite with a single target that is not
+the branch under complaint cannot answer a complaint about that branch.
+
+---
+
+## §12.34 — A spec path is not a request; the config decides what runs
+
+**Date:** 2026-09-10
+
+### The trap
+
+`all-tc.config.ts` is `testDir: '.'` with a `testMatch` regex on every project:
+
+```ts
+{ name: 'test-catalog', testMatch: /(test-catalog-.*|results-.*)\.spec\.ts/, … }
+```
+
+Playwright treats a path on the command line as an additional **filter**, not as
+an instruction. A file that no project's `testMatch` claims collects **zero
+tests, silently** — no error, no warning, just a smaller run than was asked for.
+
+Measured, passing each of twelve files to `--list`:
+
+| file | `all-tc.config.ts` | `modules.config.ts` |
+| --- | --- | --- |
+| `tests/results-by-range.spec.ts` | 17 | 0 |
+| `tests/results-by-status.spec.ts` | 12 | 0 |
+| `tests/aliquot.spec.ts` | **0** | 21 |
+| `tests/print-barcode.spec.ts` | **0** | 18 |
+| `tests/order-search.spec.ts` | **0** | 20 |
+| …and five more | **0** | 12–19 each |
+
+The two configs are complementary, and neither collects all twelve.
+
+### What it cost
+
+The reachability conversion (61 sites, commit `a5d7d1e`) was "verified" with
+
+```
+npx playwright test -c all-tc.config.ts <twelve spec paths>
+```
+
+which reported *3 failed, 1 flaky, 4 skipped, 19 passed* and was written into the
+commit message as covering all twelve files. It covered **two**. Ten files —
+the ones the change actually touched most — never ran. The run was not wrong
+about what it did; it was silent about what it skipped, and the totals looked
+plausible enough not to prompt a second look.
+
+Re-run properly under `modules.config.ts`, before and after, on the local
+3.2.2.0 stack:
+
+```
+with the conversions:    3 skipped, 121 passed
+without (a5d7d1e~1):     3 skipped, 121 passed
+```
+
+Identical, and the revert was real (`git diff --stat a5d7d1e~1 HEAD` over those
+ten files: 52 insertions, 52 deletions). So the conversions are behaviour-neutral
+and all 61 assertions hold — the right conclusion, reached for the first time by
+a run that actually executed the code in question.
+
+### The rule
+
+**A test-count total is not evidence that the files you named ran.** Before
+trusting a targeted run, confirm collection:
+
+```
+npx playwright test -c <config> --list <paths> | grep -c '›'
+```
+
+Zero, or a number far below the file's case count, means the config did not
+claim it. This generalises past Playwright: any runner that treats arguments as
+filters over a configured set will quietly return the empty intersection rather
+than complain. `scripts/run-against.sh` does not solve this — it fixes the
+target, not the collection — so the `--list` check stays manual.
+
+Related: §12.30 (an absent request is not evidence about the product) is the
+same failure at the network layer. This is it at the collection layer: the
+absent *test* is not evidence either, and both are silent by default.
