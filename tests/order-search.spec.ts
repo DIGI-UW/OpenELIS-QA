@@ -374,7 +374,7 @@ test.describe('Suite J-EXT — Order Search API & Validation (TC-OS-09–16)', (
       '/Validation',
     ]);
 
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const bodyText = await page.locator('body').innerText();
@@ -388,7 +388,7 @@ test.describe('Suite J-EXT — Order Search API & Validation (TC-OS-09–16)', (
      * without triggering a format validation error. This is the standard format.
      */
     const loaded = await goToAccessionResults(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -412,7 +412,7 @@ test.describe('Suite J-EXT — Order Search API & Validation (TC-OS-09–16)', (
      * the server. May return results or an empty set.
      */
     const loaded = await goToAccessionResults(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -478,7 +478,7 @@ test.describe('Suite J-EXT — Order Search API & Validation (TC-OS-09–16)', (
      * validation error, not an Internal Server Error.
      */
     const loaded = await goToEditOrder(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 

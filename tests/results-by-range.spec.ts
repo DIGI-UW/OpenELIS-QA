@@ -94,7 +94,7 @@ test.describe('Suite AK — Results By Range Core (TC-RBR)', () => {
      * to define the range to search.
      */
     const loaded = await goToResultsByRange(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -115,7 +115,7 @@ test.describe('Suite AK — Results By Range Core (TC-RBR)', () => {
      * the bug is still present or has been fixed.
      */
     const loaded = await goToResultsByRange(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
     const bodyText = await page.locator('body').innerText();
@@ -142,7 +142,7 @@ test.describe('Suite AK — Results By Range Core (TC-RBR)', () => {
      * show results or a clean "no results" message — never a server error.
      */
     const loaded = await goToResultsByRange(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -173,7 +173,7 @@ test.describe('Suite AK — Results By Range Core (TC-RBR)', () => {
      * trigger the range lookup explicitly.
      */
     const loaded = await goToResultsByRange(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -237,7 +237,7 @@ test.describe('Suite BF-DEEP — Results By Range API & Cross-Module (TC-RBR-06�
      * (to < from), the system must handle it gracefully without a 500 error.
      */
     const loaded = await goToResultsByRange(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
