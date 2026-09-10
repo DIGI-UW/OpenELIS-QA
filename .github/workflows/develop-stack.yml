@@ -1,0 +1,216 @@
+# Run the QA suite against a real `develop` build.
+#
+# WHY THIS EXISTS
+# Every run of this suite used to target either testing.openelis-global.org or
+# a local stack pinned to release 3.2.2.0. Neither is `develop` — so when
+# clients reported bugs on develop the suite was structurally incapable of
+# seeing them, and it produced confident false negatives (the ward field reads
+# as missing on 3.2.2.0 and is present on develop).
+#
+# WHY IT DOES NOT USE A SELF-HOSTED RUNNER
+# The obvious way to reach a develop stack is a self-hosted runner on a machine
+# running one. This repository is PUBLIC, and on a public repo a self-hosted
+# runner is a standing invitation: fork pull requests can execute code on that
+# machine, and runners are not ephemeral by default. Instead this job builds
+# the stack INSIDE the GitHub-hosted runner and throws it away with the job.
+#
+# It fits: the five develop images total ~4.5 GB against 14 GB of runner disk,
+# and the running stack uses ~3.4 GB against 16 GB of RAM (both measured).
+#
+# COST: nothing. Standard runners are free for public repositories.
+
+name: develop-stack
+
+on:
+  # Approximates "on every merge to develop" without needing a cross-repo PAT:
+  # poll, and skip immediately when the SHA has not moved. A run only happens
+  # when develop actually changed.
+  schedule:
+    - cron: '0 */3 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Run even if develop has not moved since the last run'
+        type: boolean
+        default: false
+      suite:
+        description: 'Which suites to run'
+        type: choice
+        options: [core, chains, both]
+        default: both
+
+concurrency:
+  # A stack boot is ~15-25 minutes; overlapping runs would fight for the
+  # runner's ports and prove nothing.
+  group: develop-stack
+  cancel-in-progress: false
+
+jobs:
+  test-against-develop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    env:
+      APP_REPO: DIGI-UW/OpenELIS-Global-2
+      BASE: https://localhost:10443
+      BASE_URL: https://localhost:10443
+      # The chains' declared-gap register only means anything in strict mode.
+      GAPS_STRICT: '1'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: What is develop's HEAD?
+        id: head
+        run: |
+          SHA=$(gh api "repos/$APP_REPO/commits/develop" --jq '.sha')
+          SUBJ=$(gh api "repos/$APP_REPO/commits/develop" --jq '.commit.message' | head -1)
+          echo "sha=$SHA"        >> "$GITHUB_OUTPUT"
+          echo "short=${SHA:0:8}" >> "$GITHUB_OUTPUT"
+          echo "### develop \`${SHA:0:8}\` — $SUBJ" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      # The cache is the "have we already tested this commit" record. A cache
+      # hit means the SHA is unchanged since the last successful run.
+      - name: Have we already tested this commit?
+        id: seen
+        uses: actions/cache@v4
+        with:
+          path: .last-tested-sha
+          key: develop-tested-${{ steps.head.outputs.sha }}
+
+      - name: Skip if develop has not moved
+        if: steps.seen.outputs.cache-hit == 'true' && inputs.force != true
+        run: |
+          echo "develop is still ${{ steps.head.outputs.short }}, already tested. Nothing to do." \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # ---- everything below only runs when develop actually moved ----
+
+      - name: Check out the app at develop
+        if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
+        uses: actions/checkout@v4
+        with:
+          repository: DIGI-UW/OpenELIS-Global-2
+          ref: ${{ steps.head.outputs.sha }}
+          path: app
+          fetch-depth: 1
+
+      - name: Bring up the develop stack
+        if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
+        run: |
+          set -euo pipefail
+          # These two are not in the repo and the compose file mounts them.
+          mkdir -p app/volume/plugins app/volume/lucene
+          cp environments/develop-local/docker-compose.develop.yml app/
+          cd app
+          docker compose -p oedevqa -f docker-compose.develop.yml pull --quiet
+          docker compose -p oedevqa -f docker-compose.develop.yml up -d
+          docker compose -p oedevqa -f docker-compose.develop.yml ps
+
+      - name: Record the image digest
+        if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
+        run: |
+          # `:develop` moves. A result without its digest is not reproducible.
+          D=$(docker inspect openelisglobal-webapp-dev --format '{{index .RepoDigests 0}}' || echo unknown)
+          echo "image: \`$D\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "$D" > image-digest.txt
+
+      - name: Wait for the stack to be healthy
+        if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
+        run: |
+          set -uo pipefail
+          # A cold boot reseeds the whole config catalog — ~14 min measured on
+          # an M-series Mac, and a GitHub runner has fewer cores. The compose
+          # healthcheck carries a 900s start_period for the same reason.
+          for i in $(seq 1 100); do
+            H=$(docker inspect openelisglobal-webapp-dev --format '{{.State.Health.Status}}' 2>/dev/null || echo none)
+            C=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 "$BASE/" || true)
+            echo "[$i] health=$H http=$C"
+            if [ "$H" = "healthy" ] && [ "$C" = "200" ]; then
+              echo "up after ~$((i*20))s"; exit 0
+            fi
+            if [ "$H" = "unhealthy" ]; then
+              echo "::error::webapp reported unhealthy"; break
+            fi
+            sleep 20
+          done
+          echo "::error::stack did not come up in time"
+          docker compose -p oedevqa -f app/docker-compose.develop.yml logs --tail 60 oe.openelis.org || true
+          exit 1
+
+      - uses: actions/setup-node@v4
+        if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install
+        if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Authenticate
+        if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
+        run: npx playwright test -c all-tc.config.ts --project=setup --reporter=line
+
+      - name: Core suites
+        id: core
+        if: (steps.seen.outputs.cache-hit != 'true' || inputs.force == true) && (inputs.suite != 'chains')
+        continue-on-error: true
+        run: |
+          mkdir -p out
+          npx playwright test -c modules.config.ts --reporter=line 2>&1 | tee out/core.txt
+          exit ${PIPESTATUS[0]}
+
+      - name: Regression chains (GAPS_STRICT=1)
+        id: chains
+        if: (steps.seen.outputs.cache-hit != 'true' || inputs.force == true) && (inputs.suite != 'core')
+        continue-on-error: true
+        run: |
+          mkdir -p out
+          npx playwright test -c regression-chains.config.ts --reporter=line 2>&1 | tee out/chains.txt
+          exit ${PIPESTATUS[0]}
+
+      - name: Summarise
+        if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
+        run: |
+          {
+            echo "| suite | result |"
+            echo "| --- | --- |"
+            echo "| core | ${{ steps.core.outcome || 'skipped' }} |"
+            echo "| chains | ${{ steps.chains.outcome || 'skipped' }} |"
+            echo
+            for f in out/core.txt out/chains.txt; do
+              [ -f "$f" ] || continue
+              echo "<details><summary>$(basename "$f" .txt)</summary>"
+              echo; echo '```'; tail -30 "$f"; echo '```'
+              echo "</details>"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload results
+        if: always() && (steps.seen.outputs.cache-hit != 'true' || inputs.force == true)
+        uses: actions/upload-artifact@v4
+        with:
+          name: develop-${{ steps.head.outputs.short }}-${{ github.run_number }}
+          path: |
+            out/
+            image-digest.txt
+            playwright-report/
+            test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      # Written last and only on a completed run, so a boot failure is retried
+      # on the next poll rather than being recorded as tested.
+      - name: Mark this commit tested
+        if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
+        run: echo "${{ steps.head.outputs.sha }}" > .last-tested-sha
+
+      - name: Tear down
+        if: always()
+        run: |
+          docker compose -p oedevqa -f app/docker-compose.develop.yml down -v || true

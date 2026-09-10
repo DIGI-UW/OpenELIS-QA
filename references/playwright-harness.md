@@ -3110,3 +3110,80 @@ bundle overrides it. Quote the live string, not the `defaultMessage`.
 Two instances, one release and one develop, and every result carries which one
 it came from plus the image digest. A suite with a single target that is not
 the branch under complaint cannot answer a complaint about that branch.
+
+---
+
+## §12.34 — A spec path is not a request; the config decides what runs
+
+**Date:** 2026-09-10
+
+### The trap
+
+`all-tc.config.ts` is `testDir: '.'` with a `testMatch` regex on every project:
+
+```ts
+{ name: 'test-catalog', testMatch: /(test-catalog-.*|results-.*)\.spec\.ts/, … }
+```
+
+Playwright treats a path on the command line as an additional **filter**, not as
+an instruction. A file that no project's `testMatch` claims collects **zero
+tests, silently** — no error, no warning, just a smaller run than was asked for.
+
+Measured, passing each of twelve files to `--list`:
+
+| file | `all-tc.config.ts` | `modules.config.ts` |
+| --- | --- | --- |
+| `tests/results-by-range.spec.ts` | 17 | 0 |
+| `tests/results-by-status.spec.ts` | 12 | 0 |
+| `tests/aliquot.spec.ts` | **0** | 21 |
+| `tests/print-barcode.spec.ts` | **0** | 18 |
+| `tests/order-search.spec.ts` | **0** | 20 |
+| …and five more | **0** | 12–19 each |
+
+The two configs are complementary, and neither collects all twelve.
+
+### What it cost
+
+The reachability conversion (61 sites, commit `a5d7d1e`) was "verified" with
+
+```
+npx playwright test -c all-tc.config.ts <twelve spec paths>
+```
+
+which reported *3 failed, 1 flaky, 4 skipped, 19 passed* and was written into the
+commit message as covering all twelve files. It covered **two**. Ten files —
+the ones the change actually touched most — never ran. The run was not wrong
+about what it did; it was silent about what it skipped, and the totals looked
+plausible enough not to prompt a second look.
+
+Re-run properly under `modules.config.ts`, before and after, on the local
+3.2.2.0 stack:
+
+```
+with the conversions:    3 skipped, 121 passed
+without (a5d7d1e~1):     3 skipped, 121 passed
+```
+
+Identical, and the revert was real (`git diff --stat a5d7d1e~1 HEAD` over those
+ten files: 52 insertions, 52 deletions). So the conversions are behaviour-neutral
+and all 61 assertions hold — the right conclusion, reached for the first time by
+a run that actually executed the code in question.
+
+### The rule
+
+**A test-count total is not evidence that the files you named ran.** Before
+trusting a targeted run, confirm collection:
+
+```
+npx playwright test -c <config> --list <paths> | grep -c '›'
+```
+
+Zero, or a number far below the file's case count, means the config did not
+claim it. This generalises past Playwright: any runner that treats arguments as
+filters over a configured set will quietly return the empty intersection rather
+than complain. `scripts/run-against.sh` does not solve this — it fixes the
+target, not the collection — so the `--list` check stays manual.
+
+Related: §12.30 (an absent request is not evidence about the product) is the
+same failure at the network layer. This is it at the collection layer: the
+absent *test* is not evidence either, and both are silent by default.
