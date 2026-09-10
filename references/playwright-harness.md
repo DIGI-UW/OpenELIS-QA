@@ -2617,3 +2617,85 @@ guessed: the wizard sends `providerFirstName`/`providerLastName` free text and
 the server resolved that to provider id 3, and which of `providerId`,
 `providerPersonId` or the name pair drives that resolution has not been
 established. One captured request with a provider selected would settle it.
+
+### 12.30 Results entry was never broken. I was clicking the wrong Search button.
+
+**Retraction.** §12.26 and the investigation that followed it concluded that
+orders created by the fixture were invisible to results entry, and named three
+suspects: the analysis's test section versus the user's assigned lab units,
+whether the sample must be received/accepted first, and a section-scoped
+`/LogbookResults?type=`. All three were wrong, and so was the premise. The
+orders were visible the whole time.
+
+**What actually happened.** `/AccessionResults` has exactly two elements whose
+accessible name is exactly "Search":
+
+| | element | class | container |
+|---|---|---|---|
+| header action | `BUTTON` | `cds--header__action` | `closest('header')` |
+| form submit | `BUTTON` | `cds--btn--primary` | `closest('form')` |
+
+My probe used `getByRole('button', { name: /^search$/i }).first()`, which is the
+header one. Clicking it fires **no request at all**. The table therefore still
+shows its mount-time state, which renders as:
+
+```
+There are no records to display
+0-0 of 0 items
+```
+
+That is byte-identical to a genuine no-match. So a mis-click reports "the
+product cannot find this order" and nothing in the output distinguishes it from
+"the product has no such order".
+
+**The measurement that settled it.** Calling the endpoint the screen itself
+issues, read out of `SearchResultForm.jsx`:
+
+```
+/rest/LogbookResults?labNumber=DEV01260000000000005&upperRangeAccessionNumber=
+  &patientPK=&testSectionId=&collectionDate=&recievedDate=&selectedTest=
+  &selectedSampleStatus=&selectedAnalysisStatus=&doRange=false&finished=false
+```
+
+returned `testResult.length === 1` for both the fixture-created and the
+UI-created accession, with a complete row (`Glucose(Serum)`, `Sebby, Abby`,
+`analysisStatusId: 4`, `sampleItemExternalId: DEV01260000000000005-1`). Driving
+the screen with the **form's** Search then rendered that row and reported
+`1-1 of 1 items`. No test-section condition, no receipt step, no `?type=`.
+
+**Third occurrence.** §12.22 and §12.26 are the same mistake. The fix is
+structural rather than a thing to remember: `clickFormSearch` now excludes
+`header button` and `.cds--header__action` from its candidate set, and its
+last-resort `last()` fallback warns loudly that a following empty result should
+be blamed on the fallback first.
+
+**The generalisation, which is the part worth keeping.** An empty-state render
+is not evidence about the product until the request that would have filled it
+is known to have been sent. Before reporting "X cannot find Y", check the
+network: no request means the harness failed, not the product. Two prior
+retractions in this file (§12.26's order-entry impossibility, and the
+`/organization/list` 500) are the same error in a different coat — a non-result
+from an action I only assumed I performed.
+
+**Also measured, incidentally.** Two things worth knowing about the row:
+
+- The result field is `input#ResultValue0`, `name="testResult[0].resultValue"`,
+  `type=number`. The id has a **capital R**, and CSS attribute matching is
+  case-sensitive, so `input[id*="result"]` matches nothing. Select on
+  `input[name$=".resultValue"]`.
+- The field **rounds on entry** to the test's `significantDigits`. For testId 3
+  (Glucose/Serum) that is `0`, so typing `14.5` leaves `15` in the field. Worth
+  its own case; do not let it ride along inside a "does a result save" test.
+- Saving **navigates away**. Evaluating in the page straight after the POST
+  response dies with "Execution context was destroyed". Wait the navigation out.
+
+**What this unblocks.** `TC-RE-03` was hollow: it typed accession
+`26CPHL00008T` (a record from a different instance) into
+`page.locator('input').first()` (the header search box), pressed Enter (which
+does not submit), and then took an unconditional `if (!hasResultInput) return`
+skip every run. Its final assertion, `saveStatus === 0 || 2xx`, passed when no
+POST fired — it could not fail. It now seeds its own order via
+`seedOrder()`, finds it, enters a result, requires a 2xx POST, and reads the
+value back from the server. Verified green on the local 3.2.2.0 stack:
+`DEV01260000000000026 saved 200; resultValue="15" analysisStatusId=15` — the
+analysis moved off status 4 as a consequence of the save.

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange } from '../helpers/test-helpers';
+import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, clickFormSearch } from '../helpers/test-helpers';
+import { seedOrder } from '../helpers/data-factory';
 
 /**
  * Results Entry and Results Viewing Test Suites
@@ -84,51 +85,114 @@ test.describe('Result Entry', () => {
   //
   // Removed: TC-RE-02, TC-RBP-01, TC-RBO-04, TC-RBR-01, TC-RBR-05, TC-BF-DEEP-01.
 
-  test('TC-RE-03: Enter and save a numeric result', async ({ page }) => {
+  test('TC-RE-03: a pending order is found on Results By Order, and a numeric result saves', async ({ page }) => {
+    // REWRITTEN 2026-09-10. What this replaced, and why.
+    //
+    // The old case typed accession `26CPHL00008T` — a record from a DIFFERENT
+    // instance — into `page.locator('input').first()`, pressed Enter, and then:
+    //   if (!hasResultInput) { console.log('SKIP'); return; }
+    // so on this instance it took the skip every run and asserted nothing. Its
+    // final assertion was `saveStatus === 0 || 2xx`, which passes when no POST
+    // fires at all, i.e. it could not fail.
+    //
+    // Three things were wrong and all three are now fixed:
+    //  1. The accession is SEEDED, so it exists and is pending by construction.
+    //  2. `input.first()` is the Carbon HEADER's search box, not the form's
+    //     field. The form field is `#accessionNumber`.
+    //  3. Enter did not submit. The form's own Search must be clicked, and
+    //     there are TWO buttons labelled exactly "Search" on this page — the
+    //     header action and the form's primary. Clicking the header one fires
+    //     NO request and leaves the mount-time empty table, which reads as
+    //     "There are no records to display / 0-0 of 0 items" and is
+    //     indistinguishable from a real no-match. That false negative is what
+    //     made results entry look broken (harness ref 12.30); clickFormSearch
+    //     now excludes header buttons structurally.
+    const seeded = await seedOrder(page, 'RE03');
+
     await page.goto(`${BASE}/AccessionResults`);
-    const accInput = page.locator('input').first();
-    await accInput.click({ clickCount: 3 });
-    await accInput.fill('26CPHL00008T');
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(2000);
+    await page.locator('#accessionNumber').fill(seeded.accession);
 
-    // Find a result input in the loaded row (must be visible before we can enter)
-    const resultInput = page.locator('input[id*="result"], input[name*="result"], textarea[id*="result"]').first();
-    const hasResultInput = await resultInput.isVisible({ timeout: 8000 }).catch(() => false);
-    if (!hasResultInput) {
-      console.log('TC-RE-03: SKIP — No result input found for this accession (order may already be validated)');
-      return;
-    }
+    const searched = await clickFormSearch(page, '#accessionNumber');
+    expect(searched, 'Results By Order must have a form Search button').toBe(true);
 
-    // Use native setter for Carbon controlled inputs
-    await page.evaluate(() => {
-      const inp = document.querySelector<HTMLInputElement>(
-        'input[id*="result"], input[name*="result"], textarea[id*="result"]'
-      );
-      if (!inp) return;
+    // The row, before anything else. Assert on the sample item id
+    // (`<accession>-1`) because it is what the table actually renders as the
+    // Sample Info cell — measured in the payload's `sampleItemExternalId`.
+    await expect(
+      page.locator('body'),
+      `seeded order ${seeded.accession} must appear on Results By Order`,
+    ).toContainText(`${seeded.accession}-1`, { timeout: 20_000 });
+
+    // Carbon controlled input: React owns `value`, so a plain fill can be
+    // reverted on the next render. Drive the native setter and dispatch the
+    // events React listens for.
+    // MEASURED, not guessed (2026-09-10, local 3.2.2.0). The row's controls are:
+    //   input#ResultValue0            name="testResult[0].resultValue"  type=number
+    //   textarea#testResult0.note     name="testResult[0].note"
+    //   input#testDate-date-0, select#testDate-time-0_{hour,minute}
+    //   button "Accept"
+    // Selecting on `name` rather than `id` because the id is `ResultValue0`
+    // with a CAPITAL R — CSS attribute matching is case-SENSITIVE, so the
+    // earlier `input[id*="result"]` matched nothing and the failure read as
+    // "the analysis offers no result field", i.e. as a product defect.
+    const resultInput = page.locator('input[name$=".resultValue"]').first();
+    await expect(resultInput, 'the pending analysis must offer a result field').toBeVisible({
+      timeout: 15_000,
+    });
+
+    // AN INTEGER, DELIBERATELY. '14.5' was the old case's value and this screen
+    // silently rewrites it to '15': the test's own `significantDigits` is 0
+    // (read from the LogbookResults payload for testId 3, Glucose/Serum), and
+    // the field rounds to it on entry. That rounding is real product behaviour
+    // and worth its own case; using a value it cannot rewrite keeps THIS case
+    // about "does a result save", not about rounding.
+    const VALUE = '15';
+    await resultInput.evaluate((el, v) => {
       const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-      setter.call(inp, '14.5');
-      inp.dispatchEvent(new Event('input', { bubbles: true }));
-      inp.dispatchEvent(new Event('change', { bubbles: true }));
-    });
+      setter.call(el, v);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }, VALUE);
+    await expect(resultInput, 'the entered value must survive the next render').toHaveValue(VALUE);
 
-    // Save and intercept the response
-    let saveStatus = 0;
-    page.on('response', (r) => {
-      if (r.request().method() === 'POST' && r.url().includes('Result')) saveStatus = r.status();
-    });
+    // Save, and require the POST. `saveStatus === 0` is NOT a pass: a save
+    // that never left the browser has not saved anything.
+    const savePost = page.waitForResponse(
+      (r) => r.request().method() === 'POST' && /Result/i.test(r.url()),
+      { timeout: 30_000 },
+    );
+    await page.getByRole('button', { name: /^\s*Save\s*$/i }).last().click();
+    const resp = await savePost;
+    expect(resp.status(), `save POST ${resp.url()} must be 2xx`).toBeGreaterThanOrEqual(200);
+    expect(resp.status(), `save POST ${resp.url()} must be 2xx`).toBeLessThan(300);
 
-    const saveBtn = page.getByRole('button', { name: /Save/i }).first();
-    await expect(saveBtn, 'Save button must be visible').toBeVisible({ timeout: 5000 });
-    await saveBtn.click();
-    await page.waitForTimeout(2000);
+    // SAVE NAVIGATES. Measured 2026-09-10: the POST succeeds and the app then
+    // leaves the page, so evaluating straight after the response died with
+    // "Execution context was destroyed, most likely because of a navigation".
+    // Wait the navigation out, then read from a settled document.
+    await page.waitForLoadState('domcontentloaded').catch(() => { /* already settled */ });
+    await page.waitForTimeout(2_000);
 
-    // Either the POST succeeded (2xx) or the value remains visible — either is a pass
-    const inputVal = await resultInput.inputValue().catch(() => '');
-    console.log(`TC-RE-03: saveStatus=${saveStatus}, resultValue="${inputVal}"`);
-    expect(saveStatus === 0 || (saveStatus >= 200 && saveStatus < 300),
-      'Save POST must succeed (2xx) or not fire (SPA local state only)'
-    ).toBe(true);
+    // And it must be there on a fresh read — the server's own view, not the
+    // form's local state.
+    const persisted = await page.evaluate(async (acc) => {
+      const r = await fetch(
+        '/api/OpenELIS-Global/rest/LogbookResults?labNumber=' + acc +
+          '&upperRangeAccessionNumber=&patientPK=&testSectionId=&collectionDate=&recievedDate=' +
+          '&selectedTest=&selectedSampleStatus=&selectedAnalysisStatus=&doRange=false&finished=false',
+        { headers: { Accept: 'application/json' } },
+      );
+      const j = await r.json().catch(() => null);
+      const row = j && j.testResult && j.testResult[0];
+      return row ? { resultValue: row.resultValue, analysisStatusId: row.analysisStatusId } : null;
+    }, seeded.accession);
+
+    expect(persisted, `LogbookResults must still return the analysis for ${seeded.accession}`).not.toBeNull();
+    console.log(
+      `TC-RE-03: ${seeded.accession} saved ${resp.status()}; server now reports ` +
+        `resultValue="${persisted!.resultValue}" analysisStatusId=${persisted!.analysisStatusId}`,
+    );
+    expect(String(persisted!.resultValue), 'the saved result must be readable back from the server').toContain(VALUE);
   });
 });
 

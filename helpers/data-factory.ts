@@ -682,6 +682,52 @@ export async function createOrderViaAPI(
   }
 }
 
+/**
+ * Seed ONE patient with ONE pending order, and return the accession.
+ *
+ * WHY THIS EXISTS. `createOrderViaAPI` is the real order builder and it is
+ * correct (its payload was validated against the wizard's own output — harness
+ * ref 12.29), but its signature is built for the shared `runDataSetup`
+ * orchestrator: it wants a whole TestDataState and writes into
+ * `state.primaryOrder`. A single test that just needs "an order that exists,
+ * right now, whose accession I know" should not have to fabricate that state.
+ *
+ * This is a shim, deliberately, rather than a second copy of the payload. The
+ * payload took a full session to establish (four conditions: a type-5 referring
+ * org, a type-11 department parented to it, a generated accession, and
+ * referringSiteId actually set). Duplicating it would mean two things to keep
+ * in step, and the copy would rot first.
+ *
+ * Returns the accession, or throws with the setup errors — a null return would
+ * become "the screen showed no rows", which is the wrong diagnosis.
+ */
+export async function seedOrder(page: Page, tag = 'RE'): Promise<{ accession: string; patientId: string; nationalId: string }> {
+  const stamp = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
+  const nationalId = `QA${tag}${stamp}`;
+
+  // Letters only in the name. A digit anywhere in it is rejected by the server
+  // as `400 "invalid name format"` (measured 2026-09-09), so the stamp goes in
+  // the national ID, never the name.
+  const created = await createPatientViaAPI(page, {
+    nationalId,
+    firstName: 'Resultsy',
+    lastName: 'Ordersen',
+    gender: 'F',
+    dateOfBirth: '01/01/1990',
+  });
+  if (!created.id) throw new Error(`seedOrder(${tag}): patient not created — ${created.detail}`);
+
+  const state = emptyState();
+  state.patient.systemId = created.id;
+  state.patient.nationalId = nationalId;
+
+  const accession = await createOrderViaAPI(page, state, `seedOrder(${tag})`, 'primaryOrder');
+  if (!accession) {
+    throw new Error(`seedOrder(${tag}): order not created — ${state.setupErrors.join(' | ')}`);
+  }
+  return { accession, patientId: created.id, nationalId };
+}
+
 // ---------------------------------------------------------------------------
 // Main setup orchestrator
 // ---------------------------------------------------------------------------
