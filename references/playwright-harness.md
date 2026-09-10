@@ -2699,3 +2699,78 @@ POST fired — it could not fail. It now seeds its own order via
 value back from the server. Verified green on the local 3.2.2.0 stack:
 `DEV01260000000000026 saved 200; resultValue="15" analysisStatusId=15` — the
 analysis moved off status 4 as a consequence of the save.
+
+### 12.31 `test.fail()` at describe scope is a SUITE modifier, and it blessed the canaries
+
+**What happened.** `tests/order-entry-state.spec.ts` was written with five
+tripwires and three canaries. The modifiers were placed like this:
+
+```ts
+test.fail();
+test('TC-OE-02: ...', async ({ page }) => { ... });
+```
+
+which reads as "the next test is expected to fail" and is not what it means.
+A `test.fail()` call outside a test body is a **suite-level modifier**: it marks
+**every case in the enclosing `describe`**, regardless of the line it sits on,
+including cases declared above it. All eight were marked.
+
+The run then reported:
+
+```
+3 failed
+  TC-OE-01  Expected to fail, but passed.
+  TC-OE-03  Expected to fail, but passed.
+  TC-OE-06  Expected to fail, but passed.
+7 passed
+```
+
+Read quickly, that looks like three real failures and a mostly-green file. It
+is the exact inverse: the three "failures" are the **canaries passing**, and
+the seven "passes" include five tripwires whose trustworthiness the canaries
+were there to establish. `Expected to fail, but passed` on a case you never
+marked is the signature of this mistake.
+
+**The fix.** The modifier must sit INSIDE the body, as the first statement:
+
+```ts
+test('TC-OE-02: ...', async ({ page }) => {
+  test.fail();
+  ...
+});
+```
+
+**Second trap, distinct from the first, and the reason canaries exist at all.**
+A tripwire counts *any* throw as its expected failure, including a locator that
+never matched because the harness never reached the screen. So a broken route
+reads as a confirmed defect. A precondition asserted *inside* a tripwire cannot
+protect it — that assertion failing is just another way for the tripwire to
+"pass". Preconditions therefore have to be **their own ordinary tests**.
+
+That is what TC-OE-09 is for. TC-OE-07 claims the department control is absent
+once a referring site is selected; the first manual pass at that finding was
+wrong because no site had actually been selected (12.30). Putting
+`expect(picked).toBe(true)` inside TC-OE-07 would have been worthless. As a
+separate green test, it is worth something.
+
+**Rule.** Every tripwire in this repo needs at least one ordinary test covering
+the path it walks and the preconditions it depends on. If the canary is red,
+the tripwire tells you nothing. The four in this file:
+
+| Canary | Establishes | Protects |
+|---|---|---|
+| TC-OE-01 | dashboard -> Continue -> in-app Enter Order works | TC-OE-02, 04, 05 |
+| TC-OE-03 | the lab number generator answers and reserves | TC-OE-02 |
+| TC-OE-06 | `departments-for-site` serves wards for the site | TC-OE-07 |
+| TC-OE-09 | a referring site can actually be selected | TC-OE-07 |
+
+**Also recorded: `clickFormSearch` does not cover this form.** On
+`/order/enter` it logs `NO Search button shares a container with #siteName
+(3 candidates after excluding the Carbon header)` and falls back to `last()`,
+which is the *Provider* block's Search. Three Search buttons live on that
+screen and the site one is not related to `#siteName` by any ancestor the
+helper inspects. `selectFirstSite` in this spec targets it positionally
+instead — the first Search button FOLLOWING `#siteName` in document order,
+tagged with a data attribute so the click cannot drift. The fallback warning
+added in 12.30 is what made this diagnosable from the run log alone, which is
+the first time that warning paid for itself.
