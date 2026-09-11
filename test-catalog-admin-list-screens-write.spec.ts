@@ -219,7 +219,8 @@ test.describe('Panel Editor — create', () => {
     await page.waitForTimeout(5000);
     const id = new URL(page.url()).pathname; // not used; find by name through the editor route below
     const found = await page.evaluate(async (name) => {
-      // The list endpoint hides inactive panels (see PW-3), so walk ids around the top of the range.
+      // The BARE list endpoint returns active panels only (see PW-3), so walk ids around the top
+      // of the range rather than searching it. The SCREEN does show this panel; see PW-3.
       for (let i = 60; i >= 1; i--) {
         const r = await fetch('/api/OpenELIS-Global/rest/test-catalog/panels/' + i, { credentials: 'include' });
         if (!r.ok) continue;
@@ -237,21 +238,46 @@ test.describe('Panel Editor — create', () => {
     expect(found.sampleTypes, 'a panel with no member tests derives no sample types').toEqual([]);
   });
 
-  test('PW-3: [FLIP-WHEN-FIXED] a panel you just created is visible in the panel list', async ({ page }) => {
-    // FINDING (develop 5fe0ecb): GET /rest/test-catalog/panels returns ACTIVE panels only —
-    // every row it returns has active:true — while a panel created through Add Panel is created
-    // active:false. So the panel a user just made is absent from the screen they made it on,
-    // and the Panel Editor's "All statuses" filter has no inactive rows it could ever show.
+  test('PW-3: [CONTRACT FACT] the panel list screen shows the panel you just created, because it asks for inactive rows', async ({ page }) => {
+    // OGC-1206, RETRACTED. An earlier version of this case asserted that a newly created panel
+    // is INVISIBLE on the screen that created it, and was marked test.fail() as a defect. That
+    // was wrong, and it was wrong because it was derived from an endpoint the screen does not call.
     //
-    // Same family as lab units G-2: the viewer hides what the rest of the system still holds.
-    // Marked failing rather than asserting the current behaviour, so this turns RED when fixed.
-    test.fail();
+    // The two calls differ by one parameter:
+    //   GET /rest/test-catalog/panels                      -> active panels only
+    //   GET /rest/test-catalog/panels?includeInactive=true -> what the SCREEN loads
+    //
+    // The screen uses the second, renders the inactive rows, and its Status filter partitions
+    // them (see TC-PANEL-07). Both endpoint behaviours are correct; neither is a defect. This
+    // case pins that contrast down so nobody re-derives the retracted conclusion from the bare
+    // endpoint a third time.
     await page.goto('/MasterListsPage/TestCatalogList?entity=panels', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(5000);
-    const list = await api(page, '/test-catalog/panels');
-    const rows = list.body || [];
-    console.log(`PW-3 listTotal=${rows.length} activeFlags=${JSON.stringify([...new Set(rows.map((p: any) => p.active))])}`);
-    expect(rows.some((p: any) => p.name === PANEL_NAME),
-      `"${PANEL_NAME}" was created successfully but the list endpoint does not return it`).toBe(true);
+    await page.waitForTimeout(6000);
+
+    const bare = await api(page, '/test-catalog/panels');
+    const withInactive = await api(page, '/test-catalog/panels?includeInactive=true');
+    const bareRows = bare.body || [];
+    const allRows = withInactive.body || [];
+    console.log(`PW-3 bare=${bareRows.length} includeInactive=${allRows.length} ` +
+      `bareFlags=${JSON.stringify([...new Set(bareRows.map((p: any) => p.active))])}`);
+
+    // The endpoint the screen actually calls must return the panel this suite just created.
+    expect(allRows.some((p: any) => p.name === PANEL_NAME),
+      `"${PANEL_NAME}" was created successfully but ?includeInactive=true does not return it`).toBe(true);
+
+    // ...and the bare endpoint must not, which is what makes the parameter meaningful. If this
+    // ever stops holding, the two calls have converged and the note above is stale.
+    expect(bareRows.every((p: any) => p.active === true),
+      'the bare endpoint returned an inactive panel; it no longer filters by active').toBe(true);
+    expect(allRows.length,
+      'includeInactive=true returned no more rows than the bare call, so it is doing nothing')
+      .toBeGreaterThan(bareRows.length);
+
+    // And the row has to be on the SCREEN, not merely in a JSON payload. This is the assertion
+    // the retracted version never made.
+    const onScreen = await page.$$eval('table tbody tr', (trs: any[], name: string) =>
+      trs.some(tr => ((tr as HTMLElement).innerText || '').includes(name)), PANEL_NAME);
+    expect(onScreen,
+      `"${PANEL_NAME}" is returned by the endpoint the screen calls but is not rendered in the table`).toBe(true);
   });
 });
