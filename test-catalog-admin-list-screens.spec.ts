@@ -15,8 +15,14 @@
  *   /MasterListsPage/SampleTypeEditor  -> "Sample Type Editor", a real list screen.
  *   /admin/SampleTypeManagement        -> "Manage Sample Types", a NAVIGATION HUB with zero
  *                                         tables (mainLen 146, 8 tile links).
- * `test-catalog-sample-type-management.spec.ts` drives the second one. That is a different
- * screen from this one; if that spec was meant to exercise the list, it is pointed at a hub.
+ * `test-catalog-sample-type-management.spec.ts` visits the second one, but only to bootstrap a
+ * CSRF token — it asserts purely against the REST API. It is not mis-pointed; it is not testing
+ * a screen at all. Verified: all 7 of its cases pass against develop 5fe0ecb.
+ *
+ * COMPLEMENTARY COVERAGE
+ * `test-catalog-sample-type-management.spec.ts` covers the sample-type API CONTRACT (create,
+ * round-trip, duplicate handling) and never asserts on a screen. This file covers the rendered
+ * list. Neither subsumes the other.
  *
  * SELECTOR NOTE
  * The Panel Editor search input carries a GENERATED Carbon id (`#search-input-22` on one load).
