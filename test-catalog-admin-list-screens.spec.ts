@@ -15,14 +15,8 @@
  *   /MasterListsPage/SampleTypeEditor  -> "Sample Type Editor", a real list screen.
  *   /admin/SampleTypeManagement        -> "Manage Sample Types", a NAVIGATION HUB with zero
  *                                         tables (mainLen 146, 8 tile links).
- * `test-catalog-sample-type-management.spec.ts` visits the second one, but only to bootstrap a
- * CSRF token — it asserts purely against the REST API. It is not mis-pointed; it is not testing
- * a screen at all. Verified: all 7 of its cases pass against develop 5fe0ecb.
- *
- * COMPLEMENTARY COVERAGE
- * `test-catalog-sample-type-management.spec.ts` covers the sample-type API CONTRACT (create,
- * round-trip, duplicate handling) and never asserts on a screen. This file covers the rendered
- * list. Neither subsumes the other.
+ * `test-catalog-sample-type-management.spec.ts` drives the second one. That is a different
+ * screen from this one; if that spec was meant to exercise the list, it is pointed at a hub.
  *
  * SELECTOR NOTE
  * The Panel Editor search input carries a GENERATED Carbon id (`#search-input-22` on one load).
@@ -65,6 +59,34 @@ async function readRows(page: any): Promise<Row[]> {
       .map(tr => [...tr.querySelectorAll('td')]
         .map((td: any) => ((td.innerText || '').split('\n')[0] || '').replace(/\s+/g, ' ').trim()))
       .filter(cells => !(cells.length <= 1 && /^\s*no\b.*\b(found|match|matches|matching)\b/i.test(cells[0] || ''))));
+}
+
+/**
+ * Read one cell as the LIST of lines it contains.
+ *
+ * TRAP 4. Some cells stack Carbon <Tag> elements, one per line: the Panel Editor's
+ * "Sample Types (derived)" column renders five tags for Bilan Biochimique. `readRows` keeps
+ * only the first line, which is right for the Name cell (name over description) and WRONG
+ * here — it makes a five-sample-type panel look like a one-sample-type panel. An earlier
+ * version of TC-PANEL-05 used the first line and therefore could never detect a
+ * multi-sample-type panel: it reported none while three existed.
+ */
+async function readCellLines(page: any, colIndex: number): Promise<string[][]> {
+  return page.$$eval('table tbody tr', (trs: any[], i: number) =>
+    trs
+      .filter(tr => !(tr.querySelectorAll('td').length <= 1))
+      .map(tr => {
+        const td = tr.querySelectorAll('td')[i] as HTMLElement | undefined;
+        return ((td?.innerText || '').split('\n').map(s => s.trim())
+          .filter(Boolean).filter(s => s !== '\u2014' && s !== '-'));
+      }), colIndex);
+}
+
+/** Carbon paginator caption, e.g. "1-20 of 90 items" -> 90. */
+async function totalItems(page: any): Promise<number | null> {
+  const txt = await page.locator('.cds--pagination').first().innerText().catch(() => '');
+  const m = /of\s+(\d+)\s+items/i.exec(txt || '');
+  return m ? Number(m[1]) : null;
 }
 
 /** True when the table is showing Carbon's explicit empty state. */
@@ -141,6 +163,9 @@ test.describe('Sample Type Editor list', () => {
     const headers = await readHeaders(page);
     const domainIdx = headers.indexOf('Sample Domain');
     expect(domainIdx, 'no "Sample Domain" column to verify the filter against').toBeGreaterThanOrEqual(0);
+    const unfilteredTotal = await totalItems(page);
+    expect(unfilteredTotal, 'no paginator total on the unfiltered list').not.toBeNull();
+    console.log(`TC-STYPE-04 unfilteredTotal=${unfilteredTotal}`);
 
     let checked = 0;
     for (const o of opts.slice(0, 3)) {
@@ -152,7 +177,14 @@ test.describe('Sample Type Editor list', () => {
       expect(blank.length,
         `${blank.length} row(s) have an empty Sample Domain cell, so this comparison would pass vacuously`).toBe(0);
       const wrong = rows.filter(r => !new RegExp(o.t, 'i').test(r[domainIdx]));
-      console.log(`TC-STYPE-04 domain=${o.t} rows=${rows.length} mismatched=${wrong.length}`);
+      const total = await totalItems(page);
+      console.log(`TC-STYPE-04 domain=${o.t} rows=${rows.length} totalItems=${total} mismatched=${wrong.length}`);
+      // The list PAGINATES (90 items over 5 pages). Checking only the 20 visible rows cannot
+      // distinguish a real filter from an unfiltered list that happens to be sorted by domain,
+      // so the paginator's own total has to move too.
+      expect(total, 'the paginator reports no total, so the filter cannot be verified beyond page 1').not.toBeNull();
+      expect(total!, `selecting "${o.t}" did not reduce the total below the unfiltered ${unfilteredTotal}`)
+        .toBeLessThan(unfilteredTotal!);
       expect(wrong.map(r => r[domainIdx]),
         `domain filter "${o.t}" left rows of another domain in the table`).toEqual([]);
       checked++;
@@ -260,12 +292,24 @@ test.describe('Panel Editor list', () => {
     expect(blank.map(r => r[0]),
       'these panels have member tests but derive no sample type').toEqual([]);
 
-    // Reported, not asserted: a panel spanning MORE THAN ONE sample type is the configuration
-    // behind the OGC panel/sample-type leak (see tests/panel-sample-type-leak.spec.ts). Surfacing
-    // it here makes the risky rows visible on every run without duplicating that spec's oracle.
-    const multi = withTests.filter(r => /[,;]|\band\b/i.test(r[derivedIdx] || ''));
+    // A panel spanning MORE THAN ONE sample type is the configuration behind the
+    // panel/sample-type leak (tests/panel-sample-type-leak.spec.ts). Surface the risky rows on
+    // every run, without duplicating that spec's oracle.
+    //
+    // This MUST read every line of the cell. The column stacks one Carbon <Tag> per sample type,
+    // so a first-line-only read reports zero multi-type panels while several exist — which is
+    // exactly what the first version of this case did.
+    const derivedLines = await readCellLines(page, derivedIdx);
+    const multi = rows
+      .map((r, i) => ({ name: r[0], types: derivedLines[i] || [] }))
+      .filter(x => x.types.length > 1);
     console.log('TC-PANEL-05 MULTI-SAMPLE-TYPE PANELS = ' +
-      JSON.stringify(multi.map(r => `${r[0]} -> ${r[derivedIdx]}`)));
+      JSON.stringify(multi.map(x => `${x.name} -> ${x.types.join(', ')}`)));
+
+    // Guard the detector itself: derivedLines must line up with the rows it is reported against.
+    expect(derivedLines.length,
+      'the derived-column reader returned a different row count than the table; the report above is unreliable')
+      .toBe(rows.length);
   });
 
   test('TC-PANEL-06 — Edit opens an editor bound to the row that was clicked', async ({ page }) => {
