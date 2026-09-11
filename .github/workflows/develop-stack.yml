@@ -178,6 +178,15 @@ jobs:
         if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
         run: npx playwright test -c all-tc.config.ts --project=setup --reporter=line
 
+      # WHAT THIS RUN ACTUALLY COVERS, so a green check is not read as more
+      # than it is. modules.config.ts matches `tests/<name>.spec.ts` and nothing
+      # else: specs at the repository ROOT (the whole test-catalog-* family) and
+      # specs in `tests/` SUBDIRECTORIES other than the chains config below are
+      # not collected here. "develop is green" therefore means the flat tests/
+      # module suite and the regression chains passed, not the whole repository.
+      # Widening this is a deliberate decision with a real wall-clock cost, not
+      # an oversight -- but nobody should discover the boundary by assuming the
+      # wrong one.
       - name: Core suites
         id: core
         if: (steps.seen.outputs.cache-hit != 'true' || inputs.force == true) && (inputs.suite != 'chains')
@@ -201,11 +210,27 @@ jobs:
       - name: Summarise
         if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
         run: |
+          # Report the COUNTS, not only the step outcome. A step outcome cannot
+          # distinguish "everything passed" from "nothing ran", and that is the
+          # exact confusion that made eight nightlies green for nothing.
           {
-            echo "| suite | result |"
-            echo "| --- | --- |"
-            echo "| core | ${{ steps.core.outcome || 'skipped' }} |"
-            echo "| chains | ${{ steps.chains.outcome || 'skipped' }} |"
+            echo "| suite | outcome | passed | failed | flaky | did not run |"
+            echo "| --- | --- | ---: | ---: | ---: | ---: |"
+            for f in core chains; do
+              [ -f "out/$f.txt" ] || { echo "| $f | skipped | - | - | - | - |"; continue; }
+              t=$(tail -5 "out/$f.txt")
+              p=$(echo "$t" | grep -oE '[0-9]+ passed'     | grep -oE '[0-9]+' | head -1); p=${p:-0}
+              x=$(echo "$t" | grep -oE '[0-9]+ failed'     | grep -oE '[0-9]+' | head -1); x=${x:-0}
+              k=$(echo "$t" | grep -oE '[0-9]+ flaky'      | grep -oE '[0-9]+' | head -1); k=${k:-0}
+              d=$(echo "$t" | grep -oE '[0-9]+ did not run'| grep -oE '[0-9]+' | head -1); d=${d:-0}
+              case "$f" in
+                core)   o="${{ steps.core.outcome || 'skipped' }}" ;;
+                chains) o="${{ steps.chains.outcome || 'skipped' }}" ;;
+              esac
+              echo "| $f | $o | $p | $x | $k | $d |"
+            done
+            echo
+            echo "develop \`${{ steps.head.outputs.short }}\`"
             echo
             for f in out/core.txt out/chains.txt; do
               [ -f "$f" ] || continue
@@ -230,9 +255,68 @@ jobs:
 
       # Written last and only on a completed run, so a boot failure is retried
       # on the next poll rather than being recorded as tested.
+      #
+      # Deliberately BEFORE the verdict gate below: a suite that ran and found
+      # a real defect has done its job, and re-running that same commit every
+      # three hours would only burn runner time. Only a run that never produced
+      # a result gets retried.
       - name: Mark this commit tested
         if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
         run: echo "${{ steps.head.outputs.sha }}" > .last-tested-sha
+
+      # WHY THIS STEP EXISTS
+      # Both suite steps carry continue-on-error, so that one failing suite does
+      # not rob us of the other one's results or of the uploaded artifacts. The
+      # cost of that is a job which reports success no matter what the tests did,
+      # and a green check nobody can act on is worse than no check at all: it is
+      # exactly how eight consecutive nightlies were green by construction.
+      #
+      # So the outcome is re-asserted here, at the end, once the results are
+      # safely recorded and uploaded.
+      #
+      # It fails on two distinct conditions, and they are different faults:
+      #   1. a suite FAILED           -> the product (or a spec) is broken
+      #   2. a suite ran ZERO tests   -> the harness is broken, and this is the
+      #      silent one. Playwright collects nothing when a path or testMatch
+      #      stops matching, prints a cheerful summary and can exit 0. A run
+      #      that asserts nothing must never be reported as a pass.
+      - name: Verdict
+        if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
+        run: |
+          set -uo pipefail
+          bad=0
+          for f in core chains; do
+            case "$f" in
+              core)   outcome="${{ steps.core.outcome || 'skipped' }}" ;;
+              chains) outcome="${{ steps.chains.outcome || 'skipped' }}" ;;
+            esac
+            [ "$outcome" = "skipped" ] && { echo "$f: skipped by input"; continue; }
+
+            if [ ! -f "out/$f.txt" ]; then
+              echo "::error::$f produced no output at all"; bad=1; continue
+            fi
+
+            tail5=$(tail -5 "out/$f.txt")
+            passed=$(echo "$tail5" | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+' | head -1)
+            passed=${passed:-0}
+            failed=$(echo "$tail5" | grep -oE '[0-9]+ failed' | grep -oE '[0-9]+' | head -1)
+            failed=${failed:-0}
+
+            if [ "$passed" -eq 0 ]; then
+              echo "::error::$f ran ZERO tests. A suite that asserts nothing is not a pass - check the config's testMatch and testDir before trusting any result from this run."
+              bad=1
+            fi
+            if [ "$outcome" != "success" ] || [ "$failed" -gt 0 ]; then
+              echo "::error::$f failed ($failed failing, outcome=$outcome). See the job summary and the uploaded playwright-report."
+              bad=1
+            fi
+            echo "$f: outcome=$outcome passed=$passed failed=$failed"
+          done
+          if [ "$bad" -ne 0 ]; then
+            echo "::error::develop-stack verdict: NOT GREEN on ${{ steps.head.outputs.short }}"
+            exit 1
+          fi
+          echo "develop-stack verdict: green on ${{ steps.head.outputs.short }}"
 
       - name: Tear down
         if: always()
