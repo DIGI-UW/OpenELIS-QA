@@ -39,6 +39,19 @@
  * the marker and keep the assertion. We do NOT assert the buggy-but-actual behavior; that would
  * enshrine the defect as the specification.
  *
+ * ── SCOPE: this file tests the API CONTRACT, not the screen ───────────────────────────
+ * Every assertion below goes through `api(page, '/sample-types', ...)`. The `page.goto()` in
+ * beforeEach exists ONLY to load the SPA so a CSRF token lands in localStorage; the route it
+ * visits is a session bootstrap, NOT the subject under test. Any authenticated page would do.
+ *
+ * The UI is covered separately, in `test-catalog-admin-list-screens.spec.ts`, against
+ * `/MasterListsPage/SampleTypeEditor`. The two are complementary — contract here, rendered
+ * behaviour there. Do not merge them, and do not assume this file exercises a screen.
+ *
+ * (For the record: `/admin/SampleTypeManagement` is a navigation hub with no table. That is
+ * fine for a bootstrap. An earlier note claiming this spec was "pointed at the wrong screen"
+ * was wrong — it is not pointed at a screen at all.)
+ *
  * Run: BASE=https://testing.openelis-global.org \
  *   npx playwright test --config=all-tc.config.ts test-catalog-sample-type-management.spec.ts
  */
@@ -111,7 +124,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('Sample Type Management — create flow (OGC-296)', () => {
-  test('ST-1: list renders known sample types with Name/Domain/Status/Test Count (ROUND-TRIP)', async ({ page }) => {
+  test('ST-1: GET /sample-types returns known sample types with name/domain/isActive/testCount (ROUND-TRIP)', async ({ page }) => {
     const r = await api(page, '/sample-types');
     expect(r.status, 'GET /sample-types -> 200').toBe(200);
     expect(r.body.success, 'response reports success').toBe(true);
