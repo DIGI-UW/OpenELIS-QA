@@ -88,6 +88,25 @@ jobs:
 
       # ---- everything below only runs when develop actually moved ----
 
+      # Node and the browser go in BEFORE the stack boot on purpose. The stack
+      # takes ~14 minutes to come up; a toolchain problem should surface in
+      # forty seconds, not after that wait. The first four runs of this
+      # workflow failed here and threw away a healthy stack every time.
+      - uses: actions/setup-node@v4
+        if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
+        with:
+          node-version: '22'
+          # NO `cache: npm`, and NO `npm ci` below. package-lock.json is
+          # gitignored in this repo (.gitignore:8), and both of those require
+          # it — setup-node exits 1 with "Dependencies lock file is not found".
+          # nightly.yml carries the same note; keep the two in step.
+
+      - name: Install
+        if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
       - name: Check out the app at develop
         if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
         uses: actions/checkout@v4
@@ -139,18 +158,6 @@ jobs:
           echo "::error::stack did not come up in time"
           docker compose -p oedevqa -f app/docker-compose.develop.yml logs --tail 60 oe.openelis.org || true
           exit 1
-
-      - uses: actions/setup-node@v4
-        if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
-        with:
-          node-version: '22'
-          cache: npm
-
-      - name: Install
-        if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
 
       - name: Authenticate
         if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
