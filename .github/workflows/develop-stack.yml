@@ -159,6 +159,21 @@ jobs:
           docker compose -p oedevqa -f app/docker-compose.develop.yml logs --tail 60 oe.openelis.org || true
           exit 1
 
+      # The stack bind-mounts ./volume/lucene and ./volume/plugins, and the
+      # container writes them as root, so `app/volume/lucene/Patient` lands in
+      # the workspace owned by root and mode 700. all-tc.config.ts and
+      # modules.config.ts both use `testDir: '.'`, so Playwright walks the whole
+      # repo to collect specs, reaches that directory and dies before running a
+      # single test:
+      #
+      #   Error: EACCES: permission denied, scandir
+      #   '/home/runner/work/OpenELIS-QA/OpenELIS-QA/app/volume/lucene/Patient'
+      #
+      # Making the tree traversable is enough; nothing needs to write to it.
+      - name: Let the runner traverse the stack's bind mounts
+        if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
+        run: sudo chmod -R a+rX app/volume || true
+
       - name: Authenticate
         if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
         run: npx playwright test -c all-tc.config.ts --project=setup --reporter=line
@@ -169,6 +184,7 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p out
+          sudo chmod -R a+rX app/volume || true
           npx playwright test -c modules.config.ts --reporter=line 2>&1 | tee out/core.txt
           exit ${PIPESTATUS[0]}
 
@@ -178,6 +194,7 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p out
+          sudo chmod -R a+rX app/volume || true
           npx playwright test -c regression-chains.config.ts --reporter=line 2>&1 | tee out/chains.txt
           exit ${PIPESTATUS[0]}
 
