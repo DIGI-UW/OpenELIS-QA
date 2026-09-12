@@ -27,128 +27,161 @@
   "suites": [
     {
       "config": "modules.config.ts",
-      "why": "flat tests/*.spec.ts module sweep"
+      "why": "flat tests/*.spec.ts module sweep",
+      "shard": 1
     },
     {
       "config": "regression-chains.config.ts",
       "why": "the 26 multi-step workflow chains",
       "env": {
         "GAPS_STRICT": "1"
-      }
+      },
+      "shard": 2
     },
     {
       "config": "all-tc.config.ts",
-      "why": "test catalog + results tier"
+      "why": "test catalog + results tier",
+      "shard": 3
     },
     {
       "config": "rbac.config.ts",
-      "why": "role matrix; needs roles.setup"
+      "why": "role matrix; needs roles.setup",
+      "shard": 4
     },
     {
       "config": "personas-admin.config.ts",
-      "why": "admin persona walkthroughs"
+      "why": "admin persona walkthroughs",
+      "shard": 4
     },
     {
       "config": "personas-roles.config.ts",
-      "why": "per-role persona walkthroughs; needs roles.setup"
+      "why": "per-role persona walkthroughs; needs roles.setup",
+      "shard": 4
     },
     {
       "config": "census.config.ts",
-      "why": "admin + app route census"
+      "why": "admin + app route census",
+      "shard": 4
     },
     {
       "config": "e2e.config.ts",
-      "why": "order to result end-to-end; load sensitive, runs alone"
+      "why": "order to result end-to-end; load sensitive, runs alone",
+      "shard": 3
     },
     {
       "config": "deep.config.ts",
-      "why": "deep test catalog probes"
+      "why": "deep test catalog probes",
+      "shard": 3
     },
     {
       "config": "disc.config.ts",
-      "why": "discoverability sweep"
+      "why": "discoverability sweep",
+      "shard": 4
     },
     {
       "config": "guards.config.ts",
-      "why": "navigation and unsaved-changes guards"
+      "why": "navigation and unsaved-changes guards",
+      "shard": 3
     },
     {
       "config": "lp.config.ts",
-      "why": "label presets"
+      "why": "label presets",
+      "shard": 4
     },
     {
       "config": "multicomponent.config.ts",
-      "why": "multicomponent result routing"
+      "why": "multicomponent result routing",
+      "shard": 3
     },
     {
       "config": "modify-order.config.ts",
-      "why": "modify-order field binding"
+      "why": "modify-order field binding",
+      "shard": 4
     },
     {
       "config": "ogc1192.config.ts",
-      "why": "OGC-1192 env order visibility"
+      "why": "OGC-1192 env order visibility",
+      "shard": 4
     },
     {
       "config": "envseed.config.ts",
-      "why": "environmental seed data"
+      "why": "environmental seed data",
+      "shard": 4
     },
     {
       "config": "eqa.config.ts",
-      "why": "EQA flip guards"
+      "why": "EQA flip guards",
+      "shard": 4
     },
     {
       "config": "reval2.config.ts",
-      "why": "revalidation tier 2"
+      "why": "revalidation tier 2",
+      "shard": 4
     },
     {
       "config": "probe-combo.config.ts",
-      "why": "sample type combo box behaviour"
+      "why": "sample type combo box behaviour",
+      "shard": 4
     },
     {
       "config": "panel-leak.config.ts",
-      "why": "panel / sample type leak"
+      "why": "panel / sample type leak",
+      "shard": 3
     },
     {
       "config": "preflight.config.ts",
-      "why": "preflight smoke"
+      "why": "preflight smoke",
+      "shard": 4
     },
     {
       "config": "pr3987.config.ts",
-      "why": "PR 3987 regression: FHIR specimen terminology, patient photo, catalog"
+      "why": "PR 3987 regression: FHIR specimen terminology, patient photo, catalog",
+      "shard": 4
     },
     {
       "config": "cfg.config.ts",
-      "why": "configuration pages"
+      "why": "configuration pages",
+      "shard": 4
     },
     {
       "config": "revalidate.config.ts",
-      "why": "OGC-1120 revalidation"
+      "why": "OGC-1120 revalidation",
+      "shard": 4
     },
     {
       "config": "revalidate-unauth.config.ts",
-      "why": "OGC-1120 revalidation, unauthenticated"
+      "why": "OGC-1120 revalidation, unauthenticated",
+      "shard": 4
     },
     {
       "config": "rtype.config.ts",
-      "why": "result type coverage"
+      "why": "result type coverage",
+      "shard": 3
     },
     {
       "config": "workplan.config.ts",
-      "why": "workplan by unit, including the crash regression"
+      "why": "workplan by unit, including the crash regression",
+      "shard": 3
     },
     {
       "config": "regression-seed.config.ts",
       "why": "baseline fixture data the module sweep depends on; setup projects only, collects no spec files",
-      "allowZero": true
+      "allowZero": true,
+      "shard": 4
     }
   ],
   "docsSuite": {
-    "config": "capture.config.ts",
+    "config": "playwright.config.ts",
     "why": [
-      "tests/docs/** is 87 files of MEDIA CAPTURE for the user manual: video on, screenshot",
-      "flows, and a deliberate 780ms slowMo. They exist to produce images, not verdicts, and",
-      "running them on a three-hourly poll would cost hours of runner time to produce artifacts",
-      "nobody reads. Run them on demand with the `docs` suite input instead."
+      "Its `docs` project is tests/docs/**: 87 files of MEDIA CAPTURE for the user manual.",
+      "Video on, screenshot flows, and a deliberate 780ms slowMo. They exist to produce images,",
+      "not verdicts, and running them on a three-hourly poll would cost hours of runner time to",
+      "make artifacts nobody reads. Run them on demand with the `docs` suite input instead.",
+      "",
+      "This said capture.config.ts until 2026-09-12, which collects ONE root spec and not a",
+      "single file under tests/docs. `suite: docs` would have run one capture spec and reported",
+      "success. Caught by dry-running the shard filter rather than by reading the manifest,",
+      "which is the same lesson as everything else in this file: ask the tool what it resolves."
     ]
   },
   "excluded": [
@@ -192,5 +225,27 @@
       "match": "capture-topsave.spec.ts",
       "why": "Media capture for documentation, not a verdict."
     }
+  ],
+  "$shards": [
+    "WHY THE SUITES ARE SHARDED",
+    "A single job cannot hold them. Run 34656118535 was cancelled at the 90-minute job cap",
+    "with modules.config.ts ALONE still running after 79 minutes, and that was 1 of 28 configs.",
+    "A cancelled run produces no verdict at all, which is the one outcome worse than a red one.",
+    "",
+    "Each shard is a separate job that boots its own stack (~10 min, mostly the healthcheck",
+    "wait) and runs its slice. That buys parallel wall clock at the cost of repeating the boot,",
+    "which is the right trade when the suites dominate by an order of magnitude.",
+    "",
+    "  1  modules          the flat tests/ sweep, 43 files, the heaviest single config",
+    "  2  regression-chains  26 chains at a 300s timeout each",
+    "  3  the long tail that still takes real time: all-tc, deep, guards, e2e, ...",
+    "  4  everything else, most of which is one or two files",
+    "",
+    "Shards are assigned EXPLICITLY rather than round-robined, because the configs differ in",
+    "cost by two orders of magnitude and an automatic split would put modules and chains in the",
+    "same job half the time. scripts/check-ci-coverage.mjs validates that every suite has a",
+    "shard in range, so a new config cannot be added without deciding where it goes.",
+    "",
+    "Rebalance by editing the numbers here. Nothing else needs to change."
   ]
 }
