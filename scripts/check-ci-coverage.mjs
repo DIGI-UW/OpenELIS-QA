@@ -37,6 +37,17 @@ const MANIFEST = join(ROOT, 'ci-suites.json');
 const SKIP_DIRS = new Set([
   'node_modules', 'archive', 'test-results', 'playwright-report',
   'regression-results', '.git', 'evals',
+  // 'app' is the develop-stack workflow's checkout of OpenELIS-Global-2, cloned INTO this
+  // repository so the stack's compose file and bind mounts are on the runner's disk. It
+  // brings the product's own frontend *.spec.ts files with it, and no Playwright config
+  // here collects those -- correctly, they are not ours.
+  //
+  // This was invisible locally, where app/ does not exist, and failed the first sharded CI
+  // run with "70 spec file(s) are run by NO config". The same checkout is already called
+  // out in the workflow for causing an EACCES on app/volume during spec collection, which
+  // is the same root cause wearing a different hat: a foreign tree inside ours that every
+  // walk has to know about.
+  'app',
 ]);
 const MAP_ONLY = process.argv.includes('--map');
 
@@ -44,8 +55,13 @@ function walk(dir, out = []) {
   for (const e of readdirSync(dir)) {
     if (SKIP_DIRS.has(e)) continue;
     const p = join(dir, e);
-    if (statSync(p).isDirectory()) walk(p, out);
-    else if (e.endsWith('.spec.ts')) out.push(relative(ROOT, p));
+    if (statSync(p).isDirectory()) {
+      // Belt and braces for the 'app' case above: ANY nested checkout is somebody else's
+      // tree, whatever it happens to be called. Naming one directory fixes today's failure;
+      // this stops the next clone-into-the-workspace from reintroducing it.
+      if (existsSync(join(p, '.git'))) continue;
+      walk(p, out);
+    } else if (e.endsWith('.spec.ts')) out.push(relative(ROOT, p));
   }
   return out;
 }
