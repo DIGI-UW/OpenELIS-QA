@@ -34,10 +34,10 @@ on:
         type: boolean
         default: false
       suite:
-        description: 'Which suites to run'
+        description: 'all = every suite in ci-suites.json; docs = the on-demand media capture tier'
         type: choice
-        options: [core, chains, both]
-        default: both
+        options: [all, docs]
+        default: all
 
 concurrency:
   # A stack boot is ~15-25 minutes; overlapping runs would fight for the
@@ -178,64 +178,84 @@ jobs:
         if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
         run: npx playwright test -c all-tc.config.ts --project=setup --reporter=line
 
-      # WHAT THIS RUN ACTUALLY COVERS, so a green check is not read as more
-      # than it is. modules.config.ts matches `tests/<name>.spec.ts` and nothing
-      # else: specs at the repository ROOT (the whole test-catalog-* family) and
-      # specs in `tests/` SUBDIRECTORIES other than the chains config below are
-      # not collected here. "develop is green" therefore means the flat tests/
-      # module suite and the regression chains passed, not the whole repository.
-      # Widening this is a deliberate decision with a real wall-clock cost, not
-      # an oversight -- but nobody should discover the boundary by assuming the
-      # wrong one.
-      - name: Core suites
-        id: core
-        if: (steps.seen.outputs.cache-hit != 'true' || inputs.force == true) && (inputs.suite != 'chains')
-        continue-on-error: true
-        run: |
-          mkdir -p out
-          sudo chmod -R a+rX app/volume || true
-          npx playwright test -c modules.config.ts --reporter=line 2>&1 | tee out/core.txt
-          exit ${PIPESTATUS[0]}
+      # WHAT THIS RUN COVERS
+      # Everything. ci-suites.json is the source of truth: it lists the configs CI runs
+      # and, for anything deliberately left out, the reason. scripts/check-ci-coverage.mjs
+      # asks Playwright which files each listed config actually resolves and fails if any
+      # spec in the tree is run by nobody and has no recorded reason.
+      #
+      # That check exists because "is it reachable by some config" and "does anything
+      # actually run it" are different questions, and only the first one had a gate.
+      # On 2026-09-12 the orphan gate was passing cleanly while this workflow ran 2 of 40
+      # configs: 69 of 227 spec files. The rest were owned, green in the orphan map, and
+      # executed by no one on any schedule.
+      - name: Check every spec is claimed by a suite CI runs
+        if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
+        run: node scripts/check-ci-coverage.mjs
 
-      - name: Regression chains (GAPS_STRICT=1)
-        id: chains
-        if: (steps.seen.outputs.cache-hit != 'true' || inputs.force == true) && (inputs.suite != 'core')
-        continue-on-error: true
-        run: |
-          mkdir -p out
-          sudo chmod -R a+rX app/volume || true
-          npx playwright test -c regression-chains.config.ts --reporter=line 2>&1 | tee out/chains.txt
-          exit ${PIPESTATUS[0]}
-
-      - name: Summarise
+      # One step, every suite, so adding a config to ci-suites.json is the only edit
+      # needed to get it running here. Each suite's output is kept separately so the
+      # summary and the verdict can speak about them one at a time.
+      #
+      # Failures do not stop the loop: one broken suite must not cost us the results of
+      # the other twenty-seven. The outcome is re-asserted in Verdict below, after
+      # everything is recorded and uploaded.
+      - name: Run the suites
+        id: suites
         if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
         run: |
-          # Report the COUNTS, not only the step outcome. A step outcome cannot
-          # distinguish "everything passed" from "nothing ran", and that is the
-          # exact confusion that made eight nightlies green for nothing.
+          set -uo pipefail
+          mkdir -p out
+          sudo chmod -R a+rX app/volume || true
+
+          WANT="${{ inputs.suite || 'all' }}"
+          if [ "$WANT" = "docs" ]; then
+            LIST=$(jq -r '.docsSuite.config' ci-suites.json)
+          else
+            LIST=$(jq -r '.suites[].config' ci-suites.json)
+          fi
+
+          for cfg in $LIST; do
+            name="${cfg%.config.ts}"
+            echo "::group::$name"
+            allow_zero=$(jq -r --arg c "$cfg" '(.suites[] | select(.config==$c) | .allowZero) // false' ci-suites.json)
+            env_pairs=$(jq -r --arg c "$cfg" '(.suites[] | select(.config==$c) | .env // {}) | to_entries[] | "\(.key)=\(.value)"' ci-suites.json)
+            # shellcheck disable=SC2086
+            env $env_pairs npx playwright test -c "$cfg" --reporter=line 2>&1 | tee "out/$name.txt"
+            code=${PIPESTATUS[0]}
+            printf '%s\n' "$code" > "out/$name.exit"
+            printf '%s\n' "$allow_zero" > "out/$name.allowzero"
+            echo "$name exit=$code"
+            echo "::endgroup::"
+          done
+
+      - name: Summarise
+        if: always() && (steps.seen.outputs.cache-hit != 'true' || inputs.force == true)
+        run: |
+          # Report the COUNTS, not only an exit code. An exit code cannot distinguish
+          # "everything passed" from "nothing ran", and that is the exact confusion that
+          # made eight nightlies green for nothing.
           {
-            echo "| suite | outcome | passed | failed | flaky | did not run |"
-            echo "| --- | --- | ---: | ---: | ---: | ---: |"
-            for f in core chains; do
-              [ -f "out/$f.txt" ] || { echo "| $f | skipped | - | - | - | - |"; continue; }
-              t=$(tail -5 "out/$f.txt")
-              p=$(echo "$t" | grep -oE '[0-9]+ passed'     | grep -oE '[0-9]+' | head -1); p=${p:-0}
-              x=$(echo "$t" | grep -oE '[0-9]+ failed'     | grep -oE '[0-9]+' | head -1); x=${x:-0}
-              k=$(echo "$t" | grep -oE '[0-9]+ flaky'      | grep -oE '[0-9]+' | head -1); k=${k:-0}
-              d=$(echo "$t" | grep -oE '[0-9]+ did not run'| grep -oE '[0-9]+' | head -1); d=${d:-0}
-              case "$f" in
-                core)   o="${{ steps.core.outcome || 'skipped' }}" ;;
-                chains) o="${{ steps.chains.outcome || 'skipped' }}" ;;
-              esac
-              echo "| $f | $o | $p | $x | $k | $d |"
+            echo "### develop \`${{ steps.head.outputs.short }}\`"
+            echo
+            echo "| suite | exit | passed | failed | flaky | did not run |"
+            echo "| --- | ---: | ---: | ---: | ---: | ---: |"
+            for f in out/*.txt; do
+              [ -f "$f" ] || continue
+              n=$(basename "$f" .txt)
+              t=$(tail -5 "$f")
+              p=$(echo "$t" | grep -oE '[0-9]+ passed'      | grep -oE '[0-9]+' | head -1); p=${p:-0}
+              x=$(echo "$t" | grep -oE '[0-9]+ failed'      | grep -oE '[0-9]+' | head -1); x=${x:-0}
+              k=$(echo "$t" | grep -oE '[0-9]+ flaky'       | grep -oE '[0-9]+' | head -1); k=${k:-0}
+              d=$(echo "$t" | grep -oE '[0-9]+ did not run' | grep -oE '[0-9]+' | head -1); d=${d:-0}
+              e=$(cat "out/$n.exit" 2>/dev/null || echo '?')
+              echo "| $n | $e | $p | $x | $k | $d |"
             done
             echo
-            echo "develop \`${{ steps.head.outputs.short }}\`"
-            echo
-            for f in out/core.txt out/chains.txt; do
+            for f in out/*.txt; do
               [ -f "$f" ] || continue
               echo "<details><summary>$(basename "$f" .txt)</summary>"
-              echo; echo '```'; tail -30 "$f"; echo '```'
+              echo; echo '```'; tail -40 "$f"; echo '```'
               echo "</details>"
             done
           } >> "$GITHUB_STEP_SUMMARY"
@@ -250,6 +270,7 @@ jobs:
             image-digest.txt
             playwright-report/
             test-results/
+            regression-results/
           retention-days: 14
           if-no-files-found: ignore
 
@@ -265,58 +286,56 @@ jobs:
         run: echo "${{ steps.head.outputs.sha }}" > .last-tested-sha
 
       # WHY THIS STEP EXISTS
-      # Both suite steps carry continue-on-error, so that one failing suite does
-      # not rob us of the other one's results or of the uploaded artifacts. The
-      # cost of that is a job which reports success no matter what the tests did,
-      # and a green check nobody can act on is worse than no check at all: it is
-      # exactly how eight consecutive nightlies were green by construction.
+      # The suite loop above deliberately swallows failures so that one broken suite does
+      # not rob us of the others' results or of the uploaded artifacts. The cost of that is
+      # a job which would otherwise report success no matter what the tests did, and a green
+      # check nobody can act on is worse than no check at all: it is exactly how eight
+      # consecutive nightlies were green by construction.
       #
-      # So the outcome is re-asserted here, at the end, once the results are
-      # safely recorded and uploaded.
+      # So the outcome is re-asserted here, at the end, once results are safely recorded.
       #
       # It fails on two distinct conditions, and they are different faults:
-      #   1. a suite FAILED           -> the product (or a spec) is broken
-      #   2. a suite ran ZERO tests   -> the harness is broken, and this is the
-      #      silent one. Playwright collects nothing when a path or testMatch
-      #      stops matching, prints a cheerful summary and can exit 0. A run
-      #      that asserts nothing must never be reported as a pass.
+      #   1. a suite FAILED          -> the product, or a spec, is broken
+      #   2. a suite ran ZERO tests  -> the HARNESS is broken, and this is the silent one.
+      #      Playwright collects nothing when a path or testMatch stops matching, prints a
+      #      cheerful summary and can exit 0. A run that asserts nothing is never a pass.
+      #      Setup-only configs declare "allowZero": true in ci-suites.json and are exempt.
       - name: Verdict
-        if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
+        if: always() && (steps.seen.outputs.cache-hit != 'true' || inputs.force == true)
         run: |
           set -uo pipefail
           bad=0
-          for f in core chains; do
-            case "$f" in
-              core)   outcome="${{ steps.core.outcome || 'skipped' }}" ;;
-              chains) outcome="${{ steps.chains.outcome || 'skipped' }}" ;;
-            esac
-            [ "$outcome" = "skipped" ] && { echo "$f: skipped by input"; continue; }
+          ran=0
+          for f in out/*.txt; do
+            [ -f "$f" ] || continue
+            n=$(basename "$f" .txt)
+            ran=$((ran+1))
+            code=$(cat "out/$n.exit" 2>/dev/null || echo 1)
+            allow_zero=$(cat "out/$n.allowzero" 2>/dev/null || echo false)
+            t=$(tail -5 "$f")
+            passed=$(echo "$t" | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+' | head -1); passed=${passed:-0}
+            failed=$(echo "$t" | grep -oE '[0-9]+ failed' | grep -oE '[0-9]+' | head -1); failed=${failed:-0}
 
-            if [ ! -f "out/$f.txt" ]; then
-              echo "::error::$f produced no output at all"; bad=1; continue
-            fi
-
-            tail5=$(tail -5 "out/$f.txt")
-            passed=$(echo "$tail5" | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+' | head -1)
-            passed=${passed:-0}
-            failed=$(echo "$tail5" | grep -oE '[0-9]+ failed' | grep -oE '[0-9]+' | head -1)
-            failed=${failed:-0}
-
-            if [ "$passed" -eq 0 ]; then
-              echo "::error::$f ran ZERO tests. A suite that asserts nothing is not a pass - check the config's testMatch and testDir before trusting any result from this run."
+            if [ "$passed" -eq 0 ] && [ "$allow_zero" != "true" ]; then
+              echo "::error::$n ran ZERO tests. A suite that asserts nothing is not a pass - check its testMatch and testDir before trusting any result from this run."
               bad=1
             fi
-            if [ "$outcome" != "success" ] || [ "$failed" -gt 0 ]; then
-              echo "::error::$f failed ($failed failing, outcome=$outcome). See the job summary and the uploaded playwright-report."
+            if [ "$code" != "0" ] || [ "$failed" -gt 0 ]; then
+              echo "::error::$n failed ($failed failing, exit=$code). See the job summary and the uploaded playwright-report."
               bad=1
             fi
-            echo "$f: outcome=$outcome passed=$passed failed=$failed"
+            echo "$n: exit=$code passed=$passed failed=$failed"
           done
-          if [ "$bad" -ne 0 ]; then
-            echo "::error::develop-stack verdict: NOT GREEN on ${{ steps.head.outputs.short }}"
+
+          if [ "$ran" -eq 0 ]; then
+            echo "::error::no suite produced any output at all"
             exit 1
           fi
-          echo "develop-stack verdict: green on ${{ steps.head.outputs.short }}"
+          if [ "$bad" -ne 0 ]; then
+            echo "::error::develop-stack verdict: NOT GREEN on ${{ steps.head.outputs.short }} ($ran suites)"
+            exit 1
+          fi
+          echo "develop-stack verdict: green on ${{ steps.head.outputs.short }} ($ran suites)"
 
       - name: Tear down
         if: always()

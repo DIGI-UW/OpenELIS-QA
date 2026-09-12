@@ -69,7 +69,14 @@ const OWNED_ELSEWHERE = [
   // all-tc.config.ts — the test-catalog + results tier
   'results-by-range', 'results-by-status', 'results-by-unit', 'results-entry',
   'unified-results', 'result-type-coverage', 'multicomponent-result-routing',
-  'ranges-discover', 'panel-sample-type-leak', 'workplan-by-unit-crash',
+  'panel-sample-type-leak', 'workplan-by-unit-crash',
+  // 'ranges-discover' was listed here as owned by all-tc.config.ts. It is not:
+  // all-tc does not collect it, and the only config that does is probes.config.ts,
+  // a scratch bucket CI does not run. So it was excluded here on the strength of a
+  // claim that was never true, and executed by nobody. Handed back to this sweep
+  // 2026-09-12. scripts/check-ci-coverage.mjs is what caught it and is what keeps
+  // this list honest from here.
+
   // dedicated single-purpose configs
   'modify-order-field-binding',        // modify-order.config.ts
   'ogc1192-env-order-visibility',      // ogc1192.config.ts
