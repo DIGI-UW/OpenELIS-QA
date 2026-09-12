@@ -47,13 +47,30 @@ concurrency:
 
 jobs:
   test-against-develop:
+    name: shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    # Was 90, and run 34656118535 was CANCELLED at it with modules.config.ts alone still
+    # running after 79 minutes. A cancelled run produces no verdict at all, which is the one
+    # outcome worse than a red one. Each shard now carries a slice, so this is headroom
+    # rather than an expectation.
+    timeout-minutes: 180
+    strategy:
+      # Every shard must report. Stopping the others because one went red would throw away
+      # exactly the information the run exists to collect.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
 
     env:
       APP_REPO: DIGI-UW/OpenELIS-Global-2
       BASE: https://localhost:10443
       BASE_URL: https://localhost:10443
+      # modules.config.ts makes the argument for this and the nightly already sets it:
+      # "retries exist to absorb flake; in a suite that has never run, the failures are not
+      # flake -- they are the point. Retrying them doubles the cost of every failure for no
+      # information." This workflow was the one place still paying that cost, on the suite
+      # least likely to be green.
+      PW_RETRIES: 0
       # The chains' declared-gap register only means anything in strict mode.
       GAPS_STRICT: '1'
 
@@ -209,11 +226,18 @@ jobs:
           sudo chmod -R a+rX app/volume || true
 
           WANT="${{ inputs.suite || 'all' }}"
+          SHARD="${{ matrix.shard }}"
           if [ "$WANT" = "docs" ]; then
+            # The docs tier is one config and is not sharded; only shard 1 runs it.
+            if [ "$SHARD" != "1" ]; then
+              echo "docs tier runs on shard 1 only; nothing to do here."
+              exit 0
+            fi
             LIST=$(jq -r '.docsSuite.config' ci-suites.json)
           else
-            LIST=$(jq -r '.suites[].config' ci-suites.json)
+            LIST=$(jq -r --argjson s "$SHARD" '.suites[] | select(.shard == $s) | .config' ci-suites.json)
           fi
+          echo "shard $SHARD runs: $(echo $LIST | tr '\n' ' ')" 
 
           for cfg in $LIST; do
             name="${cfg%.config.ts}"
@@ -236,7 +260,7 @@ jobs:
           # "everything passed" from "nothing ran", and that is the exact confusion that
           # made eight nightlies green for nothing.
           {
-            echo "### develop \`${{ steps.head.outputs.short }}\`"
+            echo "### develop \`${{ steps.head.outputs.short }}\` — shard ${{ matrix.shard }}"
             echo
             echo "| suite | exit | passed | failed | flaky | did not run |"
             echo "| --- | ---: | ---: | ---: | ---: | ---: |"
@@ -264,7 +288,7 @@ jobs:
         if: always() && (steps.seen.outputs.cache-hit != 'true' || inputs.force == true)
         uses: actions/upload-artifact@v4
         with:
-          name: develop-${{ steps.head.outputs.short }}-${{ github.run_number }}
+          name: develop-${{ steps.head.outputs.short }}-${{ github.run_number }}-shard${{ matrix.shard }}
           path: |
             out/
             image-digest.txt
@@ -281,8 +305,13 @@ jobs:
       # a real defect has done its job, and re-running that same commit every
       # three hours would only burn runner time. Only a run that never produced
       # a result gets retried.
+      #
+      # ONE SHARD WRITES IT. All four share the same cache key, so four writers would race
+      # to store identical content for no benefit. Shard 1 is the writer: if it never got
+      # far enough to run, nothing marks the commit and the next poll retries the lot,
+      # which is the behaviour we want anyway.
       - name: Mark this commit tested
-        if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
+        if: matrix.shard == 1 && (steps.seen.outputs.cache-hit != 'true' || inputs.force == true)
         run: echo "${{ steps.head.outputs.sha }}" > .last-tested-sha
 
       # WHY THIS STEP EXISTS
@@ -328,14 +357,14 @@ jobs:
           done
 
           if [ "$ran" -eq 0 ]; then
-            echo "::error::no suite produced any output at all"
+            echo "::error::shard ${{ matrix.shard }} produced no suite output at all"
             exit 1
           fi
           if [ "$bad" -ne 0 ]; then
-            echo "::error::develop-stack verdict: NOT GREEN on ${{ steps.head.outputs.short }} ($ran suites)"
+            echo "::error::develop-stack shard ${{ matrix.shard }}: NOT GREEN on ${{ steps.head.outputs.short }} ($ran suites)"
             exit 1
           fi
-          echo "develop-stack verdict: green on ${{ steps.head.outputs.short }} ($ran suites)"
+          echo "develop-stack shard ${{ matrix.shard }}: green on ${{ steps.head.outputs.short }} ($ran suites)"
 
       - name: Tear down
         if: always()

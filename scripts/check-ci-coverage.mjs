@@ -75,6 +75,22 @@ if (!existsSync(MANIFEST)) {
 const manifest = JSON.parse(readFileSync(MANIFEST, 'utf8'));
 const allSpecs = walk(ROOT).sort();
 
+// Every suite must declare which shard runs it. Without this, adding a config to the
+// manifest would look complete, pass the coverage check, and then be run by no shard --
+// the same "looks covered, executes never" failure this whole file exists to prevent,
+// reintroduced one level up.
+const SHARD_COUNT = Number(process.env.CI_SHARDS ?? 4);
+const badShard = manifest.suites.filter(s =>
+  !Number.isInteger(s.shard) || s.shard < 1 || s.shard > SHARD_COUNT);
+if (badShard.length) {
+  console.log(`\n\u2717 ${badShard.length} suite(s) have no valid shard (expected 1..${SHARD_COUNT}):`);
+  for (const s of badShard) console.log(`  ${s.config}: shard=${JSON.stringify(s.shard)}`);
+  process.exitCode = 1;
+}
+const perShard = {};
+for (const s of manifest.suites) perShard[s.shard] = (perShard[s.shard] || 0) + 1;
+console.log(`shards: ${JSON.stringify(perShard)}`);
+
 const covered = new Map();   // spec -> [configs]
 for (const suite of manifest.suites) {
   const files = filesFor(suite.config);
@@ -122,5 +138,5 @@ if (unexplained.length) {
   for (const s of unexplained) console.log(`  ${s}`);
 }
 
-if (unexplained.length || stale.length) process.exit(1);
+if (unexplained.length || stale.length || process.exitCode === 1) process.exit(1);
 console.log('\n✓ every spec file is either run by CI or excluded with a stated reason.');
