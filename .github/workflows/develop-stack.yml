@@ -276,6 +276,33 @@ jobs:
           # invokes every step as `bash -e`, and these parsers are built out of greps that
           # are SUPPOSED to find nothing sometimes.
           set +e +o pipefail
+
+          # WHY THIS IS NOT `tail -5 | grep`, WHICH IS WHAT IT WAS
+          #
+          # Playwright's line reporter ends with a summary whose parts are separated by the
+          # FULL LIST OF FAILURES:
+          #
+          #     30 failed
+          #       tests/a.spec.ts:12:3 > ...        <- one line per failure, dozens of them
+          #       ...
+          #     68 did not run
+          #     35 passed (4.5m)
+          #
+          # A five-line window catches "35 passed" and misses "30 failed" entirely. Run
+          # 34673628283 reported `regression-chains: exit=1 passed=35 failed=0` for a suite
+          # with thirty failures. The verdict was still red -- but only because the exit code
+          # said so, and the number a human reads was wrong.
+          #
+          # So: scan the WHOLE file, and anchor on a line that is ONLY the count. The summary
+          # lines are exactly "<spaces>N <word>"; a test that logs "3 failed" mid-line cannot
+          # match. Take the LAST occurrence, because the summary is at the end.
+          count_of() {
+            local file="$1" word="$2" n
+            n=$(grep -E "^[[:space:]]*[0-9]+ ${word}([[:space:]]|\$)" "$file" \
+                  | tail -1 | grep -oE '[0-9]+' | head -1)
+            echo "${n:-0}"
+          }
+
           # Report the COUNTS, not only an exit code. An exit code cannot distinguish
           # "everything passed" from "nothing ran", and that is the exact confusion that
           # made eight nightlies green for nothing.
@@ -287,11 +314,10 @@ jobs:
             for f in out/*.txt; do
               [ -f "$f" ] || continue
               n=$(basename "$f" .txt)
-              t=$(tail -5 "$f")
-              p=$(echo "$t" | grep -oE '[0-9]+ passed'      | grep -oE '[0-9]+' | head -1); p=${p:-0}
-              x=$(echo "$t" | grep -oE '[0-9]+ failed'      | grep -oE '[0-9]+' | head -1); x=${x:-0}
-              k=$(echo "$t" | grep -oE '[0-9]+ flaky'       | grep -oE '[0-9]+' | head -1); k=${k:-0}
-              d=$(echo "$t" | grep -oE '[0-9]+ did not run' | grep -oE '[0-9]+' | head -1); d=${d:-0}
+              p=$(count_of "$f" passed)
+              x=$(count_of "$f" failed)
+              k=$(count_of "$f" flaky)
+              d=$(count_of "$f" 'did not run')
               e=$(cat "out/$n.exit" 2>/dev/null || echo '?')
               echo "| $n | $e | $p | $x | $k | $d |"
             done
@@ -372,6 +398,18 @@ jobs:
           # defaulted with ${x:-0} immediately afterwards, and the verdict is computed from
           # those values, not from anyone's exit code. THAT is the error handling.
           set +e +o pipefail
+
+          # Same parser as Summarise, and the same reason: Playwright separates "N failed"
+          # from "N passed" with the entire failure list, so a short tail window silently
+          # reports zero failures for a suite full of them. Whole file, anchored on a line
+          # that is only the count, last occurrence wins.
+          count_of() {
+            local file="$1" word="$2" n
+            n=$(grep -E "^[[:space:]]*[0-9]+ ${word}([[:space:]]|\$)" "$file" \
+                  | tail -1 | grep -oE '[0-9]+' | head -1)
+            echo "${n:-0}"
+          }
+
           bad=0
           ran=0
           for f in out/*.txt; do
@@ -380,9 +418,8 @@ jobs:
             ran=$((ran+1))
             code=$(cat "out/$n.exit" 2>/dev/null || echo 1)
             allow_zero=$(cat "out/$n.allowzero" 2>/dev/null || echo false)
-            t=$(tail -5 "$f")
-            passed=$(echo "$t" | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+' | head -1); passed=${passed:-0}
-            failed=$(echo "$t" | grep -oE '[0-9]+ failed' | grep -oE '[0-9]+' | head -1); failed=${failed:-0}
+            passed=$(count_of "$f" passed)
+            failed=$(count_of "$f" failed)
 
             if [ "$passed" -eq 0 ] && [ "$allow_zero" != "true" ]; then
               echo "::error::$n ran ZERO tests. A suite that asserts nothing is not a pass - check its testMatch and testDir before trusting any result from this run."
