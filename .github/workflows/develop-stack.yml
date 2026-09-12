@@ -221,7 +221,20 @@ jobs:
         id: suites
         if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
         run: |
-          set -uo pipefail
+          # set +e AND +o pipefail, and this one matters MORE than the same line in Verdict.
+          #
+          # The runner invokes every step as `bash -e`. With pipefail, the first suite whose
+          # playwright run exits non-zero made this whole step abort -- so the loop stopped at
+          # the FIRST RED SUITE and never ran the rest of the shard.
+          #
+          # Observed on run 34663752134: shard 3 is 8 configs and produced output for 1;
+          # shard 4 is 18 configs and produced output for 1. The run looked like a complete
+          # red result and was actually a fraction of one. Failures are the entire reason this
+          # loop exists; it must not treat one as a reason to stop.
+          #
+          # The exit code is still captured, per suite, from PIPESTATUS below. Nothing is
+          # swallowed -- it is recorded and re-asserted in Verdict.
+          set +e +o pipefail
           mkdir -p out
           sudo chmod -R a+rX app/volume || true
 
@@ -237,7 +250,10 @@ jobs:
           else
             LIST=$(jq -r --argjson s "$SHARD" '.suites[] | select(.shard == $s) | .config' ci-suites.json)
           fi
-          echo "shard $SHARD runs: $(echo $LIST | tr '\n' ' ')" 
+          echo "shard $SHARD runs: $(echo $LIST | tr '\n' ' ')"
+          # Write down the EXPECTED count before running anything. Verdict compares against
+          # it, so a loop that stops early is a failure rather than a smaller green run.
+          echo "$LIST" | grep -c . > out/.expected
 
           for cfg in $LIST; do
             name="${cfg%.config.ts}"
@@ -256,6 +272,10 @@ jobs:
       - name: Summarise
         if: always() && (steps.seen.outputs.cache-hit != 'true' || inputs.force == true)
         run: |
+          # set +e AND +o pipefail, DELIBERATELY. See the note in Verdict below: the runner
+          # invokes every step as `bash -e`, and these parsers are built out of greps that
+          # are SUPPOSED to find nothing sometimes.
+          set +e +o pipefail
           # Report the COUNTS, not only an exit code. An exit code cannot distinguish
           # "everything passed" from "nothing ran", and that is the exact confusion that
           # made eight nightlies green for nothing.
@@ -332,7 +352,26 @@ jobs:
       - name: Verdict
         if: always() && (steps.seen.outputs.cache-hit != 'true' || inputs.force == true)
         run: |
-          set -uo pipefail
+          # WHY set +e AND +o pipefail, WHICH LOOKS LIKE GIVING UP ON ERROR HANDLING
+          #
+          # The runner invokes every `run:` as `bash -e {0}`, so -e is on before this script
+          # starts and `set -uo pipefail` does not turn it off. Combined with pipefail, that
+          # made this step fail SILENTLY: the counts are parsed with
+          #   passed=$(echo "$t" | grep -oE '[0-9]+ passed' | ... | head -1)
+          # and a grep that matches nothing exits 1, which pipefail propagates to the command
+          # substitution, which -e turns into "abort the whole script, print nothing".
+          #
+          # Observed on run 34663752134: all four shards exited 1 from this step having
+          # printed NOTHING AT ALL -- no per-suite line, no ::error::, no verdict. Red, which
+          # happened to be the right answer, arrived at for the wrong reason and with none of
+          # the detail this step exists to produce. `head -1` closing the pipe early can do
+          # the same thing on a SUCCESSFUL match, so this was luck either way.
+          #
+          # A grep that finds nothing is NORMAL here -- "0 failed" is not printed when nothing
+          # failed. So the exit status of the parsers must not be load-bearing. Every value is
+          # defaulted with ${x:-0} immediately afterwards, and the verdict is computed from
+          # those values, not from anyone's exit code. THAT is the error handling.
+          set +e +o pipefail
           bad=0
           ran=0
           for f in out/*.txt; do
@@ -359,6 +398,21 @@ jobs:
           if [ "$ran" -eq 0 ]; then
             echo "::error::shard ${{ matrix.shard }} produced no suite output at all"
             exit 1
+          fi
+
+          # DID WE RUN EVERYTHING WE WERE GIVEN?
+          #
+          # Every check above is per-suite, and per-suite checks cannot see a suite that never
+          # started. Run 34663752134 exited the loop after its first red suite and every
+          # remaining config simply left no file behind -- so each shard reported honestly on
+          # the fraction it had reached and said nothing about the rest.
+          #
+          # "Nothing ran" was already a failure. "Less ran than we asked for" has to be one too,
+          # for the same reason: a result that covers an unknown subset is not a result.
+          expected=$(cat out/.expected 2>/dev/null || echo 0)
+          if [ "$expected" -gt 0 ] && [ "$ran" -lt "$expected" ]; then
+            echo "::error::shard ${{ matrix.shard }} produced output for $ran of $expected suites. The run stopped early, so this verdict covers only part of the shard and none of the missing suites can be assumed green."
+            bad=1
           fi
           if [ "$bad" -ne 0 ]; then
             echo "::error::develop-stack shard ${{ matrix.shard }}: NOT GREEN on ${{ steps.head.outputs.short }} ($ran suites)"
