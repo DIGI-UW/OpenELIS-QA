@@ -14,7 +14,12 @@ import * as path from 'path';
 // Config Constants
 // ---------------------------------------------------------------------------
 
-export const BASE = process.env.BASE_URL || 'https://testing.openelis-global.org';
+// Resolved centrally. Reading process.env.BASE_URL here is what let the browser and the
+// fixtures target two different instances at once. See helpers/base-url.ts.
+// Imported AND re-exported: this module uses BASE itself, and its consumers import it
+// from here, so a bare `export ... from` would compile as a re-export with no local binding.
+import { BASE } from './base-url';
+export { BASE };
 
 export const ADMIN = {
   user: 'admin',
