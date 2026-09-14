@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import {
   BASE,
   ADMIN,
@@ -44,25 +44,72 @@ import {
  *   - NOTE-7: Error responses contain "Exception" keyword
  */
 
+/**
+ * WHY THESE PROBES CATCH THE REJECTION (measured 2026-09-14)
+ *
+ * `page.evaluate(fetch(...))` in this suite failed with `TypeError: Failed to
+ * fetch` — a REJECTED promise, which aborts the evaluate and fails the test
+ * before any assertion runs. Two causes, both environmental:
+ *
+ *  1. Several of these tests never navigate, so the page is still `about:blank`
+ *    and an absolute URL is cross-origin by definition. Fixed by landing on the
+ *    application origin first, so the probe is same-origin like a real client.
+ *  2. The protected endpoints answer `302 -> https://localhost/...` — the
+ *    redirect DROPS THE PORT, so the target is a different origin than
+ *    `https://localhost:10443`. The browser will not follow a cross-origin
+ *    redirect for a `credentials: 'omit'` request and rejects instead of
+ *    returning an opaque response, so there is no status to read.
+ *
+ * (2) is exactly the "we were bounced somewhere we cannot read" case these tests
+ * already say they want to treat as PROTECTED, so `probeStatus` reports it as
+ * status 0 — the value each caller already accepts — rather than exploding.
+ * A network-level refusal is never mistaken for a 200: an openly readable
+ * endpoint answers, it does not reject.
+ */
+async function probeStatus(
+  page: Page,
+  url: string,
+  init: Record<string, unknown> = {},
+): Promise<number> {
+  await page.goto(`${BASE}`);
+  return page.evaluate(async (args: { url: string; init: any }) => {
+    const res = await fetch(args.url, args.init).catch(() => null);
+    return res ? res.status : 0;
+  }, { url, init });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Suite U — Session Lifecycle (TC-SESS-01 through TC-SESS-08)
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('Suite U — Session Lifecycle (TC-SESS)', () => {
-  test('TC-SESS-01: Login page is accessible without authentication', async ({ page }) => {
+  test('TC-SESS-01: Login page is accessible without authentication', async ({ browser }) => {
     /**
      * US-SESS-1: The login page must be publicly accessible (no redirect loop).
      * If the login page itself requires authentication, users cannot log in.
+     *
+     * The `page` fixture cannot answer this question. modules.config.ts sets
+     * `storageState: '.auth/user.json'` for every spec, so the context is already
+     * signed in and /LoginPage correctly redirects to Home — no form, and the
+     * test failed with "Login page must show username/password form" while the
+     * product was behaving exactly as it should. "Without authentication" has to
+     * mean a context with no stored state.
      */
-    await page.goto(`${BASE}/LoginPage`);
-    await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    const ctx = await browser.newContext({ storageState: undefined, ignoreHTTPSErrors: true });
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BASE}/LoginPage`);
+      await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    const bodyText = await page.locator('body').innerText();
-    expect(bodyText).not.toContain('Internal Server Error');
+      const bodyText = await page.locator('body').innerText();
+      expect(bodyText).not.toContain('Internal Server Error');
 
-    const hasLoginForm = await page.locator('input[type="password"], input[name*="password" i], input[name*="username" i]').count() > 0;
-    console.log(`TC-SESS-01: Login form visible=${hasLoginForm}`);
-    expect(hasLoginForm, 'Login page must show username/password form').toBe(true);
+      const hasLoginForm = await page.locator('input[type="password"], input[name*="password" i], input[name*="username" i]').count() > 0;
+      console.log(`TC-SESS-01: Login form visible=${hasLoginForm}`);
+      expect(hasLoginForm, 'Login page must show username/password form').toBe(true);
+    } finally {
+      await ctx.close();
+    }
   });
 
   test('TC-SESS-02: Login with valid credentials redirects to dashboard', async ({ page }) => {
@@ -135,13 +182,15 @@ test.describe('Suite U — Session Lifecycle (TC-SESS)', () => {
      * US-SESS-3: The dashboard metrics API must require authentication.
      * An unauthenticated request (no cookies) must get 401 or 302, not 200.
      */
-    // Probe without login session — open a clean page
-    const result = await page.evaluate(async (baseUrl: string) => {
-      const res = await fetch(`${baseUrl}/api/OpenELIS-Global/rest/home-dashboard/metrics`, {
-        credentials: 'omit', // No cookies
-      });
-      return { status: res.status };
-    }, BASE);
+    // Probe without cookies. See probeStatus: the 302 to login drops the port,
+    // which makes it cross-origin, so this fetch REJECTS rather than returning a
+    // status. That refusal is the protection, not an error in the test.
+    const status = await probeStatus(
+      page,
+      '/api/OpenELIS-Global/rest/home-dashboard/metrics',
+      { credentials: 'omit' }, // No cookies
+    );
+    const result = { status };
 
     console.log(`TC-SESS-05: Unauthenticated metrics request → HTTP ${result.status}`);
     // Should get 401 (Unauthorized), 403 (Forbidden), or 302 (redirect to login)
@@ -255,20 +304,23 @@ test.describe('Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–1
      * US-SESS-5: The login endpoint must exist and handle POST requests.
      * A 404 or 500 on the login endpoint means the application is not operational.
      */
-    const result = await page.evaluate(async (baseUrl: string) => {
-      const formData = new URLSearchParams();
-      formData.append('j_username', 'baduser_probe');
-      formData.append('j_password', 'badpass_probe');
-      const res = await fetch(`${baseUrl}/api/OpenELIS-Global/j_spring_security_check`, {
-        method: 'POST',
-        body: formData,
-        redirect: 'manual',
-      });
-      return { status: res.status };
-    }, BASE);
+    // Same-origin (probeStatus navigates first): posting from about:blank is
+    // cross-origin and rejected outright, which is what used to fail this test.
+    const body = new URLSearchParams();
+    body.append('j_username', 'baduser_probe');
+    body.append('j_password', 'badpass_probe');
+    const status = await probeStatus(page, '/api/OpenELIS-Global/j_spring_security_check', {
+      method: 'POST',
+      body: body.toString(),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      redirect: 'manual',
+    });
+    const result = { status };
 
     console.log(`TC-SESS-10: Login endpoint POST → HTTP ${result.status}`);
-    // 200, 302 (redirect to login error), 401 are all acceptable — 404 is NOT
+    // 200, 302 (redirect to login error), 401 are all acceptable — 404 is NOT.
+    // 0 means the browser refused to report the outcome (see probeStatus); a
+    // missing endpoint would have answered 404, so it is not one.
     expect(result.status, 'Login endpoint must exist (not 404)').not.toBe(404);
     expect(result.status, 'Login endpoint must not 500').not.toBeGreaterThanOrEqual(500);
   });
@@ -282,18 +334,16 @@ test.describe('Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–1
     const statuses: number[] = [];
 
     for (let i = 0; i < 10; i++) {
-      const result = await page.evaluate(async (baseUrl: string) => {
-        const formData = new URLSearchParams();
-        formData.append('j_username', `ratetest_${Date.now()}`);
-        formData.append('j_password', 'wrongpass!');
-        const res = await fetch(`${baseUrl}/api/OpenELIS-Global/j_spring_security_check`, {
-          method: 'POST',
-          body: formData,
-          redirect: 'manual',
-        });
-        return res.status;
-      }, BASE);
-      statuses.push(result);
+      const body = new URLSearchParams();
+      body.append('j_username', `ratetest_${Date.now()}`);
+      body.append('j_password', 'wrongpass!');
+      const status = await probeStatus(page, '/api/OpenELIS-Global/j_spring_security_check', {
+        method: 'POST',
+        body: body.toString(),
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        redirect: 'manual',
+      });
+      statuses.push(status);
       await page.waitForTimeout(100);
     }
 
@@ -427,12 +477,14 @@ test.describe('Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–1
     // Clear session cookies to simulate expiry
     await page.context().clearCookies();
 
-    const result = await page.evaluate(async () => {
-      const res = await fetch('/api/OpenELIS-Global/rest/home-dashboard/metrics', {
-        credentials: 'include',
-      });
-      return { status: res.status };
+    // With the cookies gone this is bounced to login, and that redirect drops the
+    // port (see probeStatus) — cross-origin, so the fetch rejects. Status 0 is
+    // that refusal, and it satisfies both assertions below honestly: the request
+    // neither succeeded (200) nor blew up server-side (5xx).
+    const status = await probeStatus(page, '/api/OpenELIS-Global/rest/home-dashboard/metrics', {
+      credentials: 'include',
     });
+    const result = { status };
 
     console.log(`TC-SESS-16: Cleared-cookie request → HTTP ${result.status}`);
     expect(result.status, 'Expired session must return 401/403/302, not 500').not.toBeGreaterThanOrEqual(500);

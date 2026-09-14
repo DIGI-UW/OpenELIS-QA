@@ -508,11 +508,25 @@ export async function createOrderViaUI(
  * The accepted request was POST /rest/SamplePatientEntry -> 200, and the app
  * then renders "Successfully saved" with the accession.
  */
+/**
+ * Optional extras for an order. Everything here was empty-string hard-coded
+ * before; a caller that needs an order with a requester or a next-visit date
+ * (tests/modify-order-field-binding.spec.ts does — see `seedModifiableOrder`)
+ * should not have to keep a second copy of the payload to get one.
+ */
+export interface OrderOptions {
+  providerFirstName?: string;
+  providerLastName?: string;
+  /** dd/MM/yyyy, as the form submits it. */
+  nextVisitDate?: string;
+}
+
 export async function createOrderViaAPI(
   page: Page,
   state: TestDataState,
   testName: string,
-  orderKey: 'primaryOrder' | 'secondaryOrder'
+  orderKey: 'primaryOrder' | 'secondaryOrder',
+  options: OrderOptions = {}
 ): Promise<string | null> {
   try {
     const patientId = state.patient.systemId;
@@ -522,7 +536,15 @@ export async function createOrderViaAPI(
     }
 
     const result = await page.evaluate(
-      async (args: { patientId: string; nationalId: string; testId: string; sampleTypeId: string }) => {
+      async (args: {
+        patientId: string;
+        nationalId: string;
+        testId: string;
+        sampleTypeId: string;
+        providerFirstName: string;
+        providerLastName: string;
+        nextVisitDate: string;
+      }) => {
         const csrf = localStorage.getItem('CSRF') || '';
         const j = async (p: string) => {
           const r = await fetch(p, { headers: { Accept: 'application/json' } });
@@ -534,8 +556,15 @@ export async function createOrderViaAPI(
         const sites = (await j('/api/OpenELIS-Global/rest/displayList/SAMPLE_PATIENT_REFERRING_CLINIC')) || [];
         if (!sites.length) return { err: 'no referring clinic configured (org type 5) — see harness 12.27' };
         const siteId = String(sites[0].id);
+        // A department is NOT required by this endpoint, only by the UI's own
+        // validation. Measured 2026-09-14 on the local 3.2.2.0 stack: POST
+        // /rest/SamplePatientEntry with `referringSiteDepartmentId: ''` returns
+        // 200 and the order reads back complete. 12.27 established that the
+        // admin form cannot parent a type-11 org to the clinic, so insisting on
+        // a department here made every API-seeded order impossible for a reason
+        // the API does not actually have. Send it when it exists; carry on when
+        // it does not.
         const depts = (await j(`/api/OpenELIS-Global/rest/departments-for-site?refferingSiteId=${siteId}`)) || [];
-        if (!depts.length) return { err: `site ${siteId} has no departments (need a type-11 org whose parent is it) — 12.27` };
 
         // (3) the accession, generated
         // the patient's own record, for the block above
@@ -610,10 +639,10 @@ export async function createOrderViaAPI(
             requestDate: date,
             receivedDateForDisplay: date,
             receivedTime: '08:00',
-            nextVisitDate: '',
+            nextVisitDate: args.nextVisitDate,
             priority: 'ROUTINE',
             referringSiteId: siteId,
-            referringSiteDepartmentId: String(depts[0].id),
+            referringSiteDepartmentId: depts.length ? String(depts[0].id) : '',
             referringSiteCode: '',
             referringSiteName: '',
             referringSiteDepartmentName: '',
@@ -628,8 +657,8 @@ export async function createOrderViaAPI(
             referringPatientNumber: '',
             providerId: '',
             providerPersonId: '',
-            providerFirstName: '',
-            providerLastName: '',
+            providerFirstName: args.providerFirstName,
+            providerLastName: args.providerLastName,
             providerWorkPhone: '',
             providerFax: '',
             providerEmail: '',
@@ -666,6 +695,9 @@ export async function createOrderViaAPI(
         nationalId: state.patient.nationalId,
         testId: process.env.QA_TEST_ID || '3',
         sampleTypeId: process.env.QA_SAMPLE_TYPE_ID || '2',
+        providerFirstName: options.providerFirstName ?? '',
+        providerLastName: options.providerLastName ?? '',
+        nextVisitDate: options.nextVisitDate ?? '',
       }
     );
 
@@ -685,6 +717,133 @@ export async function createOrderViaAPI(
     state.setupErrors.push(`createOrder(${testName}): ${String(e).slice(0, 200)}`);
     return null;
   }
+}
+
+/**
+ * Make sure this instance has a referring clinic, creating one if it has none.
+ *
+ * WHY A FIXTURE MAY CREATE THIS. A referring clinic is configuration, not data,
+ * and 12.27 deliberately left seeding it to a human. That was right while
+ * nothing depended on it; it is wrong now that a FLIP-WHEN-FIXED suite (the
+ * OGC-1191 modify-order cases) cannot run a single assertion without one. A CI
+ * stack that starts empty would otherwise report seven red tests that never
+ * touched the product.
+ *
+ * The POST is the Organization admin form's own captured request (12.27), not a
+ * hand-composed payload, and `selectedTypes: ['5']` is what makes the
+ * organization a referring clinic. It is idempotent: if
+ * SAMPLE_PATIENT_REFERRING_CLINIC already lists anything, nothing is created.
+ *
+ * Returns the site id, or null with the reason pushed onto `errors`.
+ */
+export async function ensureReferringClinic(
+  page: Page,
+  errors: string[] = []
+): Promise<string | null> {
+  const result = await page.evaluate(async () => {
+    const csrf = localStorage.getItem('CSRF') || '';
+    const list = async () => {
+      const r = await fetch('/api/OpenELIS-Global/rest/displayList/SAMPLE_PATIENT_REFERRING_CLINIC', {
+        headers: { Accept: 'application/json' },
+      });
+      if (!r.ok) return [];
+      return (await r.json().catch(() => [])) || [];
+    };
+
+    const existing = await list();
+    if (existing.length) return { id: String(existing[0].id), created: false, detail: '' };
+
+    const r = await fetch('/api/OpenELIS-Global/rest/Organization?ID=0&startingRecNo=1', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept-Language': 'en', 'X-CSRF-Token': csrf },
+      body: JSON.stringify({
+        organizationName: 'QA_AUTO Referring Clinic',
+        shortName: 'QAARC',
+        isActive: 'Y',
+        commune: '',
+        village: '',
+        department: '',
+        formName: 'organizationForm',
+        formMethod: 'POST',
+        cancelAction: 'CancelOrganization',
+        submitOnCancel: false,
+        cancelMethod: 'POST',
+        mlsSentinelLabFlag: 'N',
+        parentOrgName: '',
+        state: 'MN',
+        selectedTypes: ['5'],
+      }),
+    });
+    const text = await r.text().catch(() => '');
+    const after = await list();
+    if (!after.length) return { id: null, created: false, detail: `status=${r.status} body=${text.slice(0, 200)}` };
+    return { id: String(after[0].id), created: true, detail: '' };
+  });
+
+  if (!result.id) {
+    errors.push(`ensureReferringClinic: no type-5 organization and could not create one — ${result.detail}`);
+    return null;
+  }
+  if (result.created) console.log(`[data-factory] created referring clinic id=${result.id}`);
+  return result.id;
+}
+
+/**
+ * Seed one order that Modify Order can be exercised against, and return it.
+ *
+ * WHAT "MODIFIABLE" MEANS HERE, and why each part is deliberate:
+ *   - a provider LAST NAME, because a blank one silently disables Submit for
+ *     ever (MO-5), so an order without one can never reach the step under test;
+ *   - a next-visit date, so MO-2 has a populated date to watch get dropped;
+ *   - no received date, so MO-3 has an empty one to watch get fabricated;
+ *   - a referring site, so MO-4 has a site name to watch get blanked;
+ *   - exactly one test, because `existingTests` must be non-empty.
+ *
+ * It replaces a scan of accessions DEV0126...000500–000600 that assumed a
+ * particular seeded instance. On the CI develop stack that window holds nothing
+ * — one order exists, with no provider and no tests — so all seven cases failed
+ * in the fixture with "the instance holds at least one order with a provider
+ * last name and a test", and the OGC-1191 regressions were never executed.
+ * Seeding what the suite needs is the only version of this that survives a
+ * reseed, an empty stack, or somebody consuming the order it found.
+ */
+export async function seedModifiableOrder(
+  page: Page
+): Promise<{ accession: string; patientId: string; nationalId: string }> {
+  const errors: string[] = [];
+  const siteId = await ensureReferringClinic(page, errors);
+  if (!siteId) throw new Error(`seedModifiableOrder: ${errors.join(' | ')}`);
+
+  const stamp = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
+  const nationalId = `QAMO${stamp}`;
+  // Letters only in the name: a digit anywhere in it is rejected as
+  // `400 "invalid name format"` (12.x), so the stamp lives in the national ID.
+  const created = await createPatientViaAPI(page, {
+    nationalId,
+    firstName: 'Orderly',
+    lastName: 'Modifyson',
+    gender: 'F',
+    dateOfBirth: '01/01/1990',
+  });
+  if (!created.id) throw new Error(`seedModifiableOrder: patient not created — ${created.detail}`);
+
+  const state = emptyState();
+  state.patient.systemId = created.id;
+  state.patient.nationalId = nationalId;
+
+  const nv = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  const nextVisitDate =
+    `${String(nv.getDate()).padStart(2, '0')}/${String(nv.getMonth() + 1).padStart(2, '0')}/${nv.getFullYear()}`;
+
+  const accession = await createOrderViaAPI(page, state, 'seedModifiableOrder', 'primaryOrder', {
+    providerFirstName: 'Quinn',
+    providerLastName: 'Autoprov',
+    nextVisitDate,
+  });
+  if (!accession) {
+    throw new Error(`seedModifiableOrder: order not created — ${state.setupErrors.join(' | ')}`);
+  }
+  return { accession, patientId: created.id, nationalId };
 }
 
 /**
