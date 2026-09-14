@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, ACCESSION, TIMEOUT, login } from '../helpers/test-helpers';
+import { BASE, ADMIN, ACCESSION, TIMEOUT, login, discoverFhirBase } from '../helpers/test-helpers';
 
 /**
  * FHIR R4 Integration Test Suite
@@ -23,26 +23,13 @@ import { BASE, ADMIN, ACCESSION, TIMEOUT, login } from '../helpers/test-helpers'
  *   - BUG-14 RESOLVED: FHIR metadata endpoint is healthy
  *   - BUG-21: patient-photos/{id}/true → HTTP 500 (unrelated, do not test)
  *
- * FHIR base path: /hapi-fhir-jpaserver/fhir or /fhir
+ * FHIR base path: discovered at runtime (see discoverFhirBase); on 3.2.2.x it is
+ *                 /api/OpenELIS-Global/fhir
  * API token: same CSRF token from localStorage
  *
  * Suite IDs: TC-FHIR-01 through TC-FHIR-12
  * Total Test Count: 12 TCs
  */
-
-// Discovery: try multiple FHIR base paths, return whichever responds
-async function findFhirBase(page: any): Promise<string | null> {
-  const candidates = [
-    '/hapi-fhir-jpaserver/fhir',
-    '/fhir',
-    '/api/OpenELIS-Global/fhir',
-  ];
-  for (const base of candidates) {
-    const res = await page.goto(`${BASE}${base}/metadata`).catch(() => null);
-    if (res && res.ok()) return base;
-  }
-  return null;
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Suite R — FHIR Metadata & Capability (TC-FHIR-01 through TC-FHIR-03)
@@ -61,22 +48,14 @@ test.describe('Suite FHIR — Metadata & Capability (TC-FHIR-01–03)', () => {
      */
     await page.goto(`${BASE}`);
 
-    const result = await page.evaluate(async () => {
-      const candidates = [
-        '/hapi-fhir-jpaserver/fhir/metadata',
-        '/fhir/metadata',
-        '/api/OpenELIS-Global/fhir/metadata',
-      ];
-      for (const path of candidates) {
-        const res = await fetch(path, {
-          headers: { Accept: 'application/fhir+json' },
-        });
-        if (res.ok) {
-          return { status: res.status, path };
-        }
-      }
-      return { status: 404, path: 'none' };
-    });
+    // Discovery must reject the SPA shell — see discoverFhirBase. The old loop
+    // here stopped at the first 200, which every path returns.
+    const base = await discoverFhirBase(page);
+    const result = await page.evaluate(async (b: string | null) => {
+      if (!b) return { status: 404, path: 'none' };
+      const res = await fetch(`${b}/metadata`, { headers: { Accept: 'application/fhir+json' } });
+      return { status: res.status, path: `${b}/metadata` };
+    }, base);
 
     console.log(`TC-FHIR-01: ${result.path} → HTTP ${result.status}`);
     expect(result.status, 'FHIR metadata endpoint must return HTTP 200').toBe(200);
@@ -89,29 +68,21 @@ test.describe('Suite FHIR — Metadata & Capability (TC-FHIR-01–03)', () => {
      */
     await page.goto(`${BASE}`);
 
-    const result = await page.evaluate(async () => {
-      const candidates = [
-        '/hapi-fhir-jpaserver/fhir/metadata',
-        '/fhir/metadata',
-      ];
-      for (const path of candidates) {
-        const res = await fetch(path, {
-          headers: { Accept: 'application/fhir+json' },
-        });
-        if (!res.ok) continue;
-        const data = await res.json();
-        return {
-          status: res.status,
-          path,
-          resourceType: data.resourceType,
-          fhirVersion: data.fhirVersion,
-          hasSoftware: !!data.software,
-          softwareName: data.software?.name || '',
-          restCount: data.rest?.length ?? 0,
-        };
-      }
-      return { status: 404, path: 'none', resourceType: null, fhirVersion: null };
-    });
+    const base = await discoverFhirBase(page);
+    const result = await page.evaluate(async (b: string | null) => {
+      if (!b) return { status: 404, path: 'none', resourceType: null, fhirVersion: null, softwareName: '', restCount: 0 };
+      const path = `${b}/metadata`;
+      const res = await fetch(path, { headers: { Accept: 'application/fhir+json' } });
+      const data = await res.json();
+      return {
+        status: res.status,
+        path,
+        resourceType: data.resourceType,
+        fhirVersion: data.fhirVersion,
+        softwareName: data.software?.name || '',
+        restCount: data.rest?.length ?? 0,
+      };
+    }, base);
 
     console.log(`TC-FHIR-02: path=${result.path}, resourceType=${result.resourceType}, fhirVersion=${result.fhirVersion}, software=${result.softwareName}`);
     expect(result.status).toBe(200);
@@ -127,27 +98,20 @@ test.describe('Suite FHIR — Metadata & Capability (TC-FHIR-01–03)', () => {
      */
     await page.goto(`${BASE}`);
 
-    const result = await page.evaluate(async () => {
-      const candidates = [
-        '/hapi-fhir-jpaserver/fhir/metadata',
-        '/fhir/metadata',
-      ];
-      for (const path of candidates) {
-        const res = await fetch(path, {
-          headers: { Accept: 'application/fhir+json' },
-        });
-        if (!res.ok) continue;
-        const data = await res.json();
-        const resources: string[] = [];
-        for (const restEntry of (data.rest ?? [])) {
-          for (const r of (restEntry.resource ?? [])) {
-            resources.push(r.type);
-          }
+    const base = await discoverFhirBase(page);
+    const result = await page.evaluate(async (b: string | null) => {
+      if (!b) return { status: 404, path: 'none', resources: [] as string[] };
+      const path = `${b}/metadata`;
+      const res = await fetch(path, { headers: { Accept: 'application/fhir+json' } });
+      const data = await res.json();
+      const resources: string[] = [];
+      for (const restEntry of (data.rest ?? [])) {
+        for (const r of (restEntry.resource ?? [])) {
+          resources.push(r.type);
         }
-        return { status: res.status, path, resources };
       }
-      return { status: 404, path: 'none', resources: [] };
-    });
+      return { status: res.status, path, resources };
+    }, base);
 
     console.log(`TC-FHIR-03: ${result.path} → declared resources: [${result.resources.join(', ')}]`);
     expect(result.status).toBe(200);
@@ -175,28 +139,22 @@ test.describe('Suite FHIR-RESOURCES — Clinical Resource Queries (TC-FHIR-04–
      */
     await page.goto(`${BASE}`);
 
-    const result = await page.evaluate(async () => {
-      const candidates = [
-        '/hapi-fhir-jpaserver/fhir',
-        '/fhir',
-      ];
-      for (const base of candidates) {
-        const res = await fetch(`${base}/Patient?identifier=0123456`, {
-          headers: { Accept: 'application/fhir+json' },
-        });
-        if (res.status === 404) continue;
-        const text = await res.text();
-        let data: any = null;
-        try { data = JSON.parse(text); } catch { /* not JSON */ }
-        return {
-          status: res.status,
-          base,
-          resourceType: data?.resourceType,
-          total: data?.total ?? -1,
-        };
-      }
-      return { status: 404, base: 'none', resourceType: null, total: -1 };
-    });
+    const fhirBase = await discoverFhirBase(page);
+    const result = await page.evaluate(async (b: string | null) => {
+      if (!b) return { status: 404, base: 'none', resourceType: null, total: -1 };
+      const res = await fetch(`${b}/Patient?identifier=0123456`, {
+        headers: { Accept: 'application/fhir+json' },
+      });
+      const text = await res.text();
+      let data: any = null;
+      try { data = JSON.parse(text); } catch { /* not JSON */ }
+      return {
+        status: res.status,
+        base: b,
+        resourceType: data?.resourceType,
+        total: data?.total ?? -1,
+      };
+    }, fhirBase);
 
     console.log(`TC-FHIR-04: ${result.base}/Patient → status=${result.status}, resourceType=${result.resourceType}, total=${result.total}`);
     // Must not be a 5xx error — 200 with Bundle or 404 if not implemented
@@ -213,28 +171,22 @@ test.describe('Suite FHIR-RESOURCES — Clinical Resource Queries (TC-FHIR-04–
      */
     await page.goto(`${BASE}`);
 
-    const result = await page.evaluate(async () => {
-      const candidates = [
-        '/hapi-fhir-jpaserver/fhir',
-        '/fhir',
-      ];
-      for (const base of candidates) {
-        const res = await fetch(`${base}/ServiceRequest`, {
-          headers: { Accept: 'application/fhir+json' },
-        });
-        if (res.status === 404) continue;
-        const text = await res.text();
-        let data: any = null;
-        try { data = JSON.parse(text); } catch { /* not JSON */ }
-        return {
-          status: res.status,
-          base,
-          resourceType: data?.resourceType,
-          total: data?.total ?? -1,
-        };
-      }
-      return { status: 404, base: 'none', resourceType: null, total: -1 };
-    });
+    const fhirBase = await discoverFhirBase(page);
+    const result = await page.evaluate(async (b: string | null) => {
+      if (!b) return { status: 404, base: 'none', resourceType: null, total: -1 };
+      const res = await fetch(`${b}/ServiceRequest`, {
+        headers: { Accept: 'application/fhir+json' },
+      });
+      const text = await res.text();
+      let data: any = null;
+      try { data = JSON.parse(text); } catch { /* not JSON */ }
+      return {
+        status: res.status,
+        base: b,
+        resourceType: data?.resourceType,
+        total: data?.total ?? -1,
+      };
+    }, fhirBase);
 
     console.log(`TC-FHIR-05: ${result.base}/ServiceRequest → status=${result.status}, type=${result.resourceType}, total=${result.total}`);
     expect(result.status, 'FHIR ServiceRequest must not return 5xx').not.toBeGreaterThanOrEqual(500);
@@ -250,28 +202,22 @@ test.describe('Suite FHIR-RESOURCES — Clinical Resource Queries (TC-FHIR-04–
      */
     await page.goto(`${BASE}`);
 
-    const result = await page.evaluate(async () => {
-      const candidates = [
-        '/hapi-fhir-jpaserver/fhir',
-        '/fhir',
-      ];
-      for (const base of candidates) {
-        const res = await fetch(`${base}/DiagnosticReport`, {
-          headers: { Accept: 'application/fhir+json' },
-        });
-        if (res.status === 404) continue;
-        const text = await res.text();
-        let data: any = null;
-        try { data = JSON.parse(text); } catch { /* not JSON */ }
-        return {
-          status: res.status,
-          base,
-          resourceType: data?.resourceType,
-          total: data?.total ?? -1,
-        };
-      }
-      return { status: 404, base: 'none', resourceType: null, total: -1 };
-    });
+    const fhirBase = await discoverFhirBase(page);
+    const result = await page.evaluate(async (b: string | null) => {
+      if (!b) return { status: 404, base: 'none', resourceType: null, total: -1 };
+      const res = await fetch(`${b}/DiagnosticReport`, {
+        headers: { Accept: 'application/fhir+json' },
+      });
+      const text = await res.text();
+      let data: any = null;
+      try { data = JSON.parse(text); } catch { /* not JSON */ }
+      return {
+        status: res.status,
+        base: b,
+        resourceType: data?.resourceType,
+        total: data?.total ?? -1,
+      };
+    }, fhirBase);
 
     console.log(`TC-FHIR-06: ${result.base}/DiagnosticReport → status=${result.status}, type=${result.resourceType}, total=${result.total}`);
     expect(result.status, 'FHIR DiagnosticReport must not return 5xx').not.toBeGreaterThanOrEqual(500);
@@ -287,28 +233,22 @@ test.describe('Suite FHIR-RESOURCES — Clinical Resource Queries (TC-FHIR-04–
      */
     await page.goto(`${BASE}`);
 
-    const result = await page.evaluate(async () => {
-      const candidates = [
-        '/hapi-fhir-jpaserver/fhir',
-        '/fhir',
-      ];
-      for (const base of candidates) {
-        const res = await fetch(`${base}/Observation`, {
-          headers: { Accept: 'application/fhir+json' },
-        });
-        if (res.status === 404) continue;
-        const text = await res.text();
-        let data: any = null;
-        try { data = JSON.parse(text); } catch { /* not JSON */ }
-        return {
-          status: res.status,
-          base,
-          resourceType: data?.resourceType,
-          total: data?.total ?? -1,
-        };
-      }
-      return { status: 404, base: 'none', resourceType: null, total: -1 };
-    });
+    const fhirBase = await discoverFhirBase(page);
+    const result = await page.evaluate(async (b: string | null) => {
+      if (!b) return { status: 404, base: 'none', resourceType: null, total: -1 };
+      const res = await fetch(`${b}/Observation`, {
+        headers: { Accept: 'application/fhir+json' },
+      });
+      const text = await res.text();
+      let data: any = null;
+      try { data = JSON.parse(text); } catch { /* not JSON */ }
+      return {
+        status: res.status,
+        base: b,
+        resourceType: data?.resourceType,
+        total: data?.total ?? -1,
+      };
+    }, fhirBase);
 
     console.log(`TC-FHIR-07: ${result.base}/Observation → status=${result.status}, type=${result.resourceType}, total=${result.total}`);
     expect(result.status, 'FHIR Observation must not return 5xx').not.toBeGreaterThanOrEqual(500);
@@ -324,21 +264,13 @@ test.describe('Suite FHIR-RESOURCES — Clinical Resource Queries (TC-FHIR-04–
      */
     await page.goto(`${BASE}`);
 
-    const result = await page.evaluate(async () => {
-      const candidates = [
-        '/hapi-fhir-jpaserver/fhir/metadata',
-        '/fhir/metadata',
-      ];
-      for (const path of candidates) {
-        const res = await fetch(path, {
-          headers: { Accept: 'application/fhir+json' },
-        });
-        if (!res.ok) continue;
-        const ct = res.headers.get('content-type') || '';
-        return { status: res.status, path, contentType: ct };
-      }
-      return { status: 404, path: 'none', contentType: '' };
-    });
+    const base = await discoverFhirBase(page);
+    const result = await page.evaluate(async (b: string | null) => {
+      if (!b) return { status: 404, path: 'none', contentType: '' };
+      const path = `${b}/metadata`;
+      const res = await fetch(path, { headers: { Accept: 'application/fhir+json' } });
+      return { status: res.status, path, contentType: res.headers.get('content-type') || '' };
+    }, base);
 
     console.log(`TC-FHIR-08: ${result.path} Content-Type: "${result.contentType}"`);
     if (result.status === 200) {
@@ -365,27 +297,21 @@ test.describe('Suite FHIR-ERROR — FHIR Error Handling (TC-FHIR-09–12)', () =
      */
     await page.goto(`${BASE}`);
 
-    const result = await page.evaluate(async () => {
-      const candidates = [
-        '/hapi-fhir-jpaserver/fhir/NonExistentResourceType12345',
-        '/fhir/NonExistentResourceType12345',
-      ];
-      for (const path of candidates) {
-        const res = await fetch(path, {
-          headers: { Accept: 'application/fhir+json' },
-        });
-        const text = await res.text();
-        let data: any = null;
-        try { data = JSON.parse(text); } catch { /* not JSON */ }
-        return {
-          status: res.status,
-          path,
-          resourceType: data?.resourceType,
-          hasStackTrace: text.includes('at org.') || text.includes('java.lang'),
-        };
-      }
-      return { status: 200, path: 'none', resourceType: null, hasStackTrace: false };
-    });
+    const base = await discoverFhirBase(page);
+    test.skip(!base, 'no FHIR base on this instance');
+    const result = await page.evaluate(async (b: string | null) => {
+      const path = `${b}/NonExistentResourceType12345`;
+      const res = await fetch(path, { headers: { Accept: 'application/fhir+json' } });
+      const text = await res.text();
+      let data: any = null;
+      try { data = JSON.parse(text); } catch { /* not JSON */ }
+      return {
+        status: res.status,
+        path,
+        resourceType: data?.resourceType,
+        hasStackTrace: text.includes('at org.') || text.includes('java.lang'),
+      };
+    }, base);
 
     console.log(`TC-FHIR-09: ${result.path} → status=${result.status}, type=${result.resourceType}, hasStackTrace=${result.hasStackTrace}`);
     expect(result.status, 'Unknown resource type must return 4xx, not 5xx').toBeLessThan(500);
@@ -399,22 +325,15 @@ test.describe('Suite FHIR-ERROR — FHIR Error Handling (TC-FHIR-09–12)', () =
      */
     await page.goto(`${BASE}`);
 
-    const result = await page.evaluate(async () => {
-      const candidates = [
-        "/hapi-fhir-jpaserver/fhir/Patient/'; DROP TABLE patients; --",
-        "/fhir/Patient/'; DROP TABLE patients; --",
-      ];
-      for (const path of candidates) {
-        const res = await fetch(encodeURI(path), {
-          headers: { Accept: 'application/fhir+json' },
-        }).catch(() => ({ ok: false, status: 0 }));
-        return {
-          status: (res as any).status,
-          path,
-        };
-      }
-      return { status: 0, path: 'none' };
-    });
+    const base = await discoverFhirBase(page);
+    test.skip(!base, 'no FHIR base on this instance');
+    const result = await page.evaluate(async (b: string | null) => {
+      const path = `${b}/Patient/'; DROP TABLE patients; --`;
+      const res = await fetch(encodeURI(path), {
+        headers: { Accept: 'application/fhir+json' },
+      }).catch(() => ({ ok: false, status: 0 }));
+      return { status: (res as any).status, path };
+    }, base);
 
     console.log(`TC-FHIR-10: SQLi attempt → status=${result.status}`);
     // Must not return a 500 (which would indicate the payload affected the server)
@@ -428,23 +347,14 @@ test.describe('Suite FHIR-ERROR — FHIR Error Handling (TC-FHIR-09–12)', () =
      */
     await page.goto(`${BASE}`);
 
-    const result = await page.evaluate(async () => {
-      const candidates = [
-        '/hapi-fhir-jpaserver/fhir/metadata',
-        '/fhir/metadata',
-      ];
-      for (const path of candidates) {
-        const start = Date.now();
-        const res = await fetch(path, {
-          headers: { Accept: 'application/fhir+json' },
-        });
-        const elapsed = Date.now() - start;
-        if (res.ok) {
-          return { status: res.status, path, elapsed };
-        }
-      }
-      return { status: 404, path: 'none', elapsed: -1 };
-    });
+    const base = await discoverFhirBase(page);
+    const result = await page.evaluate(async (b: string | null) => {
+      if (!b) return { status: 404, path: 'none', elapsed: -1 };
+      const path = `${b}/metadata`;
+      const start = Date.now();
+      const res = await fetch(path, { headers: { Accept: 'application/fhir+json' } });
+      return { status: res.status, path, elapsed: Date.now() - start };
+    }, base);
 
     console.log(`TC-FHIR-11: ${result.path} responded in ${result.elapsed}ms`);
     if (result.status === 200) {
@@ -461,25 +371,15 @@ test.describe('Suite FHIR-ERROR — FHIR Error Handling (TC-FHIR-09–12)', () =
      */
     await page.goto(`${BASE}`);
 
-    const results = await page.evaluate(async () => {
-      const candidates = [
-        '/hapi-fhir-jpaserver/fhir/metadata',
-        '/fhir/metadata',
-      ];
-
-      let fhirBase = '';
-      for (const path of candidates) {
-        const probe = await fetch(path, { headers: { Accept: 'application/fhir+json' } });
-        if (probe.ok) { fhirBase = path; break; }
-      }
-      if (!fhirBase) return { fhirBase: 'none', statuses: [] };
-
+    const base = await discoverFhirBase(page);
+    const results = await page.evaluate(async (b: string | null) => {
+      if (!b) return { fhirBase: 'none', statuses: [] as number[] };
+      const url = `${b}/metadata`;
       const promises = Array.from({ length: 5 }, () =>
-        fetch(fhirBase, { headers: { Accept: 'application/fhir+json' } }).then(r => r.status)
+        fetch(url, { headers: { Accept: 'application/fhir+json' } }).then(r => r.status)
       );
-      const statuses = await Promise.all(promises);
-      return { fhirBase, statuses };
-    });
+      return { fhirBase: url, statuses: await Promise.all(promises) };
+    }, base);
 
     console.log(`TC-FHIR-12: 5 concurrent requests to ${results.fhirBase} → [${results.statuses.join(', ')}]`);
     if (results.fhirBase === 'none') {
@@ -497,22 +397,9 @@ test.describe('Suite FHIR-ERROR — FHIR Error Handling (TC-FHIR-09–12)', () =
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('Suite FHIR-EXT — FHIR R4 Extended (TC-FHIR-EXT)', () => {
-  const FHIR_CANDIDATES = [
-    '/hapi-fhir-jpaserver/fhir',
-    '/fhir',
-    '/api/OpenELIS-Global/fhir',
-  ];
-
-  async function discoverFhirBase(page: any): Promise<string> {
-    return page.evaluate(async (candidates: string[]) => {
-      for (const base of candidates) {
-        const res = await fetch(`${base}/metadata`, {
-          headers: { Accept: 'application/fhir+json' },
-        }).catch(() => null);
-        if (res?.ok) return base;
-      }
-      return '';
-    }, FHIR_CANDIDATES);
+  /** Shared discovery (content-type aware); '' keeps the existing skip checks working. */
+  async function discoverBase(page: any): Promise<string> {
+    return (await discoverFhirBase(page)) ?? '';
   }
 
   test.beforeEach(async ({ page }) => {
@@ -526,7 +413,7 @@ test.describe('Suite FHIR-EXT — FHIR R4 Extended (TC-FHIR-EXT)', () => {
      */
     await page.goto(`${BASE}`);
 
-    const fhirBase = await discoverFhirBase(page);
+    const fhirBase = await discoverBase(page);
     if (!fhirBase) { test.skip(); return; }
 
     const result = await page.evaluate(async (base: string) => {
@@ -552,7 +439,7 @@ test.describe('Suite FHIR-EXT — FHIR R4 Extended (TC-FHIR-EXT)', () => {
      */
     await page.goto(`${BASE}`);
 
-    const fhirBase = await discoverFhirBase(page);
+    const fhirBase = await discoverBase(page);
     if (!fhirBase) { test.skip(); return; }
 
     const result = await page.evaluate(async (base: string) => {
@@ -582,7 +469,7 @@ test.describe('Suite FHIR-EXT — FHIR R4 Extended (TC-FHIR-EXT)', () => {
      */
     await page.goto(`${BASE}`);
 
-    const fhirBase = await discoverFhirBase(page);
+    const fhirBase = await discoverBase(page);
     if (!fhirBase) { test.skip(); return; }
 
     const result = await page.evaluate(async (base: string) => {
@@ -603,7 +490,7 @@ test.describe('Suite FHIR-EXT — FHIR R4 Extended (TC-FHIR-EXT)', () => {
      */
     await page.goto(`${BASE}`);
 
-    const fhirBase = await discoverFhirBase(page);
+    const fhirBase = await discoverBase(page);
     if (!fhirBase) { test.skip(); return; }
 
     const result = await page.evaluate(async (base: string) => {
@@ -624,7 +511,7 @@ test.describe('Suite FHIR-EXT — FHIR R4 Extended (TC-FHIR-EXT)', () => {
      */
     await page.goto(`${BASE}`);
 
-    const fhirBase = await discoverFhirBase(page);
+    const fhirBase = await discoverBase(page);
     if (!fhirBase) { test.skip(); return; }
 
     const results = await page.evaluate(async (base: string) => {
@@ -654,7 +541,7 @@ test.describe('Suite FHIR-EXT — FHIR R4 Extended (TC-FHIR-EXT)', () => {
      */
     await page.goto(`${BASE}`);
 
-    const fhirBase = await discoverFhirBase(page);
+    const fhirBase = await discoverBase(page);
     if (!fhirBase) { test.skip(); return; }
 
     const result = await page.evaluate(async (base: string) => {

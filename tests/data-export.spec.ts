@@ -114,7 +114,11 @@ test.describe('Suite S — Data Export Core (TC-EXP)', () => {
     await page.goto(`${BASE}/Report?type=patient`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    const [startDate, endDate] = getDateRange();
+    // getDateRange() is async and returns { from, to } — array-destructuring it
+    // without awaiting yielded `TypeError: object is not iterable` before the
+    // report was ever touched, so TC-EXP-03/04 failed on the harness, not on
+    // the product.
+    const { from: startDate } = await getDateRange();
     const dateInput = page.locator('input[type="date"], input[placeholder*="mm/dd" i]').first();
 
     if (await dateInput.isVisible({ timeout: 3000 }).catch(() => false)) {
@@ -138,7 +142,8 @@ test.describe('Suite S — Data Export Core (TC-EXP)', () => {
     await page.goto(`${BASE}/Report?type=patient`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    const [startDate, endDate] = getDateRange();
+    // See TC-EXP-03: this helper is async and returns { from, to }.
+    const { from: startDate, to: endDate } = await getDateRange();
     const dateInputs = page.locator('input[type="date"]');
     const inputCount = await dateInputs.count();
 

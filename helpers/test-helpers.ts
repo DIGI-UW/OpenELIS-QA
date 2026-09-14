@@ -190,6 +190,26 @@ export function isDataSetupComplete(): boolean {
 
 export const CONFIRMED_ADMIN_URLS: Record<string, string> = {
   'Reflex Tests Management': '/MasterListsPage/reflex',
+  // SECTION HEADERS, added 2026-09-14. Four labels the specs navigate by are
+  // not pages at all: in the live sidebar they are expandable SECTIONS whose
+  // children are the real screens. `navigateToAdminItem` therefore threw
+  // `Admin item "X" not found in the sidebar` for all eight cases that use
+  // them — the label is genuinely absent from the map, and the sidebar
+  // fallback cannot see it either because the specs call the helper from
+  // about:blank, where there is no sidebar to click.
+  //
+  // Each slug below is the section's landing screen, read off THIS instance on
+  // 2026-09-14 (v3.2.2.0) rather than guessed:
+  //   /MasterListsPage/reflex                -> heading "Reflex Tests Management"
+  //   /MasterListsPage/globalMenuManagement  -> heading "Global Menu Management"
+  //   /MasterListsPage/NonConformityConfigurationMenu -> "NonConformity Configuration"
+  //   /MasterListsPage/languageManagement    -> heading "Language Management"
+  // The parent routes themselves (/menuConfiguration, /generalConfigurations,
+  // /localization) render the chrome and no content, so they are NOT used here.
+  'Reflex Tests Configuration': '/MasterListsPage/reflex',
+  'Menu Configuration': '/MasterListsPage/globalMenuManagement',
+  'General Configurations': '/MasterListsPage/NonConformityConfigurationMenu',
+  'Localization': '/MasterListsPage/languageManagement',
   'Analyzer Test Name': '/MasterListsPage/AnalyzerTestName',
   'Lab Number Management': '/MasterListsPage/labNumber',
   'Program Entry': '/MasterListsPage/program',
@@ -292,6 +312,25 @@ export async function getFutureDate(days: number): Promise<string> {
 // Navigation Helper Functions
 // ---------------------------------------------------------------------------
 
+/** Collapse internal whitespace so a label copied off the screen still matches. */
+function normalizeAdminLabel(label: string): string {
+  return label.replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Resolve an admin sidebar label to its confirmed URL, ignoring whitespace
+ * differences between the map key and the rendered label.
+ */
+export function lookupAdminUrl(itemName: string): string | undefined {
+  const direct = CONFIRMED_ADMIN_URLS[itemName];
+  if (direct) return direct;
+  const want = normalizeAdminLabel(itemName);
+  for (const [key, url] of Object.entries(CONFIRMED_ADMIN_URLS)) {
+    if (normalizeAdminLabel(key) === want) return url;
+  }
+  return undefined;
+}
+
 /**
  * Navigate to an admin item by name or direct URL
  * Uses confirmed URLs (Round 4 validated) when available, otherwise clicks sidebar
@@ -300,8 +339,14 @@ export async function getFutureDate(days: number): Promise<string> {
  * @throws Error if admin item not found
  */
 export async function navigateToAdminItem(page: Page, itemName: string): Promise<void> {
-  // Use confirmed URL if available (Round 4 validated), otherwise click sidebar
-  const confirmedSlug = CONFIRMED_ADMIN_URLS[itemName];
+  // Use confirmed URL if available (Round 4 validated), otherwise click sidebar.
+  //
+  // The lookup collapses runs of whitespace first. The live sidebar renders
+  // "Reflex Tests  Management" with a DOUBLE space (verified 2026-09-14), and a
+  // caller who copies the label off the screen would otherwise miss a map entry
+  // that is present and correct. Whitespace is a rendering detail; it should not
+  // decide whether a screen is reachable.
+  const confirmedSlug = lookupAdminUrl(itemName);
   if (confirmedSlug) {
     await page.goto(`${BASE}${confirmedSlug}`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
@@ -379,6 +424,78 @@ export async function navigateWithDiscovery(page: Page, candidates: string[]): P
     }
   }
   return false;
+}
+
+/**
+ * FHIR base paths to probe, most likely first.
+ *
+ * `/api/OpenELIS-Global/fhir` is the real one on 3.2.2.x and is also recorded as
+ * `FHIR_BASE` in helpers/apiShapes.ts. The other two are kept because older
+ * deployments served HAPI from them, and a spec that hard-codes one base is a
+ * spec that goes red on the next deployment shape.
+ */
+export const FHIR_BASE_CANDIDATES = [
+  '/api/OpenELIS-Global/fhir',
+  '/hapi-fhir-jpaserver/fhir',
+  '/fhir',
+] as const;
+
+/**
+ * Find the FHIR base this instance actually serves, or null.
+ *
+ * WHY THIS IS CENTRAL, AND WHY `res.ok()` IS NOT ENOUGH (2026-09-14).
+ * Every FHIR spec had its own inline "try each candidate until one responds"
+ * loop, and every one of them accepted a candidate on `res.ok` alone. This SPA
+ * answers **HTTP 200 with `content-type: text/html`** for any path it does not
+ * recognise — the React shell — so the FIRST candidate always "worked",
+ * discovery stopped there, and ~17 tests then asserted FHIR semantics against an
+ * HTML page: `resourceType=undefined`, `fhirVersion=null`, "must be a
+ * CapabilityStatement" and so on. Measured on this instance:
+ *
+ *   /hapi-fhir-jpaserver/fhir/metadata -> 200 text/html            (SPA shell)
+ *   /fhir/metadata                     -> 200 text/html            (SPA shell)
+ *   /api/OpenELIS-Global/fhir/metadata -> 200 application/fhir+json, R4
+ *                                         CapabilityStatement
+ *
+ * So a candidate counts only if the server answered with JSON **and** the body
+ * is the resource we asked for. `navigateWithDiscovery` above already rejects a
+ * Spring `problemDetail` body for the same underlying reason; this is that rule
+ * applied to the API side.
+ *
+ * The page must already be on the application origin (`page.goto(BASE)`) so the
+ * relative fetches carry the session cookie.
+ */
+export async function discoverFhirBase(page: Page): Promise<string | null> {
+  return page.evaluate(async (candidates: string[]) => {
+    for (const base of candidates) {
+      try {
+        const res = await fetch(`${base}/metadata`, {
+          headers: { Accept: 'application/fhir+json' },
+        });
+        if (!res.ok) continue;
+        // A 200 proves nothing here — the SPA catch-all returns 200 for
+        // everything. The content type is what separates the FHIR server from
+        // the HTML shell.
+        const contentType = res.headers.get('content-type') || '';
+        if (!/json/i.test(contentType)) continue;
+        const body = await res.text();
+        let data: any = null;
+        try {
+          data = JSON.parse(body);
+        } catch {
+          continue;
+        }
+        // Spring hands back a problemDetail document as JSON; that is an error,
+        // not a FHIR server.
+        if (!data || data.problemDetail || typeof data.type === 'string' && data.type.includes('problemDetail')) continue;
+        if (data.resourceType !== 'CapabilityStatement') continue;
+        return base;
+      } catch {
+        // candidate unreachable — try the next
+      }
+    }
+    return null;
+  }, [...FHIR_BASE_CANDIDATES]);
 }
 
 /**
@@ -468,9 +585,18 @@ export async function login(page: Page, user: string, pass: string): Promise<voi
     );
   }
 
-  await page.fill('input[name="loginName"]', user);
-  await page.fill('input[name="userPass"]', pass);
-  await page.getByRole('button', { name: /submit|login|save|next|accept/i }).click();
+  // The password input is `name="password"` (id `password`), NOT `userPass`:
+  // read off the live form 2026-09-14. `userPass` matches nothing, so this used
+  // to hang for the full timeout on any context that really was signed out. The
+  // submit control has no accessible name either, hence the id fallback.
+  await page.fill('input[name="loginName"], #loginName', user);
+  await page.fill('input[name="password"], #password, input[type="password"]', pass);
+  const submit = page.getByRole('button', { name: /submit|login|sign in|save|next|accept/i }).first();
+  if (await submit.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    await submit.click();
+  } else {
+    await page.locator('#submitButton, button[type="submit"], input[type="submit"]').first().click();
+  }
   await page.waitForURL(/Dashboard|Home|SamplePatientEntry/);
 }
 
@@ -643,7 +769,19 @@ export async function tryNavigateToURL(page: Page, candidates: string[]): Promis
     try {
       await page.goto(`${BASE}${url}`, { waitUntil: 'domcontentloaded', timeout: 8_000 });
       const landed = page.url();
-      if (!/login|signin/i.test(landed)) return true;
+      if (/login|signin/i.test(landed)) continue;
+
+      // A Spring error document is not a screen. `/ColdStorageMonitoring` —
+      // first in TC-STOR-03/04's candidate list — bounces to
+      // /api/OpenELIS-Global/ColdStorageMonitoring and renders a
+      // NoHandlerFoundException problemDetail (measured 2026-09-14), which is
+      // neither a login page nor a crash, so this returned true and the caller
+      // never tried `/FreezerMonitoring`, the screen that actually exists. Same
+      // rule navigateWithDiscovery applies to the body it lands on.
+      const body = await page.locator('body').innerText().catch(() => '');
+      if (body.includes('NoHandlerFoundException') || body.includes('problemDetail')) continue;
+
+      return true;
     } catch {
       // try the next candidate
     }

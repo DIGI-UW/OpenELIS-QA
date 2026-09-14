@@ -210,7 +210,11 @@ test.describe('Suite O — LOINC Mapping Core (TC-LOINC)', () => {
 
     const searchInput = page.locator('input').first();
     if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await fillSearchField(page, searchInput, 'blood');
+      // fillSearchField(page, value, selectors). This passed a Locator as the
+      // value and the value as the selector list, so the helper iterated the
+      // STRING 'blood' and asked for elements matching 'b', 'l', 'o'... The
+      // search box was never filled and the test passed on an unexercised page.
+      await fillSearchField(page, 'blood', ['input']);
       await page.waitForTimeout(1500);
     }
 

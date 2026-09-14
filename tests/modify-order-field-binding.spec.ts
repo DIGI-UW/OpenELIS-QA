@@ -67,6 +67,7 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+import { seedModifiableOrder } from '../helpers/data-factory';
 
 const BASE = process.env.BASE || 'https://testing.openelis-global.org';
 
@@ -115,38 +116,104 @@ async function fetchOrder(page: Page, accession: string): Promise<OrderPayload |
 }
 
 /**
- * Finds an order that Modify Order can actually reach the final step with — i.e. one whose
- * provider last name is non-empty (see MO-5: a blank one silently disables Submit forever).
- * Scans a bounded window rather than hard-coding an accession, so the spec survives reseeds.
+ * Gets an order that Modify Order can actually reach the final step with — i.e.
+ * one whose provider last name is non-empty (see MO-5: a blank one silently
+ * disables Submit for ever), which carries a next-visit date, no received date,
+ * a referring site and at least one test.
+ *
+ * IT SEEDS THAT ORDER RATHER THAN HOPING FOR ONE (2026-09-14). This used to scan
+ * accessions DEV0126...000500–000600 and assert one matched. On the CI develop
+ * stack nothing in that window does — the instance holds a single order, with no
+ * provider and no tests — so all seven MO cases died in the fixture on "the
+ * instance holds at least one order with a provider last name and a test" and
+ * the OGC-1191 regressions were never executed at all. A FLIP-WHEN-FIXED suite
+ * that cannot run is worse than a failing one: it reports on a Highest-priority
+ * defect it never looked at.
+ *
+ * It REUSES a suitable order when the instance already has one and only seeds
+ * when it does not, so a re-run (or a worker restart after a failure, which
+ * re-imports this module) does not leave a trail of orders behind. The result is
+ * cached per worker: these seven cases want the SAME order, not seven.
  */
-async function findEditableOrder(page: Page): Promise<OrderPayload> {
-  const found = await page.evaluate(async () => {
-    for (let n = 600; n >= 500; n--) {
-      const acc = 'DEV0126' + String(n).padStart(13, '0');
-      try {
-        const r = await fetch(
-          `/api/OpenELIS-Global/rest/SampleEdit?patientId=&accessionNumber=${acc}`,
-          { headers: { Accept: 'application/json' }, credentials: 'include' },
-        );
-        const text = await r.text();
-        if (text.trimStart().startsWith('<')) continue;
-        const j = JSON.parse(text);
-        const s = j.sampleOrderItems;
-        if (s?.labNo && s.providerLastName && (j.existingTests || []).length > 0) return acc;
-      } catch {
-        /* keep scanning */
-      }
-    }
-    return null;
-  });
-  expect(
-    found,
-    'the instance holds at least one order with a provider last name and a test — reseed if this fails',
-  ).toBeTruthy();
-  const order = await fetchOrder(page, found!);
-  expect(order, 'the located order reads back cleanly').toBeTruthy();
-  return order!;
+let seeded: Promise<OrderPayload> | null = null;
+
+/** Everything the seven cases below need to be able to say anything at all. */
+function isUsable(o: OrderPayload | null): o is OrderPayload {
+  return !!o && !!o.providerLastName && !!o.referringSiteName && o.tests.length > 0;
 }
+
+/**
+ * Look for an order already on the instance that has the shape above, newest
+ * first, before creating one.
+ *
+ * The window is located from the accession generator rather than hard-coded:
+ * `GET /rest/SampleEntryGenerateScanProvider` hands back the next number in the
+ * sequence, so counting down from it looks at the orders that exist here instead
+ * of at a range that happened to be populated on somebody else's instance.
+ */
+async function findExistingUsableOrder(page: Page): Promise<OrderPayload | null> {
+  const newest = await page.evaluate(async () => {
+    const r = await fetch('/api/OpenELIS-Global/rest/SampleEntryGenerateScanProvider', {
+      headers: { Accept: 'application/json' },
+    });
+    const j = await r.json().catch(() => null);
+    return (j && j.body) || null;
+  });
+  if (!newest) return null;
+
+  const prefix = String(newest).replace(/\d+$/, '');
+  const digits = String(newest).slice(prefix.length);
+  const top = Number(digits);
+  if (!Number.isFinite(top)) return null;
+
+  for (let n = top; n > Math.max(0, top - 60); n--) {
+    const acc = prefix + String(n).padStart(digits.length, '0');
+    const order = await fetchOrder(page, acc);
+    if (isUsable(order)) return order;
+  }
+  return null;
+}
+
+async function findEditableOrder(page: Page): Promise<OrderPayload> {
+  if (!seeded) {
+    seeded = (async () => {
+      const existing = await findExistingUsableOrder(page);
+      if (existing) return existing;
+
+      const { accession } = await seedModifiableOrder(page);
+      const order = await fetchOrder(page, accession);
+      expect(
+        order,
+        `the seeded order ${accession} reads back off /rest/SampleEdit — if this fails the fixture wrote something the edit screen cannot load`,
+      ).toBeTruthy();
+      expect(
+        order!.providerLastName,
+        'the seeded order carries a provider last name (MO-5: without one Submit is disabled for ever)',
+      ).toBeTruthy();
+      expect(order!.tests.length, 'the seeded order carries at least one test').toBeGreaterThan(0);
+      return order!;
+    })();
+  }
+  return seeded;
+}
+
+/**
+ * The Lab Number input on the ORDER step.
+ *
+ * MEASURED ON THE DEVELOP BUILD 2026-09-14, and it matters: this input is not
+ * there any more. The ORDER step now shows the number as the heading "Lab
+ * Number: DEV...", with no inline text box, and the only `labNo`-ish control in
+ * the DOM is `#reassign-labNo` — which lives inside a hidden Carbon MODAL
+ * (`.cds--modal-content`, `visibility: hidden`) and is the accession
+ * REASSIGNMENT dialog, a different control with a different job. It is
+ * deliberately NOT matched here: quietly re-pointing the selector at it would
+ * turn a fixed defect into a green test against something else entirely.
+ *
+ * So MO-1/MO-5/MO-6/MO-7 fail on this build, and that is the FLIP-WHEN-FIXED
+ * signal this file exists to raise — see the header. Confirm against the ticket
+ * and invert the assertions; do not "repair" the selector.
+ */
+const LAB_NO = '#labNo';
 
 /** Walks the three-step wizard to the ORDER step, where the fields under test live. */
 async function openOrderStep(page: Page, accession: string): Promise<void> {
@@ -159,13 +226,28 @@ async function openOrderStep(page: Page, accession: string): Promise<void> {
     await page.locator('button.forwardButton', { hasText: 'Next' }).click();
     await page.waitForTimeout(800);
   }
-  await expect(page.locator('#labNo'), 'the wizard reached the ORDER step').toBeVisible();
+
+  // Gate on the STEP, not on one field in it.
+  //
+  // This used to wait for `#labNo` to be visible, which conflated "the wizard
+  // got here" with "the field MO-1 is about still exists". On the develop build
+  // the field is gone (see LAB_NO above), so every one of the seven cases died
+  // in this helper with the same message and none of them reported on its own
+  // subject. The heading is what says we arrived.
+  await expect(
+    page.getByRole('heading', { name: `Lab Number: ${accession}` }),
+    'the wizard reached the ORDER step',
+  ).toBeVisible();
 }
 
 /** Pulls the live React form state that backs the ORDER step. */
 async function formState(page: Page): Promise<any> {
   return page.evaluate(() => {
-    const el = document.querySelector('#labNo') as any;
+    // Any element inside the ORDER step's form will do — the fiber walk climbs to
+    // the state that backs the whole step. It used to be `#labNo`, which stopped
+    // existing on develop and took the state read down with it; #siteName is a
+    // field this step still has on both builds.
+    const el = document.querySelector('#labNo, #siteName, #order_receivedDate') as any;
     const key = Object.keys(el).find((k) => k.startsWith('__reactFiber'));
     let fiber = el[key!];
     for (let depth = 0; fiber && depth < 60; depth++) {
@@ -203,8 +285,11 @@ test.describe('Modify Order — field binding and save gate (FLIP-WHEN-FIXED)', 
     await openOrderStep(page, order.accessionNumber);
 
     // The number IS on the page — as static text, immediately above the box that needs it.
+    // `.first()`: the develop build renders it twice (heading and section label),
+    // and an unqualified getByText is a strict-mode violation, which reads as
+    // "the number is missing" when the opposite is true.
     await expect(
-      page.getByText(`Lab Number: ${order.accessionNumber}`),
+      page.getByText(`Lab Number: ${order.accessionNumber}`).first(),
       'the order number is displayed as a heading',
     ).toBeVisible();
 
@@ -212,9 +297,9 @@ test.describe('Modify Order — field binding and save gate (FLIP-WHEN-FIXED)', 
     expect(state, 'the ORDER step form state is reachable').toBeTruthy();
     expect(state.labNo, 'the value is present in form state the whole time').toBe(order.accessionNumber);
 
-    // WHEN FIXED: expect(page.locator('#labNo')).toHaveValue(order.accessionNumber)
+    // WHEN FIXED: expect(page.locator(LAB_NO)).toHaveValue(order.accessionNumber)
     await expect(
-      page.locator('#labNo'),
+      page.locator(LAB_NO),
       'DEFECT: the input is bound to newAccessionNumber (empty) instead of sampleOrderItems.labNo',
     ).toHaveValue('');
     expect(state.newAccessionNumber, 'the property the input IS bound to is empty on an ordinary edit').toBe('');
@@ -254,7 +339,15 @@ test.describe('Modify Order — field binding and save gate (FLIP-WHEN-FIXED)', 
     await openOrderStep(page, order.accessionNumber);
 
     // The screen looks correct, because the AutoComplete falls back to referringSiteId...
-    await expect(page.locator('#siteName')).toHaveValue(order.referringSiteName);
+    //
+    // CONTAINS, not equals: the combobox displays the site's DISPLAY LABEL, which
+    // is "SHORTNAME - Organization Name", while the REST payload's
+    // referringSiteName is the organization name alone (both read live
+    // 2026-09-14). An equality check here failed on the formatting of a field
+    // this case is only using as a precondition — its subject is the form state
+    // asserted below, which is untouched.
+    const displayed = await page.locator('#siteName').inputValue();
+    expect(displayed, 'the site name is shown on screen').toContain(order.referringSiteName);
 
     // ...while ModifyOrder.jsx's loadOrderValues has already emptied the value behind it.
     // WHEN FIXED: expect(state.referringSiteName).toBe(order.referringSiteName)
@@ -270,7 +363,7 @@ test.describe('Modify Order — field binding and save gate (FLIP-WHEN-FIXED)', 
     await openOrderStep(page, order.accessionNumber);
 
     // Lab Number carries a red asterisk and is empty — yet the form is submittable.
-    await expect(page.locator('#labNo')).toHaveValue('');
+    await expect(page.locator(LAB_NO)).toHaveValue('');
     // WHEN FIXED: expect(submit).toBeDisabled() while labNo is empty
     const submit = page.getByRole('button', { name: 'Submit', exact: true });
     await expect(
@@ -305,7 +398,7 @@ test.describe('Modify Order — field binding and save gate (FLIP-WHEN-FIXED)', 
     const order = await findEditableOrder(page);
     await openOrderStep(page, order.accessionNumber);
 
-    await page.locator('#labNo').fill(order.accessionNumber);
+    await page.locator(LAB_NO).fill(order.accessionNumber);
     const submit = page.getByRole('button', { name: 'Submit', exact: true });
     await expect(submit).toBeEnabled();
     await submit.click();

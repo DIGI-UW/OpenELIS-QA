@@ -49,6 +49,25 @@ async function goToAccessionResults(page: any): Promise<boolean> {
   ]);
 }
 
+/**
+ * Selectors for the accession box on the order-search screens, most specific
+ * first.
+ *
+ * WHY THIS CONSTANT EXISTS. Four call sites invoked `fillSearchField(page, ACCESSION)`
+ * — two arguments against a three-argument helper, so `selectors` arrived
+ * `undefined` and every one of them died on `TypeError: selectors is not
+ * iterable` before a single character was typed. The helper has always taken the
+ * candidate list; what was missing was the list. Naming it once here keeps the
+ * four call sites in step instead of re-deriving it four times.
+ */
+const ACCESSION_FIELD_SELECTORS = [
+  'input[placeholder*="accession" i]',
+  'input[id*="accession" i]',
+  'input[name*="accession" i]',
+  'input[type="text"]',
+  'input',
+];
+
 async function goToEditOrder(page: any): Promise<boolean> {
   return navigateWithDiscovery(page, [
     '/SampleEdit?type=readwrite',
@@ -96,7 +115,7 @@ test.describe('Suite J — Order Search (TC-OS)', () => {
     }
 
     // Fill accession number
-    await fillSearchField(page, ACCESSION);
+    await fillSearchField(page, ACCESSION, ACCESSION_FIELD_SELECTORS);
     await page.waitForTimeout(2000);
 
     const bodyText = await page.locator('body').innerText();
@@ -121,7 +140,7 @@ test.describe('Suite J — Order Search (TC-OS)', () => {
       return;
     }
 
-    await fillSearchField(page, ACCESSION);
+    await fillSearchField(page, ACCESSION, ACCESSION_FIELD_SELECTORS);
     await page.waitForTimeout(2000);
 
     const bodyText = await page.locator('body').innerText();
@@ -146,7 +165,7 @@ test.describe('Suite J — Order Search (TC-OS)', () => {
     }
 
     // Search for a clearly non-existent accession
-    await fillSearchField(page, 'ZZZZZ99999_NONEXISTENT');
+    await fillSearchField(page, 'ZZZZZ99999_NONEXISTENT', ACCESSION_FIELD_SELECTORS);
     await page.waitForTimeout(2000);
 
     const bodyText = await page.locator('body').innerText();
@@ -178,7 +197,7 @@ test.describe('Suite J — Order Search (TC-OS)', () => {
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     // Fill accession field
-    await fillSearchField(page, ACCESSION);
+    await fillSearchField(page, ACCESSION, ACCESSION_FIELD_SELECTORS);
     await page.waitForTimeout(2000);
 
     const bodyText = await page.locator('body').innerText();
@@ -257,7 +276,11 @@ test.describe('Suite J-DEEP — Order Search Extended (TC-OS-06 through TC-OS-08
      * US-OS-3: Filter orders by date range.
      * Validates the API accepts startDate/endDate parameters without errors.
      */
-    const { startDate, endDate } = await getDateRange();
+    // getDateRange() returns { from, to }. Destructuring `startDate`/`endDate`
+    // out of it yielded two `undefined`s and this test happily queried
+    // `startDate=undefined&endDate=undefined` — green, and proving nothing about
+    // the date filter it is named for. Same helper-shape mistake as TC-EXP-03/04.
+    const { from: startDate, to: endDate } = await getDateRange();
 
     const result = await page.evaluate(async ({ start, end }) => {
       const csrf = localStorage.getItem('CSRF') || '';
