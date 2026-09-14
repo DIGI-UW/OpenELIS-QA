@@ -62,6 +62,13 @@ export const PATIENT_DOB_FIELD = 'birthdate' as const;
  * rich per-test metadata (testSectionId, sampleTypeId, testSectionName).
  * Those fields don't exist on this endpoint. To get section info, fetch
  * `/rest/TestAdd` and use its `labUnitList` (see below).
+ *
+ * Re-confirmed live 2026-09-14 against a separate branch build (52.88.37.243,
+ * distinct catalog): the flat {id, value} shape is CURRENT, INTENDED product
+ * behavior, not a regression or defect. `seed-factory.ts` `discoverTestCatalog()`
+ * was the thing that was wrong (assumed this endpoint's non-existent section
+ * fields) and has been corrected to read TestAdd + sample-type-tests instead.
+ * See CHANGELOG.md 2026-09-14. Do not re-file this as a product bug.
  */
 export interface TestListEntry {
   id: string;

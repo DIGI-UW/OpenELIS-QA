@@ -262,3 +262,40 @@ three specs (`test-catalog-pr3987-regression`, `patient-photo-pr3987`,
 the sex+age-banded ranges on QA test 442 were **left in place**, because a banded
 range is what makes the item 5 assertion meaningful, and 442 is a QA-owned test. Seeded patients and orders left in place
 per the never-hard-delete rule and listed in the report's §8.2.
+
+
+## 2026-09-14 -- seed-data run, branch build 52.88.37.243
+
+Requested: seed 150 test orders (CREATED status) + 50 patients on a PR/branch instance.
+
+Target identity: branch/PR build (not confirmed which PR -- Vite dev server, no
+resolvable version via /actuator/info). Catalog: distinct from default -- carries
+an Indonesia/BBLK-style test set (sample values like "Aflatoxin B1(Pangan (Staple
+Food))") layered alongside the standard five section names (Hematology,
+Biochemistry, Immunology, Molecular Biology, Serology-Immunology), which the
+seeder's LAB_UNIT_IDS still matched correctly.
+
+Data census at start: 0 patients, 0 orders -- fresh instance.
+
+Harness failure -> fix: `--project=seed-data` 400'd on every order via
+`discoverTestCatalog()` reading nonexistent section metadata off `/rest/test-list`,
+and `createOrder()` POSTing a flat payload shape the real `SamplePatientEntry`
+endpoint has never accepted. See CHANGELOG.md 2026-09-14 for the full fix
+(TestAdd + sample-type-tests discovery; full nested SamplePatientEntrySubmitPayload
+with sampleXML). Confirmed NOT a product regression -- see apiShapes.ts note above
+TestListEntry.
+
+Seeded (via standalone script pending harness fix, then harness fix verified against
+the same evidence): 50 patients (qa-auto-p0000..p0049), 150 orders (accessions
+DEV01260000000000005..000154), CREATED status, collection dates spread over the
+trailing 21 days, round-robin across 5 sample-type/test pairs (Hematology/Serum/
+Plasma/Albumin/PCR-swab). 0 errors. Round-trip verified via SampleEdit -- patientName
+populated on every sampled accession, so no BUG-37 linkage failure observed on this
+instance.
+
+Not attempted: status-transition seeding (IN_PROGRESS/READY_FOR_VALIDATION/REJECTED)
+-- out of scope for this request (all-CREATED was asked for) and still blocked by
+BUG-31 for the UI path; API-substitute path unresolved (see runSeed() comment).
+
+No Jira tickets filed -- the only finding was the harness bug above, now fixed at
+source.
