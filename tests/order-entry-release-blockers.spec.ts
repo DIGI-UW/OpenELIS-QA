@@ -48,7 +48,15 @@ test.describe('Order entry — release blockers', () => {
     // number, and clicking the affordance fills the field (observed: DEV01260000000000006).
     // Nothing calls it on mount, so the one field the form marks required is empty and stays
     // empty. Checked at 9s, well past hydration.
-    test.fail();
+    // FIXED on develop dbb71ba6, 2026-09-14. The test.fail() marker that used to sit here
+    // has been removed, and the assertion below is unchanged -- which is the whole point of
+    // the flip-when-fixed pattern: the suite went RED to report good news, and the fix to a
+    // red flip-when-fixed case is to delete the marker, never to weaken what it asserts.
+    //
+    // Evidence for the flip: CI run 34839250807 reported "Expected to fail, but passed" for
+    // this case against develop dbb71ba6, while the same spec against a local develop
+    // 5fe0ecb build (three days older) still failed as expected. Two builds, opposite
+    // results, same assertion. From here this case guards the fix against regression.
     await open(page, ENTER);
     const value = await page.locator('#labNumber').inputValue();
     console.log(`BLK-LAB-1 labNumber after load = ${JSON.stringify(value)}`);
@@ -67,7 +75,15 @@ test.describe('Order entry — release blockers', () => {
     // This case walks the REAL tab order rather than reading attributes, because attributes
     // are the explanation and traversal is the evidence. Observed on develop 5fe0ecb: focus
     // leaves #labNumber and lands on "Print Labels", skipping the control entirely.
-    test.fail();
+    // FIXED on develop dbb71ba6, 2026-09-14. The test.fail() marker that used to sit here
+    // has been removed, and the assertion below is unchanged -- which is the whole point of
+    // the flip-when-fixed pattern: the suite went RED to report good news, and the fix to a
+    // red flip-when-fixed case is to delete the marker, never to weaken what it asserts.
+    //
+    // Evidence for the flip: CI run 34839250807 reported "Expected to fail, but passed" for
+    // this case against develop dbb71ba6, while the same spec against a local develop
+    // 5fe0ecb build (three days older) still failed as expected. Two builds, opposite
+    // results, same assertion. From here this case guards the fix against regression.
     await open(page, ENTER);
 
     const control = page.getByText(/generate lab number/i).first();
@@ -105,7 +121,15 @@ test.describe('Order entry — release blockers', () => {
     // The spec asserted here is the weaker, sufficient one: whatever element this is, it
     // must be capable of expressing a disabled state. A <button> satisfies it; an <a> with
     // an aria-disabled binding satisfies it; the current bare <a> does not.
-    test.fail();
+    // FIXED on develop dbb71ba6, 2026-09-14. The test.fail() marker that used to sit here
+    // has been removed, and the assertion below is unchanged -- which is the whole point of
+    // the flip-when-fixed pattern: the suite went RED to report good news, and the fix to a
+    // red flip-when-fixed case is to delete the marker, never to weaken what it asserts.
+    //
+    // Evidence for the flip: CI run 34839250807 reported "Expected to fail, but passed" for
+    // this case against develop dbb71ba6, while the same spec against a local develop
+    // 5fe0ecb build (three days older) still failed as expected. Two builds, opposite
+    // results, same assertion. From here this case guards the fix against regression.
     await open(page, ENTER);
 
     const shape = await page.evaluate(() => {
@@ -174,7 +198,15 @@ test.describe('Order entry — release blockers', () => {
     //
     // Counting headings rather than raw text, so that renaming the tile cannot make this
     // pass while the duplicate is still rendered.
-    test.fail();
+    // FIXED on develop dbb71ba6, 2026-09-14. The test.fail() marker that used to sit here
+    // has been removed, and the assertion below is unchanged -- which is the whole point of
+    // the flip-when-fixed pattern: the suite went RED to report good news, and the fix to a
+    // red flip-when-fixed case is to delete the marker, never to weaken what it asserts.
+    //
+    // Evidence for the flip: CI run 34839250807 reported "Expected to fail, but passed" for
+    // this case against develop dbb71ba6, while the same spec against a local develop
+    // 5fe0ecb build (three days older) still failed as expected. Two builds, opposite
+    // results, same assertion. From here this case guards the fix against regression.
     await open(page, QA);
 
     const seen = await page.evaluate(() => {
@@ -243,7 +275,15 @@ test.describe('Order entry — the patient blockers', () => {
     // can honour it. That also makes it the prerequisite for the agreed design: a "No
     // patient" override "gated by PatientRequired" cannot be gated by a value the browser
     // is never sent.
-    test.fail();
+    // FIXED on develop dbb71ba6, 2026-09-14. The test.fail() marker that used to sit here
+    // has been removed, and the assertion below is unchanged -- which is the whole point of
+    // the flip-when-fixed pattern: the suite went RED to report good news, and the fix to a
+    // red flip-when-fixed case is to delete the marker, never to weaken what it asserts.
+    //
+    // Evidence for the flip: CI run 34839250807 reported "Expected to fail, but passed" for
+    // this case against develop dbb71ba6, while the same spec against a local develop
+    // 5fe0ecb build (three days older) still failed as expected. Two builds, opposite
+    // results, same assertion. From here this case guards the fix against regression.
     await open(page, ENTER);
 
     const props = await configProps(page);
