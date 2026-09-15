@@ -519,6 +519,13 @@ export interface OrderOptions {
   providerLastName?: string;
   /** dd/MM/yyyy, as the form submits it. */
   nextVisitDate?: string;
+  /**
+   * Test ids to order, ALL ON ONE SAMPLE ITEM (the sampleXML carries them as a single
+   * comma-separated `tests` attribute). Defaults to the one test every other caller
+   * expects, so existing callers are unaffected. A caller that needs to tell "cancel this
+   * test" apart from "cancel the whole sample" needs at least two.
+   */
+  testIds?: string[];
 }
 
 export async function createOrderViaAPI(
@@ -693,7 +700,10 @@ export async function createOrderViaAPI(
       {
         patientId,
         nationalId: state.patient.nationalId,
-        testId: process.env.QA_TEST_ID || '3',
+        testId: (options.testIds && options.testIds.length
+          ? options.testIds
+          : [process.env.QA_TEST_ID || '3']
+        ).join(','),
         sampleTypeId: process.env.QA_SAMPLE_TYPE_ID || '2',
         providerFirstName: options.providerFirstName ?? '',
         providerLastName: options.providerLastName ?? '',
@@ -808,7 +818,8 @@ export async function ensureReferringClinic(
  * reseed, an empty stack, or somebody consuming the order it found.
  */
 export async function seedModifiableOrder(
-  page: Page
+  page: Page,
+  opts: { testIds?: string[] } = {}
 ): Promise<{ accession: string; patientId: string; nationalId: string }> {
   const errors: string[] = [];
   const siteId = await ensureReferringClinic(page, errors);
@@ -839,6 +850,7 @@ export async function seedModifiableOrder(
     providerFirstName: 'Quinn',
     providerLastName: 'Autoprov',
     nextVisitDate,
+    testIds: opts.testIds,
   });
   if (!accession) {
     throw new Error(`seedModifiableOrder: order not created — ${state.setupErrors.join(' | ')}`);
