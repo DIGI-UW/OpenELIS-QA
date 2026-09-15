@@ -1,0 +1,314 @@
+name: nightly
+
+# Why this exists (2026-09-03, OGC-1192 post-mortem):
+#
+# Until now NOTHING in CI ran a single test. The only workflow was `typecheck`.
+# That meant the harness had no mechanism that could tell anyone something had
+# broken — a suite could be entirely red for months and nobody would know until
+# a person ran it by hand. OGC-1192 (environmental orders invisible to every
+# dashboard) is what that costs.
+#
+# This job runs the suites unattended against a live instance and records the
+# result. It is deliberately NON-BLOCKING on test outcome for now: the target is
+# a shared test server whose data and uptime we do not control, so a red run is
+# a signal to read, not a build to break. What it must never do is run and be
+# ignored — hence the step summary and the artifact.
+#
+# Promote a suite to blocking once it has been stable for a couple of weeks.
+
+on:
+  schedule:
+    # 07:00 UTC daily — early morning UTC, before the working day in Kampala
+    # (UTC+3) and overnight for Seattle, so results are waiting either way.
+    - cron: '0 7 * * *'
+    # Weekly module sweep. modules.config.ts is ~866 tests that had not run in
+    # any tier before 2026-09-04; it is far too long for the daily job, so it
+    # gets its own slot and its own sharded matrix below.
+    - cron: '0 6 * * 0'
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Instance to run against'
+        required: false
+        default: 'https://testing.openelis-global.org'
+      suite:
+        description: 'Which suites to run'
+        required: false
+        default: 'core'
+        type: choice
+        options: [core, chains, ogc1192, modules, patient, all]
+      order_path:
+        description: 'Which order-entry path the chain seeder uses'
+        required: false
+        default: 'domain'
+        type: choice
+        options: [domain, legacy]
+
+concurrency:
+  # Never let two nightly runs hit the same instance at once — they seed data.
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run:
+    # The module sweep has its own job below, because it needs a real parallel
+    # shard matrix rather than a loop.
+    if: >-
+      github.event.inputs.suite != 'modules' &&
+      github.event.schedule != '0 6 * * 0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      BASE: ${{ github.event.inputs.base_url || 'https://testing.openelis-global.org' }}
+      BASE_URL: ${{ github.event.inputs.base_url || 'https://testing.openelis-global.org' }}
+      SUITE: ${{ github.event.inputs.suite || (github.event.schedule == '0 6 * * 0' && 'modules' || 'core') }}
+      # Fail-by-default for chain steps. An undeclared GAP/BLOCKED fails here
+      # instead of skipping, so this run surfaces the TRUE list of gaps rather
+      # than letting steps excuse themselves. The job is non-blocking, so it is
+      # the safe place to learn that list — declare the legitimate ones in
+      # tests/chains/known-gaps.ts from what this reports, then make the PR gate
+      # strict too. See known-gaps.ts.
+      GAPS_STRICT: '1'
+      # REQUIRED by the chain seeder. Two order-entry paths are live on 3.2.2.0
+      # and tests/chains/domain-seed.ts deliberately refuses to guess between
+      # them — an unset ORDER_PATH throws, which is what the first scheduled run
+      # (2026-09-04) hit on 11 of 13 chains. That guard is right; the omission
+      # was in this workflow. 'domain' is the future normative path and the one
+      # whose clinical lane works end to end; dispatch with 'legacy' to compare.
+      ORDER_PATH: ${{ github.event.inputs.order_path || 'domain' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # NB: `npm ci` is deliberately not used — package-lock.json is gitignored.
+      - name: Install dev dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Fail fast and legibly if the instance is down, rather than producing 40
+      # authentication failures that all look like test defects.
+      - name: Target is reachable
+        run: |
+          CODE=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 30 "$BASE/" || echo 000)
+          echo "GET $BASE/ -> $CODE"
+          if [ "$CODE" = "000" ]; then
+            echo "::error::$BASE is unreachable — aborting before the suites run."
+            exit 1
+          fi
+
+      - name: Run suites
+        id: run
+        # `continue-on-error: true` was removed 2026-09-10 together with the
+        # `exit 0` below. Between them the nightly could not report a failure:
+        # eight consecutive scheduled runs reported success, and the last one
+        # took 2m41s with `1 failed` (auth.setup itself) and `2 failed` in its
+        # own log. A scheduled suite that is green by construction is watching
+        # nothing, and it is why five order entry defects reached a client with
+        # the suite passing. The summary step below is `if: always()`, so the
+        # per-suite report still publishes on a red run.
+        run: |
+          set +e
+          mkdir -p nightly-out
+          STATUS=0
+          # Extra args after the config are passed to playwright, so a single
+          # spec can be verified without dispatching the whole 866-test module
+          # sweep. That gap is why a one-file fix used to have no run path.
+          run_cfg () {
+            local name="$1" cfg="$2"; shift 2
+            echo "::group::$name"
+            npx playwright test --config="$cfg" "$@" --reporter=line > "nightly-out/$name.txt" 2>&1
+            local rc=$?
+            [ $rc -ne 0 ] && STATUS=1
+            tail -25 "nightly-out/$name.txt"
+            echo "::endgroup::"
+            echo "$name rc=$rc" >> nightly-out/rc.txt
+          }
+
+          case "$SUITE" in
+            ogc1192) run_cfg ogc1192 ogc1192.config.ts ;;
+            chains)  run_cfg chains regression-chains.config.ts ;;
+            all)
+              run_cfg ogc1192 ogc1192.config.ts
+              run_cfg chains regression-chains.config.ts
+              run_cfg rbac rbac.config.ts
+              run_cfg all-tc all-tc.config.ts
+              run_cfg modules modules.config.ts
+              ;;
+            patient)
+              run_cfg patient modules.config.ts tests/patient-management.spec.ts
+              ;;
+            *)  # core
+              run_cfg ogc1192 ogc1192.config.ts
+              run_cfg chains regression-chains.config.ts
+              ;;
+          esac
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          # Exit with the suites' own verdict. STATUS is set to 1 by run_cfg
+          # whenever any playwright invocation returns non-zero.
+          exit $STATUS
+
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo "# Nightly run"
+            echo ""
+            echo "Target: \`$BASE\`  ·  Suite: \`$SUITE\`  ·  Order path: \`$ORDER_PATH\`"
+            echo ""
+            echo "| Suite | passed | failed | skipped | exit |"
+            echo "|---|---|---|---|---|"
+            for f in nightly-out/*.txt; do
+              [ -e "$f" ] || continue
+              n=$(basename "$f" .txt)
+              p=$(grep -oE '[0-9]+ passed' "$f" | tail -1 | grep -oE '[0-9]+' || echo 0)
+              x=$(grep -oE '[0-9]+ failed' "$f" | tail -1 | grep -oE '[0-9]+' || echo 0)
+              s=$(grep -oE '[0-9]+ skipped' "$f" | tail -1 | grep -oE '[0-9]+' || echo 0)
+              rc=$(grep "^$n rc=" nightly-out/rc.txt | tail -1 | cut -d= -f2)
+              echo "| $n | ${p:-0} | ${x:-0} | ${s:-0} | ${rc:-?} |"
+            done
+            echo ""
+            echo "**Skipped is not passed.** A step that skipped did not run — if a"
+            echo "count here is climbing, something is quietly excusing itself. See"
+            echo "Section 12 of \`references/playwright-harness.md\`."
+            echo ""
+            echo "This job runs with \`GAPS_STRICT=1\`, so a chain step that would have"
+            echo "quietly excused itself fails here instead. Failures reading"
+            echo "*\"Undeclared gap\"* are that mechanism working: either the build really"
+            echo "lacks the feature — declare it in \`tests/chains/known-gaps.ts\` with a"
+            echo "ticket — or the call actually failed, which is a real defect."
+            echo ""
+            if [ "${{ steps.run.outputs.status }}" = "1" ]; then
+              echo "> One or more suites reported failures. This job is non-blocking by"
+              echo "> design — read the artifact, do not ignore it."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-${{ github.run_number }}
+          path: |
+            nightly-out/
+            test-results/
+            regression-results/
+          retention-days: 14
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------------------
+  # Module sweep — the 46 suites adopted in #96 (866 tests).
+  #
+  # A real matrix, not a loop. Sharding only shortens wall-clock if the shards
+  # run as PARALLEL JOBS; four --shard invocations inside one job do exactly the
+  # same total work, one after another. Each runner keeps workers=1, so the
+  # instance sees four concurrent connections at most — under the 6-connection
+  # pool (harness reference §10.9).
+  # ---------------------------------------------------------------------------
+  modules:
+    if: >-
+      github.event.inputs.suite == 'modules' ||
+      github.event.inputs.suite == 'all' ||
+      github.event.schedule == '0 6 * * 0'
+    runs-on: ubuntu-latest
+    # The first run (4 shards, retries=1) had not finished a shard in 65 min and
+    # was killed by a 120-min cap. Weekly cadence makes a long job acceptable;
+    # a job that is killed before reporting is not.
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    env:
+      # See modules.config.ts — retries are for flake, and nothing here has a
+      # baseline yet. Halves the cost of a failing first run.
+      PW_RETRIES: '0'
+      BASE: ${{ github.event.inputs.base_url || 'https://testing.openelis-global.org' }}
+      BASE_URL: ${{ github.event.inputs.base_url || 'https://testing.openelis-global.org' }}
+      GAPS_STRICT: '1'
+      ORDER_PATH: ${{ github.event.inputs.order_path || 'domain' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dev dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Target is reachable
+        run: |
+          CODE=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 30 "$BASE/" || echo 000)
+          echo "GET $BASE/ -> $CODE"
+          if [ "$CODE" = "000" ]; then
+            echo "::error::$BASE is unreachable — aborting shard ${{ matrix.shard }}."
+            exit 1
+          fi
+
+      - name: Module sweep shard ${{ matrix.shard }}/6
+        # DELIBERATELY still continue-on-error, unlike the core `run` job above
+        # which was un-masked on 2026-09-10. The asymmetry is the point, so
+        # please do not "fix" this one to match:
+        #
+        #   core suite  — small, curated, expected GREEN. A failure here is a
+        #                 regression and must fail the run.
+        #   module sweep — 866 tests that had not run in any tier for a long
+        #                 time and were never gated. modules.config.ts says so
+        #                 in its own header: "EXPECT RED ... a large fraction
+        #                 will fail on first contact. That is information, not a
+        #                 regression."
+        #
+        # Hard-failing the sweep would make the weekly run permanently red,
+        # which carries no more signal than permanently green. The counts still
+        # publish through the `if: always()` summary. The route to gating this
+        # properly is the same ratchet the repo already uses for assertions
+        # (.assert-baseline.json, .falsifiable-baseline.json): record the
+        # per-suite failure count and fail only when it grows.
+        continue-on-error: true
+        id: sweep
+        run: |
+          mkdir -p nightly-out
+          npx playwright test --config=modules.config.ts --reporter=line \
+            --shard=${{ matrix.shard }}/6 > "nightly-out/modules-${{ matrix.shard }}.txt" 2>&1
+          echo "rc=$?" >> "$GITHUB_OUTPUT"
+          tail -30 "nightly-out/modules-${{ matrix.shard }}.txt"
+
+      - name: Summarise shard
+        if: always()
+        run: |
+          F="nightly-out/modules-${{ matrix.shard }}.txt"
+          p=$(grep -oE '[0-9]+ passed' "$F" | tail -1 | grep -oE '[0-9]+' || echo 0)
+          x=$(grep -oE '[0-9]+ failed' "$F" | tail -1 | grep -oE '[0-9]+' || echo 0)
+          s=$(grep -oE '[0-9]+ skipped' "$F" | tail -1 | grep -oE '[0-9]+' || echo 0)
+          {
+            echo "### Module sweep — shard ${{ matrix.shard }}/6"
+            echo ""
+            echo "Target: \`$BASE\`"
+            echo ""
+            echo "| passed | failed | skipped |"
+            echo "|---|---|---|"
+            echo "| ${p:-0} | ${x:-0} | ${s:-0} |"
+            echo ""
+            echo "First run of these suites in a long time — a large failure count is"
+            echo "expected and is information, not a regression. See Section 12.9 of"
+            echo "\`references/playwright-harness.md\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload shard results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: modules-shard-${{ matrix.shard }}-${{ github.run_number }}
+          # nightly-out only. Including test-results/ pulled Playwright traces in
+          # and the first full sweep produced >520 MB across six shards, which
+          # also made `gh run download` slow enough to time out. Traces for a
+          # 300-failure run are not worth that; re-run a single spec locally when
+          # you need one.
+          path: nightly-out/
+          retention-days: 14
+          if-no-files-found: warn

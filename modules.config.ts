@@ -1,0 +1,159 @@
+import { defineConfig, devices } from '@playwright/test';
+
+/**
+ * modules.config.ts — the module-suite sweep.
+ *
+ * WHY THIS EXISTS (2026-09-04)
+ * An audit after OGC-1192 found that **46 spec files — 1,053 test blocks, 62%
+ * of everything in the repo — were unreachable by any config**. Every
+ * `*.config.ts` declares an explicit `testMatch`, and between them they simply
+ * did not name these files. They had not run in any tier for a long time:
+ * order-entry, validation, patient-management, reports, workplan, dashboard,
+ * pathology, inventory, referral-workflow, reflex-testing, session-security,
+ * storage, non-conforming, fhir-integration, i18n, accessibility, performance,
+ * eqa. (The four root `gap-suites-*` files were retired on 2026-09-08.)
+ *
+ * `openelis-e2e.spec.ts` (quarantined in #94) was the same problem noticed one
+ * file at a time. This config is the fix at the level the problem actually
+ * lives at, and `scripts/check-orphans.mjs` is the gate that stops it coming
+ * back.
+ *
+ * GAP-SUITES RETIRED (2026-09-08). The four root `gap-suites-*` files were
+ * split into their own job on 2026-09-05 because Playwright shards by FILE and
+ * they made one shard the long pole. They are now gone entirely: 87 of their
+ * 107 cases duplicated tests that already lived in the module specs (59
+ * byte-identical, 28 drifted implementations of the same TC ID), and the
+ * remaining 20 were relocated into the specs that own their areas. The
+ * question those suites existed to answer — "are we missing QA checks?" — is
+ * now answered by `npm run check:coverage-gaps`, which diffs the catalogue
+ * against the code instead of re-running covered ground. See harness ref 12.16.
+ *
+ * WHAT IT SWEEPS
+ * Everything at the top level of `tests/` EXCEPT the files another config
+ * already owns (see OWNED_ELSEWHERE). The sweep is
+ * defined by exclusion rather than by a hand-listed include set on purpose: a
+ * newly added `tests/foo.spec.ts` is picked up automatically. An include list
+ * would rot into exactly the bug this config exists to fix.
+ *
+ * RUNTIME
+ * 866 tests, and they are slow: these suites are UI-driven and littered with
+ * fixed `waitForTimeout` sleeps. The first sharded run (2026-09-04, 4 shards,
+ * retries=1) had not finished any shard after 65 minutes.
+ *
+ * `workers` defaults to 1 to respect the 6-connection pool (harness reference
+ * §10.9). The nightly runs this as a shard MATRIX — parallel jobs, each with
+ * workers=1 — so wall-clock drops without the instance seeing more concurrent
+ * connections than there are shards. Sharding only helps when the shards are
+ * parallel JOBS; N `--shard` invocations inside one job do the same total work.
+ *
+ * Two levers, in order of effect:
+ *   1. retries. PW_RETRIES=0 in the nightly — see the `retries` note below.
+ *      On a first run where most things fail, this roughly halves wall-clock.
+ *   2. shard count. Raised 4 -> 6, which sits AT the documented connection
+ *      limit, not over it. Do not raise it further without re-reading §10.9
+ *      and watching the instance.
+ * Override locally with PW_WORKERS if you know what you are doing.
+ *
+ * EXPECT RED. These suites have not run in a long time and were never gated,
+ * so a large fraction will fail on first contact. That is information, not a
+ * regression — triage it, do not silence it.
+ */
+
+const BASE = process.env.BASE ?? process.env.BASE_URL ?? 'https://testing.openelis-global.org';
+
+/**
+ * Top-level `tests/*.spec.ts` files owned by another config. Listed so the
+ * sweep does not run them twice; each name should appear in exactly one config.
+ */
+const OWNED_ELSEWHERE = [
+  // all-tc.config.ts — the test-catalog + results tier
+  'results-by-range', 'results-by-status', 'results-by-unit', 'results-entry',
+  'unified-results', 'result-type-coverage', 'multicomponent-result-routing',
+  'panel-sample-type-leak', 'workplan-by-unit-crash',
+  // 'ranges-discover' was listed here as owned by all-tc.config.ts. It is not:
+  // all-tc does not collect it, and the only config that does is probes.config.ts,
+  // a scratch bucket CI does not run. So it was excluded here on the strength of a
+  // claim that was never true, and executed by nobody. Handed back to this sweep
+  // 2026-09-12. scripts/check-ci-coverage.mjs is what caught it and is what keeps
+  // this list honest from here.
+
+  // dedicated single-purpose configs
+  'modify-order-field-binding',        // modify-order.config.ts
+  'ogc1192-env-order-visibility',      // ogc1192.config.ts
+  'envseed',                           // envseed.config.ts
+  'eqaflip',                           // eqa.config.ts
+  'reval2',                            // reval2.config.ts
+  'admin-route-census', 'app-route-census', // census.config.ts
+];
+
+const EXCLUDED = OWNED_ELSEWHERE.join('|');
+/** tests/<name>.spec.ts, top level only, excluding the owned set. */
+const MODULE_MATCH = new RegExp(`(^|/)tests/(?!(?:${EXCLUDED})\\.spec\\.ts$)[^/]+\\.spec\\.ts$`);
+
+export default defineConfig({
+  testDir: '.',
+  // 30s, not 90s. Casey's rule, 2026-09-05: "if it's longer than 30 seconds,
+  // it's a defect anyway". This is a policy, not a tuning knob — a click that
+  // has not landed in 30s is a finding, and waiting another minute to confirm
+  // it buys nothing. The first sweep spent most of its wall clock here: shard 6
+  // alone had 50 click timeouts at 90s each, ~75 minutes of pure waiting.
+  timeout: Number(process.env.PW_TIMEOUT ?? 30_000),
+  expect: { timeout: 15_000 },
+  fullyParallel: false,
+  workers: Number(process.env.PW_WORKERS ?? 1),
+  // Retries default to 1 locally, but the nightly sets PW_RETRIES=0. Retries
+  // exist to absorb flake; in a suite that has never run, the failures are not
+  // flake — they are the point. Retrying them doubles the cost of every failure
+  // for no information. Raise this once the sweep has a stable baseline.
+  retries: Number(process.env.PW_RETRIES ?? 1),
+  reporter: [['line'], ['json', { outputFile: 'regression-results/modules.json' }]],
+  use: {
+    ...devices['Desktop Chrome'],
+    baseURL: BASE,
+    headless: true,
+    ignoreHTTPSErrors: true,
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
+    launchOptions: process.env.PW_CHROME ? { executablePath: process.env.PW_CHROME } : {},
+  },
+  projects: [
+    { name: 'setup', testMatch: /(^|\/)auth\.setup\.ts$/ },
+    // BASELINE DATA (added 2026-09-08). `data.setup.ts` creates the patient
+    // "Abby Sebby" (nationalId 0123456) and two orders, and writes their
+    // accessions to `.auth/test-data.json`. Seventeen module specs import
+    // PATIENT_NAME / PATIENT_ID from helpers/test-helpers.ts expecting it.
+    //
+    // Until now NO config ran this setup — a live probe on 2026-09-08 found
+    // zero patients matching either "Sebby" or 0123456 — so the whole module
+    // sweep ran against an instance with no baseline patient, and every
+    // patient-dependent failure looked like a product defect. `check:orphans`
+    // did not catch it because it only audits `*.spec.ts`, not setup projects;
+    // it now covers both.
+    //
+    // The setup is deliberately non-fatal (see its tail comment): if creation
+    // fails, specs degrade through getTestData() rather than the run aborting.
+    {
+      name: 'data',
+      testMatch: /(^|\/)data\.setup\.ts$/,
+      dependencies: ['setup'],
+      use: { storageState: '.auth/user.json' },
+      // The 30-second per-test timeout is a POLICY about tests: if a check
+      // takes longer than that, the slowness is itself the finding. A fixture
+      // is not a check — this one drives the UI to create a patient and two
+      // orders, which legitimately takes minutes. Giving it its own budget
+      // respects the policy rather than routing around it.
+      // 120s, not 300s: patient creation takes ~40s. Order creation used to be
+      // broken and this comment used to say so; it works as of 2026-09-09 (four
+      // conditions, harness ref 12.28) and the API path is fast. Raise it via
+      // PW_SETUP_TIMEOUT if the UI path is reinstated and needs longer.
+      timeout: Number(process.env.PW_SETUP_TIMEOUT ?? 120_000),
+      retries: 0,
+    },
+    {
+      name: 'modules',
+      testMatch: MODULE_MATCH,
+      dependencies: ['setup', 'data'],
+      use: { storageState: '.auth/user.json' },
+    },
+  ],
+});

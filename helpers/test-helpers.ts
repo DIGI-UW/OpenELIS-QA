@@ -6,7 +6,7 @@
  * to support split feature-specific test files.
  */
 
-import { Page } from '@playwright/test';
+import { Page, Locator } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -14,7 +14,12 @@ import * as path from 'path';
 // Config Constants
 // ---------------------------------------------------------------------------
 
-export const BASE = process.env.BASE_URL || 'https://testing.openelis-global.org';
+// Resolved centrally. Reading process.env.BASE_URL here is what let the browser and the
+// fixtures target two different instances at once. See helpers/base-url.ts.
+// Imported AND re-exported: this module uses BASE itself, and its consumers import it
+// from here, so a bare `export ... from` would compile as a re-export with no local binding.
+import { BASE } from './base-url';
+export { BASE };
 
 export const ADMIN = {
   user: 'admin',
@@ -64,6 +69,24 @@ export const ACCESSION2: string = (() => {
 })();
 
 export const QA_PREFIX = `QA_AUTO_${new Date().toISOString().slice(5, 10).replace('-', '')}`;
+
+/**
+ * QA_PREFIX, but valid as a patient National ID.
+ *
+ * The server validates nationalId against `(?i)^[-a-z0-9/]*$` — **underscores
+ * are rejected**, with `400 {"error":"nationalId: must match ..."}`. QA_PREFIX
+ * is `QA_AUTO_MMDD`, so every test that filled `#nationalId` with it was
+ * failing validation before it ever reached the behaviour under test.
+ *
+ * Confirmed by hand on testing 2026-09-05: `QA_PAT_0905` -> 400,
+ * `qa-pat-0905` -> 200 with `{"patientId":"502","status":"success"}`. Patient
+ * creation is not broken; the fixture data was invalid.
+ *
+ * Use this for nationalId and anything else the server pattern-checks. Keep
+ * QA_PREFIX for names, orgs and test-catalog entries, where underscores are
+ * fine and where already-seeded QA_AUTO_ data has to stay findable.
+ */
+export const QA_ID_PREFIX = QA_PREFIX.toLowerCase().replace(/_/g, '-');
 export const TIMEOUT = 5000;
 
 // ---------------------------------------------------------------------------
@@ -167,6 +190,26 @@ export function isDataSetupComplete(): boolean {
 
 export const CONFIRMED_ADMIN_URLS: Record<string, string> = {
   'Reflex Tests Management': '/MasterListsPage/reflex',
+  // SECTION HEADERS, added 2026-09-14. Four labels the specs navigate by are
+  // not pages at all: in the live sidebar they are expandable SECTIONS whose
+  // children are the real screens. `navigateToAdminItem` therefore threw
+  // `Admin item "X" not found in the sidebar` for all eight cases that use
+  // them — the label is genuinely absent from the map, and the sidebar
+  // fallback cannot see it either because the specs call the helper from
+  // about:blank, where there is no sidebar to click.
+  //
+  // Each slug below is the section's landing screen, read off THIS instance on
+  // 2026-09-14 (v3.2.2.0) rather than guessed:
+  //   /MasterListsPage/reflex                -> heading "Reflex Tests Management"
+  //   /MasterListsPage/globalMenuManagement  -> heading "Global Menu Management"
+  //   /MasterListsPage/NonConformityConfigurationMenu -> "NonConformity Configuration"
+  //   /MasterListsPage/languageManagement    -> heading "Language Management"
+  // The parent routes themselves (/menuConfiguration, /generalConfigurations,
+  // /localization) render the chrome and no content, so they are NOT used here.
+  'Reflex Tests Configuration': '/MasterListsPage/reflex',
+  'Menu Configuration': '/MasterListsPage/globalMenuManagement',
+  'General Configurations': '/MasterListsPage/NonConformityConfigurationMenu',
+  'Localization': '/MasterListsPage/languageManagement',
   'Analyzer Test Name': '/MasterListsPage/AnalyzerTestName',
   'Lab Number Management': '/MasterListsPage/labNumber',
   'Program Entry': '/MasterListsPage/program',
@@ -269,6 +312,25 @@ export async function getFutureDate(days: number): Promise<string> {
 // Navigation Helper Functions
 // ---------------------------------------------------------------------------
 
+/** Collapse internal whitespace so a label copied off the screen still matches. */
+function normalizeAdminLabel(label: string): string {
+  return label.replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Resolve an admin sidebar label to its confirmed URL, ignoring whitespace
+ * differences between the map key and the rendered label.
+ */
+export function lookupAdminUrl(itemName: string): string | undefined {
+  const direct = CONFIRMED_ADMIN_URLS[itemName];
+  if (direct) return direct;
+  const want = normalizeAdminLabel(itemName);
+  for (const [key, url] of Object.entries(CONFIRMED_ADMIN_URLS)) {
+    if (normalizeAdminLabel(key) === want) return url;
+  }
+  return undefined;
+}
+
 /**
  * Navigate to an admin item by name or direct URL
  * Uses confirmed URLs (Round 4 validated) when available, otherwise clicks sidebar
@@ -277,25 +339,50 @@ export async function getFutureDate(days: number): Promise<string> {
  * @throws Error if admin item not found
  */
 export async function navigateToAdminItem(page: Page, itemName: string): Promise<void> {
-  // Use confirmed URL if available (Round 4 validated), otherwise click sidebar
-  const confirmedSlug = CONFIRMED_ADMIN_URLS[itemName];
+  // Use confirmed URL if available (Round 4 validated), otherwise click sidebar.
+  //
+  // The lookup collapses runs of whitespace first. The live sidebar renders
+  // "Reflex Tests  Management" with a DOUBLE space (verified 2026-09-14), and a
+  // caller who copies the label off the screen would otherwise miss a map entry
+  // that is present and correct. Whitespace is a rendering detail; it should not
+  // decide whether a screen is reachable.
+  const confirmedSlug = lookupAdminUrl(itemName);
   if (confirmedSlug) {
     await page.goto(`${BASE}${confirmedSlug}`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
     return;
   }
 
-  // Fallback: click the admin item in the left sidebar
-  const adminItem = await page
+  // Fallback: click the admin item in the left sidebar.
+  //
+  // BUG FIXED 2026-09-05. This used to be:
+  //
+  //     const adminItem = await page.locator(...).first();
+  //     if (adminItem) { await adminItem.click(); } else { throw ... }
+  //
+  // `page.locator()` ALWAYS returns a Locator — it is never falsy, even when
+  // nothing matches. So the guard was always true, the `else` was unreachable
+  // dead code, and a missing sidebar item spent the full timeout inside
+  // `.click()` before failing with `locator.click: Test timeout exceeded`.
+  // That is the single largest error class in the module sweep: 42 such
+  // timeouts in run 1, 34 in shard 6 alone. The named error this helper was
+  // written to throw had never once been seen.
+  //
+  // Now: check the locator actually resolves, and fail fast with the message.
+  const adminItem = page
     .locator('a, button, span')
     .filter({ hasText: itemName })
     .first();
 
-  if (adminItem) {
-    await adminItem.click();
-  } else {
-    throw new Error(`Admin item "${itemName}" not found in sidebar`);
+  const present = await adminItem.isVisible({ timeout: 5_000 }).catch(() => false);
+  if (!present) {
+    throw new Error(
+      `Admin item "${itemName}" not found in the sidebar, and it has no entry in ` +
+      `CONFIRMED_ADMIN_URLS. Add the confirmed slug there, or fix the label — do ` +
+      `not let this fall through to a click that can only time out.`,
+    );
   }
+  await adminItem.click();
 
   // Wait for page to load
   await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
@@ -340,6 +427,78 @@ export async function navigateWithDiscovery(page: Page, candidates: string[]): P
 }
 
 /**
+ * FHIR base paths to probe, most likely first.
+ *
+ * `/api/OpenELIS-Global/fhir` is the real one on 3.2.2.x and is also recorded as
+ * `FHIR_BASE` in helpers/apiShapes.ts. The other two are kept because older
+ * deployments served HAPI from them, and a spec that hard-codes one base is a
+ * spec that goes red on the next deployment shape.
+ */
+export const FHIR_BASE_CANDIDATES = [
+  '/api/OpenELIS-Global/fhir',
+  '/hapi-fhir-jpaserver/fhir',
+  '/fhir',
+] as const;
+
+/**
+ * Find the FHIR base this instance actually serves, or null.
+ *
+ * WHY THIS IS CENTRAL, AND WHY `res.ok()` IS NOT ENOUGH (2026-09-14).
+ * Every FHIR spec had its own inline "try each candidate until one responds"
+ * loop, and every one of them accepted a candidate on `res.ok` alone. This SPA
+ * answers **HTTP 200 with `content-type: text/html`** for any path it does not
+ * recognise — the React shell — so the FIRST candidate always "worked",
+ * discovery stopped there, and ~17 tests then asserted FHIR semantics against an
+ * HTML page: `resourceType=undefined`, `fhirVersion=null`, "must be a
+ * CapabilityStatement" and so on. Measured on this instance:
+ *
+ *   /hapi-fhir-jpaserver/fhir/metadata -> 200 text/html            (SPA shell)
+ *   /fhir/metadata                     -> 200 text/html            (SPA shell)
+ *   /api/OpenELIS-Global/fhir/metadata -> 200 application/fhir+json, R4
+ *                                         CapabilityStatement
+ *
+ * So a candidate counts only if the server answered with JSON **and** the body
+ * is the resource we asked for. `navigateWithDiscovery` above already rejects a
+ * Spring `problemDetail` body for the same underlying reason; this is that rule
+ * applied to the API side.
+ *
+ * The page must already be on the application origin (`page.goto(BASE)`) so the
+ * relative fetches carry the session cookie.
+ */
+export async function discoverFhirBase(page: Page): Promise<string | null> {
+  return page.evaluate(async (candidates: string[]) => {
+    for (const base of candidates) {
+      try {
+        const res = await fetch(`${base}/metadata`, {
+          headers: { Accept: 'application/fhir+json' },
+        });
+        if (!res.ok) continue;
+        // A 200 proves nothing here — the SPA catch-all returns 200 for
+        // everything. The content type is what separates the FHIR server from
+        // the HTML shell.
+        const contentType = res.headers.get('content-type') || '';
+        if (!/json/i.test(contentType)) continue;
+        const body = await res.text();
+        let data: any = null;
+        try {
+          data = JSON.parse(body);
+        } catch {
+          continue;
+        }
+        // Spring hands back a problemDetail document as JSON; that is an error,
+        // not a FHIR server.
+        if (!data || data.problemDetail || typeof data.type === 'string' && data.type.includes('problemDetail')) continue;
+        if (data.resourceType !== 'CapabilityStatement') continue;
+        return base;
+      } catch {
+        // candidate unreachable — try the next
+      }
+    }
+    return null;
+  }, [...FHIR_BASE_CANDIDATES]);
+}
+
+/**
  * Login to the application
  * @param page Playwright Page object
  * @param user Username
@@ -364,7 +523,51 @@ export async function navigateWithDiscovery(page: Page, candidates: string[]): P
  * So: probe for the form first. If it is not there we are already in, and the
  * correct behaviour is to do nothing.
  */
+/**
+ * Is this context already carrying an authenticated session?
+ *
+ * WHY (2026-09-05): the first module sweep produced 364 failures, and the single
+ * most common error was `Login failed: still on login page` (38), followed by
+ * ~100 click/fill timeouts. Cause: all 46 module suites call login() themselves —
+ * tests/system-misc.spec.ts alone has 18 `beforeEach` login blocks — even though
+ * modules.config.ts already hands every test an authenticated `storageState`.
+ * Across six parallel shards that is several hundred redundant full UI logins
+ * against one instance, and it trips over itself. Roughly 140 of those 364
+ * failures were this, not product defects.
+ *
+ * The check is cookie-only and deliberately does NOT navigate: a navigation per
+ * test is most of the cost we are trying to remove. A stale cookie passes this
+ * check, which is fine — the mid-run re-auth guard in tests/helpers/api-json.ts
+ * is what handles a session lapsing partway through a run.
+ */
+export async function hasSession(page: Page): Promise<boolean> {
+  try {
+    const cookies = await page.context().cookies();
+    return cookies.some(c => /^(JSESSIONID|SESSION|session)$/i.test(c.name) && !!c.value);
+  } catch {
+    return false;
+  }
+}
+
 export async function login(page: Page, user: string, pass: string): Promise<void> {
+  // Fast path — see hasSession(). Skips the credential submission when the
+  // config already supplied an authenticated storageState, which is every suite
+  // run through modules.config.ts, all-tc.config.ts and friends.
+  //
+  // It still NAVIGATES. The first version of this returned immediately, and the
+  // next sweep traded 76 `Login failed: still on login page` for 61
+  // `SecurityError: Failed to read the 'localStorage' property` — reference
+  // §6.6. The old unconditional `goto` was incidentally the thing getting the
+  // page off about:blank, and every helper that reads the CSRF token out of
+  // localStorage depends on it. Skipping the form is the win; skipping the
+  // navigation is a regression.
+  if (await hasSession(page)) {
+    if (!page.url().startsWith(BASE)) {
+      await page.goto(BASE, { waitUntil: 'domcontentloaded' });
+    }
+    return;
+  }
+
   await page.goto(`${BASE}/LoginPage`);
 
   const formIsThere = await page
@@ -382,9 +585,18 @@ export async function login(page: Page, user: string, pass: string): Promise<voi
     );
   }
 
-  await page.fill('input[name="loginName"]', user);
-  await page.fill('input[name="userPass"]', pass);
-  await page.getByRole('button', { name: /submit|login|save|next|accept/i }).click();
+  // The password input is `name="password"` (id `password`), NOT `userPass`:
+  // read off the live form 2026-09-14. `userPass` matches nothing, so this used
+  // to hang for the full timeout on any context that really was signed out. The
+  // submit control has no accessible name either, hence the id fallback.
+  await page.fill('input[name="loginName"], #loginName', user);
+  await page.fill('input[name="password"], #password, input[type="password"]', pass);
+  const submit = page.getByRole('button', { name: /submit|login|sign in|save|next|accept/i }).first();
+  if (await submit.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    await submit.click();
+  } else {
+    await page.locator('#submitButton, button[type="submit"], input[type="submit"]').first().click();
+  }
   await page.waitForURL(/Dashboard|Home|SamplePatientEntry/);
 }
 
@@ -507,4 +719,227 @@ export async function resolveSectionName(page: Page, want: RegExp): Promise<stri
     .catch(() => []);
   const names = (Array.isArray(sections) ? sections : []).map((x: any) => String(x.value ?? x.name ?? ''));
   return names.find((n) => want.test(n)) ?? null;
+}
+
+/**
+ * Navigation and form helpers that several module specs call but never defined.
+ *
+ * When `openelis-e2e.spec.ts` was split into per-module specs, each new file got
+ * a copy-pasted local copy of these. Two files got the CALL SITES without the
+ * definitions — `tests/system-misc.spec.ts` and `tests/non-conforming.spec.ts` —
+ * so every test in them died on a ReferenceError before touching the product.
+ * `typecheck:all` had been reporting exactly this as TS2304 the whole time.
+ *
+ * These are the canonical versions. New specs should import from here rather
+ * than pasting another copy; the remaining local duplicates in order-entry,
+ * results-entry, pathology and the gap-suites are tracked in 12.15 — they were
+ * dragged along by whole TEST CASES being copied between those files, so they
+ * are not a standalone refactor. Note that those copies of tryNavigateToURL
+ * check `res.ok()`, which is true for every path in this SPA; this one does
+ * not, deliberately.
+ */
+export async function navigateViaMenu(page: Page, menuItems: string[]): Promise<void> {
+  const hamburger = page
+    .locator('button[aria-label*="menu" i], button[aria-label*="Menu"], [class*="hamburger"]')
+    .first();
+  if (await hamburger.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    await hamburger.click();
+    await page.waitForTimeout(500);
+  }
+
+  for (const item of menuItems) {
+    const menuItem = page.locator('button, a, [role="menuitem"]').filter({ hasText: item }).first();
+    if (await menuItem.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      await menuItem.click();
+      await page.waitForTimeout(300);
+    }
+  }
+}
+
+/**
+ * Try each candidate path in turn; return true for the first that lands
+ * somewhere other than the login page. Returns false if none do.
+ *
+ * NOTE: this is a navigation convenience, NOT an existence check. The SPA
+ * serves 200 for every path, so "we did not get bounced to login" is the only
+ * thing a true return actually proves. Assert on a rendered element after it.
+ */
+export async function tryNavigateToURL(page: Page, candidates: string[]): Promise<boolean> {
+  for (const url of candidates) {
+    try {
+      await page.goto(`${BASE}${url}`, { waitUntil: 'domcontentloaded', timeout: 8_000 });
+      const landed = page.url();
+      if (/login|signin/i.test(landed)) continue;
+
+      // A Spring error document is not a screen. `/ColdStorageMonitoring` —
+      // first in TC-STOR-03/04's candidate list — bounces to
+      // /api/OpenELIS-Global/ColdStorageMonitoring and renders a
+      // NoHandlerFoundException problemDetail (measured 2026-09-14), which is
+      // neither a login page nor a crash, so this returned true and the caller
+      // never tried `/FreezerMonitoring`, the screen that actually exists. Same
+      // rule navigateWithDiscovery applies to the body it lands on.
+      const body = await page.locator('body').innerText().catch(() => '');
+      if (body.includes('NoHandlerFoundException') || body.includes('problemDetail')) continue;
+
+      return true;
+    } catch {
+      // try the next candidate
+    }
+  }
+  return false;
+}
+
+/** Select a sample type by its option id on the order form, if the select is present. */
+export async function selectSampleType(page: Page, typeId: string): Promise<void> {
+  const typeSelect = page.locator('select[id*="sample"], select[id*="type"]').first();
+  if (await typeSelect.isVisible({ timeout: 3_000 }).catch(() => false)) {
+    await typeSelect.selectOption(typeId);
+  }
+}
+
+/**
+ * Click the Search button that BELONGS TO the form holding `fieldSelector`.
+ *
+ * Why this exists: OpenELIS screens carry more than one button whose accessible
+ * name matches /search/i — the Carbon header has a `cds--header__action` search
+ * icon, and the patient screen also has "Search for Patient" and
+ * "External Search" alongside the form's own "Search". Every previous version of
+ * this interaction used
+ *
+ *     getByRole('button', { name: /search/i }).first()
+ *
+ * which resolves to the HEADER action, clicks it, fires no request, and leaves
+ * the test asserting on a page that never searched. Captured live on
+ * 2026-09-08: candidate 0 was `cds--header__action` (outside any form),
+ * candidate 1 was `cds--btn--tertiary` inside the form with `#lastName`, and
+ * only the second one issued
+ *   GET /rest/patient-search-results?lastName=…&firstName=…&nationalID=…
+ *
+ * This is the same defect shape as the patient-form Save button, which matched
+ * "Additional Information" through `/add/i`. THE RULE: anchor the name, and
+ * when a screen has more than one button of that name, pick the one that shares
+ * an ancestor with the field you just filled — never `.first()`.
+ */
+export async function clickFormSearch(page: Page, fieldSelector: string): Promise<boolean> {
+  // SELECT "Search for Patient" FIRST.
+  //
+  // Casey's note (2026-09-08): the patient-search mode has to be selected
+  // before searching, and the control for it is not visually distinctive.
+  // It is a `cds--btn--primary` labelled "Search for Patient" — which reads
+  // like the submit button and is not; probing it on /PatientManagement and
+  // /SamplePatientEntry fired NO request and changed no visible input, while
+  // the form's own TERTIARY "Search" returned 3 rows. So it is a mode/panel
+  // control, not a submit.
+  //
+  // Clicking it is therefore harmless where the panel is already active, and
+  // necessary where it is not — states this probe did not reach, such as an
+  // order-entry screen opened mid-flow. Do it unconditionally when present
+  // rather than reasoning about which state we are in.
+  // NOTHING TO CHECK, AND ORDER IS SAFE (measured 2026-09-08): the button
+  // exposes no aria-pressed / aria-selected / aria-current and its class string
+  // is byte-identical before and after clicking, so selection can only be
+  // confirmed behaviourally — hence the unconditional click. That absence is
+  // also a WCAG 4.1.2 defect in the product (harness ref 12.20). Clicking it
+  // AFTER the fields are filled does NOT clear them, so callers fill first.
+
+  const modeBtn = page.getByRole('button', { name: /^\s*Search for Patient\s*$/i }).first();
+  if (await modeBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    await modeBtn.click().catch(() => { /* mode already active */ });
+    await page.waitForTimeout(600);
+  }
+
+  // EXCLUDE THE CARBON HEADER'S "Search" ACTION.
+  //
+  // Measured 2026-09-10 on the local 3.2.2.0 stack, on /AccessionResults:
+  // exactly two elements match /^Search$/. The header's is
+  //   BUTTON .cds--header__action   closest('header') !== null
+  // and the form's is
+  //   BUTTON .cds--btn--primary     closest('form')   !== null
+  // Clicking the header one fires NO request and leaves the mount-time empty
+  // result on screen, so the table still reads "There are no records to
+  // display / 0-0 of 0 items" — indistinguishable from a genuine no-match.
+  //
+  // That false negative cost three separate investigations in this repo
+  // (harness ref 12.22, 12.26, 12.30), the last of which concluded that
+  // results entry could not see created orders at all. It could; the probe
+  // was clicking the wrong button. Excluding header buttons structurally is
+  // cheaper than remembering not to hit them.
+  // This exact selector was the one measured working (lb3 probe, 2026-09-10):
+  // it returned 1 candidate on /AccessionResults where getByRole returned 2.
+  const candidates = page
+    .locator('button:not(header button):not(.cds--header__action), input[type="submit"]')
+    .filter({ hasText: /^\s*Search\s*$/ });
+  const n = await candidates.count();
+  for (let i = 0; i < n; i++) {
+    const owns = await candidates
+      .nth(i)
+      .evaluate((el, sel) => {
+        const form = (el as Element).closest('form, section, .cds--form, div[class*="Search"]');
+        return !!(form && form.querySelector(sel));
+      }, fieldSelector)
+      .catch(() => false);
+    if (owns) {
+      await candidates.nth(i).click();
+      return true;
+    }
+  }
+  // No button shares the field's form. Fall back to the LAST match rather than
+  // the first: the header action is rendered before page content, so last() is
+  // the better guess — but say so, because a silent fallback is how the
+  // original bug survived.
+  if (n > 0) {
+    // Last resort. last() is a guess, so say so at a level that shows up in
+    // CI output — a wrong guess here reports an empty table, not an error.
+    console.warn(
+      `clickFormSearch: NO Search button shares a container with ${fieldSelector} ` +
+      `(${n} candidates after excluding the Carbon header). Falling back to last(); ` +
+      `if this test reports an empty result set, suspect THIS line first.`,
+    );
+    await candidates.last().click();
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Check a Carbon radio button.
+ *
+ * Verified 2026-09-08 on testing v3.2.2.0. Carbon renders a radio as a real
+ * <input type="radio"> plus a sibling <label> containing a
+ * <span class="cds--radio-button__appearance"> that draws the control. The
+ * input is visible and enabled, but the span sits on top of it, so
+ * locator.check() and locator.click() both retry forever with
+ * "…__appearance from <label> subtree intercepts pointer events" until the
+ * test times out. That is what a 30s timeout on a radio always means here.
+ *
+ * The label is also the correct user gesture: a person clicks the visible
+ * control, not the hidden input underneath it.
+ *
+ * Pass the INPUT locator. This resolves its id and clicks the label bound to
+ * it, falling back to a label inside the same row/group when the input has no
+ * id.
+ */
+export async function checkCarbonRadio(page: Page, radioInput: Locator): Promise<void> {
+  const id = await radioInput.getAttribute('id');
+  if (id) {
+    const label = page.locator(`label[for="${cssEscapeId(id)}"]`);
+    if (await label.count() > 0) {
+      await label.first().click();
+      return;
+    }
+  }
+  // No usable id — click the label next to the input within its own group.
+  const sibling = radioInput.locator('xpath=following-sibling::label[1]');
+  if (await sibling.count() > 0) {
+    await sibling.first().click();
+    return;
+  }
+  // Last resort: bypass the interception rather than time out on it.
+  await radioInput.click({ force: true });
+}
+
+/** Carbon uses the record's own id (e.g. "503") as the input id, so this only
+ *  has to survive ids that are not valid bare CSS identifiers. */
+function cssEscapeId(id: string): string {
+  return id.replace(/(["\\])/g, '\\$1');
 }

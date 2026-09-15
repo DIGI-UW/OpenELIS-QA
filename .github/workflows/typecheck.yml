@@ -41,6 +41,72 @@ jobs:
       - name: Typecheck maintained surface
         run: npm run typecheck
 
+      # BLOCKING: no NEW test may be added that asserts nothing. A test which
+      # reaches its end without an assertion cannot fail, so it cannot report
+      # anything — it just inflates the pass count. A repo scan on 2026-09-03
+      # found 296 of these already present (and 36 tests that can print the
+      # word "FAIL" and still pass), which is why this is a baseline gate
+      # rather than a hard switch: the existing backlog is recorded in
+      # .assert-baseline.json and can only shrink. Also blocks focused tests.
+      - name: No new assertion-free tests
+        run: npm run lint:assert
+
+      # Companion to the step above, covering what ESLint's expect-expect rule
+      # cannot see: assertions that are present but can never fail. Chiefly the
+      # `if (!x) { console.log('SKIP'); return; }` opt-out, which carries an
+      # expect further down that never runs — 319 of the 482 unfalsifiable cases
+      # found in the 2026-09-10 audit, all of them invisible to lint:assert.
+      - name: No new tests whose assertions cannot fail
+        run: npm run lint:falsifiable
+
+      # BLOCKING: every spec file must be runnable by at least one config. An
+      # audit on 2026-09-04 found 46 spec files (866 tests — the bulk of the
+      # module coverage) that no config could run; they had been dead a long
+      # time and nothing said so. modules.config.ts adopted them; this gate
+      # stops the situation recurring. Asks Playwright which files each config
+      # resolves rather than parsing testMatch by hand.
+      - name: Every spec is reachable by a config
+        run: npm run check:orphans
+
+      # BLOCKING: no NEW duplicate TC ID. Two separate defects, both of which
+      # make a sweep's numbers lie. A CLONE is the same ID, title and body in
+      # two files: both copies run, so the case is counted twice and every
+      # failure is double counted — sweep 4 double-counted 34 failures between
+      # gap-suites and the module specs. A COLLISION is the same ID on two
+      # DIFFERENT tests, which stops "TC-IO-03 failed" from being traceable to
+      # a case in the catalogue. An audit on 2026-09-08 found 72 clones and 47
+      # collisions, so this is a baseline gate like lint:assert; the backlog in
+      # .dupe-ids-baseline.json can only shrink.
+      - name: No new duplicate TC IDs
+        run: npm run check:dupe-ids
+
+      # NON-BLOCKING report: the catalogue vs the code. "Are we missing QA
+
+      # BLOCKING: the shared case-ID grammar must still match every shape the
+      # catalogues use. Three separate miscounts this month traced to a regex
+      # that looked right and quietly matched a subset — one dropped 575 of
+      # master-test-cases.md's 1504 headings; another could not see the
+      # table-row form every per-feature suite uses. This asserts all six ID
+      # shapes and both declaration layouts, plus negatives.
+      - name: Case-ID grammar self-test
+        run: npm run catalogue:selftest
+
+      # BLOCKING: every .md that declares cases must be in catalogues.json. A
+      # catalogue nothing indexes is invisible to the coverage report, so its
+      # cases read as "never written" even when they are written and passing —
+      # which is exactly what happened to the analyzer, label-preset and
+      # test-catalog-management suites.
+      - name: Every catalogue is indexed
+        run: npm run check:catalogue-index
+      # checks?" cannot be answered by running more tests — a test that exists
+      # says nothing about one that does not. This diffs the case IDs declared
+      # across ALL indexed catalogues against the IDs implemented in *.spec.ts,
+      # and reports per catalogue. 1210 of 1636 catalogued cases had no test as
+      # of 2026-09-08, concentrated in master-test-cases.md (24% covered); the
+      # four per-feature suites are at 100%. Pass --strict to fail on growth.
+      - name: Coverage gaps (catalogue vs code)
+        run: npm run check:coverage-gaps
+
       # NON-BLOCKING: the rest of the repo. ~166 errors as of 2026-07-31,
       # mostly missing type imports in older specs. Reported so the number is
       # visible and can only go down; widen tsconfig.json's include as files

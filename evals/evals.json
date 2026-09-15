@@ -15,8 +15,20 @@
     },
     {
       "id": 3,
-      "prompt": "We just deployed a new version of OpenELIS to https://uat.openelis-global.org — run a regression test on the test catalog tools and create Jira tickets if anything is broken. Project key is OELIS.",
+      "prompt": "We just deployed a new version of OpenELIS to https://uat.openelis-global.org \u2014 run a regression test on the test catalog tools and create Jira tickets if anything is broken. Project key is OELIS.",
       "expected_output": "A full QA run against the UAT environment, a saved .md report, and Jira bug tickets created for any failures with the project key OELIS and labels 'automated-qa' and 'test-catalog'.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "I ran a suite and three test cases hit HTTP 500 on endpoints that exist, and one page 404s because the module isn't deployed on this build. How should I record these in the report?",
+      "expected_output": "The three 500s are FAIL \u2014 a 5xx from an endpoint that exists is a failure, not a gap. Only the undeployed module is a GAP, and it needs a stated reason plus what would retire it. The skill should cite the fail-by-default Verdicts table and warn against using GAP to get past something that failed, referencing the OGC-1192 post-mortem.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "I added a new spec file to the OpenELIS-QA repo and CI is failing on check:orphans. Can I just add it to .orphan-allowlist.json to get my PR through?",
+      "expected_output": "No. The allowlist is for files that are intentionally unrunnable, not a way past the gate. The skill should explain that a spec no config runs is not coverage, note that a new tests/*.spec.ts needs no config edit because modules.config.ts sweeps that directory by exclusion, and point at Section 12.9 of the harness reference.",
       "files": []
     }
   ]

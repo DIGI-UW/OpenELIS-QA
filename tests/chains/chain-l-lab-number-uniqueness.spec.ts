@@ -32,7 +32,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { BASE, apiCall, markStep } from './_common';
+import { BASE, apiCall, markStep, requireStep } from './_common';
 
 const BURST_SIZE = 10; // small enough to be fast, large enough to surface races
 
@@ -89,7 +89,7 @@ test.describe.serial('Chain L — Lab Number Uniqueness', () => {
   // Acceptance criterion: PERSIST + CROSS-LINK (concurrency)
   // ---------------------------------------------------------------------------
   test('Step 2 — Burst-create concurrent orders (PERSIST × N)', async ({ page }) => {
-    if (!patientPK || !testId) test.skip();
+    requireStep('L', 2, !(!patientPK || !testId), '!patientPK || !testId');
     await page.goto(BASE);
 
     const payload = {
@@ -154,7 +154,7 @@ test.describe.serial('Chain L — Lab Number Uniqueness', () => {
   // Acceptance criterion: CROSS-LINK
   // ---------------------------------------------------------------------------
   test('Step 3 — All returned accessions distinct (CROSS-LINK, the key check)', async () => {
-    if (accessions.length === 0) test.skip();
+    requireStep('L', 3, !(accessions.length === 0), 'accessions.length === 0');
 
     const unique = new Set(accessions);
     if (unique.size !== accessions.length) {
@@ -179,7 +179,7 @@ test.describe.serial('Chain L — Lab Number Uniqueness', () => {
   // the labNumber admin config's format).
   // ---------------------------------------------------------------------------
   test('Step 4 — Accession format matches admin labNumber config (ROUND-TRIP)', async ({ page }) => {
-    if (accessions.length === 0) test.skip();
+    requireStep('L', 4, !(accessions.length === 0), 'accessions.length === 0');
     await page.goto(BASE);
     // Read the labNumber config; first valid sample format we extract is
     // our regex. Endpoint not standardised; if not available, just check

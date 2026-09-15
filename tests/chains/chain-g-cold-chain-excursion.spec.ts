@@ -22,7 +22,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { BASE, apiCall, markStep } from './_common';
+import { BASE, apiCall, markStep, requireStep } from './_common';
 
 interface ColdStorageDevice { id?: string; name?: string; type?: string; }
 interface CorrectiveAction { id?: string; deviceId?: string; description?: string; }
@@ -61,7 +61,7 @@ test.describe.serial('Chain G — Cold-Chain Excursion', () => {
   });
 
   test('Step 2 — Insert synthetic excursion event (PERSIST, hardware-substitute)', async ({ page }) => {
-    if (!device?.id) test.skip();
+    requireStep('G', 2, !(!device?.id), '!device?.id');
     await page.goto(BASE);
     const r = await apiCall<{ id?: string }>(
       page, '/api/OpenELIS-Global/rest/cold-storage/events', {
@@ -88,7 +88,7 @@ test.describe.serial('Chain G — Cold-Chain Excursion', () => {
   });
 
   test('Step 3 — Alert fires for the excursion (CROSS-LINK)', async ({ page }) => {
-    if (!device?.id) test.skip();
+    requireStep('G', 3, !(!device?.id), '!device?.id');
     await page.goto(BASE);
     await page.waitForTimeout(2000); // alert engine may be async
     const r = await apiCall<{ alerts?: Array<{ deviceId?: string; severity?: string; source?: string }> }>(
@@ -109,7 +109,7 @@ test.describe.serial('Chain G — Cold-Chain Excursion', () => {
   });
 
   test('Step 4 — Add corrective action linked to excursion (PERSIST, CROSS-LINK)', async ({ page }) => {
-    if (!device?.id || !excursionId) test.skip();
+    requireStep('G', 4, !(!device?.id || !excursionId), '!device?.id || !excursionId');
     await page.goto(BASE);
     const r = await apiCall<CorrectiveAction>(
       page, '/api/OpenELIS-Global/rest/cold-storage/corrective-actions', {
@@ -130,7 +130,7 @@ test.describe.serial('Chain G — Cold-Chain Excursion', () => {
   });
 
   test('Step 5 — Audit log records the corrective action (REPORTABLE)', async ({ page }) => {
-    if (!device?.id) test.skip();
+    requireStep('G', 5, !(!device?.id), '!device?.id');
     await page.goto(BASE);
     const today = new Date().toISOString().slice(0, 10);
     const r = await apiCall<{ entries?: Array<{ description?: string }> }>(

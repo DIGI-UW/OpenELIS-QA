@@ -455,7 +455,7 @@ test.describe('Suite R-EXT — Alerts Extended (TC-ALERT-EXT)', () => {
      * supervisors can quickly find the most recent or highest-severity alerts.
      */
     const loaded = await navigateWithDiscovery(page, ['/Alerts', '/AlertDashboard', '/AlertNotification']);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 

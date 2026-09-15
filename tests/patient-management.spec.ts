@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, navigateToAdminItem, getDateRange, getFutureDateRange } from '../helpers/test-helpers';
+import { seedDuplicatePair, seedMergedPair, findPatientIdsByNationalId, findPatientIdsByLastName } from '../helpers/data-factory';
+import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, QA_ID_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, navigateToAdminItem, getDateRange, getFutureDateRange, clickFormSearch, checkCarbonRadio } from '../helpers/test-helpers';
 
 /**
  * Patient Management Test Suite
@@ -60,30 +61,45 @@ test.describe('Patient Management (TC-PAT)', () => {
   });
 
   test('TC-PAT-02: Search by national ID returns Abby Sebby', async ({ page }) => {
+    // WHAT THIS CASE CAN CHECK, AND WHERE (probed live 2026-09-08, v3.2.2.0).
+    //
+    // The patient search SCREEN has no national-ID input. Its fields are
+    // patientId, labNumber, lastName, firstName, a date picker and the gender
+    // radios; the only "National ID" on the page is a results-table column
+    // header (`cds--table-header-label`). The old body matched that loose
+    // selector against `#patientId`, typed the national ID into it, pressed
+    // Enter — which this form does not submit on — and then reported FAIL via
+    // console.log while asserting on a page that had never searched.
+    //
+    // The SERVER does support it, under the parameter the screen itself sends:
+    // `nationalID` (capital I, capital D). `nationalId` is ignored and answers
+    // 200 with an empty list. So this case now asserts the capability at the
+    // level where it exists, and TC-PAT-03 covers the UI path by name.
+    //
+    // Whether the search screen OUGHT to expose a national-ID field is a
+    // product question, not a test failure — national ID is a primary patient
+    // identifier in this domain. Raised in open-questions.md.
     await goToPatientSearch(page);
+    expect(page.url(), 'must be on the patient search screen').toMatch(/PatientManagement/);
 
-    // Try national ID field
-    const idField = page.locator(
-      'input[id*="national" i], input[id*="patientId" i], input[placeholder*="national" i], input[placeholder*="ID" i]'
-    ).first();
+    const found = await page.evaluate(async (nid) => {
+      const r = await fetch(
+        `/api/OpenELIS-Global/rest/patient-search-results?nationalID=${encodeURIComponent(nid)}`,
+        { headers: { Accept: 'application/json' } }
+      );
+      if (!r.ok) return { status: r.status, names: [] as string[] };
+      const d = await r.json();
+      return {
+        status: r.status,
+        names: (d.patientSearchResults ?? []).map((p: any) => `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim()),
+      };
+    }, PATIENT_ID);
 
-    if (!(await idField.isVisible({ timeout: 3000 }).catch(() => false))) {
-      console.log('TC-PAT-02: SKIP — no national ID field found');
-      test.skip();
-      return;
-    }
-
-    await idField.fill('0123456');
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(2000);
-
-    const hasAbby = await page.getByText(/Sebby/i).isVisible({ timeout: 5000 }).catch(() => false);
-    if (hasAbby) {
-      console.log('TC-PAT-02: PASS — Abby Sebby found by national ID');
-    } else {
-      console.log('TC-PAT-02: FAIL — Abby Sebby not returned for ID 0123456');
-    }
-    expect(hasAbby).toBe(true);
+    expect(found.status, 'patient search must answer 200').toBe(200);
+    expect(
+      found.names.join(' | '),
+      `national ID ${PATIENT_ID} returned no ${PATIENT_NAME}. Saw: ${JSON.stringify(found.names)}`
+    ).toMatch(/Sebby/i);
   });
 
   test('TC-PAT-03: Partial last-name search returns matching patient', async ({ page }) => {
@@ -98,91 +114,203 @@ test.describe('Patient Management (TC-PAT)', () => {
       return; // not a hard fail — document as GAP
     }
 
+    // This form does NOT submit on Enter (verified live 2026-09-08 — pressing
+    // Enter fires no request at all), and its Search button is not the first
+    // /search/i match on the page. Both were why this case failed.
     await lastNameField.fill('Seb');
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(2000);
+    const searched = await clickFormSearch(page, '#lastName');
+    expect(searched, 'the patient search form must have a Search button').toBe(true);
+    await page.waitForTimeout(3000);
 
-    const hasAbby = await page.getByText(/Sebby/i).isVisible({ timeout: 5000 }).catch(() => false);
-    console.log(hasAbby ? 'TC-PAT-03: PASS' : 'TC-PAT-03: FAIL — partial name match not working');
-    expect(hasAbby).toBe(true);
+    const hasAbby = await page.getByText(/Sebby/i).first().isVisible({ timeout: 8000 }).catch(() => false);
+    expect(
+      hasAbby,
+      `partial last-name search for "Seb" did not return ${PATIENT_NAME} (url=${page.url()})`
+    ).toBe(true);
 
-    // Empty-state test
+    // Empty-state test. This used to press Enter, which submits nothing, so
+    // the "empty state" it measured was actually the previous result set for
+    // "Seb" still on screen. Search properly, then check the count.
     await lastNameField.fill('ZZZNOTEXIST');
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(2000);
-    const hasEmpty = await page.getByText(/no.*found|no.*result|no.*patient/i).isVisible({ timeout: 3000 }).catch(() => false);
-    console.log(hasEmpty ? 'TC-PAT-03 empty state: PASS' : 'TC-PAT-03 empty state: FAIL — no empty-state message');
+    const searchedEmpty = await clickFormSearch(page, '#lastName');
+    expect(searchedEmpty, 'the patient search form must have a Search button').toBe(true);
+    await page.waitForTimeout(3000);
+
+    const rowCount = await page.locator('table tbody tr').count();
+    expect(rowCount, 'a search for a nonexistent last name must return no rows').toBe(0);
+    await expect(
+      page.getByText(/0-0 of 0 items/i),
+      'the results pager must report zero items for a search that matched nothing'
+    ).toBeVisible({ timeout: TIMEOUT });
+
+    // GAP, verified by hand 2026-09-08: there is no empty-state message at all.
+    // The table renders its headers and an "0-0 of 0 items" pager and nothing
+    // tells the user their search matched nobody. Raised for the patient-search
+    // UX work item, not asserted here.
+    // The pattern is anchored on purpose. /no.*(found|result|patient)/i
+    // reported "message present" on this very screen, which is wrong — that
+    // regex spans any amount of intervening text, so it matches unrelated
+    // copy. An empty state says something like "no patients found"; require
+    // that shape, and print what matched so the log can be checked.
+    const emptyMessage = page.getByText(/\b(no|zero)\s+(patients?|results?|records?)\b[^.]{0,20}\b(found|match(?:ed|es)?|available)\b/i);
+    const hasEmptyMessage = await emptyMessage.first().isVisible({ timeout: 3000 }).catch(() => false);
+    console.log(hasEmptyMessage
+      ? `TC-PAT-03 empty state: message present — "${(await emptyMessage.first().innerText()).trim().slice(0, 80)}"`
+      : 'TC-PAT-03 empty state: GAP — zero results are shown only as "0-0 of 0 items", with no message');
   });
 
-  test('TC-PAT-04: View patient order history', async ({ page }) => {
-    await goToPatientSearch(page);
+  test('TC-PAT-04: Patient history opens from a search result and names that patient', async ({ page }) => {
+    // REWRITTEN 2026-09-08, every locator below verified by hand in Chrome on
+    // testing v3.2.2.0. What was here before could not pass and could not fail
+    // honestly:
+    //
+    //  - it looked for the search field with
+    //    getByRole('textbox', { name: /id|patient|national/i }).first(), the same
+    //    loose-regex-plus-.first() trap that produced the other three false
+    //    results in this file. There IS no national-ID input on any patient
+    //    search screen (only #patientId, #labNumber, #lastName, #firstName, a
+    //    dd/mm/yyyy picker and gender radios), so it typed a national ID into
+    //    whatever textbox happened to be first.
+    //  - it then pressed Enter. These forms do not submit on Enter; that fires
+    //    no request at all.
+    //  - it clicked getByText(/Sebby/i).first() on a table that re-renders once
+    //    per row while the per-row patient-photos requests land.
+    //  - and it asserted only getByText(/Abby|Sebby/i), which the still-visible
+    //    search screen satisfies. So the "history" half of the case was a
+    //    console.log, never an assertion.
+    //
+    // The real screen is /PatientHistory. Search by last name, then SELECT the
+    // row's radio — there is no submit button, checking the radio navigates
+    // straight to /PatientResults/<patientId>. Result rows carry
+    // data-cy="patient-result-row-<patientId>", which is a stable hook and
+    // removes the need to match on a name at all.
+    await page.goto(`${BASE}/PatientHistory`, { waitUntil: 'domcontentloaded' });
 
-    // Search for Abby Sebby
-    const idField = page.getByRole('textbox', { name: /id|patient|national/i }).first();
-    if (await idField.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await idField.fill('0123456');
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(2000);
-    }
+    const lastNameField = page.locator('#lastName');
+    await expect(
+      lastNameField,
+      'the patient history search form must render #lastName'
+    ).toBeVisible({ timeout: 15_000 });
 
-    // Click on the patient row to open detail
-    const patientRow = page.getByText(/Sebby/i).first();
-    if (!(await patientRow.isVisible({ timeout: 3000 }).catch(() => false))) {
-      console.log('TC-PAT-04: SKIP — could not locate patient row');
-      return;
-    }
-    await patientRow.click();
-    await page.waitForTimeout(2000);
+    await lastNameField.fill('Sebby');
+    const searched = await clickFormSearch(page, '#lastName');
+    expect(searched, 'the patient history search form must have a Search button').toBe(true);
 
-    // Verify history / demographics
-    const hasHistory = await page.getByText(/26CPHL|accession|order|history/i).isVisible({ timeout: 5000 }).catch(() => false);
-    const hasDemographics = await page.getByText(/Abby|Sebby/i).isVisible({ timeout: 3000 }).catch(() => false);
+    const row = page.locator('[data-cy^="patient-result-row-"]').first();
+    await expect(
+      row,
+      `last-name search for "Sebby" returned no result rows (url=${page.url()})`
+    ).toBeVisible({ timeout: 15_000 });
 
-    console.log(hasHistory ? 'TC-PAT-04 history: PASS' : 'TC-PAT-04 history: FAIL — order history not visible');
-    console.log(hasDemographics ? 'TC-PAT-04 demographics: PASS' : 'TC-PAT-04 demographics: FAIL');
-    expect(hasDemographics).toBe(true);
+    const rowKey = (await row.getAttribute('data-cy')) ?? '';
+    const patientId = rowKey.replace('patient-result-row-', '');
+    expect(patientId, `result row must carry a numeric patient id (saw "${rowKey}")`).toMatch(/^\d+$/);
+
+    // Checking the radio IS the navigation. Nothing else to click.
+    //
+    // It must be checked through its label: Carbon draws the control as a
+    // <span class="cds--radio-button__appearance"> inside the <label>, which
+    // sits on top of the input and intercepts pointer events, so .check() on
+    // the input retries until the test times out. See checkCarbonRadio.
+    await checkCarbonRadio(page, row.locator('input[type="radio"]'));
+    await page.waitForURL(new RegExp(`/PatientResults/${patientId}(?:[/?#]|$)`), { timeout: 15_000 });
+
+    // The history view must name the patient it opened. This is the assertion
+    // the old case skipped: without it, landing on the wrong patient passes.
+    //
+    // These are toContainText, not a one-shot innerText snapshot. The URL
+    // changes before the patient header renders, so reading body text straight
+    // after waitForURL captures the SideNav and nothing else — which is exactly
+    // how this assertion failed on its first run. toContainText retries.
+    const detail = page.locator('body');
+    await expect(
+      detail,
+      `history view for patient ${patientId} does not name ${PATIENT_NAME}`
+    ).toContainText(/Sebby/i, { timeout: 15_000 });
+    await expect(
+      detail,
+      `history view for patient ${patientId} does not show national ID ${PATIENT_ID}`
+    ).toContainText(PATIENT_ID, { timeout: 10_000 });
+
+    // And it must render the results region in one of its two legitimate
+    // states. Asserting "has orders" would make this case depend on seed data;
+    // asserting the region rendered does not.
+    const hasResultRows = await page.locator('table tbody tr').first()
+      .isVisible({ timeout: 5_000 }).catch(() => false);
+    const hasEmptyState = await page.getByText(/no test results? data to display/i)
+      .isVisible({ timeout: 5_000 }).catch(() => false);
+    expect(
+      hasResultRows || hasEmptyState,
+      'patient history must render either a test-results table or an explicit empty state'
+    ).toBe(true);
+    console.log(`TC-PAT-04: patient ${patientId} history rendered (${hasResultRows ? 'has results' : 'empty state'})`);
   });
 
   test('TC-PAT-05: Create a new patient', async ({ page }) => {
-    // Try to find Add Patient screen
-    const addPatientUrls = ['/AddPatient', '/PatientEdit', '/SamplePatientEntry'];
-    let landed = false;
-    for (const u of addPatientUrls) {
-      const res = await page.goto(`${BASE}${u}`).catch(() => null);
-      if (res && res.ok() && !page.url().includes('LoginPage')) {
-        landed = true;
-        break;
-      }
-    }
-    if (!landed) {
-      console.log('TC-PAT-05: GAP — no Add Patient URL accessible');
-      return;
-    }
+    // ROUTE CORRECTED 2026-09-05, verified by hand on testing v3.2.2.0.
+    //
+    // This used to try /AddPatient, /PatientEdit and /SamplePatientEntry and
+    // take the first that returned 200. That is not a real check: OpenELIS is
+    // an SPA, so EVERY path returns 200 with the shell, and `landed` was true
+    // on a page that rendered nothing. The real screen is /PatientManagement
+    // (Add Or Modify Patient) with a "New Patient" tab that routes to
+    // /PatientManagement/new — and #nationalId only exists there, which is
+    // also what produced the run's 10 "Element not found: #nationalId".
+    await page.goto(`${BASE}/PatientManagement/new`, { waitUntil: 'domcontentloaded' });
+    const idField = page.locator('#nationalId');
+    const landed = await idField.isVisible({ timeout: 10_000 }).catch(() => false);
+    test.skip(!landed, 'Add Patient form (/PatientManagement/new) did not render #nationalId');
 
-    // Fill demographics
-    const lastNameField = page.getByRole('textbox', { name: /last.*name/i }).first();
-    const firstNameField = page.getByRole('textbox', { name: /first.*name/i }).first();
-    const idField = page.locator('input[id*="national" i], input[id*="patientId" i]').first();
+    // Fill demographics. National ID must match the server's
+    // `(?i)^[-a-z0-9/]*$` — underscores are REJECTED with a 400, which is what
+    // the old 'QA_PAT_0324' hit. See QA_ID_PREFIX in helpers/test-helpers.ts.
+    const nationalId = `${QA_ID_PREFIX}-pat-05`;
+    await idField.fill(nationalId);
+    await page.locator('#lastName').fill('QAPatient');
+    await page.locator('#firstName').fill('Automated');
 
-    if (await lastNameField.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await lastNameField.fill('QA_Patient');
-    }
-    if (await firstNameField.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await firstNameField.fill('Automated');
-    }
-    if (await idField.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await idField.fill('QA_PAT_0324');
-    }
+    // GENDER — radios, clicked by LABEL. `#radio-1` by index is brittle (the
+    // search screen uses `search-radio-1` for the same control) and the old
+    // body wrapped the click in `.catch(() => {})`, so a miss was
+    // indistinguishable from a hit. Same for the date picker below.
+    await page.getByText(/^Female$/).first().click();
+    await page.locator('#date-picker-default-id').last().fill('01/01/1990');
 
-    // Submit
-    const saveBtn = page.getByRole('button', { name: /save|submit|add patient/i }).first();
-    if (await saveBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await saveBtn.click();
-      await page.waitForTimeout(2000);
-    }
+    // SUBMIT — anchored. An unanchored alternation over button labels is how
+    // the data factory ended up clicking "Additional Information" for months
+    // (harness ref 12.20).
+    //
+    // The old body then pressed Escape to dismiss the picker overlay, and THAT
+    // is what failed the case: by then the test had exceeded its budget,
+    // Playwright had torn the page down, and keyboard.press threw "Target
+    // page, context or browser has been closed" — while every earlier step's
+    // `.catch(() => {})` hid which one had actually hung.
+    const saveBtn = page.getByRole('button', { name: /^\s*Save\s*$/i }).first();
+    await expect(saveBtn, 'the create form must offer a Save button').toBeVisible({ timeout: 10_000 });
+    await saveBtn.click();
 
-    const savedOk = await page.getByText(/QA_Patient|QA_PAT_0324/i).isVisible({ timeout: 5000 }).catch(() => false);
-    console.log(savedOk ? 'TC-PAT-05: PASS — new patient created' : 'TC-PAT-05: FAIL — patient not persisted after save');
+    // The app answers POST /rest/PatientManagement with
+    // {"status":"success","patientId":"<id>"} and routes to
+    // /PatientManagement/<id>. Wait for that, then confirm by READ-BACK: the
+    // post-save screen showing a name is not proof the record persisted
+    // (harness ref 12.3, and the data-factory bug in 12.19).
+    await page.waitForURL(/\/PatientManagement\/\d+/, { timeout: 20_000 }).catch(() => { /* read-back decides */ });
+
+    const readBack = await page.evaluate(async (nid) => {
+      const r = await fetch(
+        `/api/OpenELIS-Global/rest/patient-search-results?nationalID=${encodeURIComponent(nid)}`,
+        { headers: { Accept: 'application/json' } }
+      );
+      if (!r.ok) return { status: r.status, names: [] as string[] };
+      const d = await r.json();
+      return { status: r.status, names: (d.patientSearchResults ?? []).map((x: any) => `${x.firstName ?? ''} ${x.lastName ?? ''}`.trim()) };
+    }, nationalId);
+
+    expect(readBack.status, 'patient search must answer 200').toBe(200);
+    expect(
+      readBack.names.join(' | '),
+      `new patient ${nationalId} did not read back from patient-search-results (url=${page.url()})`
+    ).toMatch(/QAPatient/i);
   });
 });
 
@@ -191,163 +319,415 @@ test.describe('Suite AC — Merge Patient', () => {
     await login(page, ADMIN.user, ADMIN.pass);
   });
 
-  test('TC-MP-01: Merge Patient screen loads from Patient menu', async ({ page }) => {
-    // Navigate via menu
-    await page.getByRole('button', { name: /menu/i }).click();
-    await page.waitForTimeout(500);
+  // ALL FOUR MERGE CASES REWRITTEN 2026-09-08, verified by hand in Chrome on
+  // testing v3.2.2.0.
+  //
+  // What was here before could not fail. Every assertion in all four cases was
+  // .catch(() => console.log(...)), and every one of them was written against a
+  // patient-autocomplete UI that does not exist: input[placeholder*="patient"],
+  // [role="option"], a dropdown listbox. The real screen is a three-step wizard
+  // with two full search panels. So the suite reported four green merge cases
+  // while never once selecting a patient — TC-MP-04 logged
+  // "SKIP: Could not select patients for merge" and still passed.
+  //
+  // Worth stating plainly: had those locators ever matched, TC-MP-04 would have
+  // clicked /Merge|Submit|Confirm/i and merged two real patient records on the
+  // shared instance. The case was destructive; only a broken locator kept it
+  // from doing damage. It now stops at the confirmation step on purpose.
+  //
+  // The stable hooks: #patient1-*/#patient2-* for the two panels, one Search
+  // button per panel (disabled until that panel has input), and result radios
+  // id'd patient<N>-select-<patientId>. Carbon's radio label intercepts pointer
+  // events, so they must be checked through checkCarbonRadio.
 
-    const patientLink = page.getByText(/^Patient$/i, { exact: true });
-    if (await patientLink.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await patientLink.click();
-      await page.waitForTimeout(500);
-      const mergeLink = page.getByText(/Merge|Merge Patient/i);
-      if (await mergeLink.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await mergeLink.click();
-      }
+  /**
+   * Search one merge panel by the seeded pair's subject number and return the
+   * patient ids it offered.
+   *
+   * NOT by last name. The last-name search is soundex-like, so every seeded
+   * `Qaauto…` record matches every other one: each run's search returned all
+   * previous runs' seeds, which pushed the pair onto page 2 of the results and
+   * left its radio unrendered — a 30s "waiting for #patient1-select-530"
+   * timeout. The panel's "Patient Id" field matches the subject number by
+   * substring, so a fresh long digit string finds exactly this pair.
+   */
+  async function searchMergePanel(page, panel: 1 | 2, subjectNumber: string): Promise<string[]> {
+    const field = `#patient${panel}-patientId`;
+    await page.locator(field).fill(subjectNumber);
+    // clickFormSearch, not nth(). My first attempt used
+    // getByRole('button', { name: /^Search$/ }).nth(panel - 1) on the reasoning
+    // that there is one Search per panel in panel order. There is a THIRD:
+    // the Carbon header's search action, whose accessible name is also
+    // "Search" and which is rendered before page content. So nth(0) clicked
+    // the header icon and both panels came back empty — the same trap that
+    // clickFormSearch exists to close, walked into again. Scope by the field.
+    const searched = await clickFormSearch(page, field);
+    expect(searched, `merge panel ${panel} must have a Search button`).toBe(true);
+    const radios = page.locator(`input[id^="patient${panel}-select-"]`);
+    await expect(
+      radios.first(),
+      `merge panel ${panel} returned no results for subject number "${subjectNumber}"`
+    ).toBeAttached({ timeout: 15_000 });
+    const ids: string[] = [];
+    for (const r of await radios.all()) {
+      const id = (await r.getAttribute('id')) ?? '';
+      ids.push(id.replace(`patient${panel}-select-`, ''));
     }
+    return ids;
+  }
 
-    // URL discovery
-    const candidates = [
-      '/MergePatient',
-      '/PatientMerge',
-      '/patient/merge',
-      '/merge',
-    ];
-    const success = await navigateWithDiscovery(page, candidates);
+  test('TC-MP-01: Merge Patient opens from the Patient menu', async ({ page }) => {
+    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
 
-    // Verify not login
-    expect(page.url()).not.toMatch(/LoginPage|login/i);
-
-    // Verify search fields exist
-    const searchFields = page.locator('input[placeholder*="patient" i], input[placeholder*="name" i]');
-    const count = await searchFields.count();
-    if (count >= 1) {
-      await expect(searchFields.first()).toBeVisible({ timeout: 3000 });
-    } else {
-      console.log('Patient search fields not clearly visible on Merge Patient screen');
+    const mergeItem = page.locator('[data-cy="menu_patient_merge"]');
+    if (!(await mergeItem.isVisible({ timeout: 3_000 }).catch(() => false))) {
+      await page.getByRole('button', { name: /^\s*Patient\s*$/ }).first().click();
     }
-  });
+    await expect(
+      mergeItem,
+      'the Patient menu must offer a Merge Patient item (data-cy="menu_patient_merge")'
+    ).toBeVisible({ timeout: 10_000 });
+    await mergeItem.click();
 
-  test('TC-MP-02: Search finds duplicate patients', async ({ page }) => {
-    const candidates = ['/MergePatient', '/PatientMerge', '/patient/merge'];
-    await navigateWithDiscovery(page, candidates);
+    await page.waitForURL(/\/PatientMerge/, { timeout: 15_000 });
+    await expect(
+      page.locator('#patient1-lastName'),
+      'Merge Patient must render its first patient panel'
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.locator('#patient2-lastName'),
+      'Merge Patient must render its second patient panel'
+    ).toBeVisible({ timeout: TIMEOUT });
 
-    // Search for patient
-    const searchField = page.locator('input[placeholder*="patient" i], input[placeholder*="name" i]').first();
-    if (await searchField.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await searchField.fill('Abby');
-      await page.waitForTimeout(1000);
-
-      // Look for autocomplete/dropdown
-      const dropdown = page.locator('[role="listbox"], ul, [role="option"]').first();
-      await expect(dropdown).toBeVisible({ timeout: 3000 }).catch(() => {
-        console.log('No autocomplete dropdown visible after patient search');
-      });
-
-      // Look for Abby Sebby in results
-      const abbyOption = page.getByText(/Abby.*Sebby|Sebby.*Abby/i);
-      await expect(abbyOption).toBeVisible({ timeout: 2000 }).catch(() => {
-        console.log('Patient "Abby Sebby" not found in search results');
-      });
-    }
-  });
-
-  test('TC-MP-03: Select two patients for merge', async ({ page }) => {
-    const candidates = ['/MergePatient', '/PatientMerge', '/patient/merge'];
-    await navigateWithDiscovery(page, candidates);
-
-    // Fill first search
-    const firstSearch = page.locator('input[placeholder*="patient" i], input[placeholder*="name" i]').first();
-    if (await firstSearch.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await firstSearch.fill('Abby');
-      await page.waitForTimeout(1000);
-
-      // Select first result
-      const firstOption = page.locator('[role="option"]').first();
-      if (await firstOption.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await firstOption.click();
-        await page.waitForTimeout(500);
-      }
-
-      // Second search field should now be active
-      const allSearches = page.locator('input[placeholder*="patient" i], input[placeholder*="name" i]');
-      const secondSearch = allSearches.nth(1);
-
-      if (await secondSearch.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await secondSearch.fill('Sebby');
-        await page.waitForTimeout(1000);
-
-        // Select from second dropdown
-        const secondOption = page.locator('[role="option"]').nth(1);
-        if (await secondOption.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await secondOption.click();
-        }
-      }
-
-      // Verify merge button exists
-      const mergeBtn = page.getByRole('button', { name: /Merge|Submit|Confirm/i });
-      await expect(mergeBtn).toBeVisible({ timeout: 3000 }).catch(() => {
-        console.log('Merge button not visible after patient selections');
-      });
+    // The wizard must declare its three steps, so the user knows a merge is
+    // not a single click.
+    const shell = page.locator('body');
+    for (const step of ['Select Patients', 'Select Primary', 'Confirm Merge']) {
+      await expect(shell, `merge wizard must show the "${step}" step`).toContainText(step);
     }
   });
 
-  test('TC-MP-04: Merge operation completes (or document if feature is broken)', async ({ page }) => {
-    const candidates = ['/MergePatient', '/PatientMerge', '/patient/merge'];
-    await navigateWithDiscovery(page, candidates);
+  test('TC-MP-02: Merge search surfaces both records of a duplicate', async ({ page }) => {
+    const pair = await seedDuplicatePair(page);
+    await page.goto(`${BASE}/PatientMerge`, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('#patient1-lastName')).toBeVisible({ timeout: 15_000 });
 
-    // Select patients (simplified version of TC-MP-03)
-    const firstSearch = page.locator('input[placeholder*="patient" i], input[placeholder*="name" i]').first();
-    let canMerge = true;
+    const ids = await searchMergePanel(page, 1, pair.subjectNumber);
 
-    if (await firstSearch.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await firstSearch.fill('Abby');
-      await page.waitForTimeout(1000);
+    // The point of the case: merge exists because duplicates exist, so a search
+    // that matches a duplicate must return both of its records — and, searching
+    // on the pair's own subject number, ONLY those two. This is an exact-set
+    // assertion because the subject number identifies the pair exactly; the
+    // equivalent assertion on a last-name search would be wrong (soundex —
+    // see searchMergePanel).
+    expect(
+      ids.slice().sort(),
+      `merge search for subject number ${pair.subjectNumber} must return exactly the seeded pair`
+    ).toEqual(pair.ids.slice().sort());
 
-      const firstOption = page.locator('[role="option"]').first();
-      if (await firstOption.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await firstOption.click();
-      } else {
-        canMerge = false;
-      }
-    } else {
-      canMerge = false;
-    }
+    // And the shared national ID must be on screen, because it is the only
+    // thing here that tells a user these two records are the same person.
+    await expect(
+      page.locator('table'),
+      'merge results must show the national ID the two records share'
+    ).toContainText(pair.nationalId);
+    console.log(`TC-MP-02: ${pair.ids.join(' + ')} share national ID ${pair.nationalId}`);
+  });
 
-    if (canMerge) {
-      // Click merge button
-      const mergeBtn = page.getByRole('button', { name: /Merge|Submit|Confirm/i });
-      if (await mergeBtn.isEnabled({ timeout: 2000 }).catch(() => false)) {
-        await mergeBtn.click();
+  test('TC-MP-03: Selecting two patients enables Next Step', async ({ page }) => {
+    const pair = await seedDuplicatePair(page);
+    await page.goto(`${BASE}/PatientMerge`, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('#patient1-lastName')).toBeVisible({ timeout: 15_000 });
 
-        // Wait for confirmation dialog if present
-        const confirmBtn = page.getByRole('button', { name: /Yes|Confirm|OK|Merge/i });
-        if (await confirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await confirmBtn.click();
-        }
+    const nextStep = page.getByRole('button', { name: /^\s*Next Step\s*$/ });
+    await expect(nextStep, 'Next Step must start disabled').toBeDisabled();
 
-        // Wait for result
-        await page.waitForTimeout(3000);
+    await searchMergePanel(page, 1, pair.subjectNumber);
+    await checkCarbonRadio(page, page.locator(`#patient1-select-${pair.ids[0]}`));
 
-        // Check for success message
-        const successMsg = page.getByText(/success|merged|complete/i);
-        const errorMsg = page.getByText(/error|failed|not allowed/i);
+    // One panel filled is still not enough — the same guard TC-BE-DEEP-02
+    // asserts from the other direction.
+    await expect(
+      nextStep,
+      'Next Step must stay disabled with only the first patient selected'
+    ).toBeDisabled();
 
-        if (await successMsg.isVisible({ timeout: 2000 }).catch(() => false)) {
-          console.log('Merge completed successfully');
-        } else if (await errorMsg.isVisible({ timeout: 2000 }).catch(() => false)) {
-          console.log('Merge failed with error');
-          expect(false).toBe(true); // Document failure
-        } else {
-          console.log('Merge result unclear - no success/error message');
-        }
-      } else {
-        console.log('Merge button disabled or not clickable - possibly no duplicates');
-      }
-    } else {
-      console.log('SKIP: Could not select patients for merge');
-      test.skip();
-    }
+    const ids2 = await searchMergePanel(page, 2, pair.subjectNumber);
+    // The second panel excludes whatever the first panel already took.
+    expect(ids2, 'the second panel must not offer the patient already selected in the first')
+      .not.toContain(pair.ids[0]);
+    expect(ids2, 'the second panel must still offer the other half of the pair').toContain(pair.ids[1]);
+    await checkCarbonRadio(page, page.locator(`#patient2-select-${pair.ids[1]}`));
+
+    await expect(
+      nextStep,
+      'Next Step must become enabled once two distinct patients are selected'
+    ).toBeEnabled({ timeout: 15_000 });
+    await expect(
+      page.locator('body'),
+      'neither panel should still say "No patient selected"'
+    ).not.toContainText('No patient selected');
+    console.log(`TC-MP-03: selected ${pair.ids[0]} and ${pair.ids[1]}`);
+  });
+
+  test('TC-MP-04: A merge completes and consolidates the duplicate', async ({ page }) => {
+    // THIS CASE REALLY MERGES. It seeds its own duplicate pair first, so it
+    // never consumes the shared instance's Abby Sebby records and stays
+    // repeatable: the pair it destroys is the pair it created.
+    //
+    // Every locator and both payloads below were captured on the wire in Chrome
+    // on testing v3.2.2.0, 2026-09-08 (harness ref 12.23).
+    const pair = await seedDuplicatePair(page);
+    expect(
+      (await findPatientIdsByNationalId(page, pair.nationalId)).slice().sort(),
+      'the seeded pair must both exist before the merge'
+    ).toEqual(pair.ids.slice().sort());
+
+    await page.goto(`${BASE}/PatientMerge`, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('#patient1-lastName')).toBeVisible({ timeout: 15_000 });
+
+    // Step 1 — pick the two records.
+    await searchMergePanel(page, 1, pair.subjectNumber);
+    await checkCarbonRadio(page, page.locator(`#patient1-select-${pair.ids[0]}`));
+    await searchMergePanel(page, 2, pair.subjectNumber);
+    await checkCarbonRadio(page, page.locator(`#patient2-select-${pair.ids[1]}`));
+
+    const nextStep = page.getByRole('button', { name: /^\s*Next Step\s*$/ });
+    await expect(nextStep).toBeEnabled({ timeout: 15_000 });
+    await nextStep.click();
+
+    // Step 2 — the primary choice, and the warning that earns it.
+    const shell = page.locator('body');
+    await expect(
+      shell,
+      'the primary-selection step must say what happens to the non-primary record'
+    ).toContainText(/marked as merged and inactive/i, { timeout: 15_000 });
+    // The wizard labels each candidate with its SUBJECT NUMBER when it has one,
+    // falling back to the internal patient id when it does not — so asserting
+    // `Patient 1: <patientId>` fails on a seeded pair. And because a duplicate
+    // pair shares its subject number, both candidates carry the SAME identifier
+    // string here; the only thing distinguishing them on screen is the given
+    // name. Assert the pair including the name, and see harness 12.23 for why
+    // that is also a finding rather than just a test detail.
+    await expect(
+      shell,
+      'the first candidate must be labelled with its identifier and name'
+    ).toContainText(`Patient 1: ${pair.subjectNumber} - Alpha`);
+    await expect(
+      shell,
+      'the second candidate must be labelled with its identifier and name'
+    ).toContainText(`Patient 2: ${pair.subjectNumber} - Beta`);
+    await expect(
+      nextStep,
+      'Next Step must be disabled until a primary record is chosen'
+    ).toBeDisabled();
+
+    await checkCarbonRadio(page, page.locator('#patient-1'));
+    await expect(nextStep, 'choosing a primary must unlock the next step').toBeEnabled({ timeout: 10_000 });
+    await nextStep.click();
+
+    // Step 3 — the destructive gate. THREE conditions, all asserted, because
+    // this is the screen a person's safety actually rests on.
+    const confirmMerge = page.locator('button.cds--btn--danger').filter({ hasText: /Confirm Merge/i });
+    await expect(
+      shell,
+      'the confirmation step must state that the merge cannot be undone'
+    ).toContainText(/cannot be undone/i, { timeout: 15_000 });
+    await expect(shell, 'the summary must name the primary record').toContainText(`Primary Patient:`);
+    await expect(shell, 'the summary must name the record being merged away').toContainText(`Merging From:`);
+    await expect(
+      confirmMerge,
+      'Confirm Merge must be disabled before a reason is given and the acknowledgement ticked'
+    ).toBeDisabled();
+
+    await page.locator('#mergeReason').fill('QA_AUTO_ merge of a seeded duplicate pair (TC-MP-04).');
+    await expect(
+      confirmMerge,
+      'a reason alone must not unlock Confirm Merge — the acknowledgement is a separate gate'
+    ).toBeDisabled();
+
+    await page.locator('label[for="confirmMerge"]').click();
+    await expect(
+      confirmMerge,
+      'Confirm Merge must unlock only once both the reason and the acknowledgement are given'
+    ).toBeEnabled({ timeout: 10_000 });
+
+    // Execute. POST /rest/patient/merge/execute
+    // {"patient1Id","patient2Id","primaryPatientId","reason","confirmed":true}
+    await confirmMerge.click();
+
+    // The app lands on the surviving record.
+    await page.waitForURL(new RegExp(`/PatientManagement/${pair.ids[0]}(?:[/?#]|$)`), { timeout: 30_000 });
+
+    // THE OUTCOME ASSERTION. A national-ID search must now return the primary
+    // and only the primary — that is what "consolidated" has to mean.
+    await expect
+      .poll(async () => (await findPatientIdsByNationalId(page, pair.nationalId)).join(','), {
+        timeout: 15_000,
+      })
+      .toBe(pair.ids[0]);
+
+    // OBSERVATION, deliberately not an assertion (yet). A last-name search
+    // still returns BOTH records after the merge — stable across three repeats
+    // in the probe — while the national-ID search correctly returns one. If the
+    // merged-away record is inactive, a user searching by name can still find
+    // and pick it, which defeats the merge. That needs the other two
+    // revalidation gates (fresh tab, re-login) before it is called a defect, so
+    // it is logged here rather than claimed. Harness ref 12.23.
+    //
+    // The log reports only whether THIS pair's merged-away record came back.
+    // The raw list is not quotable as evidence: the last-name search is fuzzy,
+    // so it also returns earlier runs' seeds, and a reader counting ids would
+    // mistake that noise for survivors.
+    //
+    // This is no longer an open question — all three revalidation gates were
+    // cleared on 2026-09-08 and it is tracked as a confirmed defect by TC-MP-05
+    // and TC-MP-06. The line stays because it is useful per-run evidence.
+    const byLastName = await findPatientIdsByLastName(page, pair.lastName);
+    const survivedByName = byLastName.includes(pair.ids[1]);
+    console.log(
+      `TC-MP-04: merged ${pair.ids[1]} into ${pair.ids[0]}; nationalID search -> [${pair.ids[0]}] (consolidated). ` +
+        (survivedByName
+          ? `${pair.ids[1]} is still returned by a last-name search after being merged away — ` +
+            'current behaviour on v3.2.2.0; the filter is planned, not built. TC-MP-05/TC-MP-06 wait for it.'
+          : `last-name search no longer returns ${pair.ids[1]} — something has CHANGED on the instance. ` +
+            'Check what shipped: TC-MP-05 should now be red, and its assertion may need rewriting rather than unmarking.')
+    );
+  });
+
+  // ── The merge is only advisory outside the wizard ──────────────────────────
+  //
+  // NOT A DEFECT AGAINST THIS VERSION, AND NOT FIXED EITHER. Casey, 2026-09-09:
+  // "A newer version will have a filter. Keep this one as is." — then, on the
+  // filter: "which will show the merged patients." — then, correcting me:
+  // "Wait. That filter isn't built yet. They will show up right now."
+  //
+  // So the state of the world, stated plainly because I got ahead of it twice:
+  //   - TODAY, on v3.2.2.0: merged-away records DO appear in name searches and
+  //     in order entry. That is current behaviour, measured, and it is what
+  //     these tests run against. Nothing to file or chase against this version.
+  //   - PLANNED, NOT BUILT: a filter, intended to show merged patients — which
+  //     implies hidden becomes the default. Intended, not settled. There is no
+  //     control to look at, so the exact shape is not knowable from here.
+  //
+  // TC-MP-05 below encodes the intent as a single test.fail() tripwire. That is
+  // deliberately the cheapest possible bet on an unbuilt feature: if the filter
+  // lands as described the case goes red and becomes coverage; if it lands
+  // differently, one marker and one assertion get rewritten. What must NOT
+  // happen is writing locators for controls nobody has built — that is how the
+  // four hollow TC-MP cases this file just replaced came to exist (12.22).
+  //
+  // So there is no TC-MP-08 for the filter-ON state yet, on purpose. It gets
+  // written against the real control on the day there is one.
+  //
+  // ORDER ENTRY IS SETTLED AND IS NOT PART OF THIS. Casey: "Order entry should
+  // not block a merged patient." TC-MP-06 is therefore ordinary green coverage
+  // of allow-plus-disclose, not a tripwire. One question that only the real
+  // filter can answer: if merged records are hidden from search results by
+  // default, how does a user reach one in order entry — through the filter, or
+  // not at all? Noted, not guessed at.
+  //
+  // What IS already enforced after a merge, and worth not regressing: a
+  // national-ID search returns only the primary (TC-MP-04 asserts that), the
+  // merged record is badged "Merged" in result rows, opening it shows "This
+  // patient record was merged / Active records are kept on Patient
+  // <nationalId>", and it cannot be edited — no Edit or Save control is
+  // rendered.
+  //
+  // The two cases below are therefore TRIPWIRES, not complaints. They assert the
+  // behaviour the newer version is expected to bring and are marked
+  // test.fail(), so they pass on v3.2.2.0 and turn RED the moment the filter
+  // lands — which is the signal to delete the marker and let the assertion stand
+  // as ordinary coverage. That is the whole point of writing them now: the
+  // change arrives with a test already waiting for it, rather than being noticed
+  // months later.
+  //
+  // Both are deliberately MINIMAL — seed and merge through the API, then one
+  // assertion — because under test.fail() ANY failure counts as the expected
+  // one, so a case that also did elaborate setup could "pass" by being broken.
+  // That is the hollow-test trap wearing a different hat.
+  //
+  // Behaviour recorded 2026-09-08 on testing v3.2.2.0 against all three
+  // revalidation gates (3x API repeat, a fresh browser context in each of two
+  // full runs, and a genuine logout + re-login), so what these cases run
+  // against is measured, not assumed.
+
+  test('TC-MP-05: A merged-away record must not be returned by a name search', async ({ page }) => {
+    test.fail(
+      true,
+      'CURRENT BEHAVIOUR on v3.2.2.0: a name search returns records that have been merged away — ' +
+        'the identifier search filters them, the name search does not. A filter is PLANNED BUT NOT ' +
+        'BUILT, intended to show merged patients, which would make hidden the default and this ' +
+        'assertion correct. This marker is a bet on that intent, not a claim it exists. If it goes ' +
+        'red, check what actually shipped before deleting anything.'
+    );
+    const pair = await seedMergedPair(page);
+    expect(
+      await findPatientIdsByLastName(page, pair.lastName),
+      `${pair.ids[1]} was merged into ${pair.ids[0]} and must no longer appear in a name search`
+    ).not.toContain(pair.ids[1]);
+  });
+
+  test('TC-MP-06: Order entry accepts a merged-away patient, and discloses the merge', async ({ page }) => {
+    // BY DESIGN. Casey, 2026-09-09: "Order entry should not block a merged
+    // patient." So this is NOT a guard that is missing — it is intended
+    // behaviour, and this case is ordinary green coverage that locks it in.
+    //
+    // It replaces a test.fail()-marked case that asserted the opposite. I had
+    // read "the merge is advisory in order entry" as a safety gap on the
+    // reasoning that a requisition against a consolidated record is how a
+    // result ends up on a dead patient. That reasoning was mine, not the
+    // product's, and it was wrong about the intent. What the product does is
+    // disclose and allow, which is a legitimate choice: the record still
+    // exists, someone may have a sample in hand labelled with it, and blocking
+    // at the counter would strand that work.
+    //
+    // So what is worth protecting here is the DISCLOSURE, not a block. If a
+    // future change quietly drops the banner while still allowing the order,
+    // this case goes red — which is the actual risk now that allowing is
+    // settled.
+    const pair = await seedMergedPair(page, 'ORD');
+
+    await page.goto(`${BASE}/SamplePatientEntry`, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('#lastName')).toBeVisible({ timeout: 15_000 });
+
+    await page.locator('#lastName').fill(pair.lastName);
+    const searched = await clickFormSearch(page, '#lastName');
+    expect(searched, 'order entry must have a patient Search button').toBe(true);
+
+    // The merged-away record must still be offered — that is the point.
+    const mergedRow = page.locator(`[data-cy="patient-result-row-${pair.ids[1]}"]`);
+    await expect(
+      mergedRow,
+      `order entry must still offer merged-away record ${pair.ids[1]} (url=${page.url()})`
+    ).toBeAttached({ timeout: 15_000 });
+
+    await checkCarbonRadio(page, mergedRow.locator('input[type="radio"]'));
+
+    // Disclosure is the requirement. It must say the record was merged AND
+    // point at where the active records now live, which is the surviving
+    // record's identifier — a bare "this was merged" would leave the user
+    // nowhere to go.
+    const shell = page.locator('body');
+    await expect(
+      shell,
+      'selecting a merged record in order entry must disclose that it was merged'
+    ).toContainText(/this patient record was merged/i, { timeout: 15_000 });
+    await expect(
+      shell,
+      `the disclosure must name where the active records are kept (${pair.nationalId})`
+    ).toContainText(pair.nationalId);
+
+    // And it must not block. Advancing past Patient Info is the assertion.
+    const next = page.getByRole('button', { name: /^\s*Next\s*$/ });
+    await expect(next, 'order entry must not disable Next for a merged patient').toBeEnabled({ timeout: 10_000 });
+    await next.click();
+    await expect(
+      shell,
+      'the wizard must advance past Patient Info with a merged patient selected'
+    ).toContainText(/Routine Testing/i, { timeout: 15_000 });
+
+    console.log(`TC-MP-06: order entry accepted merged record ${pair.ids[1]} and disclosed the merge to ${pair.nationalId}`);
   });
 });
 
@@ -371,13 +751,10 @@ test.describe('Phase 4 — H-DEEP: Patient Interaction Tests', () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     });
 
-    const searchBtn = page.getByRole('button', { name: /search/i }).first();
-    if (await searchBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await searchBtn.click();
-    } else {
-      await page.keyboard.press('Enter');
-    }
-    await page.waitForTimeout(2000);
+    // `/search/i` + .first() resolves to the Carbon HEADER search action, which
+    // fires no request — see clickFormSearch in helpers/test-helpers.ts.
+    await clickFormSearch(page, 'input[id*="national" i], input[placeholder*="National" i], #patientId');
+    await page.waitForTimeout(3000);
 
     // Patient Abby Sebby (ID 0123456) must appear in results
     const patientVisible = await page.getByText(/Sebby|0123456/i).first()
@@ -387,17 +764,21 @@ test.describe('Phase 4 — H-DEEP: Patient Interaction Tests', () => {
 
   test('TC-H-DEEP-02: Patient History page has search fields', async ({ page }) => {
     await page.goto(`${BASE}/PatientHistory`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(2_500);
 
-    const bodyText = await page.locator('body').innerText();
-    expect(bodyText).not.toMatch(/500|Internal Server Error/);
-    expect(page.url()).not.toMatch(/LoginPage|login/i);
-
-    // Patient History must have at least one search field
-    const hasSearchField = await page.locator(
-      'input[placeholder*="Last Name" i], input[placeholder*="patient" i], input[placeholder*="search" i], input'
-    ).first().isVisible({ timeout: 3000 }).catch(() => false);
-    expect(hasSearchField, 'Patient History must have a search field').toBe(true);
+    // The fields ARE there — probed live 2026-09-08, /PatientHistory renders
+    // five text inputs: "Enter Patient Id", "Enter Previous Lab Number",
+    // "Enter Patient's Last Name", "Enter Patient's First Name" and a
+    // dd/mm/yyyy picker. This case used to fail on a selector, not on a
+    // missing feature, so assert on the ids the screen really uses.
+    expect(page.url(), 'must be on Patient History').toMatch(/PatientHistory/i);
+    for (const id of ['#patientId', '#lastName', '#firstName']) {
+      await expect(
+        page.locator(id).first(),
+        `Patient History must offer the ${id} search field`
+      ).toBeVisible({ timeout: 10_000 });
+    }
   });
 
   test('TC-H-DEEP-03: Merge Patient search step is accessible', async ({ page }) => {
@@ -455,13 +836,10 @@ test.describe('Phase 6 — BD-DEEP: Patient History Tests', () => {
     }
 
     await lastNameInput.fill('Sebby');
-    const searchBtn = page.getByRole('button', { name: /search/i }).first();
-    if (await searchBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await searchBtn.click();
-    } else {
-      await page.keyboard.press('Enter');
-    }
-    await page.waitForTimeout(2000);
+    // `/search/i` + .first() resolves to the Carbon HEADER search action, which
+    // fires no request — see clickFormSearch in helpers/test-helpers.ts.
+    await clickFormSearch(page, 'input[id*="national" i], input[placeholder*="National" i], #patientId');
+    await page.waitForTimeout(3000);
 
     // Results table or patient list must appear
     const hasResults = await page.locator('table, [role="table"]').first()
@@ -497,24 +875,54 @@ test.describe('Phase 6 — BE-DEEP: Patient Merge Tests', () => {
     ).toBe(true);
   });
 
-  test('TC-BE-DEEP-02: Next Step button is disabled until patients are selected', async ({ page }) => {
-    const candidates = ['/PatientMerge', '/MergePatient', '/patient/merge'];
-    let found = false;
-    for (const u of candidates) {
-      const res = await page.goto(`${BASE}${u}`).catch(() => null);
-      if (res && res.ok() && !page.url().includes('login')) { found = true; break; }
-    }
-    if (!found) { test.skip(); return; }
+  test('TC-BE-DEEP-02: Merge Patient blocks Next Step until both patients are chosen', async ({ page }) => {
+    // REWRITTEN 2026-09-08, verified by hand in Chrome on testing v3.2.2.0.
+    //
+    // The old version guessed the route from ['/PatientMerge','/MergePatient',
+    // '/patient/merge'] and took the first whose response was res.ok(). OpenELIS
+    // is an SPA: EVERY path answers 200 with the shell, so that loop always
+    // "found" /PatientMerge whether or not the screen existed, and would equally
+    // have "found" a typo. It then did a bare test.skip() with no reason, and
+    // wrapped the Next Step assertion in `if (await nextStep.isVisible())` — so
+    // the one thing the case exists to check was optional.
+    //
+    // /PatientMerge is real. It is a three-step wizard (Select Patients /
+    // Select Primary / Confirm Merge) with two search panels whose fields are
+    // id'd patient1-* and patient2-*. Those ids are what prove the screen
+    // rendered. Next Step is cds--btn--primary and disabled on arrival; Cancel
+    // is a ghost button and always available.
+    //
+    // Note the name anchor: /Next Step|Merge|Submit/i with .first() matched the
+    // "Merge Patient" SideNav item, not the wizard control.
+    await page.goto(`${BASE}/PatientMerge`, { waitUntil: 'domcontentloaded' });
 
-    // Next Step / Merge must be disabled before patients are selected
-    const nextStep = page.getByRole('button', { name: /Next Step|Merge|Submit/i }).first();
-    if (await nextStep.isVisible({ timeout: 3000 }).catch(() => false)) {
-      const disabled = await nextStep.isDisabled();
-      expect(disabled, 'Next Step button must be disabled until patients are selected').toBe(true);
-    }
+    const firstPanel = page.locator('#patient1-lastName');
+    await expect(
+      firstPanel,
+      `Merge Patient did not render its first patient panel (url=${page.url()}) — a 200 here proves nothing, the SPA shell answers every path`
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.locator('#patient2-lastName'),
+      'Merge Patient must render a second patient panel'
+    ).toBeVisible({ timeout: TIMEOUT });
 
-    // Cancel must always be available
-    const cancelBtn = page.getByRole('button', { name: /Cancel/i }).first();
-    await expect(cancelBtn, 'Cancel button must be present on merge page').toBeVisible({ timeout: TIMEOUT });
+    // The actual guard. Unconditional: no patients are selected at this point,
+    // so a Next Step that is enabled is the defect this case is here to catch.
+    const nextStep = page.getByRole('button', { name: /^\s*Next Step\s*$/ });
+    await expect(nextStep, 'Merge Patient must expose a Next Step control').toBeVisible({ timeout: TIMEOUT });
+    await expect(
+      nextStep,
+      'Next Step must be disabled while no patients are selected'
+    ).toBeDisabled();
+
+    await expect(
+      page.getByRole('button', { name: /^\s*Cancel\s*$/ }),
+      'Cancel must always be available on the merge wizard'
+    ).toBeVisible({ timeout: TIMEOUT });
+
+    // The wizard must say where the user is. Both were verified present.
+    const wizard = await page.locator('body').innerText();
+    expect(wizard, 'merge wizard must show its Select Patients step').toMatch(/Select Patients/i);
+    expect(wizard, 'each panel must state that no patient is selected yet').toMatch(/No patient selected/i);
   });
 });

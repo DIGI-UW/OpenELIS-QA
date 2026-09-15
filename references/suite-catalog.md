@@ -445,3 +445,37 @@ order); `pr3987-fhir` proves it properly.
 
 **Run TC-12 (the build gate) first.** A pre-#3987 build answers the same endpoints
 with the old semantics, so an ungated run reports PASS on a build lacking the fix.
+
+---
+
+### OGC-1192 environmental order visibility suite (added 2026-09-03)
+
+Flip-when-fixed regression suite for **OGC-1192** — "Environmental orders are invisible to
+every dashboard once saved, and patientless samples crash patient-joining code
+(SampleEdit 500)". Automation: `ogc1192.config.ts` → `tests/ogc1192-env-order-visibility.spec.ts`.
+
+Read `Section 12` of `references/playwright-harness.md` before touching this — it is the
+post-mortem on why the pre-existing environmental coverage could not fail.
+
+| Case | Encodes | Flips when |
+|---|---|---|
+| OGC1192-1 | saved order absent from the environmental dashboard | §1 fixed |
+| OGC1192-2 | absent from the **unfiltered** dashboard too (rules out a `workflowType` filter bug) | §1 fixed |
+| OGC1192-3 | environmental `totalCount` is 0 despite orders existing | §1 fixed |
+| OGC1192-4 | dashboard UI shows "No orders found" | §1 fixed in the UI |
+| OGC1192-5 | `SampleEdit` returns 500 for the patientless sample | §2 fixed |
+| OGC1192-6 | **CONTROL** — absent accession answers `200 + noSampleFound` | never (permanent truth) |
+| OGC1192-7 | **CONTROL** — sample with a patient serves normally | never (permanent truth) |
+| OGC1192-8 | Modify Order renders "No Patient Information Available" | §2 fixed |
+| OGC1192-9 | **GUARDRAIL** — the env create path works at all | never (permanent truth) |
+
+Cases 6, 7 and 9 are not bug encodings. If any of them fails, the flip-when-fixed cases
+beside them prove nothing — fix the control first and re-run before reading any other result.
+
+The suite creates one environmental order per run via `tests/chains/env-order-payload.ts`
+(a captured, replay-verified payload — see that file's header for the capture method).
+Baseline measured on testing v3.2.2.0, 2026-09-03: ~12 orders created in one session,
+environmental `totalCount` 0 every time, unfiltered `totalCount` 21 and unchanged.
+
+**Related coverage:** Chain N Step 4 (create → read-back) and the new Chain N Step 6
+(dashboard visibility) cover the same ground inside the chain run.

@@ -16,11 +16,29 @@
     "test:all-tc": "playwright test -c all-tc.config.ts",
     "test:pr3987": "playwright test -c pr3987.config.ts",
     "test:pr3987-catalog": "playwright test -c pr3987.config.ts --project=pr3987-catalog",
-    "freshness": "node scripts/refresh-freshness.mjs"
+    "freshness": "node scripts/refresh-freshness.mjs",
+    "lint": "eslint --no-warn-ignored \"tests/**/*.spec.ts\" \"*.spec.ts\"",
+    "lint:assert": "node scripts/lint-assert-gate.mjs",
+    "lint:falsifiable": "node scripts/lint-falsifiable-gate.mjs",
+    "lint:baseline": "node scripts/lint-assert-gate.mjs --update",
+    "check:orphans": "node scripts/check-orphans.mjs",
+    "test:modules": "playwright test -c modules.config.ts",
+    "check:dupe-ids": "node scripts/check-dupe-ids.mjs",
+    "dupe-ids:baseline": "node scripts/check-dupe-ids.mjs --update",
+    "check:coverage-gaps": "node scripts/check-coverage-gaps.mjs",
+    "coverage-gaps:baseline": "node scripts/check-coverage-gaps.mjs --update",
+    "catalogue:selftest": "node scripts/catalogue-selftest.mjs",
+    "check:catalogue-index": "node scripts/check-catalogue-index.mjs",
+    "coverage-gaps:json": "node scripts/check-coverage-gaps.mjs --json",
+    "check:ci-coverage": "node scripts/check-ci-coverage.mjs"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@playwright/test": "^1.61.0",
     "@types/node": "^22.0.0",
-    "typescript": "^5.6.0"
+    "eslint": "^9.39.5",
+    "eslint-plugin-playwright": "^2.11.0",
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8.69.0"
   }
 }

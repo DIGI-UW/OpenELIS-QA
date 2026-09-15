@@ -87,7 +87,7 @@ test.describe('Suite BB — Barcode Print Core (TC-BARCODE)', () => {
      * the sample and print its barcode label.
      */
     const loaded = await goToBarcodeScreen(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -106,7 +106,7 @@ test.describe('Suite BB — Barcode Print Core (TC-BARCODE)', () => {
      * the sample details needed for the label (patient, test, date).
      */
     const loaded = await goToBarcodeScreen(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -133,7 +133,7 @@ test.describe('Suite BB — Barcode Print Core (TC-BARCODE)', () => {
      * must match the configured format (Phase 6 BB-DEEP confirmed year-prefix pattern).
      */
     const loaded = await goToBarcodeScreen(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
     const bodyText = await page.locator('body').innerText();
@@ -158,7 +158,7 @@ test.describe('Suite BB — Barcode Print Core (TC-BARCODE)', () => {
      * A disabled or missing button means the feature is broken.
      */
     const loaded = await goToBarcodeScreen(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -217,7 +217,7 @@ test.describe('Suite BB-DEEP — Barcode API & Label Content (TC-BARCODE-06–10
      * not a server error or JS crash.
      */
     const loaded = await goToBarcodeScreen(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -311,7 +311,7 @@ test.describe('Suite BB-EXT — Barcode Extended (TC-BARCODE-EXT)', () => {
      * able to clear the form to start a fresh search without reloading the page.
      */
     const loaded = await goToBarcodeScreen(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -364,7 +364,7 @@ test.describe('Suite BB-EXT — Barcode Extended (TC-BARCODE-EXT)', () => {
      * The page must stay stable across 3 sequential accession queries.
      */
     const loaded = await goToBarcodeScreen(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -410,7 +410,7 @@ test.describe('Suite BB-EXT — Barcode Extended (TC-BARCODE-EXT)', () => {
      * After looking up 26CPHL00008V, patient name (Abby/Sebby) should appear.
      */
     const loaded = await goToBarcodeScreen(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 

@@ -1,0 +1,251 @@
+{
+  "$comment": [
+    "The single source of truth for what CI runs, and for what it deliberately does not.",
+    "",
+    "WHY THIS FILE EXISTS",
+    "Specs in this repository are partitioned across 40 Playwright configs, each of which",
+    "encodes real requirements for its tier: roles.setup dependencies, a 300s chain timeout,",
+    "a different storageState. Re-deriving all that into one mega-config would lose those",
+    "details quietly. So CI runs the configs themselves, and this file lists which ones.",
+    "",
+    "The danger with a hand-maintained list is that it goes stale in silence: a spec is",
+    "written, nothing CI runs collects it, and it never executes while still looking covered.",
+    "That had already happened. tests/ranges-discover.spec.ts was listed in modules.config.ts",
+    "as owned by all-tc.config.ts, which does not collect it; the only config that did was a",
+    "scratch probe bucket nobody runs. It was excluded on the strength of a claim that was",
+    "never true, and executed by no one.",
+    "",
+    "scripts/check-ci-coverage.mjs reads this file, asks Playwright which files each listed",
+    "config actually resolves, and fails if any spec in the tree is run by nobody and has no",
+    "recorded reason. Note that this is NOT the same question as scripts/check-orphans.mjs,",
+    "which asks whether a spec is reachable by SOME config. That gate was passing cleanly on",
+    "2026-09-12 while this workflow ran 2 of 40 configs, 69 of 227 spec files.",
+    "",
+    "So: to add a spec, put it in a config listed in `suites`. To deliberately keep one out",
+    "of CI, add it to `excluded` with a reason. There is no third option that passes."
+  ],
+  "suites": [
+    {
+      "config": "modules.config.ts",
+      "why": "flat tests/*.spec.ts module sweep",
+      "shard": 1
+    },
+    {
+      "config": "regression-chains.config.ts",
+      "why": "the 26 multi-step workflow chains",
+      "env": {
+        "GAPS_STRICT": "1"
+      },
+      "shard": 2
+    },
+    {
+      "config": "all-tc.config.ts",
+      "why": "test catalog + results tier",
+      "shard": 3
+    },
+    {
+      "config": "rbac.config.ts",
+      "why": "role matrix; needs roles.setup",
+      "shard": 4
+    },
+    {
+      "config": "personas-admin.config.ts",
+      "why": "admin persona walkthroughs",
+      "shard": 4
+    },
+    {
+      "config": "personas-roles.config.ts",
+      "why": "per-role persona walkthroughs; needs roles.setup",
+      "shard": 4
+    },
+    {
+      "config": "census.config.ts",
+      "why": "admin + app route census",
+      "shard": 4
+    },
+    {
+      "config": "e2e.config.ts",
+      "why": "order to result end-to-end; load sensitive, runs alone",
+      "shard": 3
+    },
+    {
+      "config": "deep.config.ts",
+      "why": "deep test catalog probes",
+      "shard": 3
+    },
+    {
+      "config": "disc.config.ts",
+      "why": "discoverability sweep",
+      "shard": 4
+    },
+    {
+      "config": "guards.config.ts",
+      "why": "navigation and unsaved-changes guards",
+      "shard": 3
+    },
+    {
+      "config": "lp.config.ts",
+      "why": "label presets",
+      "shard": 4
+    },
+    {
+      "config": "multicomponent.config.ts",
+      "why": "multicomponent result routing",
+      "shard": 3
+    },
+    {
+      "config": "modify-order.config.ts",
+      "why": "modify-order field binding",
+      "shard": 4
+    },
+    {
+      "config": "ogc1192.config.ts",
+      "why": "OGC-1192 env order visibility",
+      "shard": 4
+    },
+    {
+      "config": "envseed.config.ts",
+      "why": "environmental seed data",
+      "shard": 4
+    },
+    {
+      "config": "eqa.config.ts",
+      "why": "EQA flip guards",
+      "shard": 4
+    },
+    {
+      "config": "reval2.config.ts",
+      "why": "revalidation tier 2",
+      "shard": 4
+    },
+    {
+      "config": "probe-combo.config.ts",
+      "why": "sample type combo box behaviour",
+      "shard": 4
+    },
+    {
+      "config": "panel-leak.config.ts",
+      "why": "panel / sample type leak",
+      "shard": 3
+    },
+    {
+      "config": "preflight.config.ts",
+      "why": "preflight smoke",
+      "shard": 4
+    },
+    {
+      "config": "pr3987.config.ts",
+      "why": "PR 3987 regression: FHIR specimen terminology, patient photo, catalog",
+      "shard": 4
+    },
+    {
+      "config": "cfg.config.ts",
+      "why": "configuration pages",
+      "shard": 4
+    },
+    {
+      "config": "revalidate.config.ts",
+      "why": "OGC-1120 revalidation",
+      "shard": 4
+    },
+    {
+      "config": "revalidate-unauth.config.ts",
+      "why": "OGC-1120 revalidation, unauthenticated",
+      "shard": 4
+    },
+    {
+      "config": "rtype.config.ts",
+      "why": "result type coverage",
+      "shard": 3
+    },
+    {
+      "config": "workplan.config.ts",
+      "why": "workplan by unit, including the crash regression",
+      "shard": 3
+    },
+    {
+      "config": "regression-seed.config.ts",
+      "why": "baseline fixture data the module sweep depends on; setup projects only, collects no spec files",
+      "allowZero": true,
+      "shard": 4
+    }
+  ],
+  "docsSuite": {
+    "config": "playwright.config.ts",
+    "why": [
+      "Its `docs` project is tests/docs/**: 87 files of MEDIA CAPTURE for the user manual.",
+      "Video on, screenshot flows, and a deliberate 780ms slowMo. They exist to produce images,",
+      "not verdicts, and running them on a three-hourly poll would cost hours of runner time to",
+      "make artifacts nobody reads. Run them on demand with the `docs` suite input instead.",
+      "",
+      "This said capture.config.ts until 2026-09-12, which collects ONE root spec and not a",
+      "single file under tests/docs. `suite: docs` would have run one capture spec and reported",
+      "success. Caught by dry-running the shard filter rather than by reading the manifest,",
+      "which is the same lesson as everything else in this file: ask the tool what it resolves."
+    ]
+  },
+  "excluded": [
+    {
+      "match": "analyzer-guided-setup.spec.ts",
+      "why": "Targets a DIFFERENT instance (analyzers.openelis-global.org) with its own login. all-tc.config.ts records that registering it there made it run with testing cookies and produced 20 false failures. It has its own config, analyzer-m3.config.ts."
+    },
+    {
+      "match": "analyzer-auth.setup.ts",
+      "why": "Login for the analyzers instance; belongs to analyzer-m3.config.ts."
+    },
+    {
+      "match": "_timing.spec.ts",
+      "why": "Scratch timing harness, not an assertion suite."
+    },
+    {
+      "match": "tc-dom-probe.spec.ts",
+      "why": "One-off DOM probe kept for reference. Prints structure, asserts nothing."
+    },
+    {
+      "match": "probe-lookup.spec.ts",
+      "why": "One-off probe. Prints structure, asserts nothing."
+    },
+    {
+      "match": "probe-orderentry.spec.ts",
+      "why": "One-off probe. Prints structure, asserts nothing."
+    },
+    {
+      "match": "probe-typepicker.spec.ts",
+      "why": "One-off probe. Prints structure, asserts nothing."
+    },
+    {
+      "match": "capture-longcode.spec.ts",
+      "why": "Media capture for documentation, not a verdict."
+    },
+    {
+      "match": "capture-testcatalog-save.spec.ts",
+      "why": "Media capture for documentation, not a verdict."
+    },
+    {
+      "match": "capture-topsave.spec.ts",
+      "why": "Media capture for documentation, not a verdict."
+    }
+  ],
+  "$shards": [
+    "WHY THE SUITES ARE SHARDED",
+    "A single job cannot hold them. Run 34656118535 was cancelled at the 90-minute job cap",
+    "with modules.config.ts ALONE still running after 79 minutes, and that was 1 of 28 configs.",
+    "A cancelled run produces no verdict at all, which is the one outcome worse than a red one.",
+    "",
+    "Each shard is a separate job that boots its own stack (~10 min, mostly the healthcheck",
+    "wait) and runs its slice. That buys parallel wall clock at the cost of repeating the boot,",
+    "which is the right trade when the suites dominate by an order of magnitude.",
+    "",
+    "  1  modules          the flat tests/ sweep, 43 files, the heaviest single config",
+    "  2  regression-chains  26 chains at a 300s timeout each",
+    "  3  the long tail that still takes real time: all-tc, deep, guards, e2e, ...",
+    "  4  everything else, most of which is one or two files",
+    "",
+    "Shards are assigned EXPLICITLY rather than round-robined, because the configs differ in",
+    "cost by two orders of magnitude and an automatic split would put modules and chains in the",
+    "same job half the time. scripts/check-ci-coverage.mjs validates that every suite has a",
+    "shard in range, so a new config cannot be added without deciding where it goes.",
+    "",
+    "Rebalance by editing the numbers here. Nothing else needs to change."
+  ]
+}

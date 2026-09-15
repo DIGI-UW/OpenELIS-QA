@@ -27,7 +27,12 @@ import * as path from 'path';
 // Constants
 // ---------------------------------------------------------------------------
 
-export const BASE = process.env.BASE_URL || 'https://testing.openelis-global.org';
+// Resolved centrally. Reading process.env.BASE_URL here is what let the browser and the
+// fixtures target two different instances at once. See helpers/base-url.ts.
+// Imported AND re-exported: this module uses BASE itself, and its consumers import it
+// from here, so a bare `export ... from` would compile as a re-export with no local binding.
+import { BASE } from './base-url';
+export { BASE };
 
 export const TEST_PATIENT = {
   nationalId: '0123456',
@@ -111,27 +116,53 @@ function emptyState(): TestDataState {
  */
 export async function findPatientByNationalId(page: Page, nationalId: string): Promise<string | null> {
   try {
-    const result = await page.evaluate(async (nid: string) => {
+    // ENDPOINTS CORRECTED (2026-09-08). The three URLs this used to try —
+    // /rest/patient?nationalId=, /rest/PatientSearch?, /rest/patient/search? —
+    // ALL answer 404 NoHandlerFoundException on v3.2.2.0. Every candidate
+    // failed `res.ok`, the loop fell through, and the finder returned null
+    // unconditionally. It could never report an existing patient, so the setup
+    // attempted creation on every single run.
+    //
+    // The endpoint the application itself uses is patient-search-results, which
+    // answers 200 with { paging, patientSearchResults: [...] }.
+    // QUERY BY NAME, NOT BY ID.
+    //
+    // patient-search-results answers 200 for every parameter shape, but only
+    // some of them actually search. Probed on v3.2.2.0 with three patients
+    // named Abby Sebby present:
+    //
+    //   ?lastName=Sebby&firstName=Abby   -> 3 results   <- the one that works
+    //   ?searchValue=0123456             -> []
+    //   ?nationalId=0123456              -> []
+    //   ?searchValue=Sebby               -> []
+    //   ?patientId=504                   -> []
+    //
+    // A 200 with an empty list is indistinguishable from "no such patient",
+    // which is why the earlier version of this function looked correct and
+    // reported the baseline patient missing while it sat in the database. The
+    // nationalId is still used to narrow the results when the payload carries
+    // it — it just cannot be the query.
+    const result = await page.evaluate(async ({ nid, first, last }) => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const candidates = [
-        `/api/OpenELIS-Global/rest/patient?nationalId=${nid}`,
-        `/api/OpenELIS-Global/rest/PatientSearch?nationalId=${nid}`,
-        `/api/OpenELIS-Global/rest/patient/search?nationalId=${nid}`,
-      ];
-      for (const url of candidates) {
-        const res = await fetch(url, { headers: { 'X-CSRF-Token': csrf } });
-        if (res.ok) {
-          const data = await res.json();
-          // data may be an array of patients or a single patient object
-          const list = Array.isArray(data) ? data : (data.patients ?? data.results ?? [data]);
-          const match = list.find((p: any) =>
-            p.nationalId === nid || p.nationalIdNumber === nid
-          );
-          return match ? (match.patientPK ?? match.id ?? match.patientId ?? 'found') : null;
-        }
-      }
-      return null;
-    }, nationalId);
+      // `nationalID` — capital I, capital D. This is the parameter the
+      // application itself sends (captured from the search screen's own
+      // request); `nationalId` is silently ignored and answers 200 with an
+      // empty list, which is what made every earlier lookup here look like
+      // "no such patient". Verified live: nationalID=0123456 -> 5 results,
+      // nationalId=0123456 -> 0.
+      const res = await fetch(
+        `/api/OpenELIS-Global/rest/patient-search-results?nationalID=${encodeURIComponent(nid)}` +
+        `&lastName=${encodeURIComponent(last)}&firstName=${encodeURIComponent(first)}`,
+        { headers: { 'X-CSRF-Token': csrf, Accept: 'application/json' } }
+      );
+      if (!res.ok) return null;
+      const data = await res.json();
+      const list: any[] = data.patientSearchResults ?? [];
+      if (!list.length) return null;
+      const byNid = list.find((p: any) => String(p.nationalId ?? p.nationalIdNumber ?? '') === nid);
+      const pick = byNid ?? list[0];
+      return String(pick.patientID ?? pick.patientId ?? pick.id ?? 'found');
+    }, { nid: nationalId, first: TEST_PATIENT.firstName, last: TEST_PATIENT.lastName });
     return result;
   } catch {
     return null;
@@ -144,30 +175,36 @@ export async function findPatientByNationalId(page: Page, nationalId: string): P
  */
 export async function createPatientViaUI(page: Page, state: TestDataState): Promise<boolean> {
   try {
-    // Navigate to Patient Management
-    await page.goto(`${BASE}/PatientManagement`, { waitUntil: 'networkidle' });
+    // GO STRAIGHT TO THE CREATE ROUTE.
+    //
+    // This used to load /PatientManagement and click "New Patient". The button
+    // is there, but /PatientManagement is the SEARCH screen and carries its own
+    // lastName / firstName / nationalId inputs — so when the click did not land
+    // (or had not finished after the fixed 1s wait), the field selectors below
+    // matched the SEARCH form instead, typed the patient's details into it, and
+    // looked for a Save button that screen does not have. Nothing was created
+    // and nothing said so. A probe on v3.2.2.0 confirms /PatientManagement has
+    // 7 visible inputs and /PatientManagement/new has 12.
+    //
+    // The create route is known (it is the same one TC-PAT-05 was corrected to
+    // use), so navigate to it and assert the form is really there rather than
+    // driving the menu and hoping.
+    await page.goto(`${BASE}/PatientManagement/new`, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(2_500);
 
-    // Look for "Add Patient" or "New Patient" button
-    const addBtn = page.getByRole('button', { name: /add patient|new patient|create patient/i }).first();
-    const hasAdd = await addBtn.isVisible({ timeout: 5000 }).catch(() => false);
-
-    if (!hasAdd) {
-      // Try clicking directly into the form if it's already open
-      const firstInput = page.locator('input').first();
-      const hasForm = await firstInput.isVisible({ timeout: 3000 }).catch(() => false);
-      if (!hasForm) {
-        state.setupErrors.push('createPatient: no Add button and no form found on PatientManagement');
-        return false;
-      }
-    } else {
-      await addBtn.click();
-      await page.waitForTimeout(1000);
+    const formAnchor = page.locator('#lastName, #firstName, #nationalId').first();
+    if (!(await formAnchor.isVisible({ timeout: 10_000 }).catch(() => false))) {
+      state.setupErrors.push(
+        `createPatient: the create form did not render at /PatientManagement/new (url=${page.url()})`
+      );
+      return false;
     }
 
     // Fill last name
-    const lastNameField = page.locator(
-      'input[name*="lastName" i], input[id*="lastName" i], input[placeholder*="last" i]'
-    ).first();
+    // `#lastName` is the real id on the create form; the loose attribute match is
+    // kept as a fallback but must not be the primary — it also matches the
+    // search screen's field of the same name.
+    const lastNameField = page.locator('#lastName, input[name*="lastName" i]').first();
     if (await lastNameField.isVisible({ timeout: 3000 }).catch(() => false)) {
       // Carbon controlled input requires native value setter
       await lastNameField.focus();
@@ -175,56 +212,129 @@ export async function createPatientViaUI(page: Page, state: TestDataState): Prom
     }
 
     // Fill first name
-    const firstNameField = page.locator(
-      'input[name*="firstName" i], input[id*="firstName" i], input[placeholder*="first" i]'
-    ).first();
+    // `#firstName` is the real id on the create form; the loose attribute match is
+    // kept as a fallback but must not be the primary — it also matches the
+    // search screen's field of the same name.
+    const firstNameField = page.locator('#firstName, input[name*="firstName" i]').first();
     if (await firstNameField.isVisible({ timeout: 3000 }).catch(() => false)) {
       await firstNameField.focus();
       await page.keyboard.type(TEST_PATIENT.firstName);
     }
 
     // Fill national ID
-    const nationalIdField = page.locator(
-      'input[name*="nationalId" i], input[id*="nationalId" i], input[placeholder*="national" i]'
-    ).first();
+    // `#nationalId` is the real id on the create form; the loose attribute match is
+    // kept as a fallback but must not be the primary — it also matches the
+    // search screen's field of the same name.
+    const nationalIdField = page.locator('#nationalId, input[name*="nationalId" i]').first();
     if (await nationalIdField.isVisible({ timeout: 3000 }).catch(() => false)) {
       await nationalIdField.focus();
       await page.keyboard.type(TEST_PATIENT.nationalId);
     }
 
-    // Fill date of birth
-    const dobField = page.locator(
-      'input[name*="dob" i], input[name*="dateOfBirth" i], input[id*="dob" i], input[placeholder*="date" i]'
-    ).first();
-    if (await dobField.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await dobField.focus();
-      await page.keyboard.type(TEST_PATIENT.dateOfBirth);
+    // DATE OF BIRTH — Carbon date picker, not an input named "dob".
+    //
+    // The old selectors here were
+    //   input[name*=dob], input[name*=dateOfBirth], input[id*=dob],
+    //   input[placeholder*=date]
+    // and a live probe of /PatientManagement/new on v3.2.2.0 matched ZERO
+    // elements for all four. The real field is `#date-picker-default-id` with
+    // placeholder `dd/mm/yyyy` — it contains neither "dob" nor "date". So DOB
+    // was never filled. `legacy-order-helper.ts` has driven this same picker
+    // correctly for a long time; this now uses that pattern.
+    const dobField = page.locator('#date-picker-default-id').last();
+    if (await dobField.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await dobField.fill(TEST_PATIENT.dateOfBirth);
+    } else {
+      state.setupErrors.push('createPatient: date-of-birth picker not found (#date-picker-default-id)');
     }
 
-    // Select gender (Female)
-    const genderSelect = page.locator('select[name*="gender" i], select[id*="gender" i]').first();
-    if (await genderSelect.isVisible({ timeout: 2000 }).catch(() => false)) {
-      // Try to select Female by value or text
-      await genderSelect.selectOption({ value: 'F' }).catch(() =>
-        genderSelect.selectOption({ label: /female/i })
-      );
+    // GENDER — radio buttons, not a <select>.
+    //
+    // The old selector was select[name*=gender] / select[id*=gender], which
+    // also matched zero elements: gender renders as `input[name="gender"]`
+    // radios (#radio-1 / #radio-2) in Carbon. So gender was never set either.
+    //
+    // Both of these were wrapped in `if (visible) { ... }` with no else, so a
+    // selector matching nothing was indistinguishable from a field that had
+    // been filled. The form was then submitted missing two required values,
+    // Save was rejected, no "Internal Server Error" string appeared, and the
+    // function reported success. Click by LABEL text so this does not depend on
+    // which radio index the sex happens to occupy.
+    const wantFemale = TEST_PATIENT.gender.toUpperCase().startsWith('F');
+    const genderLabel = page.getByText(wantFemale ? /^Female$/ : /^Male$/).first();
+    if (await genderLabel.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await genderLabel.click();
+    } else {
+      const fallback = page.locator(`label[for="${wantFemale ? 'radio-2' : 'radio-1'}"]`).first();
+      if (await fallback.isVisible({ timeout: 2_000 }).catch(() => false)) await fallback.click();
+      else state.setupErrors.push('createPatient: gender radio not found by label or index');
     }
 
-    // Submit
-    const saveBtn = page.getByRole('button', { name: /save|submit|add|create/i }).first();
-    if (await saveBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await saveBtn.click();
-      await page.waitForTimeout(2000);
+    // SUBMIT — and this is the bug that made the whole fixture a no-op.
+    //
+    // The selector used to be:
+    //     getByRole('button', { name: /save|submit|add|create/i }).first()
+    //
+    // The patient form has exactly two buttons matching that alternation:
+    // "Additional Information" and "Save" — because `/add/i` matches
+    // "ADDitional". "Additional Information" comes first in the DOM, so
+    // `.first()` picked it, the click expanded a form section, and Save was
+    // never pressed. Combined with the "no Internal Server Error means
+    // success" check below, the fixture reported creating a patient on every
+    // run while doing nothing but opening an accordion.
+    //
+    // ANCHOR the name. A loose alternation over button labels will eventually
+    // match a button you did not mean, and `.first()` hides which one it hit.
+    const saveBtn = page.getByRole('button', { name: /^\s*Save\s*$/i }).first();
+    if (!(await saveBtn.isVisible({ timeout: 5_000 }).catch(() => false))) {
+      state.setupErrors.push('createPatient: no Save button on the create form');
+      return false;
     }
+    await saveBtn.click();
+    // The app answers POST /rest/PatientManagement with
+    // {"status":"success","patientId":"<id>"} and routes to
+    // /PatientManagement/<id>. Wait for the navigation rather than a fixed
+    // sleep, then fall through to the read-back check.
+    await page.waitForURL(/\/PatientManagement\/\d+/, { timeout: 20_000 }).catch(() => { /* read-back decides */ });
 
-    // Verify success (no error message, page didn't crash)
+    // ROUND-TRIP, NOT "THE PAGE DID NOT CRASH" (2026-09-08).
+    //
+    // This used to read the body text, check it did not contain "Internal
+    // Server Error", and then set patient.found = true. That is not a check
+    // that a patient was created — it is a check that the browser did not show
+    // one specific string. A live probe found ZERO patients matching either
+    // nationalId 0123456 or lastName "Sebby" while this function was reporting
+    // "Patient created successfully" on every run. Seventeen module specs
+    // import PATIENT_NAME / PATIENT_ID and were searching for someone who was
+    // never there, so their failures read as product defects.
+    //
+    // Success now means the patient READS BACK from the search endpoint. See
+    // harness ref 12.3: every write path needs a round-trip.
     const bodyText = await page.locator('body').innerText();
     if (bodyText.includes('Internal Server Error')) {
       state.setupErrors.push('createPatient: Internal Server Error after save');
       return false;
     }
 
+    const readBack = await findPatientByNationalId(page, TEST_PATIENT.nationalId);
+    if (!readBack) {
+      // Say WHAT the form complained about. "It did not save" sends the next
+      // person back to the browser; the validation text usually names the field.
+      const complaints = await page
+        .locator('.cds--form-requirement, [role="alert"], .cds--inline-notification__subtitle, .error, .cds--text-input__field-wrapper--warning')
+        .evaluateAll((els) => els.map((e) => (e.textContent || '').trim()).filter(Boolean).slice(0, 6))
+        .catch(() => [] as string[]);
+      state.setupErrors.push(
+        `createPatient: save produced no error, but nationalId=${TEST_PATIENT.nationalId} ` +
+        'does not read back from /rest/patient-search-results — the patient was NOT created' +
+        (complaints.length ? ` :: form said: ${complaints.join(' | ')}` : ' :: form showed no validation message') +
+        ` :: url=${page.url()}`
+      );
+      return false;
+    }
+
     state.patient.found = true;
+    state.patient.systemId = readBack === 'found' ? null : readBack;
     return true;
   } catch (e) {
     state.setupErrors.push(`createPatient: ${String(e)}`);
@@ -375,97 +485,411 @@ export async function createOrderViaUI(
  * Create an order via the REST API directly (faster than UI, requires working API).
  * Falls back to UI creation if API fails.
  */
+/**
+ * Create an order through the REST API.
+ *
+ * PAYLOAD CAPTURED (12.4), and it took the whole of 12.26-12.28 to get one,
+ * because a stock 3.2.2.0 install cannot submit an order at all. The four
+ * things that had to be true, all measured:
+ *
+ *   1. An organization of org type 5 ("referring clinic") must exist, or the
+ *      site field has nothing to offer.
+ *   2. An organization of org type 11 ("dept") whose PARENT is that clinic,
+ *      or the required #requesterDepartmentId select stays empty.
+ *   3. The accession must be GENERATED, never invented:
+ *        GET /rest/SampleEntryGenerateScanProvider -> {"status":true,"body":"DEV01260000000000002"}
+ *      An invented one is rejected with
+ *        400 sampleOrderItems.labNo: "Invalid accession number format".
+ *   4. referringSiteId must actually be set. In the UI that means choosing the
+ *      site through the combobox (ArrowDown + Enter); clicking a list item sets
+ *      the visible text and leaves the id unset, and Yup then reports
+ *      "Referring Site is required" on a field that looks filled.
+ *
+ * The accepted request was POST /rest/SamplePatientEntry -> 200, and the app
+ * then renders "Successfully saved" with the accession.
+ */
+/**
+ * Optional extras for an order. Everything here was empty-string hard-coded
+ * before; a caller that needs an order with a requester or a next-visit date
+ * (tests/modify-order-field-binding.spec.ts does — see `seedModifiableOrder`)
+ * should not have to keep a second copy of the payload to get one.
+ */
+export interface OrderOptions {
+  providerFirstName?: string;
+  providerLastName?: string;
+  /** dd/MM/yyyy, as the form submits it. */
+  nextVisitDate?: string;
+}
+
 export async function createOrderViaAPI(
   page: Page,
   state: TestDataState,
   testName: string,
-  orderKey: 'primaryOrder' | 'secondaryOrder'
+  orderKey: 'primaryOrder' | 'secondaryOrder',
+  options: OrderOptions = {}
 ): Promise<string | null> {
   try {
-    const result = await page.evaluate(async (params: { nationalId: string; testName: string }) => {
-      const csrf = localStorage.getItem('CSRF') || '';
-
-      // Build minimal patient-order payload
-      const payload = {
-        sampleOrderItems: {
-          newRequesterName: '',
-          requestDate: new Date().toISOString().slice(0, 10),
-          receivedDateForDisplay: new Date().toISOString().slice(0, 10),
-          receivedTime: '08:00',
-          nextVisitDate: '',
-          requesterSampleID: '',
-          referringPatientNumber: params.nationalId,
-          referringSiteId: '',
-          referringSiteName: '',
-          providerId: '',
-          providerLastName: '',
-          providerFirstName: '',
-          providerWorkPhone: '',
-          providerFax: '',
-          providerEmail: '',
-          program: '',
-          billingReferenceNumber: '',
-          paymentOptionSelection: 'INSURANCE',
-          testLocationCode: '',
-          otherLocationCode: '',
-          facilityAddressStreet: '',
-          facilityAddressCommune: '',
-          facilityPhone: '',
-          facilityFax: '',
-        },
-        patientProperties: {
-          patientPK: '',
-          subjectNumber: '',
-          nationalId: params.nationalId,
-          patientLastName: 'Sebby',
-          patientFirstName: 'Abby',
-          patientLastNameNational: '',
-          patientFirstNameNational: '',
-          DOB: '01/01/1990',
-          gender: 'F',
-          primaryPhone: '555-0100',
-          streetAddress: '',
-          commune: '',
-          department: '',
-          healthDistrict: '',
-          healthRegion: '',
-          mothersName: '',
-          maritialStatus: '',
-          nationality: '',
-          educationLevel: '',
-          insureNumber: '',
-          activePatient: true,
-        },
-        sampleXML:
-          '<samples>' +
-          `<sample><tests><test><id>${params.testName}</id></test></tests></sample>` +
-          '</samples>',
-      };
-
-      const res = await fetch('/api/OpenELIS-Global/rest/SamplePatientEntry', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': csrf,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) return { status: res.status, accession: null };
-      const data = await res.json();
-      const accession = data.accessionNumber ?? data.labNo ?? data.sampleOrderItems?.labNo ?? null;
-      return { status: res.status, accession };
-    }, { nationalId: TEST_PATIENT.nationalId, testName });
-
-    if (result.accession) {
-      state[orderKey].accession = result.accession;
-      state[orderKey].status = 'created';
-      return result.accession;
+    const patientId = state.patient.systemId;
+    if (!patientId) {
+      state.setupErrors.push(`createOrder(${testName}): no patient systemId; cannot build an order payload`);
+      return null;
     }
+
+    const result = await page.evaluate(
+      async (args: {
+        patientId: string;
+        nationalId: string;
+        testId: string;
+        sampleTypeId: string;
+        providerFirstName: string;
+        providerLastName: string;
+        nextVisitDate: string;
+      }) => {
+        const csrf = localStorage.getItem('CSRF') || '';
+        const j = async (p: string) => {
+          const r = await fetch(p, { headers: { Accept: 'application/json' } });
+          if (!r.ok) return null;
+          return r.json().catch(() => null);
+        };
+
+        // (1)+(2) the referring site and its department
+        const sites = (await j('/api/OpenELIS-Global/rest/displayList/SAMPLE_PATIENT_REFERRING_CLINIC')) || [];
+        if (!sites.length) return { err: 'no referring clinic configured (org type 5) — see harness 12.27' };
+        const siteId = String(sites[0].id);
+        // A department is NOT required by this endpoint, only by the UI's own
+        // validation. Measured 2026-09-14 on the local 3.2.2.0 stack: POST
+        // /rest/SamplePatientEntry with `referringSiteDepartmentId: ''` returns
+        // 200 and the order reads back complete. 12.27 established that the
+        // admin form cannot parent a type-11 org to the clinic, so insisting on
+        // a department here made every API-seeded order impossible for a reason
+        // the API does not actually have. Send it when it exists; carry on when
+        // it does not.
+        const depts = (await j(`/api/OpenELIS-Global/rest/departments-for-site?refferingSiteId=${siteId}`)) || [];
+
+        // (3) the accession, generated
+        // the patient's own record, for the block above
+        const found = await j(
+          `/api/OpenELIS-Global/rest/patient-search-results?patientID=${encodeURIComponent(args.patientId)}&lastName=&firstName=`
+        );
+        let pt = ((found && found.patientSearchResults) || []).find(
+          (x: any) => String(x.patientID ?? x.patientId) === String(args.patientId)
+        );
+        if (!pt && args.nationalId) {
+          const byNid = await j(
+            `/api/OpenELIS-Global/rest/patient-search-results?nationalID=${encodeURIComponent(args.nationalId)}&lastName=&firstName=`
+          );
+          pt = ((byNid && byNid.patientSearchResults) || []).find(
+            (x: any) => String(x.patientID ?? x.patientId) === String(args.patientId)
+          );
+        }
+        if (!pt) return { err: `could not read patient ${args.patientId} back to build patientProperties` };
+
+        const gen = await j('/api/OpenELIS-Global/rest/SampleEntryGenerateScanProvider');
+        const labNo = gen && gen.body;
+        if (!labNo) return { err: 'SampleEntryGenerateScanProvider returned no accession' };
+
+        const pay = (await j('/api/OpenELIS-Global/rest/displayList/PAYMENT_OPTIONS')) || [];
+        const today = new Date();
+        const dd = String(today.getDate()).padStart(2, '0');
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const date = `${dd}/${mm}/${today.getFullYear()}`;
+
+        const body = {
+          rememberSiteAndRequester: false,
+          customNotificationLogic: false,
+          patientEmailNotificationTestIds: [],
+          patientSMSNotificationTestIds: [],
+          providerEmailNotificationTestIds: [],
+          providerSMSNotificationTestIds: [],
+          patientUpdateStatus: 'NO_ACTION',
+          referralItems: [],
+          useReferral: false,
+          sampleXML:
+            '<?xml version="1.0" encoding="utf-8"?><samples><sample ' +
+            `sampleID='${args.sampleTypeId}' date='' time='' collector='' quantity='' uom='' ` +
+            `tests='${args.testId}' testSectionMap='' testSampleTypeMap='' panels='' rejected='false' ` +
+            "rejectReasonId='' initialConditionIds='' storageLocationId='' storageLocationType='' " +
+            "storagePositionCoordinate='' gpsLatitude='' gpsLongitude='' gpsAccuracy='' " +
+            "gpsCaptureMethod='' collectionMethod='' sampleTemperature='' specimenOrigin='' " +
+            "numOrderLabels='1' numSpecimenLabels='1'/></samples>",
+          // The server validates the WHOLE patient block, not just the PK:
+          // trimming it to patientPK returned
+          //   400 patientProperties.gender "must not be blank"
+          //      patientProperties.nationalId "Cannot be blank"
+          // so it is rebuilt from the patient's own search record.
+          patientProperties: {
+            patientUpdateStatus: 'NO_ACTION',
+            patientPK: args.patientId,
+            nationalId: pt.nationalId || '',
+            subjectNumber: pt.subjectNumber || '',
+            lastName: pt.lastName || '',
+            firstName: pt.firstName || '',
+            gender: pt.gender || '',
+            birthDateForDisplay: pt.birthdate || pt.dob || '',
+            guid: pt.guid || '',
+            aka: '', streetAddress: '', city: '', primaryPhone: '', email: '',
+            commune: '', education: '', maritialStatus: '', nationality: '',
+            healthDistrict: '', healthRegion: '', otherNationality: '',
+            occupation: '', customNotes: '', targetDiseaseProgramme: '',
+            photo: '', idDocuments: [], mothersName: '', mothersInitial: '',
+            addressDepartment: '', insuranceNumber: '', isMerged: false,
+          },
+          sampleOrderItems: {
+            labNo,
+            requestDate: date,
+            receivedDateForDisplay: date,
+            receivedTime: '08:00',
+            nextVisitDate: args.nextVisitDate,
+            priority: 'ROUTINE',
+            referringSiteId: siteId,
+            referringSiteDepartmentId: depts.length ? String(depts[0].id) : '',
+            referringSiteCode: '',
+            referringSiteName: '',
+            referringSiteDepartmentName: '',
+            referringSiteList: [],
+            referringSiteDepartmentList: [],
+            paymentOptionSelection: pay.length ? String(pay[0].id) : '',
+            paymentOptions: [],
+            testLocationCode: '',
+            otherLocationCode: '',
+            newRequesterName: '',
+            requesterSampleID: '',
+            referringPatientNumber: '',
+            providerId: '',
+            providerPersonId: '',
+            providerFirstName: args.providerFirstName,
+            providerLastName: args.providerLastName,
+            providerWorkPhone: '',
+            providerFax: '',
+            providerEmail: '',
+            providersList: [],
+            externalOrderNumber: '',
+            orderType: '',
+            orderTypes: [],
+            billingReferenceNumber: '',
+            facilityAddressStreet: '',
+            facilityAddressCommune: '',
+            facilityPhone: '',
+            facilityFax: '',
+            program: '',
+            programList: [],
+            priorityList: [],
+            testLocationCodeList: [],
+            modified: true,
+            readOnly: false,
+            sampleId: '',
+            isEQASample: false,
+          },
+        };
+
+        const r = await fetch('/api/OpenELIS-Global/rest/SamplePatientEntry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept-Language': 'en', 'X-CSRF-Token': csrf },
+          body: JSON.stringify(body),
+        });
+        const text = await r.text().catch(() => '');
+        return { status: r.status, labNo, detail: text.slice(0, 300) };
+      },
+      {
+        patientId,
+        nationalId: state.patient.nationalId,
+        testId: process.env.QA_TEST_ID || '3',
+        sampleTypeId: process.env.QA_SAMPLE_TYPE_ID || '2',
+        providerFirstName: options.providerFirstName ?? '',
+        providerLastName: options.providerLastName ?? '',
+        nextVisitDate: options.nextVisitDate ?? '',
+      }
+    );
+
+    if ((result as any).err) {
+      state.setupErrors.push(`createOrder(${testName}): ${(result as any).err}`);
+      return null;
+    }
+    const r = result as { status: number; labNo: string; detail: string };
+    if (r.status === 200) {
+      state[orderKey].accession = r.labNo;
+      state[orderKey].status = 'created';
+      return r.labNo;
+    }
+    state.setupErrors.push(`createOrder(${testName}): POST SamplePatientEntry -> ${r.status} ${r.detail}`);
     return null;
   } catch (e) {
+    state.setupErrors.push(`createOrder(${testName}): ${String(e).slice(0, 200)}`);
     return null;
   }
+}
+
+/**
+ * Make sure this instance has a referring clinic, creating one if it has none.
+ *
+ * WHY A FIXTURE MAY CREATE THIS. A referring clinic is configuration, not data,
+ * and 12.27 deliberately left seeding it to a human. That was right while
+ * nothing depended on it; it is wrong now that a FLIP-WHEN-FIXED suite (the
+ * OGC-1191 modify-order cases) cannot run a single assertion without one. A CI
+ * stack that starts empty would otherwise report seven red tests that never
+ * touched the product.
+ *
+ * The POST is the Organization admin form's own captured request (12.27), not a
+ * hand-composed payload, and `selectedTypes: ['5']` is what makes the
+ * organization a referring clinic. It is idempotent: if
+ * SAMPLE_PATIENT_REFERRING_CLINIC already lists anything, nothing is created.
+ *
+ * Returns the site id, or null with the reason pushed onto `errors`.
+ */
+export async function ensureReferringClinic(
+  page: Page,
+  errors: string[] = []
+): Promise<string | null> {
+  const result = await page.evaluate(async () => {
+    const csrf = localStorage.getItem('CSRF') || '';
+    const list = async () => {
+      const r = await fetch('/api/OpenELIS-Global/rest/displayList/SAMPLE_PATIENT_REFERRING_CLINIC', {
+        headers: { Accept: 'application/json' },
+      });
+      if (!r.ok) return [];
+      return (await r.json().catch(() => [])) || [];
+    };
+
+    const existing = await list();
+    if (existing.length) return { id: String(existing[0].id), created: false, detail: '' };
+
+    const r = await fetch('/api/OpenELIS-Global/rest/Organization?ID=0&startingRecNo=1', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept-Language': 'en', 'X-CSRF-Token': csrf },
+      body: JSON.stringify({
+        organizationName: 'QA_AUTO Referring Clinic',
+        shortName: 'QAARC',
+        isActive: 'Y',
+        commune: '',
+        village: '',
+        department: '',
+        formName: 'organizationForm',
+        formMethod: 'POST',
+        cancelAction: 'CancelOrganization',
+        submitOnCancel: false,
+        cancelMethod: 'POST',
+        mlsSentinelLabFlag: 'N',
+        parentOrgName: '',
+        state: 'MN',
+        selectedTypes: ['5'],
+      }),
+    });
+    const text = await r.text().catch(() => '');
+    const after = await list();
+    if (!after.length) return { id: null, created: false, detail: `status=${r.status} body=${text.slice(0, 200)}` };
+    return { id: String(after[0].id), created: true, detail: '' };
+  });
+
+  if (!result.id) {
+    errors.push(`ensureReferringClinic: no type-5 organization and could not create one — ${result.detail}`);
+    return null;
+  }
+  if (result.created) console.log(`[data-factory] created referring clinic id=${result.id}`);
+  return result.id;
+}
+
+/**
+ * Seed one order that Modify Order can be exercised against, and return it.
+ *
+ * WHAT "MODIFIABLE" MEANS HERE, and why each part is deliberate:
+ *   - a provider LAST NAME, because a blank one silently disables Submit for
+ *     ever (MO-5), so an order without one can never reach the step under test;
+ *   - a next-visit date, so MO-2 has a populated date to watch get dropped;
+ *   - no received date, so MO-3 has an empty one to watch get fabricated;
+ *   - a referring site, so MO-4 has a site name to watch get blanked;
+ *   - exactly one test, because `existingTests` must be non-empty.
+ *
+ * It replaces a scan of accessions DEV0126...000500–000600 that assumed a
+ * particular seeded instance. On the CI develop stack that window holds nothing
+ * — one order exists, with no provider and no tests — so all seven cases failed
+ * in the fixture with "the instance holds at least one order with a provider
+ * last name and a test", and the OGC-1191 regressions were never executed.
+ * Seeding what the suite needs is the only version of this that survives a
+ * reseed, an empty stack, or somebody consuming the order it found.
+ */
+export async function seedModifiableOrder(
+  page: Page
+): Promise<{ accession: string; patientId: string; nationalId: string }> {
+  const errors: string[] = [];
+  const siteId = await ensureReferringClinic(page, errors);
+  if (!siteId) throw new Error(`seedModifiableOrder: ${errors.join(' | ')}`);
+
+  const stamp = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
+  const nationalId = `QAMO${stamp}`;
+  // Letters only in the name: a digit anywhere in it is rejected as
+  // `400 "invalid name format"` (12.x), so the stamp lives in the national ID.
+  const created = await createPatientViaAPI(page, {
+    nationalId,
+    firstName: 'Orderly',
+    lastName: 'Modifyson',
+    gender: 'F',
+    dateOfBirth: '01/01/1990',
+  });
+  if (!created.id) throw new Error(`seedModifiableOrder: patient not created — ${created.detail}`);
+
+  const state = emptyState();
+  state.patient.systemId = created.id;
+  state.patient.nationalId = nationalId;
+
+  const nv = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  const nextVisitDate =
+    `${String(nv.getDate()).padStart(2, '0')}/${String(nv.getMonth() + 1).padStart(2, '0')}/${nv.getFullYear()}`;
+
+  const accession = await createOrderViaAPI(page, state, 'seedModifiableOrder', 'primaryOrder', {
+    providerFirstName: 'Quinn',
+    providerLastName: 'Autoprov',
+    nextVisitDate,
+  });
+  if (!accession) {
+    throw new Error(`seedModifiableOrder: order not created — ${state.setupErrors.join(' | ')}`);
+  }
+  return { accession, patientId: created.id, nationalId };
+}
+
+/**
+ * Seed ONE patient with ONE pending order, and return the accession.
+ *
+ * WHY THIS EXISTS. `createOrderViaAPI` is the real order builder and it is
+ * correct (its payload was validated against the wizard's own output — harness
+ * ref 12.29), but its signature is built for the shared `runDataSetup`
+ * orchestrator: it wants a whole TestDataState and writes into
+ * `state.primaryOrder`. A single test that just needs "an order that exists,
+ * right now, whose accession I know" should not have to fabricate that state.
+ *
+ * This is a shim, deliberately, rather than a second copy of the payload. The
+ * payload took a full session to establish (four conditions: a type-5 referring
+ * org, a type-11 department parented to it, a generated accession, and
+ * referringSiteId actually set). Duplicating it would mean two things to keep
+ * in step, and the copy would rot first.
+ *
+ * Returns the accession, or throws with the setup errors — a null return would
+ * become "the screen showed no rows", which is the wrong diagnosis.
+ */
+export async function seedOrder(page: Page, tag = 'RE'): Promise<{ accession: string; patientId: string; nationalId: string }> {
+  const stamp = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
+  const nationalId = `QA${tag}${stamp}`;
+
+  // Letters only in the name. A digit anywhere in it is rejected by the server
+  // as `400 "invalid name format"` (measured 2026-09-09), so the stamp goes in
+  // the national ID, never the name.
+  const created = await createPatientViaAPI(page, {
+    nationalId,
+    firstName: 'Resultsy',
+    lastName: 'Ordersen',
+    gender: 'F',
+    dateOfBirth: '01/01/1990',
+  });
+  if (!created.id) throw new Error(`seedOrder(${tag}): patient not created — ${created.detail}`);
+
+  const state = emptyState();
+  state.patient.systemId = created.id;
+  state.patient.nationalId = nationalId;
+
+  const accession = await createOrderViaAPI(page, state, `seedOrder(${tag})`, 'primaryOrder');
+  if (!accession) {
+    throw new Error(`seedOrder(${tag}): order not created — ${state.setupErrors.join(' | ')}`);
+  }
+  return { accession, patientId: created.id, nationalId };
 }
 
 // ---------------------------------------------------------------------------
@@ -501,23 +925,44 @@ export async function runDataSetup(page: Page): Promise<TestDataState> {
     }
   }
 
-  // ── 2. Create primary order (HGB) ────────────────────────────────────────
-  if (state.patient.found) {
-    console.log('[data-setup] Creating primary order (HGB)...');
-    const acc1 = await createOrderViaUI(page, state, 'HGB', 'primaryOrder');
-    if (!acc1) {
-      console.warn('[data-setup] Primary order UI creation failed, trying API...');
-      await createOrderViaAPI(page, state, 'HGB', 'primaryOrder');
-    }
-  }
-
-  // ── 3. Create secondary order (WBC) ──────────────────────────────────────
-  if (state.patient.found) {
-    console.log('[data-setup] Creating secondary order (WBC)...');
-    const acc2 = await createOrderViaUI(page, state, 'WBC', 'secondaryOrder');
-    if (!acc2) {
-      console.warn('[data-setup] Secondary order UI creation failed, trying API...');
-      await createOrderViaAPI(page, state, 'WBC', 'secondaryOrder');
+  // ── 2 & 3. Create the two baseline orders ────────────────────────────────
+  //
+  // ORDER OF ATTEMPTS REVERSED (2026-09-08). This used to try the UI first and
+  // fall back to the API. On v3.2.2.0 the UI attempt no longer completes —
+  // `createOrder(HGB): locator.click: Test timeout exceeded` — and because a
+  // Playwright locator waits out the WHOLE test budget, the UI attempt consumed
+  // every second the setup had and the API fallback was never reached. The
+  // setup then failed on timeout, and since the module sweep depends on this
+  // project, a failure here skips all 866 tests.
+  //
+  // API first is also the better fixture design: a fixture should take the
+  // cheapest reliable path to the state a test needs, and drive the UI only
+  // when the UI itself is what is under test. Set DATA_SETUP_ORDER_UI=1 to
+  // restore the old order once the UI path is fixed.
+  const preferUI = process.env.DATA_SETUP_ORDER_UI === '1';
+  for (const [testName, slot] of [['HGB', 'primaryOrder'], ['WBC', 'secondaryOrder']] as const) {
+    if (!state.patient.found) break;
+    console.log(`[data-setup] Creating ${slot} (${testName})${preferUI ? '' : ' via API'}...`);
+    let acc: string | null = null;
+    if (preferUI) {
+      acc = await createOrderViaUI(page, state, testName, slot);
+      if (!acc) {
+        console.warn(
+          `[data-setup] ${slot}: not created — see the setup error above and harness 12.28.` +
+            `An order needs a type-5 referring clinic and a type-11 dept whose PARENT is that ` +
+            `clinic; on a stock install neither exists.`
+        );
+      }
+    } else {
+      acc = await createOrderViaAPI(page, state, testName, slot);
+      if (!acc) {
+        console.warn(
+          `[data-setup] ${slot}: not created — see the setup error above and harness 12.28.` +
+            `order entry cannot be submitted (harness 12.26/12.27). A stock install has no ` +
+            `referring clinic or dept organization; seeding both gets the required fields filled ` +
+            `but Submit stays disabled, and that last gate is not yet identified.`
+        );
+      }
     }
   }
 
@@ -534,4 +979,221 @@ export async function runDataSetup(page: Page): Promise<TestDataState> {
   }
 
   return state;
+}
+
+// ---------------------------------------------------------------------------
+// Duplicate-pair seeding (for the patient-merge cases)
+// ---------------------------------------------------------------------------
+
+export interface DuplicatePair {
+  /** The national ID both records share. Fresh per call, so runs never collide. */
+  nationalId: string;
+  /**
+   * The unique health ID (subject number) both records share. THIS is what the
+   * merge screen's panels should search on: its "Patient Id" field matches the
+   * subject number by substring, so a fresh long digit string finds exactly this
+   * pair. Do not identify the pair by last name — see the soundex note below.
+   */
+  subjectNumber: string;
+  /** The last name both records share. For display only, not for identification. */
+  lastName: string;
+  /** The two patient ids, in creation order. */
+  ids: [string, string];
+}
+
+/**
+ * Create one patient through the REST API.
+ *
+ * PAYLOAD CAPTURED, NOT COMPOSED (harness ref 12.4). This is the exact body
+ * the Add Patient form sends, taken off the wire in Chrome on testing v3.2.2.0
+ * on 2026-09-08:
+ *
+ *   POST /api/OpenELIS-Global/rest/PatientManagement
+ *   Content-Type: application/json   Accept-Language: en   X-CSRF-Token: <token>
+ *   {"patientUpdateStatus":"ADD","nationalId":…,"lastName":…,"firstName":…,
+ *    "gender":"F","birthDateForDisplay":"01/01/1990", …all-empty rest…}
+ *   -> 200 {"patientId":"515","status":"success"}
+ *
+ * The captured request also carried a stray `"date-picker-default-id"` key
+ * alongside `birthDateForDisplay` — a UI artifact, the form's own field id
+ * leaking into the payload. It is omitted here, and the omission is verified:
+ * the request above without it answered 200 and created patient 515.
+ */
+export async function createPatientViaAPI(
+  page: Page,
+  p: { nationalId: string; firstName: string; lastName: string; subjectNumber?: string; gender?: string; dateOfBirth?: string }
+): Promise<{ id: string | null; detail: string }> {
+  return page.evaluate(async (pt) => {
+    const csrf = localStorage.getItem('CSRF') || '';
+    const body = {
+      patientUpdateStatus: 'ADD',
+      nationalId: pt.nationalId,
+      subjectNumber: pt.subjectNumber ?? '',
+      lastName: pt.lastName,
+      firstName: pt.firstName,
+      aka: '',
+      streetAddress: '',
+      city: '',
+      primaryPhone: '',
+      email: '',
+      gender: pt.gender ?? 'F',
+      birthDateForDisplay: pt.dateOfBirth ?? '01/01/1990',
+      commune: '',
+      education: '',
+      maritialStatus: '',
+      nationality: '',
+      healthDistrict: '',
+      healthRegion: '',
+      otherNationality: '',
+      occupation: '',
+      customNotes: '',
+      targetDiseaseProgramme: '',
+      photo: '',
+      idDocuments: [] as unknown[],
+      patientContact: { person: { firstName: '', lastName: '', primaryPhone: '', email: '' } },
+    };
+    const r = await fetch('/api/OpenELIS-Global/rest/PatientManagement', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept-Language': 'en', 'X-CSRF-Token': csrf },
+      body: JSON.stringify(body),
+    });
+    const text = await r.text().catch(() => '');
+    let d: any = null;
+    try { d = JSON.parse(text); } catch { /* not json */ }
+    return {
+      id: d && d.status === 'success' ? String(d.patientId) : null,
+      // Diagnostics, because "first=null, second=null" is not a bug report.
+      // A 403 with "CSRF token missing or invalid" means the token was not in
+      // localStorage yet (see apiShapes.ts); anything else is the server's own
+      // complaint and should be read, not guessed at.
+      detail: `status=${r.status} csrf=${csrf ? 'present' : 'MISSING'} origin=${location.origin} body=${text.slice(0, 200)}`,
+    };
+  }, p);
+}
+
+/**
+ * Seed two patients that share a national ID and a last name — i.e. exactly the
+ * duplicate a person would open the merge screen to resolve.
+ *
+ * WHY SEED RATHER THAN USE THE ABBY SEBBYS. The merge cases used to lean on the
+ * five duplicate "Abby Sebby" records on the shared instance. A merge case that
+ * actually merges would consume those, and after one or two runs there would be
+ * nothing left to merge — the test would destroy its own precondition and start
+ * failing for reasons that have nothing to do with the product. A fresh pair per
+ * test is repeatable forever, and TC-MP-04 merging it is the pair's cleanup.
+ *
+ * Cheap on purpose: two API POSTs, well inside the 30-second policy.
+ */
+export async function seedDuplicatePair(page: Page, tag = 'MRG'): Promise<DuplicatePair> {
+  const stamp = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
+  const nationalId = `QA${tag}${stamp}`;
+  // Identification lives in the SUBJECT NUMBER, not the name. Two earlier
+  // attempts failed and both are worth remembering:
+  //
+  //  1. A digit-bearing last name is rejected outright:
+  //     400 {"error":"lastName: invalid name format, possibly illegal character"}
+  //  2. Transliterating the stamp into letters made the name unique but NOT
+  //     unique to the search. The last-name search is soundex-like — every
+  //     `QAAuto…` name collided with every other one, so each run's search
+  //     returned all previous runs' seeds, the pair got pushed onto page 2 of
+  //     the results, and its radio was never rendered. That is what a
+  //     "waiting for #patient1-select-530" timeout meant.
+  //
+  // The merge panel's "Patient Id" field matches the subject number by
+  // substring (verified: searching "530" returned a record whose subject number
+  // merely CONTAINS 530), so a fresh long digit string identifies exactly this
+  // pair and nothing else. The last name can therefore be a constant.
+  const subjectNumber = `99${stamp}`;
+  const lastName = `Qaauto${tag}`;
+  // The POST is same-origin and needs localStorage['CSRF'], so the page must
+  // already be on the app. Make that a precondition with a readable message
+  // rather than letting it surface as a null id.
+  if (!/^https?:/.test(page.url()) || page.url().includes('about:blank')) {
+    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
+  }
+  const first = await createPatientViaAPI(page, { nationalId, subjectNumber, firstName: 'Alpha', lastName });
+  const second = first.id
+    ? await createPatientViaAPI(page, { nationalId, subjectNumber, firstName: 'Beta', lastName })
+    : { id: null, detail: 'not attempted' };
+  if (!first.id || !second.id) {
+    throw new Error(
+      `seedDuplicatePair: could not create the pair for nationalId=${nationalId}\n` +
+        `  first:  ${first.detail}\n  second: ${second.detail}`
+    );
+  }
+  return { nationalId, subjectNumber, lastName, ids: [first.id, second.id] };
+}
+
+/** Patient ids the search endpoint returns for a national ID. */
+export async function findPatientIdsByNationalId(page: Page, nationalId: string): Promise<string[]> {
+  return page.evaluate(async (nid) => {
+    const r = await fetch(
+      `/api/OpenELIS-Global/rest/patient-search-results?nationalID=${encodeURIComponent(nid)}&lastName=&firstName=`,
+      { headers: { Accept: 'application/json' } }
+    );
+    if (!r.ok) return [];
+    const d = await r.json().catch(() => null);
+    return ((d && d.patientSearchResults) || []).map((p: any) => String(p.patientID ?? p.patientId));
+  }, nationalId);
+}
+
+/** Patient ids the search endpoint returns for a last name. */
+export async function findPatientIdsByLastName(page: Page, lastName: string): Promise<string[]> {
+  return page.evaluate(async (ln) => {
+    const r = await fetch(
+      `/api/OpenELIS-Global/rest/patient-search-results?lastName=${encodeURIComponent(ln)}&firstName=`,
+      { headers: { Accept: 'application/json' } }
+    );
+    if (!r.ok) return [];
+    const d = await r.json().catch(() => null);
+    return ((d && d.patientSearchResults) || []).map((p: any) => String(p.patientID ?? p.patientId));
+  }, lastName);
+}
+
+/**
+ * Execute a patient merge through the REST API.
+ *
+ * PAYLOAD AND RESPONSE CAPTURED (harness ref 12.23/12.24), Chrome on testing
+ * v3.2.2.0, 2026-09-08:
+ *
+ *   POST /api/OpenELIS-Global/rest/patient/merge/execute
+ *   {"patient1Id","patient2Id","primaryPatientId","reason","confirmed":true}
+ *   -> 200 {"success":true,"mergeAuditId":"6","message":"Patient merge completed
+ *           successfully","primaryPatientId":"566","mergedPatientId":"567",
+ *           "mergeDurationMs":156}
+ *
+ * Use this when a case needs a merged record as a PRECONDITION. The UI wizard
+ * itself is what TC-MP-04 covers; driving it again just to arrive at a merged
+ * state would put the wizard's own defects inside another case's setup.
+ */
+export async function mergePatientsViaAPI(
+  page: Page,
+  args: { primaryId: string; mergedId: string; reason?: string }
+): Promise<{ ok: boolean; detail: string }> {
+  return page.evaluate(async (a) => {
+    const csrf = localStorage.getItem('CSRF') || '';
+    const r = await fetch('/api/OpenELIS-Global/rest/patient/merge/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept-Language': 'en', 'X-CSRF-Token': csrf },
+      body: JSON.stringify({
+        patient1Id: a.primaryId,
+        patient2Id: a.mergedId,
+        primaryPatientId: a.primaryId,
+        reason: a.reason ?? 'QA_AUTO_ merge (fixture precondition)',
+        confirmed: true,
+      }),
+    });
+    const text = await r.text().catch(() => '');
+    let d: any = null;
+    try { d = JSON.parse(text); } catch { /* not json */ }
+    return { ok: r.ok && !!(d && d.success), detail: `status=${r.status} body=${text.slice(0, 200)}` };
+  }, args);
+}
+
+/** Seed a duplicate pair and merge the second into the first. Returns the pair. */
+export async function seedMergedPair(page: Page, tag = 'FILT'): Promise<DuplicatePair> {
+  const pair = await seedDuplicatePair(page, tag);
+  const res = await mergePatientsViaAPI(page, { primaryId: pair.ids[0], mergedId: pair.ids[1] });
+  if (!res.ok) throw new Error(`seedMergedPair: merge failed — ${res.detail}`);
+  return pair;
 }

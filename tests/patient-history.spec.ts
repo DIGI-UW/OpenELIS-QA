@@ -87,7 +87,7 @@ test.describe('Suite BD-DEEP — Patient History Core (TC-HIST)', () => {
      * a patient by ID or name.
      */
     const loaded = await goToPatientHistory(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -106,7 +106,7 @@ test.describe('Suite BD-DEEP — Patient History Core (TC-HIST)', () => {
      * must return their history or an empty state — never a server error.
      */
     const loaded = await goToPatientHistory(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -133,7 +133,7 @@ test.describe('Suite BD-DEEP — Patient History Core (TC-HIST)', () => {
      * collection/result date so the user can understand the timeline.
      */
     const loaded = await goToPatientHistory(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -209,7 +209,7 @@ test.describe('Suite H-DEEP-EXT — Patient History API (TC-HIST-06–10)', () =
      * return an empty history, not a server error.
      */
     const loaded = await goToPatientHistory(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -275,7 +275,7 @@ test.describe('Suite H-DEEP-EXT — Patient History API (TC-HIST-06–10)', () =
      * when a correctly-formatted national ID is entered.
      */
     const loaded = await goToPatientHistory(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 

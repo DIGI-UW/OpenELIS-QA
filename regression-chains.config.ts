@@ -15,7 +15,11 @@ import path from 'path';
 // Resolve the chain dir relative to THIS FILE, not process.cwd(): Playwright may load the config
 // from a different working directory, and a cwd-relative readdirSync silently yields zero specs,
 // which would reintroduce exactly the bug this change removes.
-const BASE = process.env.BASE || 'https://34.212.225.107';
+// Default target. Was 'https://34.212.225.107' — a stale IP instance — until
+// 2026-09-05: the nightly always sets BASE, so the wrong default only ever bit
+// someone running this locally, silently against another server. Every other
+// config in the repo defaults to testing.
+const BASE = process.env.BASE || process.env.BASE_URL || 'https://testing.openelis-global.org';
 
 const CHAIN_DIR = path.resolve(__dirname, 'tests/chains');
 const CHAINS = Array.from(

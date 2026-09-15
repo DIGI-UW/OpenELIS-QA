@@ -41,9 +41,27 @@ import {
   extractPdfText,
   markStep,
   ChainOrderRef,
+  requireStep,
 } from './_common';
 
-test.describe.serial('Chain A — Order Lifecycle', () => {
+// SERIAL REMOVED 2026-09-05 (harness reference 12.10).
+//
+// This chain was `test.describe.serial`, so one failing step skipped every
+// later one. Step 2 (the BUG-37 patient-linkage check) fails on `testing`, and
+// it was taking Steps 3-8 with it — the whole result -> validate -> report ->
+// FHIR spine — even though nothing downstream reads anything Step 2 sets.
+//
+// Serial is not needed here: every step from 2 on already guards its own
+// precondition (`requireStep(...)`, plus Step 6 on `order.pdf` and
+// Step 8 on `order.fhir`). regression-chains.config.ts runs `workers: 1` with
+// `fullyParallel: false`, so declaration order is still execution order — the
+// only change is that one failing step no longer cancels the rest, and a retry
+// re-runs just that step instead of the whole group.
+//
+// Chains whose later steps genuinely depend on an earlier one (C on `rule` and
+// `triggerValue`, D on `testAccession`) keep `.serial` deliberately. Do not
+// remove it there without redoing the dependency audit in 12.10.
+test.describe('Chain A — Order Lifecycle', () => {
   let order: ChainOrderRef | null = null;
   const enteredResultValue = '12.5'; // arbitrary numeric we expect to round-trip
 
@@ -83,7 +101,7 @@ test.describe.serial('Chain A — Order Lifecycle', () => {
   // the round-trip pattern.
   // ---------------------------------------------------------------------------
   test('Step 2 — Patient-order linkage (ROUND-TRIP, BUG-37 check)', async ({ page }) => {
-    if (!order) test.skip();
+    requireStep('A', 2, !!order, '!order');
 
     await page.goto(BASE);
     const readback = await apiCall<{ patientSearchResults?: Array<{ nationalId?: string; firstName?: string; lastName?: string }> }>(
@@ -122,7 +140,7 @@ test.describe.serial('Chain A — Order Lifecycle', () => {
   // Acceptance criterion: PERSIST
   // ---------------------------------------------------------------------------
   test('Step 3 — Enter result via API substitute (PERSIST, BUG-31 workaround)', async ({ page }) => {
-    if (!order) test.skip();
+    requireStep('A', 3, !!order, '!order');
 
     await page.goto(BASE);
 
@@ -168,7 +186,7 @@ test.describe.serial('Chain A — Order Lifecycle', () => {
   // Acceptance criterion: PERSIST
   // ---------------------------------------------------------------------------
   test('Step 4 — Validate the result (PERSIST)', async ({ page }) => {
-    if (!order) test.skip();
+    requireStep('A', 4, !!order, '!order');
 
     await page.goto(BASE);
 
@@ -206,7 +224,7 @@ test.describe.serial('Chain A — Order Lifecycle', () => {
   // Acceptance criterion: REPORTABLE (a PDF must be produced)
   // ---------------------------------------------------------------------------
   test('Step 5 — Generate Patient Status Report PDF (REPORTABLE)', async ({ page }) => {
-    if (!order) test.skip();
+    requireStep('A', 5, !!order, '!order');
 
     await page.goto(BASE);
 
@@ -245,12 +263,12 @@ test.describe.serial('Chain A — Order Lifecycle', () => {
   // Acceptance criterion: REPORTABLE (content matches)
   // ---------------------------------------------------------------------------
   test('Step 6 — Lab number present on PDF (REPORTABLE)', async ({ page }) => {
-    if (!order) test.skip();
+    requireStep('A', 6, !!order, '!order');
     const withPdf = order as ChainOrderRef & { pdf?: Buffer };
     if (!withPdf.pdf) {
-      markStep('A', 6, 'BLOCKED', 'No PDF from Step 5');
-      test.skip();
-      return;
+      markStep('A', 6, 'BLOCKED', 'No PDF from Step 5',
+        'Step 5 must produce the PDF this step reads. A cascade, not a gap: fix Step 5.');
+      return; // unreachable: the markStep BLOCKED above skips (declared gap) or fails.
     }
 
     const text = extractPdfText(withPdf.pdf);
@@ -271,7 +289,7 @@ test.describe.serial('Chain A — Order Lifecycle', () => {
   // Acceptance criterion: CROSS-LINK (UI write → FHIR read)
   // ---------------------------------------------------------------------------
   test('Step 7 — Fetch FHIR Observation (CROSS-LINK)', async ({ page }) => {
-    if (!order) test.skip();
+    requireStep('A', 7, !!order, '!order');
     await page.goto(BASE);
 
     // Path discovery: try the documented working path first
@@ -310,12 +328,12 @@ test.describe.serial('Chain A — Order Lifecycle', () => {
   // Acceptance criterion: ROUND-TRIP
   // ---------------------------------------------------------------------------
   test('Step 8 — FHIR Observation value matches entered result (ROUND-TRIP)', async ({ page }) => {
-    if (!order) test.skip();
+    requireStep('A', 8, !!order, '!order');
     const withFhir = order as ChainOrderRef & { fhir?: { entry?: Array<{ resource?: { valueQuantity?: { value?: number }; valueString?: string } }> } };
     if (!withFhir.fhir || typeof withFhir.fhir !== 'object') {
-      markStep('A', 8, 'BLOCKED', 'No FHIR payload from Step 7');
-      test.skip();
-      return;
+      markStep('A', 8, 'BLOCKED', 'No FHIR payload from Step 7',
+        'Step 7 must fetch the Observation this step reads. A cascade, not a gap: fix Step 7.');
+      return; // unreachable: the markStep BLOCKED above skips (declared gap) or fails.
     }
 
     const entries = withFhir.fhir.entry || [];

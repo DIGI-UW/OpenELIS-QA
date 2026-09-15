@@ -93,7 +93,7 @@ test.describe('Suite BG — Results By Status Core (TC-RBS)', () => {
      * to select which status category of results to view.
      */
     const loaded = await goToResultsByStatus(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -111,7 +111,7 @@ test.describe('Suite BG — Results By Status Core (TC-RBS)', () => {
      * (confirmed in Phase 6 BG-DEEP). Must have at least 10 options.
      */
     const loaded = await goToResultsByStatus(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -137,7 +137,7 @@ test.describe('Suite BG — Results By Status Core (TC-RBS)', () => {
      * the search must not result in a 500 error.
      */
     const loaded = await goToResultsByStatus(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -244,7 +244,7 @@ test.describe('Suite BG-DEEP — Results By Status API & Validation (TC-RBS-06�
      * server error — this is a common supervisor workflow.
      */
     const loaded = await goToResultsByStatus(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 

@@ -74,8 +74,9 @@ test.describe.serial('Chain J — Audit Trail Coverage', () => {
       ? ((search.body as { patientSearchResults?: Array<{ patientID?: string }> }).patientSearchResults?.[0]?.patientID)
       : undefined;
     if (!pp) {
-      markStep('J', 3, 'BLOCKED', 'No QA_AUTO_ patient — Step 2 sensitive action skipped');
-      test.skip(); return;
+      markStep('J', 3, 'BLOCKED', 'No QA_AUTO_ patient to edit',
+        'Seed one per SKILL §0.6a (`--project=seed-data`). Missing seed data is a failure, not a gap.');
+      return; // unreachable: the markStep BLOCKED above skips (declared gap) or fails.
     }
     const r = await apiCall<unknown>(page, '/api/OpenELIS-Global/rest/patient-management', {
       method: 'POST',
@@ -144,12 +145,35 @@ test.describe.serial('Chain J — Audit Trail Coverage', () => {
     const r = await apiCall<{ entries?: AuditEntry[] } | AuditEntry[]>(
       page, `/api/OpenELIS-Global/rest/AuditTrail?startDate=${today}&endDate=${today}`
     );
-    if (!r.ok) { test.skip(); return; }
+    if (!r.ok) {
+      markStep('J', 5, 'FAIL', `AuditTrail read returned HTTP ${r.status}`,
+        'The endpoint exists on this build, so a non-2xx is a failure and not a declarable gap ' +
+        '(known-gaps.ts, "WHAT DOES NOT [belong here]").');
+      return;
+    }
     const entries = Array.isArray(r.body) ? r.body : ((r.body as { entries?: AuditEntry[] } | null)?.entries || []);
     const recent = entries.find(e =>
       e.newValue?.includes('QA_AUTO_chain-j') || e.oldValue?.includes('QA_AUTO_chain-j')
     );
-    if (!recent) { test.skip(); return; }
+    if (!recent) {
+      // Split deliberately. If Steps 2-3 got a sensitive action through and no audit row
+      // carries its signature, that is the audit-coverage gap this chain is for, and it is a
+      // FAIL. If every probed action was blocked, there is nothing to have audited, and the
+      // register decides.
+      const landed = probedActions.filter(a => a.success);
+      if (landed.length > 0) {
+        markStep('J', 5, 'FAIL',
+          `${landed.length} sensitive action(s) succeeded but no audit entry carries the ` +
+          `QA_AUTO_chain-j signature`,
+          `Actions: ${landed.map(a => a.name).join(', ')}. Searched ${entries.length} entr(ies) for ` +
+          `today. Either the audit trail does not record these actions, or it records them without ` +
+          `the changed value.`);
+      } else {
+        markStep('J', 5, 'BLOCKED', 'No sensitive action landed in Steps 2-3, so nothing to audit',
+          'A cascade, not a gap: fix the earlier steps.');
+      }
+      return;
+    }
 
     const hasUser = !!recent.userId;
     const hasTime = !!recent.timestamp;

@@ -79,7 +79,7 @@ test.describe('Suite BA — Batch Order Entry Core (TC-BOE)', () => {
      * saving time when all patients in the batch have the same test.
      */
     const loaded = await goToBatchEntry(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
     const bodyText = await page.locator('body').innerText();
@@ -100,7 +100,7 @@ test.describe('Suite BA — Batch Order Entry Core (TC-BOE)', () => {
      * Each row represents one patient order. Must have at least 2 row inputs.
      */
     const loaded = await goToBatchEntry(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -119,7 +119,7 @@ test.describe('Suite BA — Batch Order Entry Core (TC-BOE)', () => {
      * and a Clear/Reset button (to start over without leaving the page).
      */
     const loaded = await goToBatchEntry(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -204,7 +204,7 @@ test.describe('Suite BA-DEEP — Batch Entry API & Validation (TC-BOE-06–10)',
      * not an Internal Server Error. Graceful validation is critical.
      */
     const loaded = await goToBatchEntry(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -229,7 +229,7 @@ test.describe('Suite BA-DEEP — Batch Entry API & Validation (TC-BOE-06–10)',
      * valid dates without triggering a validation error.
      */
     const loaded = await goToBatchEntry(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -254,7 +254,7 @@ test.describe('Suite BA-DEEP — Batch Entry API & Validation (TC-BOE-06–10)',
      * receptionist can assign all rows to a program (Routine, HIV, TB, etc.).
      */
     const loaded = await goToBatchEntry(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -280,7 +280,7 @@ test.describe('Suite BA-DEEP — Batch Entry API & Validation (TC-BOE-06–10)',
      * so screen reader users can identify what to fill in each cell.
      */
     const loaded = await goToBatchEntry(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 

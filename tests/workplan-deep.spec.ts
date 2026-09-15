@@ -87,7 +87,7 @@ test.describe('Suite AJ — Workplan By Panel/Priority Core (TC-WPD)', () => {
      * Phase 5 N-DEEP confirmed 40+ panel types.
      */
     const loaded = await goToWorkplanPanel(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -127,7 +127,7 @@ test.describe('Suite AJ — Workplan By Panel/Priority Core (TC-WPD)', () => {
      * as priority options to cover the common lab priority scheme.
      */
     const loaded = await goToWorkplanPriority(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
     const bodyText = await page.locator('body').innerText();
@@ -146,7 +146,7 @@ test.describe('Suite AJ — Workplan By Panel/Priority Core (TC-WPD)', () => {
      * either show pending entries or a clean "no entries" state — never crash.
      */
     const loaded = await goToWorkplanPanel(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -177,7 +177,7 @@ test.describe('Suite N-DEEP-EXT — Workplan Deep Extended (TC-WPD-06–10)', ()
      * types in Phase 5 N-DEEP. Must have at least 100 options to be useful.
      */
     const loaded = await navigateWithDiscovery(page, ['/WorkPlanByTest', '/WorkPlan/test']);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -202,7 +202,7 @@ test.describe('Suite N-DEEP-EXT — Workplan Deep Extended (TC-WPD-06–10)', ()
      * sections. Baseline: Hematology, Chemistry, Microbiology, etc.
      */
     const loaded = await navigateWithDiscovery(page, ['/WorkPlanByTestSection', '/WorkPlan/section']);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -332,7 +332,7 @@ test.describe('Suite N-DEEP-EXT2 — Workplan Cross-Module & API (TC-WPD-11–16
      * must return results or empty state — never a server error.
      */
     const loaded = await navigateWithDiscovery(page, ['/WorkPlanByPriority', '/WorkPlan/priority']);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 

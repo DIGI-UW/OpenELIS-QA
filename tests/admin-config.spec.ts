@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, navigateToAdminItem, getDateRange, getFutureDateRange } from '../helpers/test-helpers';
 
 /**
@@ -23,7 +23,21 @@ import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, C
  * Total Test Count: 48 TCs
  */
 
-async function verifyPageLoad(page, expectedTitle: string): Promise<void> {
+/**
+ * The first h1/h2/h3 on these admin screens is an EMPTY heading in the page
+ * chrome, so `.first().innerText()` returns '' and every heading assertion built
+ * on it compared against the wrong element — seventeen cases in this file, each
+ * failing with `Received string: ""` about a screen whose heading was right
+ * there. Take the first heading that actually has text. The patterns those
+ * assertions match on are unchanged.
+ */
+async function firstNonEmptyHeading(page: Page): Promise<string> {
+  const texts = await page.locator('h1, h2, h3, [role="heading"]').allInnerTexts();
+  const found = (texts as string[]).map((t) => t.replace(/\s+/g, ' ').trim()).find((t) => t.length > 0);
+  return found ?? '';
+}
+
+async function verifyPageLoad(page: Page, expectedTitle: string): Promise<void> {
   // Check HTTP status is 200
   const response = await page.url();
   expect(response).not.toContain('login');
@@ -40,6 +54,26 @@ async function verifyPageLoad(page, expectedTitle: string): Promise<void> {
   expect(errorText).not.toContain('Not Found');
   expect(errorText).not.toContain('Internal Server Error');
 }
+
+/**
+ * Organisations actually present on testing.openelis-global.org (v3.2.2.0).
+ *
+ * Read from GET /rest/displayList/ACTIVE_ORG_LIST on 2026-09-08: 26 active
+ * organisations. "Adiba SC", which TC-ADMIN-03 asserted on and which
+ * master-test-cases.md still names, is NOT among them and no test creates it —
+ * it is a stale expectation carried over from the instance the catalogue was
+ * first written against. Two QA_AUTO orgs are present and are deliberate
+ * leftovers from earlier runs.
+ *
+ * `/rest/organization/list` answers 500 on this build; ACTIVE_ORG_LIST is the
+ * working read path.
+ */
+const SEEDED_ORGS = {
+  /** Reference laboratories — what TC-ADMIN-02 is really about. */
+  referenceLabs: ['National Reference Laboratory', 'Regional Reference Laboratory'],
+  /** A clinical site that ships with the seed. */
+  clinicalSite: 'Mulago',
+};
 
 test.describe('Admin Configuration (TC-ADMIN)', () => {
   test.beforeEach(async ({ page }) => {
@@ -70,7 +104,14 @@ test.describe('Admin Configuration (TC-ADMIN)', () => {
   });
 
   test('TC-ADMIN-02: Reference labs list accessible', async ({ page }) => {
+    // ROUTE DRIFT (2026-09-08). The three URLs this case used to try do not
+    // exist — `/MasterListsPage/Organizations` in particular is a near-miss for
+    // the real `organizationManagement` (lower-case o). The case had been
+    // failing to reach any of them since it was written, and said so only via
+    // console.log, so it passed every run. Lead with the verified route from
+    // CONFIRMED_ADMIN_URLS and keep the old spellings as fallbacks.
     const refLabUrls = [
+      CONFIRMED_ADMIN_URLS['Organization Management'],
       '/MasterListsPage/ReferenceLabs',
       '/MasterListsPage/Organizations',
       '/MasterListsPage/ExternalInstitutes',
@@ -89,35 +130,82 @@ test.describe('Admin Configuration (TC-ADMIN)', () => {
       }
     }
 
-    if (!found) {
-      console.log('TC-ADMIN-02: GAP — reference labs list not accessible at known URLs');
-    }
+    // VERDICT. `res.ok()` above is not an existence check — this SPA answers 200
+    // for every path (harness ref 12.2) — so the oracle is what the page renders.
+    //
+    // WHAT THIS CASE CAN AND CANNOT CHECK (2026-09-08). A route probe of
+    // /MasterListsPage on v3.2.2.0 lists 50-odd admin screens and there is no
+    // "Reference Labs" or "External Institutes" among them; external laboratories
+    // live in Organization Management. The old body probed three routes that do
+    // not exist and matched page text against /laboratory|reference|institute|
+    // CPHL|doherty/, then console.log'd either verdict — so it passed for as long
+    // as it has existed while reaching nothing.
+    //
+    // This now asserts what is actually true and checkable: the Organization
+    // Management screen loads and renders its list. Whether the catalogue still
+    // wants a distinct "reference labs" case, and against which screen, is a
+    // catalogue decision — see open-questions.md.
+    expect(page.url(), 'must not be bounced to login').not.toMatch(/login|signin/i);
+    await expect(
+      page.getByText(/organization management/i).first(),
+      'the Organization Management screen must load and name itself'
+    ).toBeVisible({ timeout: 15_000 });
+
+    // THE ACTUAL CLAIM. The seed does carry reference laboratories — the org
+    // list read on 2026-09-08 contains both National and Regional Reference
+    // Laboratory — so this case can assert what its title says rather than
+    // settle for "a screen loaded". It failed for years only because it probed
+    // three routes that do not exist.
+    const orgs = await page.evaluate(async (base) => {
+      const r = await fetch(`${base}/api/OpenELIS-Global/rest/displayList/ACTIVE_ORG_LIST`,
+        { headers: { Accept: 'application/json' }, credentials: 'include' });
+      if (!r.ok) return { status: r.status, names: [] as string[] };
+      const rows = await r.json();
+      return { status: r.status, names: (Array.isArray(rows) ? rows : []).map((o: any) => String(o.value ?? o.name ?? '')) };
+    }, BASE);
+    expect(orgs.status, 'ACTIVE_ORG_LIST must be readable').toBe(200);
+    expect(
+      orgs.names.filter((n) => SEEDED_ORGS.referenceLabs.includes(n)),
+      `reference laboratories missing from the organisation list. Saw: ${orgs.names.slice(0, 12).join(', ')}`
+    ).toEqual(expect.arrayContaining(SEEDED_ORGS.referenceLabs));
   });
 
-  test('TC-ADMIN-03: Organization/site list accessible and contains Adiba SC', async ({ page }) => {
-    await page.goto(`${BASE}/MasterListsPage/Organizations`).catch(() =>
+  test('TC-ADMIN-03: Organization/site list accessible and contains a seeded site', async ({ page }) => {
+    // ROUTE DRIFT (2026-09-08). `/MasterListsPage/Organizations` does not exist;
+    // the real screen is `organizationManagement` (lower-case o). This case has
+    // been failing on the wrong route rather than on missing seed data — the
+    // "Adiba SC not found" verdict was true but for the wrong reason.
+    await page.goto(`${BASE}${CONFIRMED_ADMIN_URLS['Organization Management']}`).catch(() =>
       page.goto(`${BASE}/MasterListsPage`)
     );
     await page.waitForTimeout(2000);
 
-    // Search for Adiba SC
+    // Search for a seeded site (was "Adiba", which this instance does not have)
     const searchField = page.getByRole('textbox', { name: /search|filter/i }).first();
     if (await searchField.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await searchField.fill('Adiba');
+      await searchField.fill(SEEDED_ORGS.clinicalSite);
       await page.waitForTimeout(1000);
     }
 
-    const hasAdiba = await page.getByText(/Adiba SC/i).isVisible({ timeout: 5000 }).catch(() => false);
-    console.log(hasAdiba
-      ? 'TC-ADMIN-03: PASS — Adiba SC present in organization list'
-      : 'TC-ADMIN-03: FAIL/GAP — Adiba SC not found in organization list');
+    const hasSeededSite = await page
+      .getByText(new RegExp(SEEDED_ORGS.clinicalSite, 'i'))
+      .first()
+      .isVisible({ timeout: 5000 })
+      .catch(() => false);
+    expect(
+      hasSeededSite,
+      `seeded organisation "${SEEDED_ORGS.clinicalSite}" was not found in the organisation list`
+    ).toBeTruthy();
   });
 
   test('TC-ADMIN-04: Rejection reasons dictionary accessible', async ({ page }) => {
+    // ROUTE DRIFT (2026-09-08) — same story as TC-ADMIN-02: the real route is
+    // DictionaryMenu, not Dictionary.
     const dictUrls = [
+      CONFIRMED_ADMIN_URLS['Dictionary Menu'],
       '/MasterListsPage/Dictionary',
       '/DictionaryManagement',
-      '/MasterListsPage/NonConformityConfiguration',
+      '/MasterListsPage/NonConformityConfigurationMenu',
     ];
 
     let found = false;
@@ -133,9 +221,14 @@ test.describe('Admin Configuration (TC-ADMIN)', () => {
       }
     }
 
-    if (!found) {
-      console.log('TC-ADMIN-04: GAP — rejection reasons dictionary not accessible at known URLs');
-    }
+    // Same story as TC-ADMIN-02: the real screens are DictionaryMenu and
+    // NonConformityConfigurationMenu (the old body tried a "…Configuration"
+    // spelling that 404s), and the text probe never rendered a verdict.
+    expect(page.url(), 'must not be bounced to login').not.toMatch(/login|signin/i);
+    await expect(
+      page.locator('table, [role="table"], .cds--data-table, form').first(),
+      'the dictionary / non-conformity config screen must render its content'
+    ).toBeVisible({ timeout: 15_000 });
   });
 
   test('TC-ADMIN-05: Test sections list contains Hematology and Biochemistry', async ({ page }) => {
@@ -222,10 +315,11 @@ test.describe('Suite AQ — Reflex Tests & Analyzer Test Name', () => {
     // Verify page loads
     await verifyPageLoad(page, 'Reflex Tests Configuration');
 
-    // Verify page heading
-    const heading = await page.locator('h1, h2, h3, [role="heading"]').first();
-    const headingText = await heading.innerText();
-    expect(headingText.toLowerCase()).toMatch(/reflex.*test/i);
+    // Verify page heading. The section's landing screen is Reflex Tests
+    // Management (rendered with a double space in the sidebar, single in the
+    // heading).
+    const headingText = await firstNonEmptyHeading(page);
+    expect(headingText, 'the Reflex Tests screen renders a heading').toMatch(/reflex.*test/i);
   });
 
   test('TC-RFX-02: Reflex test list or configuration form visible', async ({ page }) => {
@@ -237,11 +331,11 @@ test.describe('Suite AQ — Reflex Tests & Analyzer Test Name', () => {
     const buttons = await page.locator('button:has-text("Add"), button:has-text("Edit"), button:has-text("Delete")').first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       table.isVisible().catch(() => false),
       form.isVisible().catch(() => false),
       buttons.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -253,9 +347,8 @@ test.describe('Suite AQ — Reflex Tests & Analyzer Test Name', () => {
     await verifyPageLoad(page, 'Analyzer Test Name');
 
     // Verify page heading
-    const heading = await page.locator('h1, h2, h3, [role="heading"]').first();
-    const headingText = await heading.innerText();
-    expect(headingText.toLowerCase()).toMatch(/analyzer.*test/i);
+    const headingText = await firstNonEmptyHeading(page);
+    expect(headingText).toMatch(/analyzer.*test/i);
   });
 
   test('TC-ATN-02: Analyzer test name mapping list visible', async ({ page }) => {
@@ -267,11 +360,11 @@ test.describe('Suite AQ — Reflex Tests & Analyzer Test Name', () => {
     const buttons = await page.locator('button:has-text("Add"), button:has-text("Edit")').first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       table.isVisible().catch(() => false),
       form.isVisible().catch(() => false),
       buttons.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -289,9 +382,8 @@ test.describe('Suite AR — Lab Number & Program Management', () => {
     await verifyPageLoad(page, 'Lab Number Management');
 
     // Verify page heading
-    const heading = await page.locator('h1, h2, h3, [role="heading"]').first();
-    const headingText = await heading.innerText();
-    expect(headingText.toLowerCase()).toMatch(/lab.*number/i);
+    const headingText = await firstNonEmptyHeading(page);
+    expect(headingText).toMatch(/lab.*number/i);
   });
 
   test('TC-LNM-02: Lab number format/sequence configuration visible', async ({ page }) => {
@@ -303,11 +395,11 @@ test.describe('Suite AR — Lab Number & Program Management', () => {
     const inputs = await page.locator('input[type="text"], input[type="number"], textarea').first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       form.isVisible().catch(() => false),
       table.isVisible().catch(() => false),
       inputs.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -319,9 +411,8 @@ test.describe('Suite AR — Lab Number & Program Management', () => {
     await verifyPageLoad(page, 'Program Entry');
 
     // Verify page heading
-    const heading = await page.locator('h1, h2, h3, [role="heading"]').first();
-    const headingText = await heading.innerText();
-    expect(headingText.toLowerCase()).toMatch(/program/i);
+    const headingText = await firstNonEmptyHeading(page);
+    expect(headingText).toMatch(/program/i);
   });
 
   test('TC-PGM-02: Program list or entry form visible', async ({ page }) => {
@@ -333,11 +424,11 @@ test.describe('Suite AR — Lab Number & Program Management', () => {
     const buttons = await page.locator('button:has-text("Add"), button:has-text("Edit")').first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       table.isVisible().catch(() => false),
       form.isVisible().catch(() => false),
       buttons.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -355,9 +446,8 @@ test.describe('Suite AS — Provider & Barcode Configuration', () => {
     await verifyPageLoad(page, 'Provider Management');
 
     // Verify page heading
-    const heading = await page.locator('h1, h2, h3, [role="heading"]').first();
-    const headingText = await heading.innerText();
-    expect(headingText.toLowerCase()).toMatch(/provider/i);
+    const headingText = await firstNonEmptyHeading(page);
+    expect(headingText).toMatch(/provider/i);
   });
 
   test('TC-PROV-02: Provider list with search/filter visible', async ({ page }) => {
@@ -369,11 +459,11 @@ test.describe('Suite AS — Provider & Barcode Configuration', () => {
     const buttons = await page.locator('button:has-text("Add"), button:has-text("Edit")').first();
 
     // At least table or search should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       table.isVisible().catch(() => false),
       searchBox.isVisible().catch(() => false),
       buttons.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -385,9 +475,8 @@ test.describe('Suite AS — Provider & Barcode Configuration', () => {
     await verifyPageLoad(page, 'Barcode Configuration');
 
     // Verify page heading
-    const heading = await page.locator('h1, h2, h3, [role="heading"]').first();
-    const headingText = await heading.innerText();
-    expect(headingText.toLowerCase()).toMatch(/barcode/i);
+    const headingText = await firstNonEmptyHeading(page);
+    expect(headingText).toMatch(/barcode/i);
   });
 
   test('TC-BAR-02: Barcode format settings visible', async ({ page }) => {
@@ -399,11 +488,11 @@ test.describe('Suite AS — Provider & Barcode Configuration', () => {
     const saveBtn = await page.locator('button:has-text("Save"), button:has-text("Update"), button:has-text("Apply")').first();
 
     // At least form or inputs should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       form.isVisible().catch(() => false),
       inputs.isVisible().catch(() => false),
       saveBtn.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -421,9 +510,8 @@ test.describe('Suite AT — Result Reporting & Menu Configuration', () => {
     await verifyPageLoad(page, 'Result Reporting Configuration');
 
     // Verify page heading
-    const heading = await page.locator('h1, h2, h3, [role="heading"]').first();
-    const headingText = await heading.innerText();
-    expect(headingText.toLowerCase()).toMatch(/result.*reporting/i);
+    const headingText = await firstNonEmptyHeading(page);
+    expect(headingText).toMatch(/result.*reporting/i);
   });
 
   test('TC-RRC-02: Reporting rules or configuration list visible', async ({ page }) => {
@@ -435,19 +523,24 @@ test.describe('Suite AT — Result Reporting & Menu Configuration', () => {
     const buttons = await page.locator('button:has-text("Add"), button:has-text("Edit")').first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       table.isVisible().catch(() => false),
       form.isVisible().catch(() => false),
       buttons.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
 
   test('TC-MCF-01: Menu Configuration page loads', async ({ page }) => {
     // Menu Configuration may be expandable
-    const chevron = await page.locator('[role="button"]:has-text("Menu Configuration"), button:has-text("Menu Configuration"), span.chevron').first();
-    if (chevron) {
+    const chevron = page.locator('[role="button"]:has-text("Menu Configuration"), button:has-text("Menu Configuration"), span.chevron').first();
+    // NOTE 2026-09-05: `page.locator()` always returns a Locator — never falsy — so
+    // `if (x)` here was always true and a missing element burned the full timeout
+    // inside .click(). Guarded with an actual visibility check. See
+    // navigateToAdminItem in helpers/test-helpers.ts.
+    const chevronPresent = await chevron.isVisible({ timeout: 5_000 }).catch(() => false);
+    if (chevronPresent) {
       await chevron.click();
     }
 
@@ -456,10 +549,11 @@ test.describe('Suite AT — Result Reporting & Menu Configuration', () => {
     // Verify page loads
     await verifyPageLoad(page, 'Menu Configuration');
 
-    // Verify page heading
-    const heading = await page.locator('h1, h2, h3, [role="heading"]').first();
-    const headingText = await heading.innerText();
-    expect(headingText.toLowerCase()).toMatch(/menu/i);
+    // Verify page heading. "Menu Configuration" is a sidebar section whose
+    // landing screen is Global Menu Management (the parent route renders no
+    // content), so the heading names that screen.
+    const headingText = await firstNonEmptyHeading(page);
+    expect(headingText, 'a Menu Configuration screen renders a heading').toMatch(/menu/i);
   });
 
   test('TC-MCF-02: Menu items list editable', async ({ page }) => {
@@ -471,11 +565,11 @@ test.describe('Suite AT — Result Reporting & Menu Configuration', () => {
     const buttons = await page.locator('button:has-text("Edit"), button:has-text("Enable"), button:has-text("Disable")').first();
 
     // At least table or buttons should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       table.isVisible().catch(() => false),
       form.isVisible().catch(() => false),
       buttons.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -488,8 +582,13 @@ test.describe('Suite AU — General Config & App Properties', () => {
 
   test('TC-GCF-01: General Configurations page loads', async ({ page }) => {
     // General Configurations may be expandable
-    const chevron = await page.locator('[role="button"]:has-text("General Configurations"), button:has-text("General Configurations")').first();
-    if (chevron) {
+    const chevron = page.locator('[role="button"]:has-text("General Configurations"), button:has-text("General Configurations")').first();
+    // NOTE 2026-09-05: `page.locator()` always returns a Locator — never falsy — so
+    // `if (x)` here was always true and a missing element burned the full timeout
+    // inside .click(). Guarded with an actual visibility check. See
+    // navigateToAdminItem in helpers/test-helpers.ts.
+    const chevronPresent = await chevron.isVisible({ timeout: 5_000 }).catch(() => false);
+    if (chevronPresent) {
       await chevron.click();
     }
 
@@ -498,10 +597,18 @@ test.describe('Suite AU — General Config & App Properties', () => {
     // Verify page loads
     await verifyPageLoad(page, 'General Configurations');
 
-    // Verify page heading
-    const heading = await page.locator('h1, h2, h3, [role="heading"]').first();
-    const headingText = await heading.innerText();
-    expect(headingText.toLowerCase()).toMatch(/general.*config/i);
+    // Verify page heading.
+    //
+    // "General Configurations" is a sidebar SECTION, not a screen: its ten
+    // children are the configuration screens (NonConformity, WorkPlan, Site
+    // Information, Result Entry, ... — read off this instance 2026-09-14) and
+    // the parent route /MasterListsPage/generalConfigurations renders the app
+    // chrome with no content. So the heading here is the landing child's, and
+    // `/general.*config/i` could never have matched any page the product ships.
+    // What this case is actually for — the section is reachable and shows a
+    // configuration screen — is unchanged.
+    const headingText = await firstNonEmptyHeading(page);
+    expect(headingText, 'a General Configurations screen renders a heading').toMatch(/config/i);
   });
 
   test('TC-GCF-02: Configuration key-value list or form visible', async ({ page }) => {
@@ -513,11 +620,11 @@ test.describe('Suite AU — General Config & App Properties', () => {
     const inputs = await page.locator('input[type="text"], textarea').first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       table.isVisible().catch(() => false),
       form.isVisible().catch(() => false),
       inputs.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -529,9 +636,8 @@ test.describe('Suite AU — General Config & App Properties', () => {
     await verifyPageLoad(page, 'Application Properties');
 
     // Verify page heading
-    const heading = await page.locator('h1, h2, h3, [role="heading"]').first();
-    const headingText = await heading.innerText();
-    expect(headingText.toLowerCase()).toMatch(/application.*propert/i);
+    const headingText = await firstNonEmptyHeading(page);
+    expect(headingText).toMatch(/application.*propert/i);
   });
 
   test('TC-APP-02: Properties list with editable values visible', async ({ page }) => {
@@ -543,11 +649,11 @@ test.describe('Suite AU — General Config & App Properties', () => {
     const inputs = await page.locator('input[type="text"], textarea').first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       table.isVisible().catch(() => false),
       form.isVisible().catch(() => false),
       inputs.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -565,9 +671,8 @@ test.describe('Suite AV — Notifications & Search Index', () => {
     await verifyPageLoad(page, 'Test Notification Configuration');
 
     // Verify page heading
-    const heading = await page.locator('h1, h2, h3, [role="heading"]').first();
-    const headingText = await heading.innerText();
-    expect(headingText.toLowerCase()).toMatch(/notification/i);
+    const headingText = await firstNonEmptyHeading(page);
+    expect(headingText).toMatch(/notification/i);
   });
 
   test('TC-TNF-02: Notification rules or configuration form visible', async ({ page }) => {
@@ -579,11 +684,11 @@ test.describe('Suite AV — Notifications & Search Index', () => {
     const buttons = await page.locator('button:has-text("Add"), button:has-text("Edit")').first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       table.isVisible().catch(() => false),
       form.isVisible().catch(() => false),
       buttons.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -595,9 +700,8 @@ test.describe('Suite AV — Notifications & Search Index', () => {
     await verifyPageLoad(page, 'Search Index Management');
 
     // Verify page heading
-    const heading = await page.locator('h1, h2, h3, [role="heading"]').first();
-    const headingText = await heading.innerText();
-    expect(headingText.toLowerCase()).toMatch(/search.*index/i);
+    const headingText = await firstNonEmptyHeading(page);
+    expect(headingText).toMatch(/search.*index/i);
   });
 
   test('TC-SIM-02: Reindex button or status indicator visible', async ({ page }) => {
@@ -609,11 +713,11 @@ test.describe('Suite AV — Notifications & Search Index', () => {
     const statsDisplay = await page.locator('div, span, p').filter({ hasText: /indexed|status|last/i }).first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       reindexBtn.isVisible().catch(() => false),
       statusDisplay.isVisible().catch(() => false),
       statsDisplay.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -631,9 +735,8 @@ test.describe('Suite AW — Logging, Legacy Admin, Plugins', () => {
     await verifyPageLoad(page, 'Logging Configuration');
 
     // Verify page heading
-    const heading = await page.locator('h1, h2, h3, [role="heading"]').first();
-    const headingText = await heading.innerText();
-    expect(headingText.toLowerCase()).toMatch(/logging/i);
+    const headingText = await firstNonEmptyHeading(page);
+    expect(headingText).toMatch(/logging/i);
   });
 
   test('TC-LOG-02: Log level settings visible (DEBUG/INFO/WARN/ERROR)', async ({ page }) => {
@@ -645,11 +748,11 @@ test.describe('Suite AW — Logging, Legacy Admin, Plugins', () => {
     const buttons = await page.locator('button').filter({ hasText: /DEBUG|INFO|WARN|ERROR/i }).first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       selector.isVisible().catch(() => false),
       radioButtons.isVisible().catch(() => false),
       buttons.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -691,9 +794,8 @@ test.describe('Suite AW — Logging, Legacy Admin, Plugins', () => {
     await verifyPageLoad(page, 'List Plugins');
 
     // Verify page heading
-    const heading = await page.locator('h1, h2, h3, [role="heading"]').first();
-    const headingText = await heading.innerText();
-    expect(headingText.toLowerCase()).toMatch(/plugin/i);
+    const headingText = await firstNonEmptyHeading(page);
+    expect(headingText).toMatch(/plugin/i);
   });
 });
 
@@ -704,8 +806,13 @@ test.describe('Suite AX — Localization, Notify User, Batch Reassignment', () =
 
   test('TC-LOC-01: Localization page loads', async ({ page }) => {
     // Localization may be expandable
-    const chevron = await page.locator('[role="button"]:has-text("Localization"), button:has-text("Localization")').first();
-    if (chevron) {
+    const chevron = page.locator('[role="button"]:has-text("Localization"), button:has-text("Localization")').first();
+    // NOTE 2026-09-05: `page.locator()` always returns a Locator — never falsy — so
+    // `if (x)` here was always true and a missing element burned the full timeout
+    // inside .click(). Guarded with an actual visibility check. See
+    // navigateToAdminItem in helpers/test-helpers.ts.
+    const chevronPresent = await chevron.isVisible({ timeout: 5_000 }).catch(() => false);
+    if (chevronPresent) {
       await chevron.click();
     }
 
@@ -714,10 +821,13 @@ test.describe('Suite AX — Localization, Notify User, Batch Reassignment', () =
     // Verify page loads
     await verifyPageLoad(page, 'Localization');
 
-    // Verify page heading
-    const heading = await page.locator('h1, h2, h3, [role="heading"]').first();
-    const headingText = await heading.innerText();
-    expect(headingText.toLowerCase()).toMatch(/localization|locale/i);
+    // Verify page heading. Like General Configurations above, "Localization" is
+    // a sidebar section; its screens are Language Management and Translation
+    // Management, and the section route itself renders nothing. The landing
+    // screen is Language Management, so that — not the word "Localization" — is
+    // what the product puts on the page.
+    const headingText = await firstNonEmptyHeading(page);
+    expect(headingText, 'a Localization screen renders a heading').toMatch(/language|translation|localization|locale/i);
   });
 
   test('TC-LOC-02: Localization entries list with language columns visible', async ({ page }) => {
@@ -729,11 +839,11 @@ test.describe('Suite AX — Localization, Notify User, Batch Reassignment', () =
     const inputs = await page.locator('input[type="text"], textarea').first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       table.isVisible().catch(() => false),
       form.isVisible().catch(() => false),
       inputs.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
@@ -745,9 +855,8 @@ test.describe('Suite AX — Localization, Notify User, Batch Reassignment', () =
     await verifyPageLoad(page, 'Notify User');
 
     // Verify page heading
-    const heading = await page.locator('h1, h2, h3, [role="heading"]').first();
-    const headingText = await heading.innerText();
-    expect(headingText.toLowerCase()).toMatch(/notify|notification/i);
+    const headingText = await firstNonEmptyHeading(page);
+    expect(headingText).toMatch(/notify|notification/i);
   });
 
   test('TC-NTU-02: User notification form or list visible', async ({ page }) => {
@@ -759,20 +868,30 @@ test.describe('Suite AX — Localization, Notify User, Batch Reassignment', () =
     const sendBtn = await page.locator('button:has-text("Send"), button:has-text("Submit")').first();
 
     // At least one of these should be visible
-    const hasInterface = await Promise.any([
+    const hasInterface = await Promise.all([
       form.isVisible().catch(() => false),
       table.isVisible().catch(() => false),
       sendBtn.isVisible().catch(() => false)
-    ]).then(v => v);
+    ]).then((results) => results.some(Boolean));
 
     expect(hasInterface).toBeTruthy();
   });
 
   test('TC-BTR-01: Batch test reassignment page loads', async ({ page }) => {
     // Search for batch reassignment item (may be truncated)
-    const batchItem = await page.locator('a, button, span').filter({ hasText: /batch.*reassign/i }).first();
+    const batchItem = page.locator('a, button, span').filter({ hasText: /batch.*reassign/i }).first();
 
-    if (batchItem) {
+    // NOTE 2026-09-05: `page.locator()` always returns a Locator — never falsy — so
+
+    // `if (x)` here was always true and a missing element burned the full timeout
+
+    // inside .click(). Guarded with an actual visibility check. See
+
+    // navigateToAdminItem in helpers/test-helpers.ts.
+
+    const batchItemPresent = await batchItem.isVisible({ timeout: 5_000 }).catch(() => false);
+
+    if (batchItemPresent) {
       await batchItem.click();
     } else {
       // Try alternative name pattern
@@ -783,9 +902,8 @@ test.describe('Suite AX — Localization, Notify User, Batch Reassignment', () =
     await verifyPageLoad(page, 'Batch Reassignment');
 
     // Verify page heading contains batch or reassign
-    const heading = await page.locator('h1, h2, h3, [role="heading"]').first();
-    const headingText = await heading.innerText();
-    expect(headingText.toLowerCase()).toMatch(/batch|reassign/i);
+    const headingText = await firstNonEmptyHeading(page);
+    expect(headingText).toMatch(/batch|reassign/i);
   });
 });
 
@@ -815,9 +933,9 @@ test.describe('Phase 4 — K-DEEP: Admin Interaction Tests', () => {
     // Search for known org "Adiba"
     const searchInput = page.locator('input[type="search"], input[placeholder*="Search" i]');
     if (await searchInput.isVisible()) {
-      await searchInput.fill('Adiba');
+      await searchInput.fill(SEEDED_ORGS.clinicalSite);
       await page.waitForTimeout(500);
-      await expect(page.locator('text=Adiba')).toBeVisible();
+      await expect(page.locator(`text=${SEEDED_ORGS.clinicalSite}`).first()).toBeVisible();
     }
     // Verify pagination controls exist for 4,726 orgs
     const pagination = page.locator('[class*="pagination" i], nav[aria-label="pagination"]');

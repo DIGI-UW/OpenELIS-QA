@@ -345,11 +345,14 @@ test.describe('Multi-Patient Batch Workflow (TC-BATCH)', () => {
 
     console.log(`TC-BATCH-01: ${batchAccessions.length} orders placed: ${batchAccessions.join(', ')}`);
 
-    // Verify uniqueness
-    const unique = new Set(batchAccessions.filter(Boolean));
-    console.log(unique.size === batchAccessions.filter(Boolean).length
-      ? 'TC-BATCH-01: PASS — all accessions are unique'
-      : 'TC-BATCH-01: FAIL — duplicate accession numbers detected');
+    // Placing zero orders is a failure of this test's own premise. Without this
+    // guard the uniqueness check below is vacuously true on an empty set — the
+    // classic shape of a test that passes because it did nothing.
+    const placed = batchAccessions.filter(Boolean);
+    expect(placed.length, 'no orders were placed, so accession uniqueness was never exercised').toBeGreaterThan(1);
+
+    const unique = new Set(placed);
+    expect(unique.size, `duplicate accession numbers issued: ${placed.join(', ')}`).toBe(placed.length);
   });
 
   test('TC-BATCH-02: All batch orders searchable in Results By Order', async ({ page }) => {
@@ -501,12 +504,11 @@ test.describe('Multi-Patient Batch Workflow (TC-BATCH)', () => {
         await page.waitForTimeout(1500);
         const page2Rows = await page.getByRole('row').allTextContents();
         const noDups = !page2Rows.some(r => page1Rows.includes(r));
-        console.log(noDups
-          ? 'TC-BATCH-06: PASS — page 2 rows are distinct from page 1'
-          : 'TC-BATCH-06: FAIL — duplicate rows between page 1 and page 2');
+        expect(noDups, 'page 2 repeated rows from page 1 — pagination is not advancing the offset').toBeTruthy();
       }
     } else {
-      console.log('TC-BATCH-06: No pagination controls — single-page list (acceptable for current data volume)');
+      // Legitimately absent: too little data to paginate. Visible as a skip.
+      test.skip(true, 'no pagination controls — single-page list at the current data volume');
     }
   });
 });

@@ -95,7 +95,7 @@ test.describe('Suite O — LOINC Mapping Core (TC-LOINC)', () => {
      * LOINC codes for admin review and editing.
      */
     const loaded = await goToLOINC(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
     const bodyText = await page.locator('body').innerText();
@@ -113,7 +113,7 @@ test.describe('Suite O — LOINC Mapping Core (TC-LOINC)', () => {
      * LOINC code without scrolling through all entries.
      */
     const loaded = await goToLOINC(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -186,7 +186,7 @@ test.describe('Suite O — LOINC Mapping Core (TC-LOINC)', () => {
      * Known baseline: 1,273 entries.
      */
     const loaded = await goToDictionary(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
     const bodyText = await page.locator('body').innerText();
@@ -204,13 +204,17 @@ test.describe('Suite O — LOINC Mapping Core (TC-LOINC)', () => {
      * must return results without a server error.
      */
     const loaded = await goToDictionary(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const searchInput = page.locator('input').first();
     if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await fillSearchField(page, searchInput, 'blood');
+      // fillSearchField(page, value, selectors). This passed a Locator as the
+      // value and the value as the selector list, so the helper iterated the
+      // STRING 'blood' and asked for elements matching 'b', 'l', 'o'... The
+      // search box was never filled and the test passed on an unexercised page.
+      await fillSearchField(page, 'blood', ['input']);
       await page.waitForTimeout(1500);
     }
 
@@ -332,7 +336,7 @@ test.describe('Suite O-DEEP — LOINC & Dictionary Deep Validation (TC-LOINC-09�
      * indicates a data integrity problem. All visible names should be unique.
      */
     const loaded = await goToDictionary(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -405,7 +409,7 @@ test.describe('Suite O-DEEP — LOINC & Dictionary Deep Validation (TC-LOINC-09�
      * must show an Add or Edit button so admins can initiate a change.
      */
     const loaded = await goToLOINC(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 

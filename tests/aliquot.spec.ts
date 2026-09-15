@@ -7,6 +7,8 @@ import {
   TIMEOUT,
   login,
   navigateWithDiscovery,
+  navigateViaMenu,
+  tryNavigateToURL,
 } from '../helpers/test-helpers';
 
 /**
@@ -82,7 +84,7 @@ test.describe('Suite AP — Aliquot Management Core (TC-ALQ)', () => {
      * can look up a primary sample by accession number.
      */
     const loaded = await goToAliquot(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -101,7 +103,7 @@ test.describe('Suite AP — Aliquot Management Core (TC-ALQ)', () => {
      * aliquot data or empty state — never a server error.
      */
     const loaded = await goToAliquot(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -146,7 +148,7 @@ test.describe('Suite AP — Aliquot Management Core (TC-ALQ)', () => {
      * (button, form, or link). Without this, the page is read-only and useless.
      */
     const loaded = await goToAliquot(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -169,7 +171,7 @@ test.describe('Suite AP — Aliquot Management Core (TC-ALQ)', () => {
      * empty state, not a Java NullPointerException or 500 error.
      */
     const loaded = await goToAliquot(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -265,7 +267,7 @@ test.describe('Suite AP-DEEP — Aliquot Deep Validation (TC-ALQ-09–16)', () =
      * even when an error occurs internally.
      */
     const loaded = await goToAliquot(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
     const bodyText = await page.locator('body').innerText();
@@ -326,7 +328,7 @@ test.describe('Suite AP-DEEP — Aliquot Deep Validation (TC-ALQ-09–16)', () =
      * must show a validation message, not an Internal Server Error.
      */
     const loaded = await goToAliquot(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -369,7 +371,7 @@ test.describe('Suite AP-DEEP — Aliquot Deep Validation (TC-ALQ-09–16)', () =
      * sub-sample amount is tracked. A missing volume field is a data quality gap.
      */
     const loaded = await goToAliquot(page);
-    if (!loaded) { test.skip(); return; }
+    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -410,4 +412,93 @@ test.describe('Suite AP-DEEP — Aliquot Deep Validation (TC-ALQ-09–16)', () =
     expect(result.aliquot, 'Aliquot API must not 5xx').not.toBeGreaterThanOrEqual(500);
     expect(result.accession, 'AccessionResults must not 5xx').not.toBeGreaterThanOrEqual(500);
   });
+});
+
+/**
+ * Relocated from the retired gap-suites (2026-09-08) — see harness ref 12.16.
+ * These are the cases the gap suites uniquely carried; the rest of those files
+ * duplicated tests that already lived here.
+ *   TC-ALQ-01 -> TC-ALQ-17   (renumbered: TC-ALQ-01 already meant a different test)
+ *   TC-ALQ-02 -> TC-ALQ-18   (renumbered: TC-ALQ-02 already meant a different test)
+ *   TC-ALQ-03 -> TC-ALQ-19   (renumbered: TC-ALQ-03 already meant a different test)
+ */
+test.describe('Relocated from gap-suites', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+  });
+
+  test('TC-ALQ-17: Aliquot screen loads', async ({ page }) => {
+      await login(page, ADMIN.user, ADMIN.pass);
+  
+      try {
+        await navigateViaMenu(page, ['Aliquot']);
+      } catch (e) {
+        const found = await tryNavigateToURL(page, ['/Aliquot', '/SpecimenAliquot', '/aliquot']);
+        if (!found) {
+          test.skip();
+          return;
+        }
+      }
+  
+      await page.waitForTimeout(1000);
+  
+      expect(page.url()).not.toContain('login');
+    });
+
+  test('TC-ALQ-18: Aliquot entry form visible with fields', async ({ page }) => {
+      await login(page, ADMIN.user, ADMIN.pass);
+  
+      try {
+        await navigateViaMenu(page, ['Aliquot']);
+      } catch (e) {
+        await tryNavigateToURL(page, ['/Aliquot', '/SpecimenAliquot', '/aliquot']);
+      }
+  
+      await page.waitForTimeout(1000);
+  
+      const button = await page.$('button:has-text("Create"), button:has-text("New"), button:has-text("Add")');
+      if (button) {
+        await button.click();
+        await page.waitForTimeout(1000);
+      }
+  
+      const form = await page.$('form, [role="form"]');
+      const inputs = await page.$$('input, textarea, select');
+  
+      expect(form && inputs.length > 0).toBeTruthy();
+    });
+
+  test('TC-ALQ-19: Aliquot creation workflow executes', async ({ page }) => {
+      await login(page, ADMIN.user, ADMIN.pass);
+  
+      try {
+        await navigateViaMenu(page, ['Aliquot']);
+      } catch (e) {
+        await tryNavigateToURL(page, ['/Aliquot', '/SpecimenAliquot', '/aliquot']);
+      }
+  
+      await page.waitForTimeout(1000);
+  
+      const button = await page.$('button:has-text("Create"), button:has-text("New")');
+      if (button) {
+        await button.click();
+        await page.waitForTimeout(1000);
+      }
+  
+      const inputs = await page.$$('input[type="text"]');
+      if (inputs.length > 0) {
+        await inputs[0].fill('26CPHL00001T');
+      }
+  
+      const submitBtn = await page.$('button:has-text("Submit"), button:has-text("Save")');
+      if (submitBtn) {
+        await submitBtn.click();
+        await page.waitForTimeout(2000);
+      }
+  
+      // Check for error or success
+      const error = await page.$('[class*="error"]');
+      expect(!error).toBeTruthy();
+    });
+
 });

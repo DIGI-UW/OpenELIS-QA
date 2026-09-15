@@ -15,17 +15,34 @@
  *   - markStep()          structured step logger that prints
  *                         "[Chain A · Step N · PASS] description"
  *
- * NOTE on §11.5 Blocking-Bug Etiquette: when a step hits a known
- * destructive bug (BUG-31 Carbon Accept checkbox, BUG-38 NCE POST), use
- * `markStep('BLOCKED', ...)` and `return null` from the step function so
- * the chain marks PARTIAL and continues. Never throw — the parent chain's
- * `test.step()` wrapper needs to keep running so later steps can still
- * surface their own findings.
+ * NOTE on §11.5 Blocking-Bug Etiquette (REVISED 2026-09-03, see OGC-1192):
+ * markStep is no longer a passive logger. Prior to this change its entire
+ * body was a console.log, so `markStep(..., 'FAIL', ...)` followed by an
+ * early `return` produced a GREEN test. Chain N Step 4 sat in exactly that
+ * shape for months: its create POST returned 400, the handler recorded GAP,
+ * returned, and the chain reported healthy while its only write path had
+ * never once executed. That is how OGC-1192 (environmental orders invisible
+ * to every dashboard) reached production unnoticed.
+ *
+ * The status argument now has consequences:
+ *   FAIL           -> fails the test immediately, with the description as the
+ *                     assertion message. No caller needs a follow-up expect().
+ *   GAP / BLOCKED  -> annotates and SKIPS the test. A skip is honest: it is
+ *                     visibly not-run in the report, and it can never be
+ *                     mistaken for a pass.
+ *   PASS / PARTIAL -> logged only, as before.
+ *
+ * Because GAP and BLOCKED now throw Playwright's skip signal, any `return`
+ * that followed one is unreachable and harmless; leave it or delete it.
+ * Do NOT reach for GAP to get past a failing assertion — that is the exact
+ * habit this change exists to stop. GAP means "this build genuinely does not
+ * have the feature under test"; anything else is a FAIL.
  */
 
-import { Page, expect } from '@playwright/test';
+import { Page, expect, test } from '@playwright/test';
 import * as zlib from 'zlib';
 import { resolveOrderPath, seedDomainOrder } from './domain-seed';
+import { isDeclaredGap, gapsAreStrict } from './known-gaps';
 
 export const BASE = process.env.BASE_URL || process.env.BASE || 'https://testing.openelis-global.org';
 
@@ -360,8 +377,105 @@ export type StepStatus = 'PASS' | 'FAIL' | 'BLOCKED' | 'PARTIAL' | 'GAP';
 
 export function markStep(chain: string, n: number, status: StepStatus, description: string, detail?: string): void {
   const tag = `[Chain ${chain} · Step ${n} · ${status}]`;
+  const message = detail ? `${description} — ${detail}` : description;
   // eslint-disable-next-line no-console
-  console.log(detail ? `${tag} ${description} — ${detail}` : `${tag} ${description}`);
+  console.log(`${tag} ${message}`);
+
+  // Annotate first, so the reason survives into the HTML report even when the
+  // call below ends the test.
+  if (status === 'FAIL' || status === 'GAP' || status === 'BLOCKED') {
+    try {
+      test.info().annotations.push({
+        type: status.toLowerCase(),
+        description: `Chain ${chain} Step ${n}: ${message}`,
+      });
+    } catch {
+      // markStep called outside a running test (e.g. from a fixture or a
+      // bare helper). Logging above is all we can honestly do.
+    }
+  }
+
+  if (status === 'FAIL') {
+    // The description IS the failure message; callers no longer need to
+    // follow this with their own expect().
+    expect(false, `${tag} ${message}`).toBeTruthy();
+  }
+
+  if (status === 'GAP' || status === 'BLOCKED') {
+    // Fail-by-default. A gap is only allowed to skip if it was DECLARED in
+    // advance in known-gaps.ts, where a human wrote down why this build cannot
+    // run the step and what would retire the entry. Everything else fails.
+    //
+    // Strict mode is currently opt-in (GAPS_STRICT=1, set by the nightly job)
+    // because you cannot honestly declare gaps you have never seen fire, and
+    // this repo had no unattended runs before 2026-09-03. See known-gaps.ts.
+    const declared = isDeclaredGap(chain, n);
+    if (declared) {
+      test.skip(true,
+        `${tag} ${message} — DECLARED GAP${declared.ticket ? ` (${declared.ticket})` : ''}: ${declared.reason}`);
+    } else if (gapsAreStrict()) {
+      expect(false,
+        `${tag} ${message}\n\nUndeclared gap. A step may only excuse itself if the reason is ` +
+        `written down in tests/chains/known-gaps.ts (key "${chain}:${n}"). If this build genuinely ` +
+        `lacks the feature, declare it there with a ticket and a retirement condition. If the call ` +
+        `simply failed, this is a FAIL — fix it, do not declare it.`,
+      ).toBeTruthy();
+    } else {
+      // Pre-strict: skip, never silently pass.
+      test.skip(true, `${tag} ${message} — UNDECLARED gap (would fail under GAPS_STRICT=1)`);
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Step preconditions
+// -----------------------------------------------------------------------------
+
+/**
+ * Assert a step's precondition, routed through the declared-gap register.
+ *
+ * WHY THIS EXISTS. `known-gaps.ts` is the rule that a step may only excuse
+ * itself if someone wrote the excuse down in advance, and `markStep(...,
+ * 'BLOCKED', ...)` enforces it. But the chains opened their steps with a bare
+ *
+ *     if (!order) test.skip();
+ *
+ * which goes around the register completely: no annotation, no ticket, no
+ * retirement condition, and no failure under GAPS_STRICT=1. A step that skips
+ * whenever its input is missing is a step that reports green on a build where
+ * nothing upstream worked. An audit on 2026-09-10 found 122 of 126 chain steps
+ * unfalsifiable, and this pattern was the whole reason.
+ *
+ * `requireStep` puts the same situation back under the register. `ok` false is
+ * a BLOCKED with the failed condition quoted, so it fails unless "<chain>:<n>"
+ * is declared in known-gaps.ts with a reason and a retirement condition.
+ *
+ * A cascade is not a gap. If the precondition is missing because an EARLIER
+ * step of this chain failed, the honest fix is to make that step pass or to
+ * seed this step's input independently — not to declare a gap here. Declared
+ * gaps are for capabilities this build genuinely lacks (an undeployed module, a
+ * flag that is off), which is what known-gaps.ts already says.
+ *
+ * Never returns normally when `ok` is false.
+ */
+export function requireStep(
+  chain: string,
+  n: number,
+  ok: unknown,
+  condition: string,
+  detail?: string,
+): void {
+  if (ok) return;
+  markStep(
+    chain,
+    n,
+    'BLOCKED',
+    `precondition unmet: \`${condition}\``,
+    detail ??
+      'The step cannot run because its input is absent. If an earlier step of this chain ' +
+      'produces that input, this is a cascade — fix the earlier step or seed this input ' +
+      'directly. Only declare it in known-gaps.ts if this build genuinely lacks the feature.',
+  );
 }
 
 // =============================================================================

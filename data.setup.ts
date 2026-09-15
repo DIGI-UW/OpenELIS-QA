@@ -21,9 +21,60 @@
 import { test as setup } from '@playwright/test';
 import { runDataSetup } from './helpers/data-factory';
 
-const BASE = process.env.BASE_URL || 'https://testing.openelis-global.org';
+import { BASE } from './helpers/base-url';
 
 setup('create baseline test data', async ({ page }) => {
+  // THIS SETUP MUST NOT FAIL THE RUN. `modules.config.ts` declares it as a
+  // dependency of the 866-test module sweep, and Playwright SKIPS a project
+  // whose dependency failed — so a broken fixture here would silently take the
+  // entire sweep with it, which is a far worse failure than missing baseline
+  // data. Specs already degrade gracefully through getTestData().
+  //
+  // So: catch everything, and make the state LOUD in the log instead. This is
+  // the one place in the repo where swallowing an error is correct, and it is
+  // only correct because the alternative is skipping every test.
+  // THE CATCH BELOW IS NOT ENOUGH ON ITS OWN, and that is how this bit us.
+  //
+  // A Playwright TEST TIMEOUT is not a thrown exception: it aborts the test from the
+  // outside, so try/catch never runs and the project is marked failed anyway. The
+  // "must not fail the run" guarantee was therefore false in exactly the case it was
+  // written for -- a target that is slow or unreachable -- and Playwright then skipped
+  // the whole module sweep that depends on this project.
+  //
+  // Observed 2026-09-12: "page.fill: Test timeout of 120000ms exceeded", project failed,
+  // 43 spec files skipped.
+  //
+  // So the work gets its OWN deadline, comfortably inside the project timeout. Losing the
+  // race throws a normal error, the catch runs, and the fixture degrades loudly instead of
+  // taking the sweep with it.
+  const DEADLINE_MS = Number(process.env.DATA_SETUP_DEADLINE_MS ?? 90_000);
+  setup.setTimeout(DEADLINE_MS + 60_000);
+
+  try {
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      await Promise.race([
+        createBaselineData(page),
+        new Promise((_, reject) => {
+          timer = setTimeout(
+            () => reject(new Error(`baseline data setup exceeded its ${DEADLINE_MS}ms deadline against ${BASE}`)),
+            DEADLINE_MS);
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  } catch (e) {
+    console.log('\n╔══════════════════════════════════════════════════════════════╗');
+    console.log('║  BASELINE DATA SETUP FAILED — specs will degrade, not fail   ║');
+    console.log('╚══════════════════════════════════════════════════════════════╝');
+    console.log(String(e).split('\n').slice(0, 4).join('\n'));
+    console.log(`Target was ${BASE}.`);
+    console.log('Fix this before trusting any patient- or accession-dependent result.\n');
+  }
+});
+
+async function createBaselineData(page: import('@playwright/test').Page) {
   // Navigate to dashboard to establish session + CSRF token
   await page.goto(`${BASE}`);
   await page.waitForLoadState('networkidle');
@@ -52,4 +103,4 @@ setup('create baseline test data', async ({ page }) => {
   // Non-fatal: if setup fails, tests will gracefully skip their data-dependent
   // assertions rather than failing the entire run. This is enforced via the
   // `getTestData()` helper's fallback behaviour.
-});
+}

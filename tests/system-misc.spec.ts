@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange } from '../helpers/test-helpers';
+import { test, expect, type Page } from '@playwright/test';
+import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, getFutureDate, navigateViaMenu, tryNavigateToURL, selectSampleType, discoverFhirBase } from '../helpers/test-helpers';
 
 /**
  * System & Miscellaneous Tests
@@ -154,10 +154,9 @@ test.describe('LOINC and Dictionary CRUD (TC-LOINC)', () => {
 
   test('TC-LOINC-02: Search for HGB LOINC code (718-7)', async ({ page }) => {
     const url = await goToLoincScreen(page);
-    if (!url) {
-      console.log('TC-LOINC-02: SKIP — LOINC screen not accessible');
-      return;
-    }
+    // A genuine absence: this build does not expose the LOINC screen. Skip is
+    // visible in the report; an early `return` here used to read as a pass.
+    test.skip(!url, 'LOINC screen not accessible on this build');
 
     const searchField = page.locator('input[type="search"], input[type="text"]').first();
     if (await searchField.isVisible({ timeout: 2000 }).catch(() => false)) {
@@ -167,9 +166,7 @@ test.describe('LOINC and Dictionary CRUD (TC-LOINC)', () => {
     }
 
     const has7187 = await page.getByText(/718-7|hemoglobin/i).isVisible({ timeout: 5000 }).catch(() => false);
-    console.log(has7187
-      ? 'TC-LOINC-02: PASS — 718-7 found in LOINC list'
-      : 'TC-LOINC-02: FAIL — 718-7 not returned in LOINC search');
+    expect(has7187, 'LOINC search for 718-7 returned neither the code nor "hemoglobin"').toBeTruthy();
   });
 
   test('TC-LOINC-03: LOINC mapping visible on HGB test record', async ({ page }) => {
@@ -264,16 +261,12 @@ test.describe('LOINC and Dictionary CRUD (TC-LOINC)', () => {
   test('TC-LOINC-06: Edit and deactivate dictionary entry', async ({ page }) => {
     // Use the QA entry from TC-ADMIN-06 if it was created; otherwise find any safe entry
     const res = await page.goto(`${BASE}/MasterListsPage/Dictionary`).catch(() => null);
-    if (!res || page.url().includes('LoginPage')) {
-      console.log('TC-LOINC-06: SKIP — dictionary not accessible');
-      return;
-    }
+    test.skip(!res || page.url().includes('LoginPage'), 'dictionary screen not accessible');
 
     const qaEntry = page.getByText(/QA_AUTO_RejReason/i).first();
-    if (!(await qaEntry.isVisible({ timeout: 3000 }).catch(() => false))) {
-      console.log('TC-LOINC-06: SKIP — QA dictionary entry from TC-ADMIN-06 not found (run that test first)');
-      return;
-    }
+    const haveFixture = await qaEntry.isVisible({ timeout: 3000 }).catch(() => false);
+    // Ordering dependency, not a defect: TC-ADMIN-06 seeds this entry.
+    test.skip(!haveFixture, 'QA_AUTO_RejReason not present — run TC-ADMIN-06 first to seed it');
 
     // Click edit on this entry
     const row = page.locator('tr', { has: page.getByText(/QA_AUTO_RejReason/i) }).first();
@@ -290,6 +283,7 @@ test.describe('LOINC and Dictionary CRUD (TC-LOINC)', () => {
       }
 
       const edited = await page.getByText(/QA_EDITED_ENTRY/i).isVisible({ timeout: 3000 }).catch(() => false);
+      expect(edited, 'dictionary edit did not persist after save (BUG-8 class)').toBeTruthy();
       console.log(edited
         ? 'TC-LOINC-06 edit: PASS'
         : 'TC-LOINC-06 edit: FAIL — edit not persisted (BUG-8 class?)');
@@ -312,17 +306,19 @@ test.describe('Audit Log and System Configuration (TC-SYS)', () => {
   const SYS_CONFIG_URLS = ['/SystemConfiguration', '/MasterListsPage/SystemConfig', '/AdminModule'];
 
   test('TC-SYS-01: Audit log screen accessible', async ({ page }) => {
+    let found = false;
     for (const u of AUDIT_URLS) {
       const res = await page.goto(`${BASE}${u}`).catch(() => null);
       if (res && res.ok() && !page.url().includes('LoginPage')) {
         const text = await page.textContent('body') ?? '';
         if (/log|audit|action|event/i.test(text)) {
           console.log(`TC-SYS-01: PASS — audit log at ${page.url()}`);
-          return;
+          found = true;
+          break;
         }
       }
     }
-    console.log('TC-SYS-01: GAP — audit log screen not found at known URLs');
+    expect(found, `no audit log screen at any of: ${AUDIT_URLS.join(', ')}`).toBeTruthy();
   });
 
   test('TC-SYS-02: Audit log shows recent admin actions', async ({ page }) => {
@@ -334,10 +330,7 @@ test.describe('Audit Log and System Configuration (TC-SYS)', () => {
         break;
       }
     }
-    if (!auditUrl) {
-      console.log('TC-SYS-02: SKIP — audit log not accessible');
-      return;
-    }
+    test.skip(!auditUrl, 'audit log not accessible on this build');
 
     // Apply today's date filter if available
     const today = new Date();
@@ -350,9 +343,7 @@ test.describe('Audit Log and System Configuration (TC-SYS)', () => {
     }
 
     const hasAdminEntry = await page.getByText(/admin/i).isVisible({ timeout: 3000 }).catch(() => false);
-    console.log(hasAdminEntry
-      ? 'TC-SYS-02: PASS — admin entries found in audit log'
-      : 'TC-SYS-02: FAIL — no admin entries in audit log (may be filtered or log is empty)');
+    expect(hasAdminEntry, 'audit log showed no admin entries — either the log is empty or the date filter excluded everything').toBeTruthy();
   });
 
   test('TC-SYS-03: System configuration screen accessible', async ({ page }) => {
@@ -418,73 +409,64 @@ test.describe('FHIR Integration (TC-EO)', () => {
     await login(page, ADMIN.user, ADMIN.pass);
   });
 
-  const FHIR_BASES = [`${BASE}/fhir`, `${BASE}/api/fhir`];
+  /**
+   * These four used to `page.goto()` a hard-coded `${BASE}/fhir` and `${BASE}/api/fhir`
+   * and accept the answer when `res.ok()` was true. Both paths are unknown to the
+   * server, which serves the React SPA shell for them with HTTP 200 + text/html, so
+   * every probe "succeeded" against an HTML page and every one of these tests then
+   * reported GAP — or failed reading a FHIR body that was never there. Discovery is
+   * shared now and demands a JSON CapabilityStatement; see discoverFhirBase.
+   *
+   * They also fetch rather than navigate: driving the browser to a JSON endpoint
+   * throws away the session cookie behaviour these assertions depend on and leaves
+   * the page parked on a JSON document.
+   */
+  async function fhirText(page: any, path: string): Promise<{ status: number; text: string } | null> {
+    await page.goto(`${BASE}`);
+    const base = await discoverFhirBase(page);
+    if (!base) return null;
+    return page.evaluate(async (url: string) => {
+      const res = await fetch(url, { headers: { Accept: 'application/fhir+json' } });
+      return { status: res.status, text: (await res.text()).slice(0, 20000) };
+    }, `${base}${path}`);
+  }
 
   test('TC-EO-01: FHIR metadata endpoint responds', async ({ page }) => {
-    let found = false;
-    for (const fb of FHIR_BASES) {
-      const res = await page.goto(`${fb}/metadata`).catch(() => null);
-      if (res && res.ok()) {
-        const text = await page.textContent('body') ?? '';
-        if (/CapabilityStatement|fhirVersion/i.test(text)) {
-          found = true;
-          console.log(`TC-EO-01: PASS — FHIR metadata at ${fb}/metadata`);
-          break;
-        }
-      }
-    }
-    if (!found) {
-      console.log('TC-EO-01: GAP — FHIR metadata endpoint not accessible');
-    }
+    const res = await fhirText(page, '/metadata');
+    const reachable = !!res && /CapabilityStatement|fhirVersion/i.test(res.text);
+    console.log(reachable
+      ? 'TC-EO-01: PASS — FHIR metadata reachable'
+      : 'TC-EO-01: GAP — FHIR metadata endpoint not accessible');
   });
 
   test('TC-EO-02: FHIR Patient lookup by national ID', async ({ page }) => {
-    for (const fb of FHIR_BASES) {
-      const res = await page.goto(`${fb}/Patient?identifier=0123456`).catch(() => null);
-      if (res && res.ok()) {
-        const text = await page.textContent('body') ?? '';
-        if (/Sebby|Abby/i.test(text)) {
-          console.log(`TC-EO-02: PASS — FHIR Patient found at ${fb}`);
-          return;
-        }
-      }
+    const res = await fhirText(page, '/Patient?identifier=0123456');
+    if (res && /Sebby|Abby/i.test(res.text)) {
+      console.log('TC-EO-02: PASS — FHIR Patient found');
+      return;
     }
     console.log('TC-EO-02: GAP — FHIR Patient lookup not available or patient not found');
   });
 
   test('TC-EO-03: FHIR ServiceRequest for lab order', async ({ page }) => {
-    for (const fb of FHIR_BASES) {
-      const res = await page.goto(`${fb}/ServiceRequest?subject:Patient.identifier=0123456`).catch(() => null);
-      if (res && res.ok()) {
-        const text = await page.textContent('body') ?? '';
-        if (/ServiceRequest|entry/i.test(text)) {
-          console.log(`TC-EO-03: PASS — FHIR ServiceRequest found at ${fb}`);
-          return;
-        }
-      }
-      // Fallback: DiagnosticReport
-      const drRes = await page.goto(`${fb}/DiagnosticReport?subject:Patient.identifier=0123456`).catch(() => null);
-      if (drRes && drRes.ok()) {
-        const drText = await page.textContent('body') ?? '';
-        if (/DiagnosticReport|entry/i.test(drText)) {
-          console.log(`TC-EO-03: PASS — FHIR DiagnosticReport found (no ServiceRequest) at ${fb}`);
-          return;
-        }
-      }
+    const sr = await fhirText(page, '/ServiceRequest?subject:Patient.identifier=0123456');
+    if (sr && /ServiceRequest|entry/i.test(sr.text)) {
+      console.log('TC-EO-03: PASS — FHIR ServiceRequest found');
+      return;
+    }
+    const dr = await fhirText(page, '/DiagnosticReport?subject:Patient.identifier=0123456');
+    if (dr && /DiagnosticReport|entry/i.test(dr.text)) {
+      console.log('TC-EO-03: PASS — FHIR DiagnosticReport found (no ServiceRequest)');
+      return;
     }
     console.log('TC-EO-03: GAP — no FHIR ServiceRequest or DiagnosticReport found');
   });
 
   test('TC-EO-04: FHIR DiagnosticReport includes result values', async ({ page }) => {
-    for (const fb of FHIR_BASES) {
-      const res = await page.goto(`${fb}/DiagnosticReport?subject:Patient.identifier=0123456`).catch(() => null);
-      if (res && res.ok()) {
-        const text = await page.textContent('body') ?? '';
-        if (/result|Observation|valueQuantity/i.test(text)) {
-          console.log(`TC-EO-04: PASS — DiagnosticReport with result references at ${fb}`);
-          return;
-        }
-      }
+    const res = await fhirText(page, '/DiagnosticReport?subject:Patient.identifier=0123456');
+    if (res && /result|Observation|valueQuantity/i.test(res.text)) {
+      console.log('TC-EO-04: PASS — DiagnosticReport with result references');
+      return;
     }
     console.log('TC-EO-04: GAP — FHIR DiagnosticReport with results not accessible');
   });
@@ -623,45 +605,93 @@ test.describe('Session Management (TC-SESS)', () => {
     await page.goBack();
     await page.waitForTimeout(1500);
     const backOnLogin = page.url().includes('Login') || !page.url().includes('Accession');
-    console.log(backOnLogin
-      ? 'TC-SESS-02 back button: PASS — session fully cleared'
-      : 'TC-SESS-02 back button: FAIL — protected page accessible via back button');
+    // Security assertion — a protected page reachable via Back after logout is
+    // a real finding, not a note.
+    expect(backOnLogin, `protected page still reachable via the back button after logout (${page.url()})`).toBeTruthy();
   });
 
-  test('TC-SESS-03: Stale URL redirects to login', async ({ page }) => {
-    // Don't login — go directly to a protected URL
-    const res = await page.goto(`${BASE}/AccessionResults`);
-    await page.waitForTimeout(2000);
+  test('TC-SESS-03: Stale URL redirects to login', async ({ browser }) => {
+    /**
+     * "Don't login" cannot be honoured by the `page` fixture: modules.config.ts
+     * gives every test `storageState: '.auth/user.json'`, so the browser context
+     * arrives already authenticated and the protected URL correctly loads. The
+     * test was asserting the opposite of what its own harness had arranged, and
+     * failing on the fixture rather than on the product.
+     *
+     * An ANONYMOUS context is what this case is about, so it makes one. Verified
+     * 2026-09-14: /AccessionResults in a clean context lands on /login with a
+     * password field, i.e. the security property holds.
+     */
+    const ctx = await browser.newContext({ storageState: undefined, ignoreHTTPSErrors: true });
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BASE}/AccessionResults`);
+      await page.waitForTimeout(2000);
 
-    const redirectedToLogin = page.url().includes('Login');
-    console.log(redirectedToLogin
-      ? 'TC-SESS-03: PASS — protected URL redirects to login without session'
-      : `TC-SESS-03: FAIL — protected page accessible without login (${page.url()})`);
-    expect(redirectedToLogin).toBe(true);
+      // The route is lowercase `/login` on 3.2.2.x; the old `includes('Login')`
+      // would have missed the redirect even from an anonymous context.
+      const redirectedToLogin = /\/login/i.test(page.url());
+      console.log(redirectedToLogin
+        ? 'TC-SESS-03: PASS — protected URL redirects to login without session'
+        : `TC-SESS-03: FAIL — protected page accessible without login (${page.url()})`);
+      expect(redirectedToLogin, `unauthenticated /AccessionResults must redirect to login (landed on ${page.url()})`).toBe(true);
+    } finally {
+      await ctx.close();
+    }
   });
 
-  test('TC-SESS-04: Login error messages are consistent', async ({ page }) => {
+  test('TC-SESS-04: Login error messages are consistent', async ({ browser }) => {
+    /**
+     * Needs the login FORM, and an authenticated context never sees it —
+     * /LoginPage redirects straight to Home, so every fill() below waited for an
+     * input that was not there. Same root cause as TC-SESS-03: the config injects
+     * storageState for every spec. Own anonymous context.
+     */
+    const ctx = await browser.newContext({ storageState: undefined, ignoreHTTPSErrors: true });
+    const page = await ctx.newPage();
+    try {
     await page.goto(`${BASE}/LoginPage`);
     await page.waitForTimeout(1000);
 
+    // The password input is `name="password"`, not `userPass`, and the submit
+    // control carries no accessible name (both read off the live login form
+    // 2026-09-14) — so the original fill/click waited out the whole test timeout
+    // on a form that was right there.
+    const PASS_SEL = 'input[name="password"], #password, input[type="password"]';
+    const submit = async () => {
+      const byRole = page.getByRole('button', { name: /submit|login|sign in|save|next|accept/i }).first();
+      if (await byRole.isVisible({ timeout: 1_000 }).catch(() => false)) return byRole.click();
+      return page.locator('#submitButton, button[type="submit"], input[type="submit"]').first().click();
+    };
+
     // Bad username
     await page.fill('input[name="loginName"]', 'fakeuserXYZ');
-    await page.fill('input[name="userPass"]', 'wrongpassword');
-    await page.getByRole('button', { name: /submit|login|save|next|accept/i }).click();
+    await page.fill(PASS_SEL, 'wrongpassword');
+    await submit();
     await page.waitForTimeout(1500);
-    const errMsg1 = await page.locator('[class*="error"], [class*="alert"], [role="alert"]').textContent().catch(() => '');
+    // textContent() with no timeout waits FOREVER when nothing matches, and on a
+    // rejected login this instance renders no error element at all — so the test
+    // hung here for its whole budget once the form selectors were fixed. Bounded,
+    // and an absent message reads as the empty string it is.
+    const ERROR_SEL = '[class*="error"], [class*="alert"], [role="alert"]';
+    const errMsg1 = await page.locator(ERROR_SEL).first().textContent({ timeout: 3000 }).catch(() => '');
 
     // Bad password for real user
+    await page.goto(`${BASE}/LoginPage`);
+    await page.waitForTimeout(1000);
     await page.fill('input[name="loginName"]', 'admin');
-    await page.fill('input[name="userPass"]', 'totallyWrongPassword');
-    await page.getByRole('button', { name: /submit|login|save|next|accept/i }).click();
+    await page.fill(PASS_SEL, 'totallyWrongPassword');
+    await submit();
     await page.waitForTimeout(1500);
-    const errMsg2 = await page.locator('[class*="error"], [class*="alert"], [role="alert"]').textContent().catch(() => '');
+    const errMsg2 = await page.locator(ERROR_SEL).first().textContent({ timeout: 3000 }).catch(() => '');
 
     const consistent = errMsg1 === errMsg2;
     console.log(consistent
       ? `TC-SESS-04: PASS — consistent error messages ("${errMsg1!.trim().slice(0, 50)}")`
       : `TC-SESS-04: FAIL — different errors: "${errMsg1!.trim().slice(0, 40)}" vs "${errMsg2!.trim().slice(0, 40)}" (credential enumeration risk)`);
+    } finally {
+      await ctx.close();
+    }
   });
 
   test('TC-SESS-05: Concurrent sessions both work', async ({ browser }) => {
@@ -1051,16 +1081,29 @@ test.describe('Suite AL — Storage Management', () => {
   test('TC-STOR-04: Cold storage shows temperature data', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
 
-    try {
-      await navigateViaMenu(page, ['Storage', 'Cold Storage Monitoring']);
-    } catch (e) {
+    // The `try { navigateViaMenu } catch { byUrl }` shape these storage cases use
+    // never reaches the fallback: navigateViaMenu clicks whatever it finds and
+    // returns quietly when it finds nothing, so on an authenticated context —
+    // where login() is a no-op and the page is still about:blank — this test
+    // asserted about temperature readings on a blank page. Try the menu, then
+    // check whether a screen actually rendered, and navigate by URL if not.
+    await navigateViaMenu(page, ['Storage', 'Cold Storage Monitoring']).catch(() => {});
+    const onAScreen = await page
+      .locator('table, [role="table"], [class*="list"]')
+      .first()
+      .isVisible({ timeout: 2_000 })
+      .catch(() => false);
+    if (!onAScreen) {
       await tryNavigateToURL(page, ['/ColdStorageMonitoring', '/FreezerMonitoring', '/storage/monitoring']);
     }
 
     await page.waitForTimeout(1000);
 
     // Look for temperature readings
-    const tempText = await page.locator('text/-?\\d+°?C/').count();
+    // `page.locator('text/.../')` is not Playwright selector syntax — it threw
+    // "Unknown engine \"text/-?\\d+°?C/\"" and took the test down before the screen
+    // was looked at. getByText() is the regex-capable API.
+    const tempText = await page.getByText(/-?\d+°?C/).count();
     const table = await page.locator('table, [role="table"], [class*="list"]').first().isVisible({ timeout: 3000 }).catch(() => false);
 
     expect(table || tempText > 0).toBeTruthy();

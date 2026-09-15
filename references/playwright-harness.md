@@ -6,7 +6,8 @@
 > single-file `openelis-e2e.spec.ts` all live at the repo root. This skill (SKILL.md +
 > references/) is the methodology layer over that harness. Canonical spec layout is **one spec
 > per chain/persona** (`tests/chains/chain-a-*.spec.ts`, run via `--project=chain-a`); the
-> single `openelis-e2e.spec.ts` is legacy.
+> single `openelis-e2e.spec.ts` is legacy and was quarantined to `archive/` in #94 (no config
+> ran it). Module suites live in `tests/` and are swept by `modules.config.ts`.
 
 ---
 
@@ -79,7 +80,98 @@ tab hang. This affects ALL checkboxes across the React SPA, not just Referral dr
 **Workarounds:**
 - **Results page:** DOM workaround works — `cb.checked = true; cb.dispatchEvent(new Event('change', {bubbles:true}))` sets the DOM state and persists on Save.
 - **Validation page:** DOM workaround sets `checked` but React state does NOT update — server POST omits the value. Mark checkbox interaction tests as BLOCKED.
-- **General rule:** Never use `.click()` on Carbon checkboxes. Use DOM manipulation where possible, mark as BLOCKED where DOM workaround doesn't propagate to React state.
+- **General rule (SUPERSEDED BY 6.2a):** the hang is an actionability wait against a 1x1 hidden input, not a Carbon defect. Click `label.cds--checkbox-label` instead and the interaction works — see 6.2a before marking anything BLOCKED.
+
+### 6.2a — Carbon checkbox: click the LABEL, not the input (RESOLVES 6.2)
+
+6.2 says never `.click()` a Carbon checkbox because of a 60-second hang. That is the right
+observation with the wrong conclusion, and the cause is measurable:
+
+```js
+document.querySelector('.cds--structured-list-thead input[type=checkbox]')
+  .getBoundingClientRect()          // { width: 1, height: 1 }  <- position:absolute, hidden
+document.querySelector('.cds--structured-list-thead label.cds--checkbox-label')
+  .getBoundingClientRect()          // { width: 20, height: 20 } <- the real hit target
+```
+
+Carbon hides the real `<input>` at 1x1 px and draws the box with the `<label>`. Playwright's
+`.check()` and `.click()` run an actionability wait against that 1x1 input, never satisfy it,
+and block until the test timeout — the "60-second hang" and a 180s Playwright timeout are the
+same phenomenon seen through different clocks.
+
+**Click the label.** It is what a human clicks, it is trusted, and it toggles React state
+immediately:
+
+```ts
+// WRONG — waits on a 1x1 hidden input until the test times out
+await page.locator('.cds--structured-list-thead input[type="checkbox"]').first().check();
+
+// RIGHT
+await page.locator('.cds--structured-list-thead label.cds--checkbox-label').first().click();
+```
+
+This supersedes the "mark as BLOCKED" advice for checkbox interaction wherever a label is
+rendered. Verified 2026-09-02 driving Lab Unit Management select-all over 37 rows.
+
+### 6.2b — Assigned Tests and Display Order are StructuredLists, not `<table>`
+
+Not every Carbon list is a table. Lab Unit Management's **Assigned Tests** and **Display
+Order** screens render `cds--structured-list`, and `document.querySelector('table')` on them
+returns `null`. A `table thead input[type=checkbox]` locator matches nothing and fails with a
+bare "element(s) not found" that reads like a product bug.
+
+| Container | Select-all | Rows |
+| --- | --- | --- |
+| `<table>` (lab unit LIST page) | `table thead input[type=checkbox]` | `table tbody tr` |
+| StructuredList (Assigned Tests, Display Order) | `.cds--structured-list-thead ...` | `.cds--structured-list-tbody .cds--structured-list-row` |
+
+Check which one you are on before writing the locator — `!!document.querySelector('table')`
+answers it in one probe. Where the assertion is about a value rather than a row, prefer
+`getByText(...)` so the container stops mattering at all.
+
+### 6.2c — Danger buttons carry a hidden "danger" in their accessible name
+
+Carbon prefixes `kind="danger"` buttons with visually-hidden text. The Reassign dialog's
+commit button reads "Reassign 37 tests" on screen but its accessible name is:
+
+```
+danger Reassign 37 tests
+```
+
+So `getByRole('button', { name: /^Reassign \d+ tests?$/ })` never matches. **Do not anchor
+`getByRole` name patterns with `^`** on any danger-kind button; anchor the end if you need
+precision (`/Reassign \d+ tests?$/`). Confirmed on the Reassign Tests dialog 2026-09-02.
+
+### 6.2d — Dialog selects populate after an async fetch
+
+The Reassign dialog mounts with only its `Select destination...` placeholder and fills the lab
+units in after a request returns. Reading options on the tick the modal opens gives a list of
+one, which then fails an "options are offered" assertion in a way that looks like a product
+defect. Poll before reading:
+
+```ts
+await expect
+  .poll(async () => page.locator('select').last().locator('option').count(), { timeout: 15000 })
+  .toBeGreaterThan(1);
+```
+
+`selectOption()` auto-waits for the option and does not need this; only direct reads of the
+option list do.
+
+### 6.2e — DatePicker duplicates its id onto the wrapper `<div>`
+
+Carbon's DatePicker puts the SAME id on the wrapper and the field:
+
+```
+DIV.cds--form-item          id=order_receivedDate
+INPUT.cds--date-picker__input  id=order_receivedDate
+```
+
+`locator('#order_receivedDate')` is therefore a strict-mode violation ("resolved to 2
+elements"), and `.first()` picks the DIV — `inputValue()` then fails with "Node is not an
+`<input>`". Scope the selector to the element type: `locator('input#order_receivedDate')`.
+Note `document.querySelector('#id')` returns the DIV too, so a value read by hand in the
+console can disagree with what the page shows unless you scope it the same way.
 
 ### 6.3 — React SPA Routing (Sidebar Navigation)
 
@@ -96,6 +188,33 @@ await page.click('text=Add/Edit Patient');
 ```
 
 Admin pages at `/MasterListsPage/*` routes generally work with direct URL navigation.
+
+### 6.6 — Navigate before any helper reads `localStorage`
+
+Helpers that read the CSRF token (`page.evaluate(() => localStorage.getItem('CSRF'))`) throw
+if the page has never navigated:
+
+```
+SecurityError: Failed to read the 'localStorage' property from 'Window':
+Access is denied for this document.
+```
+
+A `baseURL` in the config does NOT navigate anything — the page starts on `about:blank`, which
+has no accessible storage and no origin for a relative `fetch()`. A spec whose first statement
+calls an API helper fails before it touches the product, and the failure text names the
+assertion rather than the cause: an entire suite reporting `Received: null` from a fixture
+lookup is this, not missing data.
+
+Every spec that uses an API helper needs a `beforeEach` that lands on a real origin first:
+
+```ts
+test.beforeEach(async ({ page }) => {
+  await page.goto(`${BASE}${SOME_ROUTE}`);
+  await page.waitForFunction(() => !!localStorage.getItem('CSRF'), null, { timeout: 15000 });
+});
+```
+
+This accounted for 15 of the 20 failures on the first run of the 2026-09-02 suites.
 
 ### 6.4 — Dual Authentication Systems
 
@@ -184,7 +303,10 @@ console.log(summarize(session));
 
 ## Section 10 — Playwright Rules
 
-When generating or updating Playwright test specs (`openelis-e2e.spec.ts`), follow these rules:
+When generating or updating Playwright test specs, follow these rules. (This line used to name
+`openelis-e2e.spec.ts` as the place specs go; that file was quarantined to `archive/` in #94
+because no config ran it. New module suites go in `tests/`, where `modules.config.ts` picks them
+up automatically — see 12.9. **Read Section 12 before writing a spec.**)
 
 ### 10.1 — Navigation
 - Use sidebar menu clicks for React SPA pages, NOT direct `page.goto()` URLs
@@ -192,7 +314,11 @@ When generating or updating Playwright test specs (`openelis-e2e.spec.ts`), foll
 - Always `await page.waitForSelector()` after navigation to confirm page loaded
 
 ### 10.2 — Carbon Component Interaction
-- **NEVER** use `.click()` on Carbon checkboxes (causes 60s hang)
+- Carbon checkboxes: click `label.cds--checkbox-label`, never the 1x1 hidden input (the "60s hang" is an actionability wait — see 6.2a)
+- Check whether a list is a `<table>` or a `cds--structured-list` before writing row locators (6.2b)
+- Never anchor a `getByRole` name with `^` on a danger button — the accessible name starts with a hidden "danger" (6.2c)
+- Scope duplicated ids to the element type: `input#order_receivedDate` (6.2e)
+- Navigate before any helper reads `localStorage` (6.6)
 - Use native setter pattern for React-controlled inputs (see Section 6.1)
 - For visible UI updates (e.g., char counters), prefer `computer.type()` over native setter
 - Use `page.evaluate()` for DOM manipulation when Playwright actions don't trigger React
@@ -337,6 +463,668 @@ via `loginName`/`password` with the native-setter pattern, navigate back, and re
 continuing — in-page widget state may survive but any React form state will not.
 ---
 
+## Section 12 — Oracle design: what makes a test able to fail (OGC-1192 post-mortem)
+
+Added 2026-09-03 after OGC-1192 — "environmental orders are invisible to every dashboard once
+saved" — reached production despite the repo carrying a dedicated environmental chain. The bug
+was not missed for lack of coverage. It was missed because the coverage **could not fail**.
+Read this section before writing any new chain step.
+
+### 12.1 — `markStep` is no longer a logger (BEHAVIOUR CHANGE)
+
+Until 2026-09-03 the entire body of `markStep()` was a `console.log`. `FAIL`, `GAP` and
+`BLOCKED` were decorative. That meant this extremely common shape was a **green test**:
+
+```ts
+if (!post.ok) {
+  markStep('N', 4, 'GAP', `create returned HTTP ${post.status}`);
+  return;                       // <- test ends here, reported as PASSED
+}
+```
+
+Chain N Step 4 sat in exactly that shape for months. Its create POST returned 400 on every
+run because the hand-written payload omitted the requester, so the chain's only write path
+never executed once — and the chain reported healthy the whole time.
+
+`markStep` now has consequences:
+
+| status | effect |
+| --- | --- |
+| `FAIL` | fails the test immediately, description becomes the assertion message |
+| `GAP` / `BLOCKED` | **declared** in `known-gaps.ts` -> skips, with reason + ticket attached. **Undeclared** -> skips today, and FAILS under `GAPS_STRICT=1` (set by the nightly job). See 12.6. |
+| `PASS` / `PARTIAL` | logged only, as before |
+
+Callers no longer need a follow-up `expect()` after `markStep(..., 'FAIL', ...)`, and any
+`return` after a GAP/BLOCKED is now unreachable (harmless — leave or delete).
+
+FAIL always fails. GAP/BLOCKED routing is governed by the declared-gap register — see 12.6.
+
+**The rule this encodes:** `GAP` means *this build genuinely does not have the feature under
+test*. It does not mean *the call failed and I would rather not deal with it*. A 4xx from an
+endpoint that exists is a FAIL. If you find yourself reaching for GAP to get past a failing
+assertion, you are writing the next OGC-1192.
+
+### 12.2 — "The page rendered" is not an oracle
+
+`app-route-census` visits `/order/environmental` and asserts: didn't bounce to login, painted
+some chrome, no error-text markers, no uncaught page errors, no 5xx. An environmental
+dashboard reading **"No orders found — 0–0 of 0 items"** passes all five, because it paints a
+heading and a table.
+
+Route censuses are cheap smoke tests and worth keeping, but they answer *did this route
+render*, never *did it render the right thing*. Do not count a census as coverage of a
+screen's data. Before OGC-1192, `grep -rn "order/dashboard"` returned **zero** hits across the
+whole repo — no test in any domain had ever asserted what a dashboard contains.
+
+### 12.3 — Every write path needs a round-trip, and the round-trip needs a landing check
+
+A create that is never read back is not tested. Chain N now: generates an accession →
+POSTs the verified payload → reads the sample back → asserts it appears on the dashboard
+(Step 6). Three separate failure surfaces, each with its own message.
+
+When writing a create step, ask what would happen if the POST silently did nothing. If the
+answer is "the test still passes", the step is decorative.
+
+### 12.4 — Capture payloads, do not compose them
+
+Chain N's old payload carried its own confession: *"the full payload wasn't captured
+byte-for-byte (output filter), so a body-shape rejection is recorded as GAP."* A guessed
+payload plus a self-excusing error branch is indistinguishable from no test at all.
+
+The working method (see the header of `tests/chains/env-order-payload.ts`):
+
+1. Drive the real UI to a successful save with `window.fetch` patched to record the outgoing
+   request body verbatim.
+2. Replay the captured body with a fresh identifier. If it does not 200, it was tied to
+   one-shot form state — fix that before proceeding.
+3. Bisect: delete key groups, re-post each variant, and record what the server actually
+   requires. This both shrinks the fixture and documents the contract.
+
+For the environmental order this took 6574 bytes down to 3177 and surfaced two facts no amount
+of reading the frontend would have given: `rememberSiteAndRequester` is **required** (omitting
+that one boolean yields a 500, not a 400), and the ~45 empty-string/empty-array keys in
+`sampleOrderItems` are load-bearing for the binder.
+
+### 12.5 — Controls are what make a bug assertion mean anything
+
+`SampleEdit` returning 500 for a patientless sample only means something next to the two
+controls: a nonexistent accession returns `200 + noSampleFound: true`, and a sample with a
+patient returns `200 + payload`. Those controls are permanent truths in the OGC-1192 suite,
+not flip-when-fixed cases — and the suite says so, because if a control breaks, the bug
+assertion beside it proves nothing.
+
+Pair every "this is broken" assertion with the measurement that isolates the variable.
+
+---
+
+### 12.6 — Declared gaps: fail-by-default with an auditable escape
+
+`tests/chains/known-gaps.ts` is the register. A step may only excuse itself if
+the excuse was written down in advance, with a reason, a ticket where one
+exists, and a `retireWhen` condition saying what would let the entry be deleted.
+
+```
+markStep(chain, n, 'GAP', …)
+        |
+        |-- key "<chain>:<n>" in DECLARED_GAPS  -> skip, reason + ticket shown
+        `-- not declared                        -> FAIL (under GAPS_STRICT=1)
+```
+
+**Why a register and not a runtime decision.** The whole OGC-1192 failure was a
+step deciding, inside a catch block, that a 400 it did not like was a "gap". A
+gap you have to type into a file is one a reviewer can argue with. A gap decided
+at runtime is one nobody ever sees.
+
+**What belongs in it:** this build genuinely lacks the feature — an older
+instance without the environmental domain, a module not deployed, a feature
+behind an off flag.
+
+**What does not:** a 4xx or 5xx from an endpoint that exists; a selector that
+stopped matching; a payload the server rejected; data that was not seeded. Those
+are failures. Declaring them to get a green run is the old escape hatch wearing
+a new hat.
+
+**Why strict mode is opt-in for now.** You cannot honestly declare gaps you have
+never watched fire, and this repo had no unattended runs at all before
+2026-09-03 — so there is no evidence base to populate the register from. The
+nightly job sets `GAPS_STRICT=1` and is non-blocking, which makes it the safe
+place to learn the true list. Read a couple of weeks of its "Undeclared gap"
+failures, declare the legitimate ones, then flip the default on and make the PR
+gate strict too. Populating the register by guesswork first would recreate the
+original problem: excuses written by someone who never saw the step run.
+
+### 12.10 — `describe.serial` turns one FAIL into a silent chain amputation
+
+Found 2026-09-05 while fixing the very steps added to catch OGC-1192.
+
+Every chain is a `test.describe.serial`. In serial mode a failing test causes Playwright to
+**skip every later test in the group**. That is usually what you want — step 4 is meaningless if
+step 2 never seeded anything. It is a trap when an early step asserts something that later steps
+do not actually depend on.
+
+Chain N had exactly that. Step 1 required four populated environmental dictionaries and failed
+otherwise. On `testing` v3.2.2.0, `sampling-sites` and `sample-types` are populated but
+`collection-methods`, `env-weather` and `sample-containers` are empty (OGC-1192 §4) — so Step 1
+failed, and Steps 4 and 6, *the regression watches written for OGC-1192*, never ran once. The
+chain reported a legitimate finding and amputated its own reason for existing. Step 3 had the
+same shape: its GAP branch becomes a FAIL under `GAPS_STRICT=1`, with the same effect.
+
+**The rule:** in a serial chain, an early step may only FAIL on a precondition later steps
+genuinely need. Anything else is recorded and asserted at the END of the chain.
+
+Chain N now does this:
+
+- Step 1 fails only if `sampling-sites` **or** `sample-types` is empty — order entry is then
+  impossible and nothing downstream can run.
+- Step 3 fails only if there are no sample types at all.
+- Both record their shortfall in module state and report `PARTIAL`.
+- **Step 7**, last, asserts full dictionary and manifest population. The finding still fails the
+  chain; it just no longer takes Steps 4-6 with it.
+
+When you add a step to a serial chain, ask: *if this fails, which later steps become
+meaningless?* If the answer is "none", it belongs at the end.
+
+#### The 2026-09-05 audit across all 26 chains
+
+Measured from nightly run `33901256497` (GAPS_STRICT=1, ORDER_PATH set): **21 chains failed and
+65 later steps never ran.** Per-chain, steps lost to an early failure:
+
+| Lost | Chains |
+|---|---|
+| 6 | A, N |
+| 5 | B, D, F |
+| 4 | C, E, G, J, M |
+| 3 | L, S, Z |
+| 2 | AB, K, O, T, U |
+| 0 | H, I, P, Q, R, W, X, Y |
+
+**Amputation is not always wrong.** Three distinct cases came out of the audit, and only the
+first is a defect:
+
+1. **The early step is a leaf finding — nothing downstream reads it.**
+
+   **Chain A**: fixed by dropping `.serial`. Step 2's BUG-37 linkage check was taking Steps 3-8
+   — the whole result → validate → report → FHIR spine — with it, and nothing downstream reads
+   anything Step 2 sets. Every step from 2 on already guards its own precondition
+   (`if (!order) test.skip()`, plus Step 6 on `order.pdf` and Step 8 on `order.fhir`), and the
+   config runs `workers: 1` / `fullyParallel: false`, so declaration order is still execution
+   order. The only change is that one failing step no longer cancels the rest.
+
+   **Dropping `.serial` is the preferred fix when every later step guards itself.** The first
+   attempt here split Step 2 into a measurement step plus a verdict step at the end — and the
+   assertion gate caught it, correctly: the measurement step no longer asserted anything, which
+   is precisely the shape `lint:assert` exists to reject. Splitting is the fallback for when a
+   step's finding really must be asserted after later work has run (**Chain N** Step 7, above);
+   reach for de-serialising first.
+
+2. **The chain is genuinely linear.** **Chain C** needs `rule` and `triggerValue` from Step 2 for
+   everything after it; **Chain D** is linear on `testAccession` from Step 2. Nothing to reorder —
+   a Step 2 failure legitimately ends both. Left alone deliberately.
+
+3. **Step 1 is a real hard precondition that the whole chain rests on.** **F** (`eqaEnabled` is
+   false), **G** (Cold Storage endpoint 404), **J** (`AuditTrail` 404), **L** (empty test
+   catalog), **M** (worklist contract changed). These chains are correctly reporting that their
+   subject is unavailable. Left alone.
+
+**Chain Z** was a fourth, smaller case: Step 5 (sub-resource wiring) is independent of the
+destructive create/update/archive and carries its own `createdId ?? seedId ?? 1` fallback, but sat
+last and was lost every time the create failed. Its `test()` declaration now runs after Step 1
+while keeping its step *number*, so report keys stay stable.
+
+**One latent defect fell out of the audit.** Chain C Step 4 guarded `if (!order)` but compared
+against `triggerValue`, which Step 2 sets. A null `triggerValue` reached the comparison and
+reported *"Entered result not found in read-back"* — blaming the write instead of the missing
+rule. Now guarded on both.
+
+**Guard style is inconsistent and worth a follow-up.** Chains A-E use `if (!order) test.skip()`,
+which protects against null state but produces a silent skip. Chain Z uses
+`markStep(..., 'GAP', 'Skipped — …'); return;`, which keeps the step visible in the report with
+its reason. Z's pattern is the better one; adopting it chain-wide would make "did not run"
+legible instead of absent.
+
+### 12.11 — Read the failure *causes* before triaging a first sweep
+
+The first module sweep (2026-09-05, 6 shards, `PW_RETRIES=0`) came back **493 passed,
+364 failed, 14 skipped** across 866 tests — a 42% failure rate. Longest shard 69 min against
+a 300-min cap, so 6 shards is the right count.
+
+But 42% badly overstates the product signal, and the shape of the failures says so:
+
+| Error | Count |
+|---|---|
+| `locator.click: Test timeout` | 42 |
+| **`Login failed: still on login page`** | **38** |
+| `page.fill: Test timeout` | 36 |
+| `expect(received).toBe(expected)` | 33 |
+| `expect(locator).toBeVisible() failed` | 18 |
+
+Roughly **140 of the 364 were self-inflicted**. All 46 adopted suites call `login()` themselves
+— `tests/system-misc.spec.ts` alone has 18 `beforeEach` login blocks — even though
+`modules.config.ts` already hands every test an authenticated `storageState`. Six parallel
+shards doing several hundred redundant full UI logins against one instance trips over itself,
+and the timeouts cascade from there.
+
+Fixed by giving `login()` a cookie-only fast path (`hasSession()` in
+`helpers/test-helpers.ts`, mirrored in the four `gap-suites-*` files, which each define their
+own local `login`). It deliberately does not navigate — a navigation per test is most of the
+cost being removed — and a stale cookie passing the check is fine, because the mid-run re-auth
+guard in `tests/helpers/api-json.ts` is what handles a session lapsing partway through.
+
+**The lesson generalises.** Before triaging a first run of anything, group the failures by cause
+and ask which are the harness failing rather than the product. A count of red tests is not a
+count of bugs. Here the single most common "failure" was the suite logging in too often.
+
+**And a second one, found the same way.** All four `gap-suites-*` files hardcoded
+`const BASE = 'https://www.jdhealthsolutions-openelis.com'` — a different instance from the one
+every config and the nightly target use, not overridable by env. 131 tests had been pointed at
+the wrong server. Nothing surfaced it because those files were unreachable by any config until
+#96; being orphaned hid a second defect underneath the first. They now read `BASE`/`BASE_URL`
+with the same default as the rest of the repo.
+
+#### The fix regressed, and the second run caught it
+
+Worth reading as a worked example of measuring instead of assuming.
+
+The first version of the fast path returned immediately when a session cookie was present — no
+navigation. The next sweep traded the login failures for a different error, one-for-one:
+
+| | run 1 | run 2 |
+|---|---|---|
+| `Login failed: still on login page` | **76** | **0** |
+| `SecurityError: Failed to read the 'localStorage' property` | **0** | **61** |
+
+The login noise really was gone. But the unconditional `page.goto()` that the old `login()` did
+was *also* the thing getting the page off `about:blank`, and every helper that reads the CSRF
+token out of `localStorage` depends on that — **§6.6, in this same document**. Skipping the form
+is the win; skipping the navigation is a regression, and net failures went UP.
+
+The fast path now still navigates (to `BASE`, only when the page is not already on it) and only
+the credential submission is skipped. The general point: when you remove a step, ask what else
+that step was incidentally providing. A `goto` in a login helper is doing two jobs.
+
+**Artifacts:** the same run produced >520 MB, because `test-results/` carries Playwright traces.
+That also made `gh run download` slow enough to time out repeatedly. The modules job now uploads
+`nightly-out/` only; re-run a single spec locally when you need a trace.
+
+### 12.12 — Sweep tuning, and two fixture bugs the third sweep exposed
+
+Third module sweep (2026-09-05, 6 shards, retries 0, login fast path fixed):
+**544 passed / 308 failed / 19 skipped**, against run 1's 493 / 364 / 14 — and
+**zero** of both harness error classes (`Login failed` 76 -> 0,
+`SecurityError` 61 -> 0).
+
+**Per-test timeout is 30 seconds, and that is a policy.** Casey's rule: *if it
+takes longer than 30 seconds, it is a defect anyway.* A click that has not
+landed in 30s is a finding; waiting another minute to confirm it buys nothing
+and costs the whole run. Shard 6 alone had ~50 click timeouts at the old 90s
+default — roughly 75 minutes of pure waiting, which was most of its 91-minute
+wall clock. Override with `PW_TIMEOUT` only to investigate a specific slow
+path, never in CI.
+
+**gap-suites have their own config and job.** Playwright shards by FILE, so the
+four `gap-suites-*` files (131 tests) always landed in one shard and made it
+the long pole — 91 minutes against 14-49 for the others. No shard count fixes
+that; four files cannot spread across more than four shards. They now run from
+`gap-suites.config.ts` in a separate nightly job.
+
+Their own history is worth keeping straight: unreachable by any config until
+#96, pointed at `jdhealthsolutions-openelis.com` until #101. Repointed at the
+real target they went from ~all failing to **70 of 131 passing**. The 61 that
+still fail are dominated by click timeouts — selector drift against a
+deployment they were never written for. A cleanup backlog, not a bug list.
+
+#### National IDs cannot contain underscores
+
+The server validates `nationalId` against `(?i)^[-a-z0-9/]*$`. `QA_PREFIX` is
+`QA_AUTO_MMDD`, so **every test that filled `#nationalId` with it was failing
+validation before reaching the behaviour under test** — 11 fills in
+`order-creation-e2e` alone, plus TC-PAT-05's hardcoded `QA_PAT_0324`.
+
+Verified by hand on testing 2026-09-05: `QA_PAT_0905` -> `400 {"error":
+"nationalId: must match ..."}`; `qa-pat-0905` -> `200 {"patientId":"502",
+"status":"success"}`. **Patient creation is not broken.** Use `QA_ID_PREFIX`
+(hyphenated, lowercased) for nationalId and anything else the server
+pattern-checks; keep `QA_PREFIX` for names, orgs and catalog entries, where
+underscores are fine and already-seeded `QA_AUTO_` data must stay findable.
+
+#### An SPA returns 200 for every path, so "did it load" is not a check
+
+TC-PAT-05 tried `/AddPatient`, `/PatientEdit` and `/SamplePatientEntry`, taking
+the first that returned 200. All three return 200 — OpenELIS serves the SPA
+shell for any path — so the test proceeded on a page that rendered nothing.
+The real screen is `/PatientManagement` (Add Or Modify Patient) with a **New
+Patient** tab routing to `/PatientManagement/new`, and `#nationalId` exists
+only there. That single wrong assumption also produced the run's 10
+`Element not found: #nationalId` failures.
+
+**Assert on a rendered element, never on a status code, when the target is an
+SPA.** The corrected test waits for `#nationalId` to be visible and skips with
+a named reason if it is not.
+### 12.13 — `page.locator()` is never falsy, and that cost 42 timeouts a run
+
+The single largest error class in every module sweep was
+`locator.click: Test timeout exceeded` — 42 in run 1, 34 in shard 6 alone. One
+bug in a shared helper produced most of them:
+
+```ts
+const adminItem = await page.locator('a, button, span')
+  .filter({ hasText: itemName }).first();
+
+if (adminItem) {                 // <- ALWAYS true
+  await adminItem.click();       // <- waits the full timeout, then throws
+} else {
+  throw new Error(`Admin item "${itemName}" not found in sidebar`);   // dead code
+}
+```
+
+**`page.locator()` returns a Locator object whether or not anything matches.**
+It is a query, not a result — it is never falsy. So the guard always passed,
+the `else` was unreachable, and a missing sidebar item spent the entire timeout
+inside `.click()` before failing with a message that named the timeout instead
+of the missing item. The helpful error the helper was written to throw had
+never once been printed.
+
+At the old 90s timeout each of these cost a minute and a half of run time for
+no information. That is why the timeout policy (12.12) and this fix belong
+together: one makes the failures cheap, the other makes them legible.
+
+**The fix, and the pattern to use:**
+
+```ts
+const adminItem = page.locator(...).first();      // no await — it is a query
+const present = await adminItem.isVisible({ timeout: 5_000 }).catch(() => false);
+if (!present) throw new Error(`... not found ...`);
+await adminItem.click();
+```
+
+Nine more instances of the same shape were found and fixed in
+`tests/admin-config.spec.ts` and `gap-suites-AQ-AX.spec.ts` (`if (chevron)`,
+`if (batchItem)`, `if (adminItem)`).
+
+**Grep for it before trusting any suite:** `const X = await page.locator(...)`
+followed by `if (X)`. The `await` is the tell — awaiting a locator gives you the
+locator, not a match. Anything that reads like an existence check on a raw
+locator is not one.
+
+
+### 12.14 — Two defect classes that `typecheck:all` had been reporting all along
+
+Added 2026-09-06, after sweep 4.
+
+`tsconfig.all.json` is not the blocking gate — `tsconfig.json` is, and it lists
+only the files that compile clean. That ratchet is the right design, but it
+made it easy to wave off `npm run typecheck:all` as "a backlog". Two of its
+error codes are not style debt. They are runtime defects with a compiler
+already pointing at them.
+
+**TS2304 on a FUNCTION name is a guaranteed `ReferenceError`.** Not a missing
+type import — a missing *value*. `tests/system-misc.spec.ts` and
+`tests/non-conforming.spec.ts` called `navigateViaMenu`, `tryNavigateToURL`,
+`selectSampleType` and `getFutureDate` without ever defining or importing them.
+When `openelis-e2e.spec.ts` was split into per-module specs, every other file
+got a copy-pasted local copy of these helpers; those two got the call sites
+alone. Every test in them died before touching the product. That is 18
+failures a sweep that were never about OpenELIS at all.
+
+Distinguish the two cases when triaging TS2304: `Cannot find name 'Page'` is a
+missing *type* import and erases at runtime, so it costs nothing but a red
+compiler. `Cannot find name 'someFunction'` is a missing *value* and the test
+cannot run. Fix the second class on sight.
+
+**TS2367 (`no overlap`) is the compiler noticing a tautology.** Fifteen
+instances in `gap-suites-AQ-AX.spec.ts` and fifteen more in
+`tests/admin-config.spec.ts` read:
+
+```ts
+const hasInterface = await Promise.any([
+  table.isVisible().catch(() => false),
+  form.isVisible().catch(() => false),
+  buttons.isVisible().catch(() => false)
+]).then(v => v === true || v === true);   // same comparison twice
+expect(hasInterface).toBeTruthy();
+```
+
+The duplicated comparison is what the compiler flagged, but it is the smaller
+half of the bug. **`Promise.any` resolves on the first promise to FULFIL, and
+`.catch(() => false)` makes all three of these always fulfil.** So the "at
+least one of these is visible" check is really "whichever locator settles
+first, report that one" — a race. A page with a visible table still fails the
+assertion whenever the form's `isVisible` happens to settle first with `false`.
+
+`Promise.any` is for genuinely-rejecting promises. Once every branch is
+`.catch()`-ed into a value, the primitive you want is:
+
+```ts
+const hasInterface = await Promise.all([...]).then((results) => results.some(Boolean));
+```
+
+**The general rule:** a type error inside an assertion is never cosmetic. The
+assertion is the only part of a test that does any work, and a compiler
+complaining about its logic is telling you the test does not check what its
+name claims. Grep the backlog for TS2367 and for TS2304 on call expressions
+before reading another sweep's failures — both classes are cheaper to fix than
+to triage.
+
+
+### 12.15 — Duplicated test cases, and a parser bug that misdescribed them
+
+Added 2026-09-08. **Substantially corrected the same day — the first version of
+this section reported a number that was an artefact of my own tooling. The
+correction is the more useful lesson, so it is kept here rather than quietly
+edited away.**
+
+The trail started at the copy-pasted `navigateViaMenu` / `tryNavigateToURL` in
+12.14. The hypothesis was that the local copies had drifted on purpose, each
+targeting its own screen. That is not what the code says: `order-entry` and
+`results-entry` hold identical `navigateViaMenu`, `pathology` adds one
+`goto(BASE)`. What the call sites showed instead is that whole TEST CASES exist
+in two files — `tests/order-entry.spec.ts` and `gap-suites-AH-AP.spec.ts` carry
+the same TC IDs over the same menu paths and URL lists.
+
+#### What the first scan claimed, and why it was wrong
+
+It reported **72 exact clones** — same ID, same title, byte-identical body. It
+found them with:
+
+```ts
+let i = src.indexOf('{', m.index), depth = 0;   // WRONG
+```
+
+In `test('TC-X-01: ...', async ({ page }) => { ... })` the first `{` after the
+title is the **destructuring brace of `({ page })`**, not the function body. So
+brace-matching closed immediately and every "body" was really just the test
+header. Both sides of every comparison truncated identically, so tests that
+merely shared an ID compared as byte-identical. The gate shipped in #105 with a
+baseline built from that, and the PR asserted 72 clones existed.
+
+**The real numbers are different, and one whole category was invisible.**
+Matching the PARENTHESES of the `test(...)` call instead — which captures the
+arguments and the entire callback — gives:
+
+| | first scan | correct |
+|---|---|---|
+| identical body (true clones) | 72 | **59** |
+| same ID and title, **different body** | 0 (invisible) | **28** |
+| same ID, different title | 47 | **47** |
+
+Clones do exist — `TC-ANZ-01` really is byte-identical between
+`gap-suites-AH-AP` and `tests/system-misc`. But 13 of the claimed 72 were not
+clones, and the 28 **drifted** pairs were a category the broken parser could
+not represent at all, because it had thrown away the bodies that distinguish
+them. They are two *implementations* of one case that diverged:
+
+```ts
+// TC-VBO-01, gap-suites-AA-AD          // TC-VBO-01, tests/validation
+page.click('button[aria-label*="menu" i]')   page.getByRole('button', { name: /menu/i })
+navigateWithDiscovery(page, candidates)      navigateWithDiscoveryLocal(page, candidates)
+```
+
+Both run, both report under `TC-VBO-01`, and **they can disagree** — one can
+pass while the other fails, and the sweep line does not say which ran. That is
+worse than a clone, and it is not fixable by deleting a copy at random: someone
+has to decide which implementation is correct.
+
+#### What survives from the first version
+
+The **double-counting is real and was measured from sweep logs, not the
+parser**: in sweep 4, 34 TC IDs failed in both the `modules` and `gap-suites`
+jobs. Treating 306 failures as 306 distinct findings still overcounts.
+
+The **collisions are real**: `TC-IO-03` is "Batch Order Entry screen loads" in
+two files and "Status dropdown enumerates expected order states" in a third.
+
+#### The lesson
+
+This is 12.13 again in a different costume. There, `if (locator)` looked like an
+existence check and was not. Here, `indexOf('{')` looked like "find the test
+body" and found a parameter list. In both cases the code ran, produced
+confident output, and the output was about something other than the question
+asked. **When a scan produces a surprisingly clean number — 72 exact clones,
+zero drift — treat the cleanliness as suspicious.** Real codebases are untidy;
+a suspiciously tidy measurement usually means the measurement collapsed a
+distinction rather than that the distinction is absent. Print one raw sample and
+read it before believing the aggregate.
+
+The gate (`npm run check:dupe-ids`) now parses correctly and classifies into
+clone / drifted / collision, because the three need different fixes. Baseline
+`.dupe-ids-baseline.json`: 59 clones / 28 drifted / 47 collisions.
+
+### 12.16 — "Are we missing checks?" is a catalogue question, not a test suite
+
+The gap-suites (`gap-suites-AA-AX`) exist to answer whether QA coverage is
+missing somewhere. They cannot: **a test that exists tells you nothing about a
+test that does not.** 105 of their 107 cases duplicate an ID that a
+module spec also defines, so the suites re-run covered ground and report it as
+gap closure, at 18.2 minutes of wall clock per sweep.
+
+The instrument that does answer it compares the **catalogue** against the
+**code**: `npm run check:coverage-gaps` reads the case IDs declared as headings
+in `master-test-cases.md` and the IDs implemented in `*.spec.ts`, and reports
+both directions.
+
+- **607 catalogued cases have no test** (SUPERSEDED — the real figure is 1210 across all seven catalogues; see 12.17) — grouped by area, this is the gap
+  list (HP 22, HN 20, MGT 20, HO 14, EQA 13, …).
+- **242 implemented IDs are not in the catalogue** (SUPERSEDED: 433 — see 12.17) — either the catalogue is
+  stale or the ID is wrong; both break traceability from a sweep line to a case.
+
+Report-only by default so it can run on every build; `--strict` fails when the
+unimplemented count grows past `.coverage-gaps-baseline.json`.
+
+**Retired on 2026-09-08 — see below.** The decision was deferred at first because with
+28 of the pairs being drifted implementations rather than copies, deleting
+either side is a judgement about which implementation is correct — 28 separate
+calls, not a refactor.
+### 12.9 — A spec no config runs is not coverage
+
+Added 2026-09-04, after the audit that followed OGC-1192.
+
+Quarantining `openelis-e2e.spec.ts` in #94 was the right call for the wrong
+reason: it was treated as one dead file. It was not. Asking Playwright itself
+which files each config resolves — `playwright test --config X --list`, not
+static parsing, because several configs build `testMatch` dynamically — showed
+**46 spec files, 866 tests, unreachable by any config**. That was the bulk of
+the module coverage: order-entry, validation, patient-management, reports,
+workplan, dashboard, pathology, inventory, referral-workflow, reflex-testing,
+session-security, storage, non-conforming, fhir-integration, i18n,
+accessibility, performance, eqa, plus the four root `gap-suites-*` files.
+
+They looked like coverage in a directory listing and executed never.
+
+Two changes:
+
+- **`modules.config.ts`** adopts them. It sweeps `tests/*.spec.ts` by
+  EXCLUSION — everything except the files another config owns — so a newly
+  added module suite is picked up with no edit. An include list would rot into
+  the same bug.
+- **`scripts/check-orphans.mjs`** is the gate, blocking on PR. It also reports
+  files reachable from more than one config; that is not an error (deliberate
+  tiering, e.g. `guards` and `all-tc` sharing a spec) but it is worth seeing.
+
+The sweep runs weekly rather than nightly (866 tests), as a **shard matrix** —
+parallel jobs, each `workers=1`. Sharding only shortens wall-clock when the
+shards are separate jobs; N `--shard` invocations in a loop inside one job do
+the same total work in the same time. That mistake was made and corrected in
+#96 before merge; if you touch the workflow, keep the matrix.
+
+**Sizing it (measured 2026-09-04).** These suites are UI-driven and full of
+fixed `waitForTimeout` sleeps, so they are far slower per test than the chains
+(131 tests in 8.7 min). The first sweep — 4 shards, `retries: 1` — had not
+finished a single shard after 65 minutes and was killed by the 120-minute cap.
+Two levers, in order of effect:
+
+1. **Retries.** The nightly now sets `PW_RETRIES=0`. Retries absorb flake; in a
+   suite that has never run, the failures are not flake, they are the point —
+   and retrying each one doubles its cost for no information. Raise it again
+   once the sweep has a stable baseline.
+2. **Shard count**, raised 4 → 6. Six parallel runners at `workers: 1` sits **at**
+   the 6-connection limit in §10.9, not over it. Do not raise it further without
+   re-reading that section and watching the instance for strain.
+
+Job timeout is 300 minutes. A long weekly job is acceptable; a job killed
+before it reports is not.
+
+**Cautionary note for whoever reads the first module-sweep results.** These
+suites have not run in a long time and were never gated, so expect a large
+fraction to fail on first contact. That is information, not a regression. Also
+note that seven of them had 35 self-reported verdicts converted into real
+assertions in #94 — that work was done while the files were still unreachable,
+so its first real execution is also its first verification.
+
+### 12.7 — The gates, and what each one is for
+
+Added with the OGC-1192 remediation. Fail-by-default: anything not demonstrably
+green should be visible as not-green.
+
+| Gate | Command | Blocking? | Catches |
+|---|---|---|---|
+| orphan gate | `npm run check:orphans` | **yes**, on PR | a spec file no config can run |
+| assertion gate | `npm run lint:assert` | **yes**, on PR | a new test that asserts nothing; any focused test |
+| nightly run | `.github/workflows/nightly.yml` | no (reported) | the suites actually breaking against a live instance |
+| `markStep` semantics | built in (12.1) | **yes**, at runtime | a step self-excusing past a failure |
+| declared gaps | `GAPS_STRICT=1` (12.6) | nightly only, for now | an *undeclared* gap — an excuse nobody reviewed |
+
+**The assertion gate is a baseline, not a switch.** The 2026-09-03 scan found
+**296** pre-existing assertion-free tests across 111 files. Quarantining the
+legacy `openelis-e2e.spec.ts` (93 of them — and no config ran it) plus
+converting 35 self-reported verdicts into real assertions brought that to
+**188 across 109 files**. Turning the rule on hard even so would make `main`
+unmergeable, and a gate people route around is worth less than no gate. So
+`.assert-baseline.json` records the backlog per file, and CI fails only when a
+file's count goes **up** or a new file appears. Fix a file, run
+`npm run lint:baseline`, commit the smaller number.
+
+Do not raise the baseline to make a build pass. That is the same move as
+reaching for GAP, one level up.
+
+**Why the nightly run is non-blocking.** It runs against a shared instance whose
+data and uptime we do not control, so a red run is a signal to read rather than
+a build to break. The risk is that a permanently-red non-blocking job becomes
+wallpaper — so promote a suite to blocking once it has been stable for a couple
+of weeks, and treat a climbing **skipped** count as a failure signal in its own
+right. Skipped is not passed; a step that skipped did not run.
+
+### 12.8 — Shapes that pass while proving nothing (the 2026-09-03 census)
+
+Search for these before trusting any suite. Counts are from the scan that
+followed OGC-1192.
+
+| Shape | Count | Why it passes |
+|---|---|---|
+| test block with zero `expect()` | 296 -> **188** | nothing can fail |
+| `console.log(ok ? 'TC-X: PASS' : 'TC-X: FAIL')` | 36 -> **1** | a self-reported verdict is not an assertion — and it prints "FAIL" while the runner says green |
+| `console.log('SKIP: …'); return;` | 57 | early return with no skip marker; shows as a pass, not even amber |
+| `.catch(() => false)` | 1119 | turns "this errored" into "this is absent", which then feeds a conditional that quietly does nothing |
+
+The first is gated and shrinking. The second is effectively gone — the single
+survivor is a seed script, not a test. The last two are open work: when you
+touch a file containing either, fix what you touch.
+
+**On the 1119 catch-swallowers**: not all are wrong. `.catch(() => false)` on a
+visibility probe is idiomatic. It is wrong when the thing swallowed IS the thing
+under test — an API call whose status is the assertion, a navigation whose
+success is the claim. Judge them one at a time; a blanket rewrite would break
+the legitimate majority.
+
 ## Section 11 — PR #3987 findings (live-validated 2026-08-06, testing v3.2.1.11)
 
 Authored while regression-testing DIGI-UW/OpenELIS-Global-2#3987. Everything here
@@ -436,3 +1224,1966 @@ Reading a component's own `disabled` prop (as distinct from an ancestor
 `__reactFiber$` up to the named component and read `memoizedProps.disabled`. On Add
 Order the fieldset is disabled while the selector's prop is `false`, and those two
 facts grade differently.
+
+#### Retirement (2026-09-08)
+
+The suites are gone. Accounting for all 107 of their cases:
+
+| | | |
+|---|---|---|
+| **59** | byte-identical clones | dropped; the module spec's copy stands |
+| **28** | drifted — same TC ID and title, different implementation | dropped; the module implementation kept in **all 28** |
+| **20** | genuinely distinct (2 unique, 18 wearing a colliding ID) | **relocated** into the spec that owns the area, renumbered where the old ID already meant another test |
+
+On the 28 drifted pairs: scored against the module version, the gap-suite
+version won **zero** times. It was consistently the older idiom — raw CSS menu
+clicks over `getByRole`, and in the ones that scored "tied", `page.$(...)`
+(truthy for a hidden element, and deprecated) where the module version used
+`locator(...).isVisible()`. The tie was an artefact of the scoring heuristic,
+not of the code; reading one pair settled it.
+
+The 20 survivors went to `results-entry` (TC-RBP-01, TC-RBO-04),
+`electronic-orders` (TC-IO-01…05 → 11…15), `results-by-range` (TC-RBR-01…05 →
+11…15), `aliquot` (TC-ALQ-01…03 → 17…19), `workplan` (TC-WPP-02/03/05 →
+06/07/08) and `pathology` (TC-PATH-02 → 03, TC-CYT-02 → 03). Their relocation
+promptly produced eight `TS2304 Cannot find name` errors, because the helpers
+they call live in `helpers/test-helpers.ts` and the destination files did not
+import them — 12.14's defect class, caught by the gate this time instead of by
+a sweep.
+
+**A gate bug the cleanup exposed.** `check-dupe-ids` keyed its baseline on
+`id|file,file`. `TC-ALQ-01` was a *three*-file collision; removing the
+gap-suite participant left the same collision over two files, a different key,
+which the gate reported as a NEW violation — i.e. the gate blocked the cleanup
+it existed to encourage. It now keys on the **TC ID alone** and records the
+file list for the reader only. If a gate makes the fix look like a regression,
+the gate is wrong.
+
+Backlog after: **0 clones, 0 drifted, 40 collisions** (the 40 are all
+`tests/*` ↔ `tests/*`, untouched by this and still needing per-case decisions).
+
+### 12.17 — The catalogue is plural, and the grammar for reading it is load-bearing
+
+Added 2026-09-08, immediately after 12.16 shipped a number that was wrong.
+
+12.16 reported "607 catalogued cases have no test". That was computed from
+`master-test-cases.md` alone, with a regex that matched a subset of even that
+file. Casey's correction — *we wrote test catalogs for the new features, and I'm
+pretty sure we did reflexes too* — was right, and finding them changed every
+figure.
+
+#### Two independent errors, both silent
+
+**The catalogue is not one file.** Seven files declare cases. Four are
+per-feature suites written alongside the features they cover:
+
+| catalogue | area | covered |
+|---|---|---|
+| `master-test-cases.md` | core suites A–JF | **24%** (383/1567) |
+| `references/test-cases.md` | Test Catalog module | 42% (11/26) |
+| `edit-order-rbac-test-cases.md` | Edit Order & RBAC | 21% (3/14) |
+| `analyzer-guided-setup.md` | analyzer guided setup (OGC-1057) | **100%** (23/23) |
+| `test-catalog-mgmt.md` | test catalog editor (OGC-949) | **100%** (8/8) |
+| `test-catalog-mgmt-deep.md` | editor, deep interaction | **100%** (7/7) |
+| `label-presets.md` | label presets | **100%** (5/5) |
+
+Reading only `master` reported all four 100%-covered feature suites as
+uncatalogued *and* their cases as ungapped — invisible in both directions.
+
+**The grammar matched a subset, three times over.** Cases are declared in six ID
+shapes and two layouts, and each version of the scanner saw only some:
+
+```
+TC-01                        bare
+TC-HP-01                     common
+TC-ADMIN-SITEINFO-TABLE-01   multi-segment   <- dropped 575 of master's 1504
+TC-RPT-R01                   letter-number
+CLEANUP-01                   teardown
+TC-DEEP-FILTER               no number at all
+
+### TC-HP-01 — Title                              heading form
+| TC-LP-01 | List renders with the 5 presets |    TABLE form  <- every per-feature suite
+```
+
+The table form is how *all four* newer suites declare cases. A heading-only
+grammar sees zero cases in them — and reports the file as "indexed but empty"
+rather than as a parse failure, which is how it stayed quiet.
+
+#### The corrected picture
+
+**1636 catalogued · 859 implemented · 1210 with no test · 433 tests whose ID no (per-catalogue figures below are superseded by 12.18: ids shared between catalogues were mis-attributed, and 82 of the covered cases prove nothing)
+catalogue declares.** The gap roughly doubled, and it is concentrated almost
+entirely in `master-test-cases.md`. The features the team catalogued
+deliberately are fully covered; the sprawling core catalogue is not.
+
+The 433 uncatalogued run the other way: tests written code-first, spread across
+~40 module specs (generic-sample 19, fhir-integration 18, order-creation 18),
+with no case ever written down. The catalogue is not a complete inventory of
+what QA covers, in either direction.
+
+#### What stops it recurring
+
+Three things, in the order they fail:
+
+1. **One grammar, in one file.** `scripts/catalogue-ids.mjs` is the only
+   definition of "a case ID" and "a declaration". Every script imports it.
+2. **`npm run catalogue:selftest`** asserts all six shapes and both layouts, plus
+   negatives (prose, suite headings and plain tables must NOT count). Blocking.
+   This is what a regex change has to get past now.
+3. **`npm run check:catalogue-index`** walks every tracked `.md` and fails when
+   one declares cases but appears in neither `catalogues.json` nor its
+   `notCatalogues` list — the latter requiring a written reason. Adding a
+   per-feature suite is one line; deciding a file is not a catalogue is one line
+   and a sentence. Blocking. It also fails on an indexed file that declares
+   *zero* cases, which is what catches a grammar that has stopped matching.
+
+**The pattern across 12.13, 12.15 and this one is now unmistakable.** Three
+times a scanner ran cleanly, produced a confident number, and answered a
+narrower question than the one asked: `if (locator)` that was never false,
+`indexOf('{')` that found a parameter list, and a case-ID regex that matched a
+third of the catalogue. None of them errored. The defence is not more care while
+writing the regex — it is a self-test that names the shapes, and a gate that
+fails when a file the tool should see produces nothing.
+
+### 12.18 — What "covered" means, and whose case an id refers to
+
+Added 2026-09-08, sharpening 12.17 rather than correcting it. 12.17's headline
+(1210 gaps across seven catalogues) survives; two things underneath it did not.
+
+#### First, the good news: the gap number is sound
+
+The obvious worry about exact-ID matching is that a test covering a catalogued
+case under a *different* id reads as a gap, and 433 uncatalogued tests were
+sitting next to 1210 unimplemented cases. Cross-referencing the two piles by
+normalised title found **18 matches** — they are genuinely disjoint. The
+catalogue's own internal duplication is likewise small once the heuristic's
+false positives are discounted (a dozen suites each declare a case titled "Page
+structure", for twelve *different* pages). The gap is real.
+
+#### Identity: a case is (catalogue, id), not id
+
+Fourteen ids are declared in two catalogues — the bare `TC-NN` forms shared by
+`master-test-cases.md` and `references/test-cases.md`, plus three shared with
+the edit-order suite. Keying one map by id collapsed them, so a test for
+master's `TC-01` credited the unrelated `TC-01` in `references/test-cases.md`:
+
+| catalogue | reported | actual |
+|---|---|---|
+| `references/test-cases.md` | 42% (11/26) | **0%** — every "covered" case was a borrowed credit |
+| `edit-order-rbac-test-cases.md` | 21% (3/14) | **0%** — same |
+
+Such ids are now reported as **ambiguous** and counted as neither covered nor
+gap, because a test naming one cannot be attributed and guessing is what caused
+the error. `check-catalogue-index` grandfathers the existing 14 and fails on any
+new one; the fix is to give those cases prefixed ids.
+
+#### Substance: a test that cannot fail is not coverage
+
+"Covered" meant "some test declares this id". But an assertion-free test cannot
+fail and an always-skipped test never runs, so a case whose *every* test is one
+of those is reported as covered while proving nothing. There are **82**:
+
+```
+  real coverage      341   a test that asserts and can run
+  hollow coverage     82   a test exists but asserts nothing, or always skips
+  no test at all    1199
+  ambiguous id        14
+```
+
+**Real coverage is 21%, not the 26% the id-only count reports.** The correction
+also lands on suites I had reported as fully covered: analyzer guided setup is
+96% (one always-skipped case) and test-catalog-mgmt-deep is 71% —
+`TC-DEEP-TERMINOLOGY` and `TC-DEEP-STORAGE` assert nothing. Test catalog
+management and label presets really are 100%.
+
+This is 12.8's census applied to the coverage number instead of to the suite: a
+test shaped like coverage is not coverage. The two gates now agree —
+`lint:assert` stops new assertion-free tests being written, and
+`check:coverage-gaps` stops the existing ones being counted as coverage.
+
+#### The habit worth keeping
+
+Every correction in 12.13 through 12.18 came from asking one question of a
+number I had just produced: *what would make this number wrong, and can I check
+it cheaply?* Cross-referencing the two gap piles took twenty lines and confirmed
+the headline. Grouping coverage by catalogue instead of globally took about the
+same and demolished two of the per-catalogue figures. Neither needed a rerun of
+the suite. **Print one raw sample, then check the aggregate against a second
+method, before reporting it.**
+
+### 12.19 — The baseline patient never existed, and three layers hid it
+
+Added 2026-09-08, from pulling on "is `Anga, Dr` still seeded?".
+
+`helpers/test-helpers.ts` exports `PATIENT_NAME = 'Abby Sebby'` and
+`PATIENT_ID = '0123456'`, described as *"the baseline test patient created by
+data.setup.ts"*. **Seventeen module specs import them. The patient does not
+exist, and as far as this audit can tell never has.**
+
+A live probe on v3.2.2.0: `patient-search-results?searchValue=0123456` →
+`patientSearchResults: []`. Same for `lastName=Sebby`. Zero.
+
+Three independent failures had to line up, and each one hid the next:
+
+**1. No config ran the setup.** `data.setup.ts` exists precisely to create this
+patient and two orders. Every other setup has a home — `auth.setup.ts` in ~25
+configs, `roles.setup.ts` in two, `analyzer-auth.setup.ts` in the analyzer
+configs, `seed-data.setup.ts` in `regression-seed` — and `data.setup.ts` had
+none. `check:orphans`, the gate built in #96 for exactly this class of bug, only
+audited `*.spec.ts`, so a setup nothing ran was outside its remit. It now audits
+both, and the reachable side of its scan had to be widened to match, or the two
+halves disagree and the gate reports files it just fixed.
+
+**2. The finder could never find anyone.** `findPatientByNationalId` tried three
+endpoints:
+
+```
+/rest/patient?nationalId=        404 NoHandlerFoundException
+/rest/PatientSearch?nationalId=  404
+/rest/patient/search?nationalId= 404
+```
+
+All three 404 on this build. Every candidate failed `res.ok`, the loop fell
+through, and the function returned `null` unconditionally — so the setup
+concluded "patient not found" every run, regardless of reality. The endpoint the
+app itself uses is `patient-search-results`.
+
+**3. Creation reported success from "the page did not crash".**
+
+```ts
+// Verify success (no error message, page didn't crash)
+const bodyText = await page.locator('body').innerText();
+if (bodyText.includes('Internal Server Error')) return false;
+state.patient.found = true;   // <- the only other outcome
+return true;
+```
+
+That is not a check that a patient was created; it is a check that the browser
+did not render one particular string. So the log said
+`[data-setup] Patient created successfully` on every run while creating nothing.
+
+#### What this cost
+
+Every patient-dependent failure in the module sweep looked like a product
+defect. `TC-PAT-02: Search by national ID returns Abby Sebby` fails because
+Abby Sebby is not there — nothing to do with patient search. Any triage of the
+sweep that treated those as findings was investigating the wrong system.
+
+#### Fixed
+
+- `data.setup.ts` is now a dependency of the module sweep, with its own 120s
+  budget (a fixture is not a check, so the 30s test policy does not apply to it)
+  and `retries: 0`.
+- The finder uses `patient-search-results`.
+- Creation requires a **read-back** and now reports honestly:
+  *"save produced no error, but nationalId=0123456 does not read back — the
+  patient was NOT created."*
+- Order creation tries the **API before the UI**. The UI path burns the entire
+  budget on one `locator.click`, which meant the API fallback was never reached
+  and the setup died on timeout. Both paths currently fail; the setup now says
+  so in 14 seconds instead of 4 minutes.
+- `check:orphans` covers `*.setup.ts`.
+
+Whether the UI cannot create a patient because of a product defect or a stale
+selector needs a clickthrough before it becomes a ticket. **ANSWERED the same
+day — see the resolution below: the UI works, the fixture had five defects.** What is settled is
+that the fixture no longer claims a success it cannot demonstrate.
+
+#### The rule
+
+**A fixture that reports success it has not verified is worse than a fixture
+that fails.** A failing fixture gets fixed; a lying one sends every dependent
+failure to the wrong investigation, for months. Fixtures need round-trips for
+the same reason tests do (12.3) — and a fixture that is a dependency of a large
+project must also be unable to take that project down with it, which is why this
+one is non-fatal and fast rather than thorough and blocking.
+
+#### Resolved (same day): the UI was never the problem
+
+Casey's read — *"I'm sure we can create a patient through the UI"* — was right.
+A live drive of the form creates a patient in about eight seconds:
+
+```
+POST /rest/PatientManagement -> 200 {"status":"success","patientId":"503"}
+```
+
+The fixture had **five** separate defects between it and that request. Each one
+alone was enough to stop the patient being created, and none of them said so.
+
+**1. The Save selector matched the wrong button.**
+
+```ts
+getByRole('button', { name: /save|submit|add|create/i }).first()
+```
+
+The form carries exactly two buttons matching that alternation —
+**"Additional Information"** and **"Save"** — because `/add/i` matches
+"ADDitional". "Additional Information" is first in the DOM, so `.first()` took
+it, the click expanded an accordion, and Save was never pressed. Anchoring to
+`/^Save$/` fixed it. *A loose alternation over button labels will eventually
+match a button you did not mean, and `.first()` hides which one it hit.*
+
+**2. Gender was queried as a `<select>`.** It is a radio pair
+(`input[name="gender"]`, `#radio-1` / `#radio-2`). Zero matches.
+
+**3. Date of birth was queried as `input[name*="dob"]` / `[placeholder*="date"]`.**
+It is a Carbon picker, `#date-picker-default-id`, placeholder `dd/mm/yyyy` —
+containing neither "dob" nor "date". Zero matches. (Save turns out not to
+require it, but the selector was still dead.)
+
+**4. It filled the search screen, not the create screen.** The fixture loaded
+`/PatientManagement` and clicked "New Patient", then looked for fields. But
+`/PatientManagement` is the SEARCH screen and has its OWN lastName / firstName /
+nationalId inputs (7 visible inputs, against 12 on `/PatientManagement/new`), so
+when the click had not landed the selectors matched the search form and typed
+the patient's details into it.
+
+Defects 2, 3 and 4 shared one shape: every fill was wrapped in
+`if (await field.isVisible()) { ... }` **with no else**, so a selector matching
+nothing was indistinguishable from a field that had been filled.
+
+**5. The finder queried parameters that do not search.** `patient-search-results`
+answers 200 for every parameter shape, but only one of them looks anything up.
+With three patients named Abby Sebby present:
+
+| query | result |
+|---|---|
+| `?lastName=Sebby&firstName=Abby` | **3 results** |
+| `?searchValue=0123456` | `[]` |
+| `?nationalId=0123456` | `[]` |
+| `?searchValue=Sebby` | `[]` |
+| `?patientId=504` | `[]` |
+
+**A 200 with an empty list is indistinguishable from "no such patient".** This
+is what made the read-back oracle added earlier the same day report the patient
+missing while it sat in the database — the original false positive traded for a
+false negative. The nationalId still narrows the results; it just cannot be the
+query.
+
+#### Two findings that came out of it
+
+**Search by national ID appears genuinely broken.** *(RETRACTED — see 12.20: the parameter is nationalID, and neither UI case actually searched.)* `?nationalId=` returns empty
+for a national ID that demonstrably exists, and two independent UI cases —
+`TC-PAT-02` and `TC-H-DEEP-01`, both "search by national ID finds the known
+patient" — fail on it in separate runs. That is API repetition plus two UI
+paths agreeing. It was NOT a defect; 12.20 has the correction.
+
+**Three duplicate Abby Sebbys (503, 504, 505)** now exist, created while the
+finder was blind. The fixture is idempotent again and settles on 503, but any
+case asserting a unique search result will see three rows.
+
+`tests/patient-management.spec.ts` after the fix: **10 passed, 7 failed,
+1 skipped** of 18 — and the remaining failures are about the product or about
+stale expectations, not about a patient that isn't there.
+
+### 12.20 — `.first()` on a loose name is the defect of the day, three times over
+
+Added 2026-09-08. Casey asked whether the UI could really create a patient, and
+following that question to the end turned up the same mistake in three
+unrelated places — and produced a defect claim I had to retract.
+
+#### The retraction first
+
+I told Casey that **search by national ID looked like a real product defect**:
+`?nationalId=0123456` returned nothing for an ID that three patients carried,
+and two independently-written cases (`TC-PAT-02`, `TC-H-DEEP-01`) failed on it
+across separate runs. API repetition plus two UI paths agreeing felt conclusive.
+
+It was wrong on both halves.
+
+**The parameter is `nationalID`** — capital I, capital D — captured from the
+request the search screen sends for itself:
+
+```
+GET /rest/patient-search-results?lastName=Sebby&firstName=Abby&STNumber=
+    &subjectNumber=&nationalID=&labNumber=&guid=&dateOfBirth=&gender=
+    &suppressExternalSearch=true
+```
+
+| query | results |
+|---|---|
+| `?nationalID=0123456` | **5** |
+| `?nationalId=0123456` | **0** |
+
+And **the two UI cases never searched at all** — see below. So neither leg of
+the evidence stood. The revalidation protocol's Method A is what caught it:
+running it properly, rather than treating "two tests agree" as confirmation,
+flipped the verdict. *Two tests failing the same way is not two pieces of
+evidence when both fail for the same test-side reason.*
+
+#### The shape, three times
+
+**Save on the patient form.** `/save|submit|add|create/i` + `.first()` →
+matched **"Additional Information"**, because `/add/i` matches "ADDitional".
+Clicked an accordion; Save never pressed.
+
+**Search on the patient screen.** `/search/i` + `.first()` → matched the Carbon
+header's `cds--header__action` search icon, which is rendered before page
+content and belongs to no form. Captured live: candidate 0 was the header
+action, candidate 1 was `cds--btn--tertiary` inside the form holding
+`#lastName`, and only the second issued a request. The first fired **nothing** —
+no request of any kind — so the case then asserted against a page that had never
+searched, and reported the absence as a product failure.
+
+**My own probe.** I filtered captured requests with `/patient-search/i` and saw
+an empty list, and briefly read that as "the app sends no request". It was my
+filter. Capturing everything is what exposed the real parameter list.
+
+#### What replaced it
+
+`clickFormSearch(page, fieldSelector)` in `helpers/test-helpers.ts` picks the
+`/^Search$/` button that shares an ancestor with the field just filled, and
+**warns loudly** when it has to fall back — a silent fallback is how the
+original bug survived. `TC-PAT-03` and `TC-H-DEEP-01` use it; both now pass.
+
+Two more things this settled:
+
+- **The form does not submit on Enter.** `TC-PAT-02` and `TC-PAT-03` both
+  pressed Enter. No request fires. Anything that "searches" by pressing Enter on
+  these screens has never searched.
+- **The patient search screen has no national-ID input.** Its fields are
+  `patientId`, `labNumber`, `lastName`, `firstName`, a date picker and gender
+  radios; the only "National ID" on the page is a results-table column header
+  (`cds--table-header-label`). The server supports the query, the screen does not
+  expose it. That is a product question — national ID is a primary patient
+  identifier in this domain — not a test failure, and it is in
+  `open-questions.md` rather than a ticket.
+
+`tests/patient-management.spec.ts`: **13 passed, 4 failed, 1 skipped** of 18,
+from 10/7/1 before this pass.
+
+#### The rule
+
+**Anchor the name, and never `.first()` a name that could match twice.** When a
+screen genuinely has two controls of the same name, pick by relationship — the
+one inside the form you filled — not by document order. And when a locator that
+"can't fail" produces no effect, check what it actually resolved to before
+concluding the application is broken: on all three occasions here, the button
+was found, visible, enabled, clicked without error, and wrong.
+
+#### "Search for Patient" has no selected state at all (verified 2026-09-08)
+
+Casey flagged that the patient-search mode must be selected first and that the
+control is *not visually distinctive*. Measuring it is worse than that phrasing
+suggests — there is **no state signal of any kind**:
+
+```
+before click: { cls: "cds--btn cds--btn--primary", aria-pressed: null,
+                aria-selected: null, aria-current: null }
+after  click: { cls: "cds--btn cds--btn--primary", aria-pressed: null,
+                aria-selected: null }
+```
+
+The class string is byte-identical before and after, and none of the three
+state attributes is set. Consequences, in order of who they hurt:
+
+- **A user cannot tell which mode is active** — the only "primary" styling on
+  the row is permanent, not selection feedback.
+- **A screen reader is told nothing.** A control that changes mode without
+  `aria-pressed` (or a tab with `aria-selected`) fails WCAG 2.1 §4.1.2
+  *Name, Role, Value*. This is a real accessibility defect, not a nicety.
+- **A test cannot assert selection either.** `clickFormSearch` can only verify
+  the mode *behaviourally* — click it, then check that the form's Search
+  produced a request. That is why the helper clicks it unconditionally rather
+  than checking first: there is nothing to check.
+
+**Order is safe**, which was the risk worth measuring: clicking the mode button
+*after* the fields are filled does not clear them. Verified end-to-end —
+`#lastName` still held "Sebby" after the mode click, the helper returned true,
+and the search returned 3 rows with the real request. So `fill → clickFormSearch`
+is the correct sequence and needs no reordering.
+
+### 12.21 — Two fixes, and why order creation is a separate job
+
+Added 2026-09-08.
+
+**TC-PAT-05 now passes.** Its failure was reported as
+`keyboard.press: Target page, context or browser has been closed`, which named
+the last line to run rather than the one that broke. The case filled gender and
+the date picker with `.catch(() => {})` on each, so a selector matching nothing
+was indistinguishable from a field being filled; by the time it reached
+`keyboard.press('Escape')` — a line that only existed to dismiss the picker
+overlay — the test had already exhausted its budget and Playwright had torn the
+page down. Rewritten on the sequence the data factory now uses: gender by label,
+`#date-picker-default-id`, an ANCHORED `/^Save$/`, wait for
+`/PatientManagement/<id>`, then confirm by read-back through
+`patient-search-results?nationalID=`. Verified live: 3 passed.
+
+**The patient results table never settles, and that is what blocks order
+creation.** Driving `/SamplePatientEntry` — search for the patient, then select
+the row — fails at the row's radio with:
+
+```
+locator.click: Timeout exceeded
+  - waiting for element to be visible, enabled and stable
+```
+
+`isVisible()` passes; **stable** never does. The likely cause is visible in the
+network capture: each search fires one `GET /rest/patient-photos/<id>/true` per
+result row, and with three patients named Abby Sebby present those three
+responses land at different moments and re-render the table each time. Playwright
+waits for the element to stop moving; it does not.
+
+Two consequences worth separating:
+
+- **For the harness:** an order test cannot simply click the row. It has to wait
+  for the photo requests to settle first (or click through the row's label), and
+  the whole wizard — search, select, Next Step, choose tests, save — took **3.2
+  minutes** to reach step 2 in a probe with the timeout raised. That does not fit
+  the 30-second policy, so order-creating tests need either a documented
+  exemption like `data.setup`'s, or a faster path (the API, once a payload has
+  been CAPTURED rather than hand-composed — `createOrderViaAPI` currently
+  composes one by hand, which 12.4 says not to do).
+- **For the product:** a results table that re-renders once per row photo is
+  also a table that visibly jumps for a user, and it gets worse with more rows.
+  Worth a look, though it is a design observation rather than a defect claim.
+
+Order creation is therefore left broken deliberately rather than half-fixed. It
+is a multi-step wizard, its first step exceeds the test budget, and the fixture's
+API fallback needs a captured payload — three separate pieces of work, none of
+which should be rushed at the end of a long session.
+
+### 12.22 Patient history and patient merge: four hollow cases, and two traps I walked into
+
+**2026-09-08.** `patient-management.spec.ts` went from 15/3 to **18/18**, and
+the interesting part is that not one of the six cases fixed here was blocked by
+a product defect. Every one of them was a test that could not see the screen it
+claimed to test.
+
+**TC-PAT-04 was never on the history screen.** It searched with
+`getByRole('textbox', { name: /id|patient|national/i }).first()` — the loose
+regex plus `.first()` trap for the fourth time in this file — and there is no
+national-ID input on any patient search screen, so it typed a national ID into
+whichever textbox came first. Then it pressed Enter (no submit), clicked
+`getByText(/Sebby/i).first()` on the table that re-renders per row (12.21), and
+asserted only `/Abby|Sebby/i`, which the still-visible *search* screen satisfies.
+The history half of the case was a `console.log`.
+
+**The four TC-MP merge cases were written against a UI that does not exist.**
+All of them looked for `input[placeholder*="patient"]`, `[role="option"]` and an
+autocomplete dropdown. The real screen is a three-step wizard with two full
+search panels. Every assertion in all four was `.catch(() => console.log(...))`,
+so the suite reported four green merge cases while never selecting a patient.
+
+**And that mattered more than a false green.** Had those locators ever matched,
+TC-MP-04 would have clicked `/Merge|Submit|Confirm/i` and merged two real
+patient records on the shared instance. It was a destructive test; only a broken
+locator kept it from doing damage. Worth generalising: *a hollow test is not
+merely uninformative — a hollow test whose real actions are destructive is a
+loaded gun with the safety taped down.* TC-MP-04 now walks to the confirmation
+gate and cancels, and says in a comment why it stops.
+
+#### What the screens actually offer
+
+| Screen | Hook | Behaviour |
+|---|---|---|
+| `/PatientHistory` results | `tr[data-cy="patient-result-row-<patientId>"]` | **Checking the row radio IS the navigation** — no submit button; it goes to `/PatientResults/<patientId>` |
+| `/PatientMerge` panels | `#patient1-*`, `#patient2-*` | one Search per panel, each enabled only once its own panel has input |
+| `/PatientMerge` results | `input#patient<N>-select-<patientId>` | radio per candidate |
+| `/PatientMerge` step 2 | `#patient-1`, `#patient-2` | warns "marked as merged and inactive", asks which record is primary, Next Step disabled until one is chosen |
+
+Note `/PatientHistory` has **no** "Search for Patient" mode control, while
+`/PatientManagement` does. The same-looking panel is not the same panel.
+
+#### Trap 1: Carbon radios cannot be `.check()`ed
+
+Carbon draws a radio as a real `<input type="radio">` plus a `<label>`
+containing a `<span class="cds--radio-button__appearance">`. The input is
+visible and enabled, but the span sits on top of it, so both `.check()` and
+`.click()` retry until the test times out with:
+
+```
+<span class="cds--radio-button__appearance"> from <label for="503"> subtree intercepts pointer events
+```
+
+**A 30-second timeout on a radio in this app always means this.** New helper
+`checkCarbonRadio(page, inputLocator)` clicks the bound label, which is also
+the correct user gesture. Use it everywhere; the gender radios and the search
+radios are the same shape.
+
+#### Trap 2: there is a THIRD button named "Search"
+
+My first merge fix used `getByRole('button', { name: /^Search$/ }).nth(panel - 1)`,
+reasoning that there is one Search per panel in panel order. There are three:
+the Carbon header's search action has the accessible name "Search" too, and it
+renders before page content. So `nth(0)` clicked the header icon and both panels
+came back empty.
+
+This is the *same* trap `clickFormSearch` was written to close in 12.20, and I
+walked straight back into it one section later. The lesson is not "remember the
+header button" — it is that **any name-based button lookup on this app must be
+scoped to the field it belongs to**, and `clickFormSearch(page, fieldSelector)`
+is that scoping. Reach for the helper, not for `nth()`.
+
+#### One more retracted measurement
+
+TC-PAT-03's empty-state probe used `/no.*(found|result|patient)/i` and reported
+"message present" on a screen that has no empty-state message. `.*` spans any
+amount of intervening text, so it matched unrelated copy. Anchored to an actual
+empty-state shape, it correctly reports the gap: **zero results are communicated
+only by the pager reading "0-0 of 0 items"**. That is a sixth finding for the
+patient-search UX work item.
+
+Also fixed: TC-PAT-04's identity assertion first failed because it read
+`body.innerText()` immediately after `waitForURL`. The URL changes before the
+patient header renders, so it captured the SideNav and nothing else. Use
+`expect(locator).toContainText(...)`, which retries; a one-shot `innerText()`
+snapshot is a race dressed up as an assertion.
+
+### 12.23 The merge case now really merges, and seeds its own victim
+
+**2026-09-08, after Casey's ruling:** *"destructive tests are fine, this will only
+be run against a testing instance."* So TC-MP-04 executes the merge. The
+interesting problem was never permission — it was **repeatability**.
+
+The merge cases used to lean on the five duplicate "Abby Sebby" records that
+happen to exist on `testing`. A merge case that actually merges *consumes* them.
+After one or two runs there would be nothing left to merge, and the case would
+start failing for a reason that has nothing to do with the product: it would have
+destroyed its own precondition. Generalising: **a destructive test must create
+what it destroys.** TC-MP-04 seeds a fresh duplicate pair, merges that, and the
+merge is the pair's cleanup.
+
+#### Both payloads, captured (12.4)
+
+Patient creation — off the wire from the Add Patient form:
+
+```
+POST /api/OpenELIS-Global/rest/PatientManagement
+Content-Type: application/json   Accept-Language: en   X-CSRF-Token: <localStorage['CSRF']>
+{"patientUpdateStatus":"ADD","nationalId":…,"lastName":…,"firstName":…,
+ "gender":"F","birthDateForDisplay":"01/01/1990", …all-empty rest…}
+-> 200 {"patientId":"515","status":"success"}
+```
+
+The captured request also carried a stray `"date-picker-default-id"` key next to
+`birthDateForDisplay` — the form's own field id leaking into its payload. Omitting
+it is verified good (200, patient created), so `createPatientViaAPI` omits it.
+Two POSTs seed a duplicate pair in about a second, which is what makes per-test
+seeding affordable inside the 30-second policy.
+
+Merge execution:
+
+```
+POST /api/OpenELIS-Global/rest/patient/merge/execute
+{"patient1Id":"514","patient2Id":"515","primaryPatientId":"514","reason":"…","confirmed":true}
+```
+
+After it succeeds the app navigates to `/PatientManagement/<primaryId>`.
+
+#### What the merge wizard gates, and how it is id'd
+
+| Step | Hooks | Gate |
+|---|---|---|
+| 1 Select Patients | `#patient<N>-lastName`, `input#patient<N>-select-<patientId>` | Next Step disabled until two distinct records; panel 2 excludes panel 1's pick |
+| 2 Select Primary | `#patient-1`, `#patient-2` | Next Step disabled until a primary is chosen; warns "marked as merged and inactive" |
+| 3 Confirm Merge | `#mergeReason`, `label[for="confirmMerge"]`, `button.cds--btn--danger` | **two independent gates** — a reason AND the acknowledgement; states "cannot be undone" |
+
+This is a well-built destructive flow, which is worth saying out loud given the
+state of the tests that were pointed at it. TC-MP-04 asserts all three gates,
+including that a reason *alone* does not unlock the danger button.
+
+#### Duplicate id on the create form
+
+`/PatientManagement/new` renders **two** elements with `id="date-picker-default-id"`
+— a `div.cds--form-item` wrapper and the input inside it. `document.querySelector`
+returns the div, so a naive value-setter throws. Use `input#date-picker-default-id`
+(the factory's existing `.last()` works for the same reason). Duplicate ids are an
+HTML validity error and a screen-reader hazard; noted for the product, not claimed
+as a defect here. The same screen also renders **two** buttons named `Save`, only
+one visible — another reason never to use `.first()` on a name (12.22).
+
+#### The last-name search is FUZZY — never assert an exact result set from it
+
+Found while reading TC-MP-04's own log output. A query for `lastName=QA AUTO Smith`
+returns **every** `qa-auto-*` record on the instance: `QA-AUTO Chain`,
+`qa-auto-probe`, `QaautoSmith`, `QA-AUTO-Davis`… The endpoint normalises case and
+punctuation and matches loosely, so it is not prefix matching and not exact
+matching.
+
+This bit immediately. TC-MP-02 first asserted that the merge search returned
+**exactly** its seeded pair. It passed — because it runs before the other two
+merge cases seed theirs. On the *second* run it would have found the first run's
+leftovers and failed, and the failure would have looked like a product
+regression. A test that passes only on a clean instance is a test that will lie
+to you later. The assertion is now a subset check per seeded id.
+
+It is soundex-like, not merely case-insensitive. Two consecutive attempts at a
+"unique" seeded last name both failed:
+
+1. `QAAutoMRG1788898067465248` → **400** `{"error":"lastName: invalid name format,
+   possibly illegal character"}`. Names reject digits.
+2. Transliterating the stamp into letters (`QAAutoMRGBHIIJ…`) made the name unique
+   but not unique *to the search*. Every `QAAuto…` name matched every other one,
+   so each run's panel search returned all previous runs' seeds, the pair got
+   pushed onto page 2 of the results, and its radio was never rendered. That is
+   what a 30-second `waiting for #patient1-select-530` timeout meant — not a
+   Carbon interception (12.22), not a slow server, just a result set the pair had
+   fallen out of.
+
+**How a destructive test identifies its own records here.** The merge panel's
+"Patient Id" field does not search the internal patient id — it matches the
+**subject number (Unique Health ID) by substring**. Verified: searching `530`
+returned patient 439, whose subject number merely *contains* `530`. So the seeder
+sets a fresh long digit subject number (`99<timestamp>`) on both records, and the
+panels search on that. It returned exactly the seeded pair and nothing else, and
+it is immune to both soundex and accumulation. The last name is now a constant,
+used for display only.
+
+General rule: **identify seeded records by a field that is matched exactly (or by
+a long unique substring), never by name.** Names on this app are for driving the
+UI.
+
+#### Finding: the primary-selection step labels both candidates identically
+
+Step 2 labels each candidate with its **subject number** when it has one, and
+falls back to the internal patient id when it does not — so the same screen reads
+`Patient 1: 514 - Alpha QAMergeProbe` for a record with no subject number and
+`Patient 1: 991788898821595883 - Alpha QaautoMRG` for one with.
+
+The consequence lands exactly where it hurts: a duplicate pair usually *shares*
+its identifier — that is generally why someone is merging it — so step 2 shows
+both candidates prefixed with the **same** string. On a real pair the only thing
+distinguishing "Patient 1" from "Patient 2" is the given name, on the screen where
+the user decides which record survives and which is marked inactive. Worth raising
+with the merge UX; it is what forced this case to assert on
+`Patient 1: <subjectNumber> - Alpha` rather than on an id.
+
+(Step 2 also shows a useful per-candidate summary — Active Orders / Total Results
+/ Samples, and an Identifiers block — so the data needed to choose is there. It is
+the label that does not distinguish.)
+
+#### Observation from the merge, NOT a defect claim
+
+After a successful merge of 515 into 514, on the same endpoint:
+
+- `?nationalID=<shared id>` returns **`[514]`** — correctly consolidated.
+- `?lastName=<shared name>` returns **`[514, 515]`** — the merged-away record is
+  still there.
+
+Stable across three consecutive repeats, on a pair with no other similar records
+present — which matters, because the fuzzy matching above means a longer result
+list proves nothing on its own. If 515 is "merged and inactive", a user searching
+by name can still find and select it, which defeats the merge.
+
+Revalidation status: **two of three gates cleared.** 3× API on a clean pair, and
+reproduced on a different pair in each of two consecutive full runs, every one of
+which uses a fresh browser context — that is the fresh-tab gate. What is still
+owed is a genuine **re-login**: the suite authenticates from saved storage state,
+so no run so far has actually re-authenticated. Until that third gate is cleared
+this stays an observation, because 12.14's lesson stands — I have called a search
+parameter a defect before and been wrong twice over. TC-MP-04 asserts the
+national-ID outcome and *logs* the last-name result with an `OBSERVATION` marker,
+naming only its own pair's record rather than quoting the raw list. Promote it to
+an assertion once the re-login gate is cleared.
+
+#### Repeatability, demonstrated rather than asserted
+
+The seeding design exists to make a destructive case re-runnable, so it was worth
+proving rather than reasoning about. Two consecutive full runs of the file:
+
+```
+pass 1   TC-MP-04: merged 558 into 557; nationalID search -> [557]     18 passed (1.3m)
+pass 2   TC-MP-04: merged 565 into 564; nationalID search -> [564]     18 passed (1.3m)
+```
+
+Different pair each pass, merge executed each pass, no state carried between them.
+A destructive test that has only ever been run once is not a verified test.
+
+#### Still open: order creation in the fixture
+
+Both runs logged `[data-setup] primaryOrder API creation failed`. That is the
+known 12.21 item, not a regression from this work: `createOrderViaAPI` composes
+its payload by hand, which 12.4 says not to do. The capture technique used above
+for `PatientManagement` and `patient/merge/execute` is exactly what that needs —
+drive the order wizard once in the browser with a request interceptor installed
+and keep what it actually sends. That remains its own piece of work.
+
+### 12.24 A merge is enforced for editing, advisory for search and order entry
+
+**2026-09-08.** Casey, on the 12.23 observation: *"for some reason, we don't remove
+the duplicated patient, which seems wrong, it should at least be a filter."* He is
+right, and chasing it into the UI turned a search-filter annoyance into a patient-safety
+finding.
+
+**All three revalidation gates cleared** (12.23 owed the third): 3× API repeat, a
+fresh browser context in each of two consecutive full runs, and a genuine logout
+plus re-login. So the behaviour below is measured, not assumed.
+
+**Then the disposition changed twice, and the sequence is the lesson.** Casey:
+
+1. *"A newer version will have a filter. Keep this one as is."*
+2. *"which will show the merged patients."*
+3. *"Wait. That filter isn't built yet. They will show up right now."*
+
+I ran ahead on both of the first two. After (1) I wrote that the search-results
+half was "handled"; after (2) I wrote that the result-list question was "settled"
+and started deriving second-order consequences from a default state that does not
+exist. (3) is the correction, and it is the state to hold:
+
+- **Today, on v3.2.2.0:** merged-away records **do** appear in name searches and
+  in order entry. Measured, and it is what these tests run against. Not a defect
+  against this version — nothing to file or chase.
+- **Planned, not built:** a filter, *intended* to show merged patients, which
+  would imply hidden becomes the default. **Intended, not settled.** There is no
+  control to look at, so its shape is not knowable from here.
+
+The generalisable bit, since I did it twice in two turns: **a one-line answer
+about future work is not a specification.** "A newer version will have a filter"
+licenses a tripwire. It does not license writing up a default state, a toggle
+semantics, or knock-on requirements as decided — and a QA reference that states
+unbuilt behaviour as fact is worse than one that says nothing, because the next
+reader cannot tell which parts were measured.
+
+So: no TC-MP-08 for a filter-ON state. Not "not yet written" — **not written**,
+because there is nothing to write it against, and inventing locators for
+unbuilt controls is exactly how the four hollow TC-MP cases this file replaced
+came to exist (12.22).
+
+That does not make the work wasted; it changes what the work is *for*. A finding
+that is already scheduled to be fixed is exactly the finding worth encoding as a
+test, because the test becomes the thing that tells you the fix arrived and that it
+covered what you thought it covered. The alternative — noting it in prose and
+moving on — means noticing months later, by hand, if at all.
+
+#### What a merge actually does, feature by feature
+
+Seeded pair 566 (primary) / 567 (merged away), merged via
+`POST /rest/patient/merge/execute` →
+`{"success":true,"mergeAuditId":"6","primaryPatientId":"566","mergedPatientId":"567","mergeDurationMs":156}`.
+
+| Surface | Behaviour after merge | Verdict |
+|---|---|---|
+| `?nationalID=` search | returns `[566]` only | **enforced** |
+| `?lastName=` search | returns `[566, 567]` | **advisory** |
+| Result row for 567 | badged `Merged` in the leading column | marked, not hidden |
+| Opening 567 | banner: "This patient record was merged / Active records are kept on Patient `<nationalId>`" | good |
+| Editing 567 | no Edit and no Save control rendered | **enforced** |
+| `/SamplePatientEntry` search | offers 567, radio **enabled** | **by design** |
+| Selecting 567 for an order | banner shows, Patient Info marks Complete, wizard advances to Program Selection | **by design** |
+
+So the merge is enforced where the record is written to, and advisory where the
+record is *chosen*.
+
+**And the order-entry half is settled, the other way from how I read it.** Casey,
+2026-09-09: *"Order entry should not block a merged patient."*
+
+I had argued the opposite, and the argument is worth writing down because the shape
+of the mistake recurs. I reasoned: a requisition against a consolidated record is
+how a result ends up attached to a patient the lab has declared dead, therefore the
+absence of a block is a safety gap, therefore the banner is insufficient because
+"a banner is not a control". Every step follows, and the conclusion was still
+wrong — because the premise it rests on is a clinical-workflow judgement I am not
+the one making. The record still exists. Someone may be standing at the counter
+with a sample labelled with it. Blocking there strands real work, and disclosing
+plus allowing is a legitimate choice.
+
+**The lesson: measuring a behaviour correctly does not make me the one who decides
+whether it is wrong.** I can say what the app does and what the consequence would
+be; whether that consequence is acceptable is the product's call. In the same
+session I also read "a newer version will have a filter" as a finished spec. Same
+error twice — reasoning past the edge of what was actually established.
+
+So TC-MP-06 is now **ordinary green coverage** of allow-plus-disclose, not a
+tripwire. What it protects is the **disclosure**: the banner must appear and must
+name where the active records live (the surviving identifier), because a future
+change that quietly drops the banner while still allowing the order is the real
+remaining risk. TC-MP-07 has been **deleted** — it existed only as a canary for a
+`test.fail()`-marked TC-MP-06, and with that marker gone its rationale went with
+it. A duplicate assertion with no stated reason is how files rot.
+
+One question only the real filter can answer, noted rather than guessed at: if
+merged records are hidden from search results by default, how does a user reach
+one in order entry — through the filter, or not at all?
+
+Worth being precise about what is *not* broken, so a fix does not regress it: the
+identifier search filters correctly, the record is badged in results, the banner
+names where the active records went, and editing is locked. The gap is the name
+search and the order-entry guard.
+
+#### Tracked as one `test.fail()` tripwire
+
+TC-MP-05 (name search) asserts the behaviour the planned work is *intended* to
+bring, and carries `test.fail(true, '<why>')`. It passes on v3.2.2.0 and turns
+**red when something changes on the instance** — at which point
+the job is to look at what actually shipped, not to reflexively delete the marker.
+The assertion may need rewriting rather than unmarking.
+
+This is the cheapest possible bet on an unbuilt feature: if the filter lands as
+described, one marker comes off and the case becomes ordinary coverage; if it
+lands differently, one marker and one assertion get rewritten. Either way the
+change cannot land unnoticed. That is the whole claim being made for it — nothing
+stronger.
+
+It was two tripwires until order entry was settled. Keeping them separate is what
+made that cheap to correct: inverting TC-MP-06 touched one case and left TC-MP-05
+untouched. Had they been folded into one "merged records are excluded everywhere"
+assertion, the correction would have meant unpicking a case that was half right.
+
+Generalising, because this keeps coming up: **a known-and-scheduled behaviour change
+is the best possible candidate for `test.fail()`.** Not a complaint, not a ticket —
+a tripwire that converts itself into coverage on the day the change ships.
+
+Both are deliberately **minimal** — seed and merge through the API, then one
+assertion. Under `test.fail()` *any* failure counts as the expected one, so a case
+that also did elaborate setup could "pass" by being broken. That is the hollow-test
+trap (12.22) wearing a different hat, and it is the rule for every `test.fail()`
+case in this repo: **one assertion, API setup, nothing else.**
+
+Setup for these uses `seedMergedPair` → `mergePatientsViaAPI`, not the wizard.
+Driving the merge UI to reach a merged state would put the wizard's own defects
+inside another case's precondition.
+
+#### `toHaveCount(0)` after an async action is vacuously true
+
+*(Found in the first TC-MP-06, which has since been rewritten as green coverage —
+the lesson outlives the case.)*
+
+The first TC-MP-06 was one line after the search:
+
+```ts
+await expect(mergedRow).toHaveCount(0, { timeout: 15_000 });
+```
+
+The run reported **"Expected to fail, but passed"** — and not because order entry
+filters merged records. `expect()` polls until the assertion PASSES, and
+`toHaveCount(0)` is satisfied the instant it is first evaluated, before the search
+has rendered anything. The 15-second timeout never came into play. **Any
+"must not exist" assertion placed straight after an async action is always
+vacuously true**, and it will keep being true when the thing it forbids is right
+there on screen a second later.
+
+The fix is to wait for evidence that the action completed, then assert the absence:
+
+```ts
+await expect(page.locator(`[data-cy="patient-result-row-${primaryId}"]`)).toBeAttached({ timeout: 15_000 });
+await expect(page.locator(`[data-cy="patient-result-row-${mergedId}"]`)).toHaveCount(0);
+```
+
+That guard sat inside a `test.fail()` case, where a failure would read as the
+expected one — so TC-MP-07 asserted the same precondition unmarked, as a canary.
+**The rule still stands: pair every `test.fail()` case with an unmarked canary for
+its preconditions.** TC-MP-07 itself is gone, because TC-MP-06 stopped being
+`test.fail()`-marked and a canary for an ordinary green case is just a duplicate.
+
+Note also what caught this: the marker itself. A plain green test asserting
+`toHaveCount(0)` would have sailed through and been counted as coverage forever.
+`test.fail()` inverts the reporting, so a vacuous assertion becomes a loud
+"Expected to fail, but passed" instead of a silent pass.
+
+### 12.25 A local 3.2.2.0 QA target, so a shared instance can never block a run again
+
+**2026-09-09.** The nightly redeploy of `testing.openelis-global.org` left it
+serving a page with no login form for hours, which blocked verification of a
+finished branch. Casey: *"Don't we have a VM we run this stuff against anyway?"*
+
+There was one, and the honest answer was "yes, and it can't run this" — for two
+reasons I had to separate carefully:
+
+1. The stack up on this host is the `oe-catalog-import` distro bundle
+   (`~/dev/oe-catalog-import/bundle/distro`, project `distro`, images
+   `demo-silnas` / `3.2.1.10`), reporting **3.2.1.11**.
+2. **Its React frontend and proxy containers were not running at all** — only
+   webapp, db and fhir. So `https://localhost:8443` was Tomcat direct, which
+   serves the legacy JSP app. Every React route redirected to
+   `/OpenELIS-Global/Home`, and `patient-search-results` answered HTML.
+
+Point 2 matters: my first read was "wrong version, dead end". The version *was*
+wrong, but the missing frontend and proxy were doing most of the damage, and
+saying so precisely is the difference between "this can't work" and "this needs
+two containers and a tag bump".
+
+#### What now exists
+
+`~/dev/oe-322-qa` — a shallow clone of `DIGI-UW/OpenELIS-Global-2` at tag
+**3.2.2.0** (commit `aa00894`), plus `docker-compose.qa.yml`, forked from
+upstream's compose at that tag with four changes and nothing else:
+
+| Change | Why |
+|---|---|
+| all five images pinned to `3.2.2.0` | upstream pins `:develop`, a moving target; the point is to be the version the suite was verified against |
+| container names suffixed `-qa322`, ports remapped, subnet `172.21.1.0/24` | runs **alongside** the distro stack, which holds 80/443/8080/8443/8081/8444/15432 and `172.20.1.0/24` |
+| `./configuration` → `./volume/configuration` | upstream's path does not exist at the repo root at this tag |
+| healthcheck with `start_period: 900s` on the webapp | a cold boot can reseed the config catalog; without it Docker calls a healthy boot `unhealthy` |
+
+```
+cd ~/dev/oe-322-qa
+docker compose -p oe322qa -f docker-compose.qa.yml up -d
+```
+
+**Reach it at `https://localhost:9443` — through the proxy.** Not
+`https://localhost:18443`, which is Tomcat direct and serves the legacy JSP app.
+That distinction is the whole of point 2 above; a copy of the compose file lives
+at `openelis-work/docker-compose.qa-322.yml`.
+
+Two boot notes, both benign and both worth expecting:
+
+- The **proxy dies once** on first `up` — `host not found in upstream
+  "oe.openelis.org"`, a DNS race against a webapp that has not registered yet.
+  `restart: unless-stopped` recovers it. Do not debug this.
+- Webapp went healthy in **145s**, not the ~836s the distro bundle warns about.
+  That warning is about reseeding a large existing config catalog; a fresh
+  database has nothing to reseed.
+
+#### It works, and it is faster
+
+```
+BASE_URL=https://localhost:9443 npx playwright test --config=modules.config.ts tests/patient-management.spec.ts
+  20 passed (51.3s)
+```
+
+Against the shared instance the same file takes 1.3–1.7 minutes. And `data.setup`
+created the Abby Sebby fixture on the empty database by itself — which is the
+standing *"seed a known good"* instruction finally satisfied by construction
+rather than by hoping a shared instance still has the row.
+
+Note what this run also bought: **TC-MP-06 had never been executed.** It was
+written from a hand-driven browser probe and pushed unverified because the shared
+instance was down, and its wizard-advance assertion was the part I trusted least.
+It passed here. A version-matched local target is what turns "typechecks, should
+work" into a result.
+
+#### What it does not solve
+
+`createOrderViaAPI` still fails — the payload is hand-composed (12.4). A clean
+local instance is the ideal place to capture the real one, and that is now the
+obvious next piece of work rather than a vague backlog item.
+
+### 12.26 Order creation: there is no payload to capture, because a stock install cannot submit an order
+
+**2026-09-09.** With a local 3.2.2.0 target in place (12.25), the obvious next
+piece was to capture the real order-entry payload and retire
+`createOrderViaAPI`'s hand-composed one (12.4). I drove the Add Order wizard to
+its final step on a freshly seeded install to record the POST. There is no POST
+to record.
+
+#### The wizard walks fine. It just cannot be submitted.
+
+All four steps advance in one pass on a clean instance — Patient Info → Program
+Selection → Add Sample → Add Order — in about a minute, not the 3.2 minutes
+12.21 measured against the shared instance. The blocker is at the end:
+
+| Add Order field | Required | State |
+|---|---|---|
+| `#priorityId` | yes | defaults to `Routine` — fine |
+| `#paymentOptionSelectionId` | yes | 4 options — fine |
+| `#testLocationCodeId` | yes | options `1303=B1`… — fine |
+| `#siteName` | yes | free text, **no data behind it** |
+| `#requesterDepartmentId` | yes | **only the blank option, `["="]`** |
+
+`#requesterDepartmentId` is a required select with nothing selectable in it, so
+it can never be satisfied and **Submit stays disabled permanently**. Confirmed on
+two separate runs.
+
+And the site field is not a slow lookup that needed more patience: **typing five
+characters into `#siteName` fires zero network requests.** That was the
+measurement worth taking, because "the autocomplete is slow" and "the field has
+no data" call for completely different work.
+
+#### RETRACTED: the "organization/list 500"
+
+I reported `/rest/organization/list` answering **500** on a freshly seeded
+database, and treated it as a reproducible server fault feeding the empty site
+field. That was wrong, and the webapp log says so plainly:
+
+```
+ERROR -- java.lang.NumberFormatException: For input string: "list"
+```
+
+**There is no `/organization/list` endpoint.** The route is
+`/organization/{id}`, and `list` was being parsed as an id. The 500 was a
+report about my URL, not about the product. The same claim recorded earlier in
+this session against `testing` is equally void.
+
+This is the third instance of one pattern in one session: `?nationalId=` vs
+`?nationalID=` (12.14), a vacuous `toHaveCount(0)`, and now a guessed path.
+The rule, stated so it stops recurring: **a non-2xx on a path or parameter I
+guessed is evidence about my guess, not about the product.** Confirm the
+endpoint exists — from the app's own traffic — before any status code becomes a
+finding.
+
+#### The real mechanism, from the app's own traffic
+
+Capturing every request the wizard makes gives the actual chain:
+
+| Call | Result |
+|---|---|
+| `GET /rest/displayList/REFERRAL_ORGANIZATIONS` | **200 `[]`** |
+| `GET /rest/departments-for-site?refferingSiteId=` | **200 `[]`** |
+| `GET /rest/departments-for-site?refferingSiteId=2` | **200 `[]`** |
+
+Both endpoints work and correctly return nothing. `#siteName` is a plain
+`<input type="text" required>` — no combobox role, no listbox, and typing into
+it fires **zero** requests because its candidates come from that
+already-fetched (empty) referral-organizations list. With no site selectable,
+`departments-for-site` is never called with an id that has departments, so the
+required `#requesterDepartmentId` stays empty and Submit stays disabled.
+
+(Note the upstream spelling of the query parameter: `refferingSiteId`, two f's.
+Anything calling it needs the typo.)
+
+#### Why it is empty: nothing is typed as a referring clinic
+
+`organization` has **24 rows**, so this is not an empty table. The join table
+tells the story:
+
+```
+organization_type:                    5 = "referring clinic"  (org who can order lab tests)
+                                     11 = "dept"              (organisation department)
+                                     13-16 = Provinsi / Kabupaten / Kecamatan / Kelurahan
+
+organization_organization_type used:  13 -> 3,  14 -> 3,  15 -> 3,  16 -> 14
+```
+
+Every organization on a stock install is part of the **Indonesian address
+hierarchy**. **Not one is mapped to type 5 or type 11.** So there are no
+referring clinics and no departments, and order entry cannot be completed —
+by configuration, not by fault. No defect to file.
+
+#### What this changes about a backlog item
+#### What this changes about a backlog item
+
+12.21 recorded order creation as blocked by an unstable results row and a
+3.2-minute step 1, and proposed "the API, once a payload has been CAPTURED". Both
+halves were about *cost*. The real blocker is *possibility*: on a stock install
+the form cannot be completed at all. That reframing matters because the two
+diagnoses buy different work — waiting-and-retrying versus seeding config data.
+
+So `createOrderViaAPI` no longer fabricates a payload. It now fails with a named
+reason pointing here. The old body was ~50 guessed fields and a `sampleXML`
+string that put a test NAME where an id belongs
+(`<test><id>HGB</id></test>`); it never once succeeded, and its real cost was
+making `data.setup` look like it had an API fallback. **A fabricated fallback is
+worse than none: it hides the fact that nothing works.**
+
+#### To unblock order-dependent coverage
+
+Precisely: create at least one organization mapped to **org type 5 ("referring
+clinic")** and at least one mapped to **org type 11 ("dept")**, so
+`displayList/REFERRAL_ORGANIZATIONS` and `departments-for-site` have something
+to return. Test locations already exist (`#testLocationCodeId` offers
+`1303=B1`…), so they are not part of this.
+
+Do it through the app's Organization admin rather than raw SQL: the LIMS rules
+about active/inactive and the app's own bookkeeping should apply, and the POST
+that creates it is itself the "seed a known good" mechanism worth capturing.
+Then submit one order by hand, capture that POST, and `createOrderViaAPI` has a
+real payload for the first time.
+
+This is the prerequisite for TC-PAT-04's history assertions ever seeing real
+orders, for the `ACCESSION`-dependent cases, and for the chains suites.
+
+Useful ids gathered while probing, so nobody repeats it: sample types are
+`#sampleId_0` (`2=Serum`, `4=Whole Blood`, `1=Urines`, 18 in all); test
+checkboxes are `test_0_<testId>` and panels `panel_0_<panelId>` (e.g.
+`test_0_15` = Hemoglobin, `test_0_3` = Glucose, `panel_0_1` = Bilan
+Biochimique); `/rest/test-list` returns `[{id, value}]` and works;
+`/rest/sample-type-tests` answers 500. Selecting a panel fires
+`POST /api/OpenELIS-Global/api/orderEntry/labelRequest` with
+`{"test_ids":[…],"samples":[{"sample_id_local":"0","sample_type":"2"}]}` — the
+label-preset call, not the order submit.
+
+
+### 12.27 Seeding a referring site and a department, and where order entry still stops
+
+**2026-09-09.** 12.26 said the unblock was "create an organization of org type 5
+and one of type 11". I did that, on the local 3.2.2.0 stack, and got further —
+but not to a submitted order. Recording exactly how far, because the next person
+should start from the wall rather than from the beginning.
+
+#### The Organization create payload (CAPTURED, per 12.4)
+
+`/MasterListsPage/organizationManagement` → **Add**. The form's own POST:
+
+```
+POST /api/OpenELIS-Global/rest/Organization?ID=0&startingRecNo=1
+{"organizationName":"QA Referring Clinic","shortName":"QARC","isActive":"Y",
+ "commune":"","village":"","department":"","formName":"organizationForm",
+ "formMethod":"POST","cancelAction":"CancelOrganization","submitOnCancel":false,
+ "cancelMethod":"POST","mlsSentinelLabFlag":"N","parentOrgName":"","state":"MN",
+ "selectedTypes":["5"]}
+-> 200 {"organizationName":"QA Referring Clinic","success":true,"id":"26","shortName":"QARC"}
+```
+
+`selectedTypes` carries the org-type ids, and the form exposes them as a checkbox
+table whose row ids **are** those ids: `input[id="5:select"]` is "referring
+clinic", `input[id="11:select"]` is "dept". Note the selector — an id starting
+with a digit is not a valid CSS id selector, so `#5\:select` throws
+`SyntaxError` in the browser and the attribute form `input[id="5:select"]` is
+required.
+
+(Also visible: `state` defaults to `"MN"` for every organization created this
+way.)
+
+#### It is SAMPLE_PATIENT_REFERRING_CLINIC, not REFERRAL_ORGANIZATIONS
+
+12.26 named `displayList/REFERRAL_ORGANIZATIONS` as the site field's source
+because that is the call the order page makes on load. It stayed `[]` even after
+the clinic existed. The list that actually picked it up:
+
+```
+GET /rest/displayList/SAMPLE_PATIENT_REFERRING_CLINIC
+  -> [{"id":"26","value":"QARC - QA Referring Clinic"}]
+```
+
+With that populated, the site field accepts a selection —
+`#siteName` reads `QARC - QA Referring Clinic`. So REFERRAL_ORGANIZATIONS is a
+different concept (referral labs, presumably type 6), and 12.26's attribution
+was wrong even though the observation of the call was right. Watching a page's
+traffic tells you what it *calls*, not what each call is *for*.
+
+#### A department is a type-11 org whose PARENT is the clinic
+
+Proven by changing one thing and re-reading:
+
+```
+before:  departments-for-site?refferingSiteId=26  ->  []
+set organization.org_id = 26 on the type-11 org
+after:   departments-for-site?refferingSiteId=26  ->  [{"id":"27","value":"QA Ward A"}]
+```
+
+**And this is a finding: the admin form does not set the parent.** All three
+organizations created through it came out with a null parent, whether the name
+was typed into `#parentOrgName` in the form or passed as
+`"parentOrgName":"QA Referring Clinic"` in the captured payload. Both returned
+**200 `success:true`** with no warning. The field is marked required in the DOM
+and yet saves empty. So a department created through the Organization admin is
+invisible to `departments-for-site`, and nothing tells the admin why.
+
+The `org_id` above was set with a direct SQL UPDATE **as a diagnostic**, to
+establish the mechanism. That is not the seeding recipe — it skips the app's
+bookkeeping, and the fhirUuid the create call generates suggests there is more
+to a real link than one column.
+
+#### Where it still stops
+
+With a site selected and a department chosen, all five required fields on Add
+Order hold values:
+
+```
+priorityId=Routine  siteName=QARC - QA Referring Clinic  requesterDepartmentId=27
+paymentOptionSelectionId=1120  testLocationCodeId=1303
+```
+
+**Submit is still disabled.** So the gate is not the required-field set, and
+12.26's "required field with no options" was necessary but not sufficient.
+Unverified next suspects, in the order I would test them: that the site must be
+chosen from the real suggestion list so an underlying id is set rather than just
+the visible text (the value read back is the display string, and my selection
+came from clicking a list item that may not be the component's own option); that
+`consentGiven` interacts with `consentRecordedBy`; that the empty `labNo` matters.
+
+One practical note for anyone driving this form: **selecting the site re-renders
+the panel and clears earlier selections.** Payment option had to be set *after*
+the site, or it came back empty.
+
+So `createOrderViaAPI` stays as it is — a named failure, no fabricated payload.
+Its message needs the update this section brings: the blocker is no longer "no
+referring clinic exists" on a stack where one has been seeded.
+
+### 12.28 SOLVED: an order can be created, and what four things it took
+
+**2026-09-09.** 12.27 stopped at "all five required fields hold values and Submit
+is still disabled". Casey: *"let's figure this out now."* Here is the answer, and
+the method matters more than the answer.
+
+#### How it was found: read the state, not the symptoms
+
+The Submit button's condition, from the **deployed bundle's own sourcemap** (the
+frontend image ships `.js.map` files, so the shipped source is readable and
+matches tag 3.2.2.0 exactly):
+
+```js
+disabled={ isSubmitting ||
+           Object.values(phoneValidation).some((item) => item.status === false) ||
+           errors?.errors?.length > 0 }
+```
+
+My first pass at reading the live React state mapped hooks by position and
+concluded all three terms were false — which was wrong, because hooks whose
+values were too large to serialise had been skipped, shifting everything after
+them. Re-reading **by shape** instead of by position found it immediately:
+
+```
+hook 4: obj keys=["name","value","path","type","errors","inner","message"]
+        ERRORS=["Sample Lab Number is required","Referring Site is required"]
+        name=ValidationError
+```
+
+`errors` holds a Yup `ValidationError`, populated **before Submit is ever
+clicked**, and nothing renders it — no `.cds--form-requirement`, no inline
+message. That is why the button looked arbitrarily dead. **When a control's state
+disagrees with the code you just read, suspect how you read the state.**
+
+#### The four conditions, all measured
+
+1. An organization of **org type 5** ("referring clinic") must exist, or the site
+   field has nothing to offer.
+2. An organization of **org type 11** ("dept") whose **parent is that clinic**, or
+   the required `#requesterDepartmentId` stays empty (12.27).
+3. The accession must be **generated**:
+   `GET /rest/SampleEntryGenerateScanProvider` → `{"status":true,"body":"DEV01260000000000002"}`.
+   An invented one is rejected: `400 sampleOrderItems.labNo: "Invalid accession
+   number format"`. That was the first of the two Yup errors.
+4. **`referringSiteId` must actually be set.** This was the trap. Clicking a list
+   item under the site field sets the *visible text* and leaves the id unset —
+   `#siteName` read `QARC - QA Referring Clinic` while Yup still said "Referring
+   Site is required". Selecting through the combobox properly (**ArrowDown then
+   Enter**) sets the id, and the validation error cleared to `none`.
+
+With those four, `POST /rest/SamplePatientEntry` → **200**, and the app renders
+**"Successfully saved"** with the accession `DEV01260000000000002`.
+
+Generalise (4), because it will bite again: **a filled-looking Carbon combobox
+proves nothing.** Assert on the id the form will submit, not on the text the
+field displays. A field whose display value and underlying value disagree is
+exactly the class of bug this file keeps finding from the other direction.
+
+#### `createOrderViaAPI` now works from the captured request
+
+Rewritten to build the accepted payload: it resolves the site from
+`SAMPLE_PATIENT_REFERRING_CLINIC`, its department from `departments-for-site`,
+generates the accession, and posts the captured shape — failing with a named
+reason at whichever of the four preconditions is missing rather than guessing.
+No hand-composed fields remain (12.4 satisfied).
+
+It still returns null on a stock install, and that is correct: the referring
+clinic and department are **configuration**, and seeding them is a deliberate act
+(12.27 has the captured Organization POST). What has changed is that the fixture
+now says which precondition failed, and works the moment they exist.
+
+### 12.29 The order fixture is validated against the UI's own output — and results entry is a separate problem
+
+**2026-09-09.** With orders creating (12.28), the next step was to enter and
+validate a result so patient history renders populated. It does not get that
+far, and the reason is worth more than the goal was.
+
+#### The control comparison
+
+`/AccessionResults` (Results → search by accession) returns **"There are no
+records to display"** for a fixture-created accession. The obvious inference is
+that the fixture built something subtly wrong. So the fixture was compared
+against the order created earlier **through the real UI wizard**
+(`DEV01260000000000002`), which is the only trustworthy control available:
+
+| | UI-created (002) | fixture-created (005/006) |
+|---|---|---|
+| `sample.status_id` | 1 (Test Entered) | 1 |
+| `sample_item.status_id` / `typeosamp_id` | 20 (SampleEntered) / 2 | 20 / 2 |
+| `analysis.status_id` | 4 (Not Tested) | 4 |
+| `sample_human.patient_id` | 2 | 2 |
+| `sample_human.provider_id` | **3** | **null** |
+
+And in `/AccessionResults`, **both** are invisible — the UI-created order shows
+"There are no records to display" exactly like the fixture's.
+
+Two conclusions, and the second only follows because of the control:
+
+1. **The captured payload is faithful.** Sample, sample item and analysis rows
+   match the UI's output exactly. The one real difference is
+   `sample_human.provider_id`: the wizard attached a requester (I typed provider
+   first/last name into it), the fixture sends none. That is a fidelity gap to
+   close, not the cause of anything here — 002 *has* a provider and is still
+   invisible.
+2. **Results entry not finding these orders is not a fixture problem.** It is
+   equally true of an order created by hand through the product's own wizard, so
+   it belongs to that screen or this instance's configuration, not to
+   `createOrderViaAPI`.
+
+Without the control I would have spent the night "fixing" a correct fixture. **A
+fixture is verified by comparing its output against the product's own, at the
+data layer — not by whether a downstream screen likes it.**
+
+#### Where to look next, unverified
+
+Analysis status 4 ("Not Tested") is the normal pre-result state, so the order is
+not in a dead state. Named suspects, in the order worth testing: the analysis's
+**test section** versus the logged-in user's assigned lab units (`/AccessionResults`
+plausibly scopes by section, and this instance's sections are Hematology,
+Biochemistry, Serology…); whether the sample must be **received or accepted**
+before it is enterable; and `/LogbookResults?type=` as the section-scoped
+alternative to the accession screen.
+
+I also probed several guessed REST paths here (`/rest/accession/<n>/results`,
+`/rest/analysis-by-accession/<n>`, `/rest/logbook-results`) and all 404'd. Per
+12.26's rule those tell us nothing — they are reports about my guesses. The
+evidence above is the UI comparison, not those statuses.
+
+#### Fidelity fix worth doing
+
+`createOrderViaAPI` should send a provider so `sample_human.provider_id` is
+populated as the wizard populates it. Left undone deliberately rather than
+guessed: the wizard sends `providerFirstName`/`providerLastName` free text and
+the server resolved that to provider id 3, and which of `providerId`,
+`providerPersonId` or the name pair drives that resolution has not been
+established. One captured request with a provider selected would settle it.
+
+### 12.30 Results entry was never broken. I was clicking the wrong Search button.
+
+**Retraction.** §12.26 and the investigation that followed it concluded that
+orders created by the fixture were invisible to results entry, and named three
+suspects: the analysis's test section versus the user's assigned lab units,
+whether the sample must be received/accepted first, and a section-scoped
+`/LogbookResults?type=`. All three were wrong, and so was the premise. The
+orders were visible the whole time.
+
+**What actually happened.** `/AccessionResults` has exactly two elements whose
+accessible name is exactly "Search":
+
+| | element | class | container |
+|---|---|---|---|
+| header action | `BUTTON` | `cds--header__action` | `closest('header')` |
+| form submit | `BUTTON` | `cds--btn--primary` | `closest('form')` |
+
+My probe used `getByRole('button', { name: /^search$/i }).first()`, which is the
+header one. Clicking it fires **no request at all**. The table therefore still
+shows its mount-time state, which renders as:
+
+```
+There are no records to display
+0-0 of 0 items
+```
+
+That is byte-identical to a genuine no-match. So a mis-click reports "the
+product cannot find this order" and nothing in the output distinguishes it from
+"the product has no such order".
+
+**The measurement that settled it.** Calling the endpoint the screen itself
+issues, read out of `SearchResultForm.jsx`:
+
+```
+/rest/LogbookResults?labNumber=DEV01260000000000005&upperRangeAccessionNumber=
+  &patientPK=&testSectionId=&collectionDate=&recievedDate=&selectedTest=
+  &selectedSampleStatus=&selectedAnalysisStatus=&doRange=false&finished=false
+```
+
+returned `testResult.length === 1` for both the fixture-created and the
+UI-created accession, with a complete row (`Glucose(Serum)`, `Sebby, Abby`,
+`analysisStatusId: 4`, `sampleItemExternalId: DEV01260000000000005-1`). Driving
+the screen with the **form's** Search then rendered that row and reported
+`1-1 of 1 items`. No test-section condition, no receipt step, no `?type=`.
+
+**Third occurrence.** §12.22 and §12.26 are the same mistake. The fix is
+structural rather than a thing to remember: `clickFormSearch` now excludes
+`header button` and `.cds--header__action` from its candidate set, and its
+last-resort `last()` fallback warns loudly that a following empty result should
+be blamed on the fallback first.
+
+**The generalisation, which is the part worth keeping.** An empty-state render
+is not evidence about the product until the request that would have filled it
+is known to have been sent. Before reporting "X cannot find Y", check the
+network: no request means the harness failed, not the product. Two prior
+retractions in this file (§12.26's order-entry impossibility, and the
+`/organization/list` 500) are the same error in a different coat — a non-result
+from an action I only assumed I performed.
+
+**Also measured, incidentally.** Two things worth knowing about the row:
+
+- The result field is `input#ResultValue0`, `name="testResult[0].resultValue"`,
+  `type=number`. The id has a **capital R**, and CSS attribute matching is
+  case-sensitive, so `input[id*="result"]` matches nothing. Select on
+  `input[name$=".resultValue"]`.
+- The field **rounds on entry** to the test's `significantDigits`. For testId 3
+  (Glucose/Serum) that is `0`, so typing `14.5` leaves `15` in the field. Worth
+  its own case; do not let it ride along inside a "does a result save" test.
+- Saving **navigates away**. Evaluating in the page straight after the POST
+  response dies with "Execution context was destroyed". Wait the navigation out.
+
+**What this unblocks.** `TC-RE-03` was hollow: it typed accession
+`26CPHL00008T` (a record from a different instance) into
+`page.locator('input').first()` (the header search box), pressed Enter (which
+does not submit), and then took an unconditional `if (!hasResultInput) return`
+skip every run. Its final assertion, `saveStatus === 0 || 2xx`, passed when no
+POST fired — it could not fail. It now seeds its own order via
+`seedOrder()`, finds it, enters a result, requires a 2xx POST, and reads the
+value back from the server. Verified green on the local 3.2.2.0 stack:
+`DEV01260000000000026 saved 200; resultValue="15" analysisStatusId=15` — the
+analysis moved off status 4 as a consequence of the save.
+
+### 12.31 `test.fail()` at describe scope is a SUITE modifier, and it blessed the canaries
+
+**What happened.** `tests/order-entry-state.spec.ts` was written with five
+tripwires and three canaries. The modifiers were placed like this:
+
+```ts
+test.fail();
+test('TC-OE-02: ...', async ({ page }) => { ... });
+```
+
+which reads as "the next test is expected to fail" and is not what it means.
+A `test.fail()` call outside a test body is a **suite-level modifier**: it marks
+**every case in the enclosing `describe`**, regardless of the line it sits on,
+including cases declared above it. All eight were marked.
+
+The run then reported:
+
+```
+3 failed
+  TC-OE-01  Expected to fail, but passed.
+  TC-OE-03  Expected to fail, but passed.
+  TC-OE-06  Expected to fail, but passed.
+7 passed
+```
+
+Read quickly, that looks like three real failures and a mostly-green file. It
+is the exact inverse: the three "failures" are the **canaries passing**, and
+the seven "passes" include five tripwires whose trustworthiness the canaries
+were there to establish. `Expected to fail, but passed` on a case you never
+marked is the signature of this mistake.
+
+**The fix.** The modifier must sit INSIDE the body, as the first statement:
+
+```ts
+test('TC-OE-02: ...', async ({ page }) => {
+  test.fail();
+  ...
+});
+```
+
+**Second trap, distinct from the first, and the reason canaries exist at all.**
+A tripwire counts *any* throw as its expected failure, including a locator that
+never matched because the harness never reached the screen. So a broken route
+reads as a confirmed defect. A precondition asserted *inside* a tripwire cannot
+protect it — that assertion failing is just another way for the tripwire to
+"pass". Preconditions therefore have to be **their own ordinary tests**.
+
+That is what TC-OE-09 is for. TC-OE-07 claims the department control is absent
+once a referring site is selected; the first manual pass at that finding was
+wrong because no site had actually been selected (12.30). Putting
+`expect(picked).toBe(true)` inside TC-OE-07 would have been worthless. As a
+separate green test, it is worth something.
+
+**Rule.** Every tripwire in this repo needs at least one ordinary test covering
+the path it walks and the preconditions it depends on. If the canary is red,
+the tripwire tells you nothing. The four in this file:
+
+| Canary | Establishes | Protects |
+|---|---|---|
+| TC-OE-01 | dashboard -> Continue -> in-app Enter Order works | TC-OE-02, 04, 05 |
+| TC-OE-03 | the lab number generator answers and reserves | TC-OE-02 |
+| TC-OE-06 | `departments-for-site` serves wards for the site | TC-OE-07 |
+| TC-OE-09 | a referring site can actually be selected | TC-OE-07 |
+
+**Also recorded: `clickFormSearch` does not cover this form.** On
+`/order/enter` it logs `NO Search button shares a container with #siteName
+(3 candidates after excluding the Carbon header)` and falls back to `last()`,
+which is the *Provider* block's Search. Three Search buttons live on that
+screen and the site one is not related to `#siteName` by any ancestor the
+helper inspects. `selectFirstSite` in this spec targets it positionally
+instead — the first Search button FOLLOWING `#siteName` in document order,
+tagged with a data attribute so the click cannot drift. The fallback warning
+added in 12.30 is what made this diagnosable from the run log alone, which is
+the first time that warning paid for itself.
+
+---
+
+## §12.32 — The chains could not report a failure, and the gate could not see why
+
+**Date:** 2026-09-10
+**Files:** `tests/chains/_common.ts`, 12 chain specs, `scripts/lint-falsifiable-gate.mjs`
+
+### What was found
+
+The 26 regression chains are the suite's headline artifact. On audit, **122 of
+their 126 steps could not fail**. Two independent causes, pulling in opposite
+directions, and each hid the other.
+
+**Cause 1 — 64 bare `test.skip()` calls bypassed the declared-gap register.**
+
+`tests/chains/known-gaps.ts` exists to enforce one rule: a step may only excuse
+itself if a human wrote the excuse down in advance, with a reason, a ticket, and
+a condition that would retire it. `markStep(..., 'GAP'|'BLOCKED', ...)` honours
+that register and fails under `GAPS_STRICT=1`, which the nightly sets.
+
+But every chain opened its steps with
+
+```ts
+if (!order) test.skip();
+```
+
+which goes around the register completely. No annotation, no ticket, no
+retirement condition, and **no failure even in strict mode**. A step whose input
+is missing opted out silently, on every run, including the nightly. A chain
+whose Step 1 failed to seed reported seven green skips behind it.
+
+This is the same move the register was written to stop, one level down: not a
+gap decided in a catch block, but a gap decided in an `if` guard.
+
+**Cause 2 — the gate's `self-skip-return` detector was wrong in both directions,
+and never mentioned Cause 1.**
+
+The detector was one regex over the case body:
+
+```
+/if\s*\(\s*![\s\S]{0,160}?\)\s*\{[\s\S]{0,400}?\breturn\s*;/
+```
+
+It asks "is there a negated `if` followed within 400 characters by a `return`".
+
+*False positives.* It fires on `if (!r.ok) { markStep(..., 'FAIL', ...); return; }`
+— a guard that **fails** the case. And it takes the `{` of a generic type
+argument for the `{` of a block, which is how every chain step that reads
+`apiCall<{ ... }>` came to be counted hollow. 65 of the 122 chain flags were
+this.
+
+*False negatives.* A guard more than 400 characters from its `return`, or one
+whose condition is positive (`if (rows.length === 0) return;`), sailed straight
+past. It also never flagged the bare `test.skip()` shape — the actual problem.
+
+So the gate reported the chains as the worst files in the repo for a reason that
+was mostly artefact, while the reason they were genuinely broken went unnamed.
+
+### What changed
+
+**`requireStep(chain, n, ok, condition, detail?)`** in `_common.ts`. An unmet
+precondition now routes through `markStep(..., 'BLOCKED', ...)`, so the register
+governs it: fails unless `"<chain>:<n>"` is declared. 53 guards were rewritten
+mechanically; 10 were read individually and turned out to be three kinds:
+
+- **dead code** — `markStep(..., 'BLOCKED', ...); test.skip(); return;`. markStep
+  already skips-or-fails, so the trailing skip could never run, while reading as
+  an unconditional opt-out. Dropped.
+- **an HTTP failure treated as a gap** — three guards skipped on a non-2xx from
+  an endpoint that exists, which `known-gaps.ts` explicitly calls a failure.
+- **a missing result treated as a gap** — Chain D Step 7 skipped when the calc
+  engine had written no value; Chain J Step 5 skipped when no audit entry existed
+  for the action it had just performed. Those absences are the findings each step
+  exists to make. Both now fail. Chain J splits on whether any probed action
+  actually landed: if one did and no audit row carries its signature, that is a
+  FAIL; if none landed there is nothing to audit and the register decides.
+
+**A guard-walking detector** replaces the regex. It brackets each `if`
+condition and its block properly, then asks the question that matters: does this
+guard leave the case without raising anything? `expect()`, `throw`,
+`requireStep()`, and `markStep(..., 'FAIL'|'BLOCKED'|'GAP')` are reviewable
+exits and are not flagged. `markStep(..., 'PASS'|'PARTIAL')` is not.
+
+A block cannot be delimited by a regex. That is the whole lesson: the previous
+detector approximated a block with "within 400 characters" and could not tell a
+type argument from a body, so it was answering a different question than the one
+it printed.
+
+### The numbers, decomposed
+
+Two changes landed together, so they were measured apart deliberately — a
+detector change can manufacture an "improvement" that is only a change of ruler.
+
+| | total unfalsifiable | of which in chains |
+|---|---|---|
+| old detector, old chains | 325 | 122 |
+| **new detector**, old chains | 293 | 57 |
+| new detector, **new chains** | 244 | 8 |
+
+So the detector change accounts for 325 → 293, and the actual work accounts for
+293 → 244, all of it in the chains (57 → 8). The baseline was **re-recorded, not
+ratcheted**: the new detector found 34 real opt-outs in 15 non-chain files it had
+previously missed (`system-misc` 19→27, `reports` 11→16, `alerts-notifications`
+3→7, `results-entry` 7→10). Those are backlog, not regressions.
+
+### Verified
+
+Run against the local 3.2.2.0 stack, `chain-a/d/e/h/j`:
+
+- Non-strict: **4 failed, 11 skipped, 2 passed**. The skips now print the failed
+  condition and a cascade explanation. Previously all of these were silent green.
+- `GAPS_STRICT=1`: **9 failed**, each naming its register key
+  (`known-gaps.ts` key `"H:1"`, and so on). Before this change the same steps
+  passed silently in strict mode too, because a bare `test.skip()` never
+  consulted the register at all.
+
+The failures are honest and mostly environmental on this instance: no calculation
+rules configured (Chain D Step 1), `AuditTrail` 404 (Chain J Step 1),
+`UnifiedSystemUser` create returning 500 (Chain H Step 1). Those are now visible
+instead of absorbed.
+
+### Left open: PARTIAL reports green
+
+The 8 remaining chain flags are one shape: `markStep(..., 'PARTIAL', ...); return;`.
+`PARTIAL` is doing two different jobs, and only one of them is honest.
+
+- *"I could not determine the answer."* Chain H Step 3 gets a 401 with a dead
+  session, which genuinely cannot distinguish authz from session loss. Reporting
+  that as not-a-pass is right; it belongs in the register as BLOCKED.
+- *"I determined a degraded answer, and that is the finding."* Chain E Step 6
+  finds the corrected value **and** the superseded wrong value both present in a
+  patient report. Chain J Step 4 finds the audit count grew but no entry carries
+  the changed value — stated in the test's own words as a regulatory gap. Both
+  report green.
+
+The second kind is the same defect as the bare skip: a status that describes a
+problem and passes anyway. It is not fixed here because the fix needs a product
+answer, not a harness one — whether a patient report should show retest history
+at all is Casey's call, not the harness's.
+
+### Rule
+
+A step may not decide at runtime that it is excused. If the precondition is
+missing, either seed it, or fail, or route through the register where the excuse
+is written down and someone can review it. And a status that describes a problem
+must not be a passing status.
+
+---
+
+## §12.33 — Order entry on develop vs 3.2.2.0, and why the suite could not see it
+
+**Date:** 2026-09-10
+**Instances:** develop `5fe0ecb` (OGC-782, order-entry remediation #4196) on
+`https://localhost:10443`; release `3.2.2.0` on `https://localhost:9443`
+
+### The environment finding, which came first
+
+Every QA run to date has targeted either the local stack — pinned to release
+tag `3.2.2.0`, images built 2026-08-18 — or `testing.openelis-global.org`.
+Neither is develop. So the suite was structurally incapable of seeing a
+develop regression, which is where the client reports come from. A `develop`
+tag exists on Docker Hub and is rebuilt continuously.
+
+A second stack now runs develop in parallel (`../oe-develop-qa`,
+`docker-compose.develop.yml`, project `oedevqa`), with its own ports, subnet
+and volumes so the 3.2.2.0 database and its seeded QA data are untouched.
+Running both is what makes a failure attributable: red on develop and green on
+3.2.2.0 is a new regression; red on both is an older bug the suite had not
+covered.
+
+`:develop` moves, so record the digest with any result. At the time of writing:
+`itechuw/openelis-global-2@sha256:f664191b4954cf9e496dec2b2b560583c57b430b8f33c8112a4f5f362c050da5`.
+
+### Clinical order entry, field by field
+
+`/order/clinical/enter` on develop (29 controls) against `/order/enter` on
+3.2.2.0 (20 controls):
+
+| | 3.2.2.0 | develop |
+|---|---|---|
+| Department / Ward / Unit | absent | **`referringSiteDepartment`, present** |
+| Required By | absent | **`requiredBy`, `type=date`** |
+| Order date / Order time | absent | absent |
+| Clinic ID | absent | absent |
+| Site Name | `Site Name *` (required) | `Site Name` (not required) |
+| Organization Phone / Fax / Email | absent | present |
+| Provider first/last/phone/fax/email | absent (name + phone only) | present |
+
+Two things follow. The ward field is back on develop, so a suite running only
+against 3.2.2.0 would report it missing as a live defect. And `siteContactFax`
+now exists, which is the field the Clinic ID request asked about repurposing.
+
+### The order date exists; the order TIME does not
+
+**Corrected 2026-09-10, same day, by Casey.** This section first read "the
+order date and time already exist in the payload" and concluded that only a UI
+binding was missing. That was wrong, and wrong in the direction that
+under-sizes the work.
+
+`GET /rest/SamplePatientEntry` returns, inside `sampleOrderItems`, and
+identically on both builds:
+
+```
+receivedDateForDisplay = "10/09/2026"   <- when the sample was RECEIVED AT THE LAB
+receivedTime           = "20:26"        <- likewise. NOT the order time.
+requestDate            = "10/09/2026"   <- this IS the order date. No time component.
+```
+
+Received date and time are lab receipt: a different event from order entry,
+and not a substitute for it. `requestDate` is the order date, and it carries
+no time.
+
+So an "order date and time, defaulting to entry time and overwritable"
+requirement splits: the **date** has a home in `requestDate` and needs a UI
+binding, while the **time** does not exist anywhere in the payload and needs
+new data. Do not read a `receivedTime` in the response as evidence that an
+order time is available.
+
+The lesson for this file: a field whose name contains the right noun is not
+the field you want. `receivedTime` matched a grep for time-ish keys, and being
+in the payload alongside the order data made it look like part of the same
+concept. Only someone who knows the lab workflow could say otherwise, which
+is why a payload key is a lead and not a finding.
+
+### develop has three save buttons
+
+`Save`, `Save & Next`, `Save Draft` — plus a `Print Labels` accordion and an
+`Add Sample` button. Any spec that settles on a different set of save actions
+is changing what is already there, not adding to a blank slate.
+
+### What is NOT established: the two behavioural reports
+
+"Fields not clearing after submission" and "previous patient details persist"
+are **not reproduced and not refuted**. Three attempts, all inconclusive, and
+the reason is worth recording because the first attempt nearly reported a false
+positive.
+
+Filling the patient block, selecting a sample type, ticking a revealed test
+(`#test-0-6` Albumin, tick confirmed) and clicking Save produced, on both
+builds:
+
+```
+POSTs seen: []
+messages:   []
+6 of 6 filled controls kept their value
+```
+
+The first version of the probe called that REPRODUCED. It is not. With no POST,
+the form retaining its values means only that an incomplete form was refused
+client-side — which is correct behaviour. This is §12.30 again: no request, no
+evidence about the product. The probe now refuses to print a verdict unless a
+POST was seen.
+
+Two blockers, both real:
+
+1. **`#labNumber` loads empty and is the only control marked required** on the
+   base form. It stays empty at 2s, 5s, 10s and 15s, `readOnly=false`, and no
+   request resembling accession or lab-number generation is made on load — the
+   full list is `site-branding`, `open-configuration-properties`,
+   `supportedlocales/active`, `properties`, `menu`,
+   `database-cleaning/status`, `configuration-properties`, `notifications`,
+   `displayList/SAMPLE_PATIENT_PAYMENT_OPTIONS`, `user-programs`,
+   `user-sample-types`, `SamplePatientEntry`. And `SamplePatientEntry` returns
+   no accession-shaped key at any depth. **Identical on 3.2.2.0**, so this is
+   baseline behaviour and not a develop regression — but it does mean the form
+   as loaded cannot be saved, and nothing on screen says why.
+
+2. **The name fields on the entry form are patient SEARCH inputs**, sitting
+   beside `Search for Patient` and `New Patient`. Typing into them does not
+   bind a patient. `New Patient` reveals the real patient form, where
+   `nationalId`, `Gender` and `Date of Birth` are required. So a submit that
+   reaches the server needs that flow completed first.
+
+Blocker 2 also reframes the second client report: if those are search inputs
+that retain the previous patient, "previous patient details persist and can
+overwrite the wrong record" is a statement about the search block, which is a
+different defect from the order form failing to reset.
+
+### Why the lab number is empty at load: nothing generates it on mount
+
+The form loads with `#labNumber` empty, and it is the only control marked
+required, so the form as loaded cannot be saved. The cause is not a missing
+generator — the generator works. It is that nothing calls it until a human
+clicks.
+
+`ClinicalOrderEnter.jsx` wires generation to
+`GET /rest/SampleEntryGenerateScanProvider` through `handleGenerateLabNumber`.
+There is no `useEffect` that calls it on mount; the only caller is a click
+handler. Verified live on develop:
+
+```
+labNumber at load:        (EMPTY)
+generator called on load: NO
+click "Generate Lab Number"
+  -> GET 200 /api/OpenELIS-Global/rest/SampleEntryGenerateScanProvider
+  -> labNumber = DEV01260000000000001
+manual typing also works  -> QA-MANUAL-0001
+```
+
+So generation is click-only and functions correctly. Three separate defects
+sit around it:
+
+1. **The trigger is unreachable by keyboard.** It is a Carbon `<Link>`, which
+   renders `<a class="cds--link generate-link">` with `href=null` and
+   `tabindex=null`. An anchor with no href is not focusable, so a keyboard-only
+   user cannot reach Generate at all — and the field it fills is the one
+   required control on the form. WCAG 2.1.1.
+
+2. **Its disabled state is not conveyed.** The JSX passes
+   `disabled={isGeneratingLabNo || (isReadOnly && !isEditMode)}` to `<Link>`,
+   and the live element carries neither `disabled` nor `aria-disabled`. So the
+   link stays clickable during the in-flight generate, and in read-only mode.
+
+3. **The save-blocked message names the wrong things.** The gate is
+   `canSave = localLabNumber && hasPatientOrSite && hasSampleTypes`, but the
+   notification reads "Please add a patient and at least one sample type before
+   saving" — it never mentions the lab number. A user who has a patient and a
+   sample type but no lab number is told to add a patient and a sample type.
+
+Note also that `hasPatientOrSite` reads `orderData.patientProperties`, i.e.
+the context, not the DOM. Typing into the `#lastName` / `#firstName` inputs on
+this form sets neither, because those are the patient SEARCH inputs. That is
+why the earlier submit attempts never POSTed, and it is the same observation
+that reframes the "previous patient persists" report as a search-block defect.
+
+One more caution about reading behaviour out of source: the JSX default for
+`order.labNumber.helper` is "Auto-generated per existing lab number rules",
+but the running app shows "Unique identifier for this order" — a message
+bundle overrides it. Quote the live string, not the `defaultMessage`.
+
+### Rule
+
+Two instances, one release and one develop, and every result carries which one
+it came from plus the image digest. A suite with a single target that is not
+the branch under complaint cannot answer a complaint about that branch.
+
+---
+
+## §12.34 — A spec path is not a request; the config decides what runs
+
+**Date:** 2026-09-10
+
+### The trap
+
+`all-tc.config.ts` is `testDir: '.'` with a `testMatch` regex on every project:
+
+```ts
+{ name: 'test-catalog', testMatch: /(test-catalog-.*|results-.*)\.spec\.ts/, … }
+```
+
+Playwright treats a path on the command line as an additional **filter**, not as
+an instruction. A file that no project's `testMatch` claims collects **zero
+tests, silently** — no error, no warning, just a smaller run than was asked for.
+
+Measured, passing each of twelve files to `--list`:
+
+| file | `all-tc.config.ts` | `modules.config.ts` |
+| --- | --- | --- |
+| `tests/results-by-range.spec.ts` | 17 | 0 |
+| `tests/results-by-status.spec.ts` | 12 | 0 |
+| `tests/aliquot.spec.ts` | **0** | 21 |
+| `tests/print-barcode.spec.ts` | **0** | 18 |
+| `tests/order-search.spec.ts` | **0** | 20 |
+| …and five more | **0** | 12–19 each |
+
+The two configs are complementary, and neither collects all twelve.
+
+### What it cost
+
+The reachability conversion (61 sites, commit `a5d7d1e`) was "verified" with
+
+```
+npx playwright test -c all-tc.config.ts <twelve spec paths>
+```
+
+which reported *3 failed, 1 flaky, 4 skipped, 19 passed* and was written into the
+commit message as covering all twelve files. It covered **two**. Ten files —
+the ones the change actually touched most — never ran. The run was not wrong
+about what it did; it was silent about what it skipped, and the totals looked
+plausible enough not to prompt a second look.
+
+Re-run properly under `modules.config.ts`, before and after, on the local
+3.2.2.0 stack:
+
+```
+with the conversions:    3 skipped, 121 passed
+without (a5d7d1e~1):     3 skipped, 121 passed
+```
+
+Identical, and the revert was real (`git diff --stat a5d7d1e~1 HEAD` over those
+ten files: 52 insertions, 52 deletions). So the conversions are behaviour-neutral
+and all 61 assertions hold — the right conclusion, reached for the first time by
+a run that actually executed the code in question.
+
+### The rule
+
+**A test-count total is not evidence that the files you named ran.** Before
+trusting a targeted run, confirm collection:
+
+```
+npx playwright test -c <config> --list <paths> | grep -c '›'
+```
+
+Zero, or a number far below the file's case count, means the config did not
+claim it. This generalises past Playwright: any runner that treats arguments as
+filters over a configured set will quietly return the empty intersection rather
+than complain. `scripts/run-against.sh` does not solve this — it fixes the
+target, not the collection — so the `--list` check stays manual.
+
+Related: §12.30 (an absent request is not evidence about the product) is the
+same failure at the network layer. This is it at the collection layer: the
+absent *test* is not evidence either, and both are silent by default.
