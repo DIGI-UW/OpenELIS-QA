@@ -69,16 +69,39 @@ test.describe.serial('Chain L — Lab Number Uniqueness', () => {
     patientPK = patients[0].patientID!;
     patientNationalId = patients[0].nationalId!;
 
-    const t = await apiCall<{ testList?: Array<{ id?: string; sampleTypeId?: string; testSectionName?: string }> }>(
-      page, '/api/OpenELIS-Global/rest/test-list?activeOnly=true'
-    );
-    const tests = (t.ok && typeof t.body === 'object' && t.body !== null)
-      ? ((t.body as { testList?: Array<{ id?: string; sampleTypeId?: string }> }).testList || [])
-      : [];
+    // `/rest/test-list` answers a BARE ARRAY of IdValuePair. This chain used to read
+    // `body.testList`, which is never present, so "Empty test catalog" was reported on an
+    // instance carrying 48 active tests -- for two months, on every run. It also ignores
+    // `activeOnly`; the parameter was ours, not the API's.
+    //
+    // Worth knowing before trusting a non-empty answer: the endpoint is
+    // `getAllDisplayUserTestsByLabUnit(user, ROLE_RESULTS)`, so it returns only tests in
+    // lab units the LOGGED-IN USER holds the Results role for. An empty list here can
+    // legitimately mean "this user has no lab units", which is a permissions fact and not
+    // a catalog one -- the message below says so rather than guessing.
+    const t = await apiCall<unknown>(page, '/api/OpenELIS-Global/rest/test-list');
+    const raw = t.ok ? t.body : null;
+    const tests = (Array.isArray(raw)
+      ? raw
+      : ((raw as { testList?: unknown[] } | null)?.testList ?? [])) as Array<{
+      id?: string;
+      value?: string;
+      sampleTypeId?: string;
+    }>;
     if (tests.length === 0) {
-      markStep('L', 1, 'FAIL', 'Empty test catalog'); expect(tests.length).toBeGreaterThan(0); return;
+      markStep(
+        'L',
+        1,
+        'FAIL',
+        `test-list returned no tests (HTTP ${t.status}). Either the catalog is empty or ` +
+          `this user holds the Results role in no lab unit -- the endpoint filters by both.`
+      );
+      expect(tests.length).toBeGreaterThan(0);
+      return;
     }
     testId = tests[0].id!;
+    // IdValuePair carries no sampleTypeId; '1' is the documented fallback this chain has
+    // always used in practice.
     sampleTypeId = tests[0].sampleTypeId || '1';
     markStep('L', 1, 'PASS', `Patient ${patientNationalId}, test ${testId}, sampleType ${sampleTypeId}`);
   });
@@ -92,6 +115,19 @@ test.describe.serial('Chain L — Lab Number Uniqueness', () => {
     requireStep('L', 2, !(!patientPK || !testId), '!patientPK || !testId');
     await page.goto(BASE);
 
+    // KNOWN STALE, 2026-09-15. This payload is a hand-rolled shape that the endpoint does
+    // not accept: all ten POSTs answer 400. The real contract is the one
+    // `helpers/data-factory.ts:createOrderViaAPI` carries -- it took a full session to
+    // establish and has four conditions the shape below satisfies none of: a `sampleXML`
+    // string rather than a `sampleItems` array, a `labNo` generated per order from
+    // `/rest/SampleEntryGenerateScanProvider`, a `referringSiteId` from a type-5
+    // organization, and the WHOLE patient block rather than three fields of it.
+    //
+    // Left in place deliberately rather than quietly deleted: the 400s are this chain's
+    // own bug, not the product refusing a valid order, and the failure message below now
+    // says so. Fixing it means rebuilding the burst on createOrderViaAPI's payload with a
+    // separately generated accession per request, which is the only way this chain can
+    // test what it is named for.
     const payload = {
       patientProperties: { patientPK, nationalId: patientNationalId, patientUpdateStatus: 'UPDATE' },
       sampleOrderItems: {
@@ -140,7 +176,7 @@ test.describe.serial('Chain L — Lab Number Uniqueness', () => {
 
     if (successCount === 0) {
       markStep('L', 2, 'FAIL',
-        `All ${BURST_SIZE} concurrent SamplePatientEntry POSTs failed`,
+        `All ${BURST_SIZE} concurrent SamplePatientEntry POSTs failed (THIS CHAIN'S PAYLOAD IS STALE -- see the comment above; not a product refusal)`,
         `Statuses: ${results.map(r => r.status).join(',')}. Cannot test uniqueness without successful writes.`);
       expect(successCount).toBeGreaterThan(0); return;
     }

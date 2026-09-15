@@ -46,11 +46,49 @@ export default defineConfig({
   use: { ...devices['Desktop Chrome'], baseURL: BASE, headless: true, ignoreHTTPSErrors: true, trace: 'retain-on-failure' },
   projects: [
     { name: 'setup', testDir: '.', testMatch: /auth\.setup\.ts/ },
+    // FIXTURES. Until 2026-09-15 this config depended on `setup` and nothing else, and on
+    // the develop-stack nightly that meant the chains ran against a BARE instance every
+    // night: each shard boots its own ephemeral stack, and the config that seeds
+    // (`regression-seed.config.ts`) lives in a different shard against a different stack.
+    // Ten-odd chains dutifully recorded "no orders exist", "found 0 patients", "no
+    // REFERRAL_ORGANIZATIONS" — all true, none of them product findings.
+    //
+    // Three setups, cheapest first, each non-fatal by its own contract:
+    //   data          the baseline patient (Abby Sebby) and two orders
+    //   chain-fixtures  >= 2 QA-AUTO patients and >= 1 order, the floor Chains L/P/S/U name
+    //   referral-data  three reference labs and five referrals, for Chains O and R
+    {
+      name: 'data',
+      testDir: '.',
+      testMatch: /(^|\/)data\.setup\.ts$/,
+      dependencies: ['setup'],
+      use: { storageState: '.auth/user.json' },
+      timeout: Number(process.env.PW_SETUP_TIMEOUT ?? 120_000),
+      retries: 0,
+    },
+    {
+      name: 'chain-fixtures',
+      testDir: '.',
+      testMatch: /(^|\/)chain-seed\.setup\.ts$/,
+      dependencies: ['setup', 'data'],
+      use: { storageState: '.auth/user.json' },
+      timeout: Number(process.env.PW_SETUP_TIMEOUT ?? 180_000),
+      retries: 0,
+    },
+    {
+      name: 'referral-data',
+      testDir: '.',
+      testMatch: /(^|\/)referral-seed\.setup\.ts$/,
+      dependencies: ['setup', 'data'],
+      use: { storageState: '.auth/user.json' },
+      timeout: Number(process.env.PW_SETUP_TIMEOUT ?? 150_000),
+      retries: 0,
+    },
     ...CHAINS.map((c) => ({
       name: `chain-${c}`,
       testDir: CHAIN_DIR,
       testMatch: new RegExp(`chain-${c}-.*\\.spec\\.ts`),
-      dependencies: ['setup'],
+      dependencies: ['setup', 'data', 'chain-fixtures', 'referral-data'],
       use: { storageState: '.auth/user.json' },
     })),
   ],
