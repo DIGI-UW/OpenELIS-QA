@@ -59,11 +59,28 @@
  * what cancelling means), so it cannot share a fixture with anything else and does not
  * try to. The accession is logged on every run.
  *
+ * ============================================================================
+ * THE SECOND ACTION: REMOVE SAMPLE
+ * ============================================================================
+ * The same table carries a "Remove Sample" column, and it is a bigger hammer: it cancels
+ * EVERY analysis on the sample item, not one test. Two details make it worth its own
+ * cases rather than a footnote to the ones above.
+ *
+ *   1. It is gated on the whole sample, not the row. `getCurrentTestInfo` computes
+ *      `canRemove` by ANDing `canCancel` across every analysis on the item, so one
+ *      started test makes the entire sample unremovable for an ordinary user. That is a
+ *      different rule from the per-test one, and a suite that only exercised the per-test
+ *      path would never notice it changing.
+ *   2. The control is rendered on the FIRST row of each sample item only (`accession !==
+ *      ""` in EditSample.jsx, and only the first item of a group is given an accession),
+ *      so a one-test order cannot tell "removed the sample" apart from "cancelled the
+ *      only test". The remove cases therefore seed TWO tests on one sample item, which is
+ *      what `seedModifiableOrder({ testIds: [...] })` was added for.
+ *
  * NOT COVERED HERE, deliberately, and worth saying out loud:
- *   - the non-admin arm of `canCancel` (a started analysis, an ordinary user). It needs a
- *     second storage state; `rbac.config.ts` is where that belongs.
- *   - "Remove Sample", which cancels every analysis on the sample item.
- *   - whether cancelling the last remaining test leaves the SAMPLE in a sensible state.
+ *   - the non-admin arm of `canCancel` / `canRemove` (a started analysis, an ordinary
+ *     user). It needs a second storage state; `rbac.config.ts` is where that belongs.
+ *   - an order with two sample ITEMS, where removing one must leave the other alone.
  */
 import { test, expect, Page } from '@playwright/test';
 import { seedModifiableOrder } from '../helpers/data-factory';
@@ -82,6 +99,7 @@ interface SampleEditItem {
   testId?: string;
   testName?: string;
   analysisId?: string;
+  sampleItemId?: string;
   status?: string;
   canCancel?: boolean;
   hasResults?: boolean;
@@ -90,6 +108,13 @@ interface SampleEditItem {
 /** Shared across the serial cases: seeded once, then acted on. */
 let accession = '';
 let testName = '';
+
+/** The remove-sample half seeds its own two-test order; these are its subjects. */
+let removeAccession = '';
+let removeTestNames: string[] = [];
+
+/** Glucose and Amylase, both orderable against sample type 2 on this instance. */
+const TWO_TESTS = [process.env.QA_TEST_ID || '3', process.env.QA_TEST_ID_2 || '5'];
 
 async function readCurrentTests(page: Page, acc: string): Promise<SampleEditItem[]> {
   const res = await page.evaluate(async (p) => {
@@ -235,5 +260,121 @@ test.describe('Edit Order — cancelling a placed test', () => {
       `the Results worklist still offers "${testName}" on ${accession} after it was cancelled, ` +
         `so a technician would still be asked to run it`
     ).toHaveCount(0, { timeout: 20_000 });
+  });
+});
+
+test.describe('Edit Order — removing a whole sample', () => {
+  test('EO-REMOVE-01 [canary]: a two-test sample lists both tests and offers Remove Sample on the sample row', async ({
+    page,
+  }) => {
+    await page.goto(BASE, { waitUntil: 'domcontentloaded' });
+    const seeded = await seedModifiableOrder(page, { testIds: TWO_TESTS });
+    removeAccession = seeded.accession;
+    console.log(`[edit-order-remove] seeded order ${removeAccession} with tests ${TWO_TESTS.join(',')}`);
+
+    const before = await readCurrentTests(page, removeAccession);
+    // Two, on ONE sample item. If the payload put them on separate items the remove would
+    // only take one of them down and EO-REMOVE-02 would pass for the wrong reason.
+    expect(
+      before.length,
+      `expected two tests on ${removeAccession}, got ${before.length}: ` +
+        `${JSON.stringify(before.map((t) => t.testName))}`
+    ).toBe(2);
+    expect(
+      new Set(before.map((t) => t.sampleItemId)).size,
+      'the two tests landed on different sample items, so "Remove Sample" would not cover both'
+    ).toBe(1);
+    removeTestNames = before.map((t) => String(t.testName ?? ''));
+
+    await openSampleStep(page, removeAccession);
+    for (const name of removeTestNames) {
+      await expect(
+        page.locator('tr', { hasText: name }).first(),
+        `no Current Tests row for ${name}`
+      ).toBeVisible({ timeout: 15_000 });
+    }
+
+    // Remove Sample sits on the first row of the sample item only.
+    const firstRow = page.locator('tr', { hasText: removeTestNames[0] }).first();
+    const boxes = firstRow.locator('.cds--checkbox-wrapper');
+    expect(
+      await boxes.count(),
+      'the sample row should carry three checkboxes: Remove Sample, Results Recorded, Cancel Test'
+    ).toBe(3);
+    await expect(
+      boxes.first().locator('input'),
+      'Remove Sample is disabled on a sample whose tests have all not been started'
+    ).toBeEnabled();
+  });
+
+  test('EO-REMOVE-02: removing the sample cancels every test on it, not just the first', async ({
+    page,
+  }) => {
+    await openSampleStep(page, removeAccession);
+
+    const firstRow = page.locator('tr', { hasText: removeTestNames[0] }).first();
+    // First wrapper in the row is `removeSample`; the column order is Remove Sample,
+    // Results Recorded, Cancel Test. Clicking the LABEL — the input is hidden.
+    await firstRow.locator('.cds--checkbox-wrapper').first().locator('label').click();
+    await expect(
+      firstRow.locator('.cds--checkbox-wrapper').first().locator('input'),
+      'the Remove Sample checkbox did not take the click'
+    ).toBeChecked();
+
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    const submit = page.locator('[data-cy="submit-order"]');
+    await expect(submit, 'the wizard never reached the submit step').toBeVisible({ timeout: 20_000 });
+    await submit.click();
+    await expect(
+      page.getByText(/success|saved/i).first(),
+      'the order did not save — no success message appeared after Submit'
+    ).toBeVisible({ timeout: 30_000 });
+
+    const after = await readCurrentTests(page, removeAccession);
+    // The sample is gone from Edit Order. This is a CONTRACT FACT, not the evidence that
+    // the tests were cancelled, and the distinction is the whole point of EO-REMOVE-03:
+    // `getSampleItems` drops a cancelled sample item, so this list empties whether the
+    // analyses under it were cancelled or not. Asserting only this would report success
+    // on a build that cancelled nothing.
+    expect(
+      after.map((t) => t.testName),
+      `${removeAccession} still lists current tests after its sample was removed`
+    ).toEqual([]);
+  });
+
+  test('EO-REMOVE-03: nothing from the removed sample is left on the work the lab is asked to do', async ({
+    page,
+  }) => {
+    test.fail();
+    // THE SPEC. Removing a sample must cancel every analysis on it. Measured on develop
+    // 2026-09-15, it cancels the sample item and ONLY the ticked row's analysis:
+    //
+    //   accession DEV01260000000000228, sample_item 177 status 19 (Canceled)
+    //     analysis 151 Glucose  status 14 Test Canceled
+    //     analysis 152 Amylase  status  4 Not Tested        <- still live
+    //
+    // ROOT CAUSE. `SampleEditServiceImpl.createCancelSampleList` walks the rows and uses a
+    // sticky flag to carry "this sample is being removed" from the first row of a sample
+    // item to the rest of the group. It resets that flag on any row whose accession number
+    // is non-null — that is how it detects the start of the next group. But
+    // `EditSample.jsx:formatTestsObject` rewrites every falsy accessionNumber to `""`
+    // (mutating the form objects in place, so the submitted payload carries it), and `""`
+    // is not null. The flag therefore resets on EVERY row and the group never extends past
+    // the one the user ticked.
+    //
+    // The consequence is worse than a no-op: the surviving analyses are still on the
+    // worklist, and Edit Order can no longer see them, because its GET drops the cancelled
+    // sample item they hang from. They cannot be reached to be fixed.
+    await page.goto(`${BASE}/Results?accessionNumber=${removeAccession}`, {
+      waitUntil: 'domcontentloaded',
+    });
+    await page.waitForLoadState('networkidle').catch(() => undefined);
+
+    for (const name of removeTestNames) {
+      await expect(
+        page.getByRole('cell', { name, exact: false }),
+        `the Results worklist still offers "${name}" on ${removeAccession} after the sample was removed`
+      ).toHaveCount(0, { timeout: 20_000 });
+    }
   });
 });
