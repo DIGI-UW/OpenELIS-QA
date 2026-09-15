@@ -224,6 +224,10 @@
     {
       "match": "capture-topsave.spec.ts",
       "why": "Media capture for documentation, not a verdict."
+    },
+    {
+      "match": "tests/ogc803-804-referral-accept-reject.spec.ts",
+      "why": "OGC-803/804 Accept and Reject are RETURNED-only actions, and a referral only reaches Returned when the peer-lab import poll writes COMPLETED. Nothing inside an instance can produce one: scripts/mint-returned-referral.sh writes the peer's four FHIR resources into the store over mutual TLS, which needs the webapp container's keystore and therefore a local stack. On the shared CI target every case would fail for want of a fixture. Run it with referral-reception.config.ts after minting."
     }
   ],
   "$shards": [
