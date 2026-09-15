@@ -38,6 +38,11 @@ on:
         type: choice
         options: [all, docs]
         default: all
+      order_path:
+        description: 'Which order-entry path the chain seeder uses. domain is normative; legacy is being retired.'
+        type: choice
+        options: [domain, legacy]
+        default: domain
 
 concurrency:
   # A stack boot is ~15-25 minutes; overlapping runs would fight for the
@@ -73,6 +78,14 @@ jobs:
       PW_RETRIES: 0
       # The chains' declared-gap register only means anything in strict mode.
       GAPS_STRICT: '1'
+      # REQUIRED by the chain seeder, and its absence here cost 10 of regression-chains'
+      # 30 failures in run 34993104951 -- every one of them the same thrown error, not a
+      # product fault. Two order-entry paths are live and tests/chains/domain-seed.ts
+      # deliberately refuses to guess between them, so an unset ORDER_PATH throws. That
+      # guard is right; the omission was in this workflow. nightly.yml has always set it.
+      # 'domain' is the future normative path and the one whose clinical lane works end to
+      # end; dispatch with 'legacy' to compare.
+      ORDER_PATH: ${{ github.event.inputs.order_path || 'domain' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -374,7 +387,8 @@ jobs:
       #   2. a suite ran ZERO tests  -> the HARNESS is broken, and this is the silent one.
       #      Playwright collects nothing when a path or testMatch stops matching, prints a
       #      cheerful summary and can exit 0. A run that asserts nothing is never a pass.
-      #      Setup-only configs declare "allowZero": true in ci-suites.json and are exempt.
+      #      "Zero" means no passes AND no failures; an all-red suite is condition 1, not
+      #      this one. Setup-only configs declare "allowZero": true and are exempt.
       - name: Verdict
         if: always() && (steps.seen.outputs.cache-hit != 'true' || inputs.force == true)
         run: |
@@ -421,8 +435,14 @@ jobs:
             passed=$(count_of "$f" passed)
             failed=$(count_of "$f" failed)
 
-            if [ "$passed" -eq 0 ] && [ "$allow_zero" != "true" ]; then
-              echo "::error::$n ran ZERO tests. A suite that asserts nothing is not a pass - check its testMatch and testDir before trusting any result from this run."
+            # ZERO TESTS means NOTHING RAN: no passes AND no failures. It does NOT mean
+            # "no passes". A suite whose every test failed also has passed=0, and calling
+            # that a harness fault is wrong twice over -- it blames the wrong layer, and it
+            # buries the real signal (the failures) under an error about testMatch. Run
+            # 34993104951 mislabelled `deep` exactly that way: 1 test ran, it failed, and
+            # the verdict announced the suite had collected nothing.
+            if [ "$passed" -eq 0 ] && [ "$failed" -eq 0 ] && [ "$allow_zero" != "true" ]; then
+              echo "::error::$n ran ZERO tests - no passes and no failures. A suite that asserts nothing is not a pass; check its testMatch and testDir before trusting any result from this run."
               bad=1
             fi
             if [ "$code" != "0" ] || [ "$failed" -gt 0 ]; then
