@@ -1,0 +1,42 @@
+{
+    "resourceType": "Organization",
+    "id": "aff2976e-0a78-465e-a8dd-38f4d6e97a2a",
+    "meta": {
+        "versionId": "1",
+        "lastUpdated": "2026-09-15T04:47:54.880+00:00",
+        "source": "#tjq3YBjxO7KEMYIh"
+    },
+    "identifier": [
+        {
+            "system": "http://openelis-global.org/org_shortName",
+            "value": "QAARLA"
+        },
+        {
+            "use": "official",
+            "system": "http://openelis-global.org/facility_id",
+            "value": "Test LIMS",
+            "assigner": {
+                "reference": "Organization/be74e48d-8cdf-4294-bff0-6d10727fa1c5",
+                "display": "Test LIMS"
+            }
+        }
+    ],
+    "active": true,
+    "type": [
+        {
+            "coding": [
+                {
+                    "system": "http://openelis-global.org/orgType",
+                    "code": "referralLab"
+                }
+            ],
+            "text": "An organization to which samples may be sent"
+        }
+    ],
+    "name": "QA_AUTO Reference Lab Alpha",
+    "address": [
+        {
+            "state": "MN"
+        }
+    ]
+}

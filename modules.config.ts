@@ -149,10 +149,30 @@ export default defineConfig({
       timeout: Number(process.env.PW_SETUP_TIMEOUT ?? 120_000),
       retries: 0,
     },
+    // REFERENCE-LAB REFERRAL DATA (added 2026-09-15). The Reference Lab Results
+    // page (OGC-798..815) is built and shipped and every one of its four metric
+    // tiles reads 0 on a stock instance, because nothing has ever created a
+    // referral: `GET /rest/displayList/REFERRAL_ORGANIZATIONS` answers `[]` on an
+    // instance holding 27 organizations, so no reference lab can be picked and no
+    // referral can be made through any screen. Eighteen stories sat In Review with
+    // nothing to test against. This fixture is what changed that.
+    //
+    // It depends on `data`, not just `setup`: it attaches its referrals to that
+    // setup's baseline patient rather than creating a second one.
+    //
+    // Non-fatal, same contract as `data` — see the setup file's own header.
+    {
+      name: 'referral-data',
+      testMatch: /(^|\/)referral-seed\.setup\.ts$/,
+      dependencies: ['setup', 'data'],
+      use: { storageState: '.auth/user.json' },
+      timeout: Number(process.env.PW_SETUP_TIMEOUT ?? 150_000),
+      retries: 0,
+    },
     {
       name: 'modules',
       testMatch: MODULE_MATCH,
-      dependencies: ['setup', 'data'],
+      dependencies: ['setup', 'data', 'referral-data'],
       use: { storageState: '.auth/user.json' },
     },
   ],

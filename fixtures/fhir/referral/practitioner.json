@@ -1,0 +1,42 @@
+{
+    "resourceType": "Practitioner",
+    "id": "9c7f0540-ebdf-4b05-88e0-07c8c5b55e36",
+    "meta": {
+        "versionId": "1",
+        "lastUpdated": "2026-09-15T04:52:36.466+00:00",
+        "source": "#OfsbNTnDl8RPA7me"
+    },
+    "identifier": [
+        {
+            "use": "usual",
+            "system": "http://openelis-global.org/provider_uuid",
+            "value": "3e8af392-d2e2-4b57-8409-7ddc4f60baf0"
+        },
+        {
+            "use": "official",
+            "system": "http://openelis-global.org/facility_id",
+            "value": "Test LIMS",
+            "assigner": {
+                "reference": "Organization/be74e48d-8cdf-4294-bff0-6d10727fa1c5",
+                "display": "Test LIMS"
+            }
+        }
+    ],
+    "active": true,
+    "name": [
+        {
+            "family": "Seeder",
+            "given": [
+                "QA"
+            ]
+        }
+    ],
+    "telecom": [
+        {
+            "system": "email"
+        },
+        {
+            "system": "fax"
+        }
+    ]
+}

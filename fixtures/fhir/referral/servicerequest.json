@@ -1,0 +1,71 @@
+{
+    "resourceType": "ServiceRequest",
+    "id": "31dc8a06-3366-49ef-b884-2cf04c936da5",
+    "meta": {
+        "versionId": "1",
+        "lastUpdated": "2026-09-15T04:51:02.237+00:00",
+        "source": "#GsOsRQhk1Ejj89mM"
+    },
+    "identifier": [
+        {
+            "use": "usual",
+            "system": "http://openelis-global.org/analysis_uuid",
+            "value": "31dc8a06-3366-49ef-b884-2cf04c936da5"
+        },
+        {
+            "use": "official",
+            "system": "http://openelis-global.org/facility_id",
+            "value": "Test LIMS",
+            "assigner": {
+                "reference": "Organization/be74e48d-8cdf-4294-bff0-6d10727fa1c5",
+                "display": "Test LIMS"
+            }
+        }
+    ],
+    "requisition": {
+        "use": "usual",
+        "system": "http://openelis-global.org/samp_labNo",
+        "value": "DEV01260000000000129"
+    },
+    "status": "active",
+    "intent": "original-order",
+    "category": [
+        {
+            "coding": [
+                {
+                    "system": "http://openelis-global.org/samp_domain",
+                    "code": "H",
+                    "display": "H"
+                }
+            ]
+        }
+    ],
+    "priority": "stat",
+    "code": {
+        "coding": [
+            {
+                "system": "http://loinc.org",
+                "code": "2345-7",
+                "display": "Glucose"
+            }
+        ],
+        "text": "Glucose"
+    },
+    "subject": {
+        "reference": "Patient/6b23dd84-eaaa-4b1e-bbf6-002bdd70c2c3"
+    },
+    "authoredOn": "2026-09-15T04:51:02+00:00",
+    "requester": {
+        "reference": "Practitioner/3e8af392-d2e2-4b57-8409-7ddc4f60baf0"
+    },
+    "locationReference": [
+        {
+            "reference": "Location/ca6d9545-e4ac-41b3-aed5-ac88c5f5acbf"
+        }
+    ],
+    "specimen": [
+        {
+            "reference": "Specimen/2715deae-1782-4212-a9e8-f611a27abc5f"
+        }
+    ]
+}
