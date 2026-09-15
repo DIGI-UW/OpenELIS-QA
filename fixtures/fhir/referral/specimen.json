@@ -1,0 +1,66 @@
+{
+    "resourceType": "Specimen",
+    "id": "2715deae-1782-4212-a9e8-f611a27abc5f",
+    "meta": {
+        "versionId": "1",
+        "lastUpdated": "2026-09-15T04:51:02.237+00:00",
+        "source": "#GsOsRQhk1Ejj89mM"
+    },
+    "identifier": [
+        {
+            "use": "usual",
+            "system": "http://openelis-global.org/sampleItem_uuid",
+            "value": "2715deae-1782-4212-a9e8-f611a27abc5f"
+        },
+        {
+            "use": "official",
+            "system": "http://openelis-global.org/facility_id",
+            "value": "Test LIMS",
+            "assigner": {
+                "reference": "Organization/be74e48d-8cdf-4294-bff0-6d10727fa1c5",
+                "display": "Test LIMS"
+            }
+        }
+    ],
+    "accessionIdentifier": {
+        "use": "usual",
+        "system": "http://openelis-global.org/sampleItem_labNo",
+        "value": "DEV01260000000000129-1"
+    },
+    "status": "available",
+    "type": {
+        "coding": [
+            {
+                "system": "http://openelis-global.org/sampleType",
+                "code": "SER",
+                "display": "Serum"
+            },
+            {
+                "system": "http://loinc.org",
+                "code": "LP7576-4",
+                "display": "Serum"
+            }
+        ]
+    },
+    "subject": {
+        "reference": "Patient/6b23dd84-eaaa-4b1e-bbf6-002bdd70c2c3"
+    },
+    "request": [
+        {
+            "reference": "ServiceRequest/31dc8a06-3366-49ef-b884-2cf04c936da5"
+        }
+    ],
+    "container": [
+        {
+            "type": {
+                "coding": [
+                    {
+                        "system": "http://snomed.info/sct",
+                        "code": "434711009",
+                        "display": "Specimen container (physical object)"
+                    }
+                ]
+            }
+        }
+    ]
+}

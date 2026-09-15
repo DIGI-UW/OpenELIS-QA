@@ -1,0 +1,30 @@
+{
+    "resourceType": "DiagnosticReport",
+    "id": "qa-auto-peer-dr-0001",
+    "basedOn": [
+        {
+            "reference": "ServiceRequest/qa-auto-peer-sr-0001"
+        }
+    ],
+    "status": "final",
+    "code": {
+        "coding": [
+            {
+                "system": "http://loinc.org",
+                "code": "2345-7",
+                "display": "Glucose"
+            }
+        ],
+        "text": "Glucose"
+    },
+    "subject": {
+        "reference": "Patient/6b23dd84-eaaa-4b1e-bbf6-002bdd70c2c3"
+    },
+    "issued": "2026-09-14T10:05:00+00:00",
+    "result": [
+        {
+            "reference": "Observation/qa-auto-peer-obs-0001"
+        }
+    ],
+    "conclusion": "QA_AUTO peer-returned report fixture"
+}

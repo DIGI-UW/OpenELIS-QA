@@ -1,0 +1,55 @@
+{
+    "resourceType": "Patient",
+    "id": "6b23dd84-eaaa-4b1e-bbf6-002bdd70c2c3",
+    "meta": {
+        "versionId": "1",
+        "lastUpdated": "2026-09-12T00:34:43.802+00:00",
+        "source": "#xtSwWH8znTxpwYbQ"
+    },
+    "identifier": [
+        {
+            "use": "official",
+            "system": "http://openelis-global.org/pat_nationalId",
+            "value": "0123456"
+        },
+        {
+            "use": "usual",
+            "system": "http://openelis-global.org/pat_guid",
+            "value": "6b23dd84-eaaa-4b1e-bbf6-002bdd70c2c3"
+        },
+        {
+            "use": "usual",
+            "system": "http://openelis-global.org/pat_uuid",
+            "value": "6b23dd84-eaaa-4b1e-bbf6-002bdd70c2c3"
+        },
+        {
+            "use": "official",
+            "system": "http://openelis-global.org/facility_id",
+            "value": "Test LIMS",
+            "assigner": {
+                "reference": "Organization/be74e48d-8cdf-4294-bff0-6d10727fa1c5",
+                "display": "Test LIMS"
+            }
+        }
+    ],
+    "name": [
+        {
+            "use": "official",
+            "family": "Sebby",
+            "given": [
+                "Abby"
+            ]
+        }
+    ],
+    "telecom": [
+        {
+            "system": "phone",
+            "use": "mobile"
+        },
+        {
+            "system": "email"
+        }
+    ],
+    "gender": "female",
+    "birthDate": "1990-01-01"
+}

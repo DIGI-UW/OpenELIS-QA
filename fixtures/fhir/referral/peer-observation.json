@@ -1,0 +1,58 @@
+{
+    "resourceType": "Observation",
+    "id": "qa-auto-peer-obs-0001",
+    "basedOn": [
+        {
+            "reference": "ServiceRequest/qa-auto-peer-sr-0001"
+        }
+    ],
+    "status": "final",
+    "code": {
+        "coding": [
+            {
+                "system": "http://loinc.org",
+                "code": "2345-7",
+                "display": "Glucose"
+            }
+        ],
+        "text": "Glucose"
+    },
+    "subject": {
+        "reference": "Patient/6b23dd84-eaaa-4b1e-bbf6-002bdd70c2c3"
+    },
+    "effectiveDateTime": "2026-09-14T10:00:00+00:00",
+    "valueQuantity": {
+        "value": 11.2,
+        "unit": "mmol/L",
+        "system": "http://unitsofmeasure.org",
+        "code": "mmol/L"
+    },
+    "interpretation": [
+        {
+            "coding": [
+                {
+                    "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+                    "code": "H",
+                    "display": "High"
+                }
+            ]
+        }
+    ],
+    "referenceRange": [
+        {
+            "low": {
+                "value": 3.9,
+                "unit": "mmol/L"
+            },
+            "high": {
+                "value": 5.6,
+                "unit": "mmol/L"
+            }
+        }
+    ],
+    "note": [
+        {
+            "text": "QA_AUTO peer-returned result fixture"
+        }
+    ]
+}
