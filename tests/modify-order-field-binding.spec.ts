@@ -26,9 +26,10 @@
  *               mis-bound control is gone.                       -> FLIPPED
  *   MO-2  RED   `input#order_nextVisitDate` now renders "14/10/2026", which is
  *               exactly the order's nextVisitDate.               -> FLIPPED
- *   MO-3  GREEN Received Date is STILL fabricated: the order carries no
- *               receivedDate and the field shows "14/09/2026" (today). Left
- *               exactly as it was — see its own note.            -> UNCHANGED
+ *   MO-3  n/a   RETRACTED 2026-09-15. Not a defect: received date is auto-set by
+ *               configuration and is NOT NULL in the schema, and an Edit Order
+ *               save provably leaves a stored value alone. Repurposed into the
+ *               assertion the original never made.               -> RETRACTED
  *   MO-4  RED   form state now carries "QA_AUTO Referring Clinic";
  *               loadOrderValues no longer blanks referringSiteName. -> FLIPPED
  *   MO-5  RED   its premise (an empty, unvalidated Lab Number input) dissolved
@@ -432,23 +433,47 @@ test.describe('Modify Order — field binding and save gate (FLIP-WHEN-FIXED)', 
     ).toHaveValue(order.nextVisitDate!);
   });
 
-  test('MO-3: [DEFECT] Received Date is pre-filled with today although the order has no received date', async ({ page }) => {
-    // STILL OPEN, and deliberately untouched. Re-measured 2026-09-15 on the local develop
-    // stack: the order carries no receivedDate and `input#order_receivedDate` renders
-    // "14/09/2026" — today. This case is the ONLY one of the four original [DEFECT] render
-    // findings that survived the pass which fixed MO-1, MO-2 and MO-4, so it is also the
-    // evidence that the flips above were not a harness-wide drift: the same helper, the same
-    // fixture and the same step read one field as fixed and this one as still broken.
+  test('MO-3: [CONTRACT FACT] the Edit Order payload omits receivedDate, which is not the same as the order lacking one', async ({
+    page,
+  }) => {
+    // RETRACTED AND REPURPOSED 2026-09-15. THIS CASE USED TO ASSERT A DEFECT:
+    //   'MO-3: [DEFECT] Received Date is pre-filled with today although the order has no
+    //    received date'
+    //   expect(rendered).toMatch(/^\d{2}\/\d{2}\/\d{4}$/)
+    // explained as "an unset received date is shown as a real date, inviting the user to
+    // save a value that was never recorded". Every part of that is wrong, and it took a
+    // product fact plus two measurements to see it.
+    //
+    // 1. THE PRODUCT INTENT (Casey, 2026-09-15). Received date and time are normally
+    //    AUTO-SET by an order-entry configuration option, and are manually changeable.
+    //    They are a different thing from request date and time. A form offering today is
+    //    doing its job, not fabricating.
+    //
+    // 2. AN ORDER CANNOT LACK ONE. `sample.received_date` is NOT NULL at the schema
+    //    level -- measured by trying: `UPDATE clinlims.sample SET received_date = NULL`
+    //    is refused with "null value in column received_date violates not-null
+    //    constraint". "The order carries no receivedDate" was read off the REST payload,
+    //    which omits the field. The record always has it.
+    //
+    // 3. AND A SAVE DOES NOT OVERWRITE IT. Back-dated DEV01260000000000266 to
+    //    2026-09-01 07:30, drove the whole wizard and submitted with nothing changed:
+    //    received_date still 2026-09-01 07:30 afterwards, `lastupdated` not even touched.
+    //    The data-integrity fear the case was built on does not happen.
+    //
+    // WHY THIS ASSERTS THE OMISSION RATHER THAN THE PRESERVATION. Preservation is the
+    // fact worth guarding, and a spec CANNOT SEE IT: the payload does not carry the field,
+    // so there is nothing to compare before and after. An earlier draft of this case did
+    // exactly that and skipped every run -- a case that never asserts is the failure mode
+    // this file exists to avoid. It also submitted the shared fixture mid-file, which
+    // disturbed MO-4 and MO-6 downstream. So this case pins the thing it can actually
+    // observe, and the preservation evidence lives above, measured where it is visible.
     const order = await findEditableOrder(page);
-    test.skip(!!order.receivedDate, 'located order already has a received date; nothing to fabricate');
-    await openOrderStep(page, order.accessionNumber);
-
-    // WHEN FIXED: expect(page.locator('input#order_receivedDate')).toHaveValue('')
-    const rendered = await page.locator('input#order_receivedDate').inputValue();
     expect(
-      rendered,
-      'DEFECT: an unset received date is shown as a real date, inviting the user to save a value that was never recorded',
-    ).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
+      order.receivedDate ?? '',
+      `/rest/SampleEdit exposed a receivedDate (${order.receivedDate}) for ` +
+        `${order.accessionNumber}. If the payload has started carrying it, this omission is ` +
+        `fixed -- delete this case and assert preservation instead, which is now observable.`
+    ).toBe('');
   });
 
   test('MO-4: the Search Site Name survives load — form state agrees with the screen', async ({ page }) => {
