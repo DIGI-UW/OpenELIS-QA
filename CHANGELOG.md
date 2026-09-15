@@ -1,5 +1,45 @@
 # Changelog
 
+
+## 2026-09-14 - seed-data payload correction (branch build, 52.88.37.243)
+
+Bulk seed (`--project=seed-data`) 400'd on every order (`HttpMessageNotReadableException`)
+against a PR/branch instance whose test catalog turned out to be an Indonesia/BBLK-style
+distro build. Root cause was in the harness, not the product.
+
+**Clarification -- not a defect:** `GET /rest/test-list` returning a flat `Array<{id, value}>`
+with no `testSectionName`/`sampleTypeId`/`testSectionId` fields is current, intended product
+behavior on this and (per `apiShapes.ts`) prior instances. `discoverTestCatalog()` had been
+written against an assumed `{testList: [...]}` shape with rich per-test metadata that this
+endpoint has never returned. Do not file a product bug against `/rest/test-list` for lacking
+section fields -- file against this harness's assumptions instead, which is what this entry
+fixes.
+
+**Fixed**
+- `helpers/seed-factory.ts` `discoverTestCatalog()` -- now sources sample-type/test pairs from
+  `GET /rest/TestAdd` (`sampleTypeList`) + `GET /rest/sample-type-tests?sampleType=<id>`, both
+  live-verified shapes, instead of the non-existent `test-list` section metadata.
+- `helpers/seed-factory.ts` `createOrder()` -- replaced an invented flat payload
+  (`{patientProperties:{patientPK,...}, sampleItems:[...]}`, which 400s on every instance) with
+  the full nested `SamplePatientEntrySubmitPayload` documented in `apiShapes.ts`
+  (patientProperties / sampleOrderItems / a literal `sampleXML` string), plus the
+  `SampleEntryGenerateScanProvider` labNo-generation step the real wizard performs first.
+  `providerPersonId`/`referringSiteId`/`programId` sent blank per `apiShapes.ts` PR#3987 --
+  the dev-fixture IDs 500 off dev.
+- `apiCall()`'s CSRF header corrected to `X-CSRF-TOKEN` (case-insensitive over the wire, so not
+  the cause of the 400s, but now matches `apiShapes.ts`'s documented `csrfFetch()` convention).
+- BUG-37 linkage check now reads `patientName` off `SampleEdit` (previous check compared
+  `nationalId`, a field that response never carried).
+
+**Verified:** 153 orders created with 0 errors (3-order pilot + 150-order production batch)
+against `https://52.88.37.243` (branch build), all round-tripped through `SampleEdit` with
+`patientName` populated.
+
+**Known gap, not attempted:** status-transition seeding (READY_FOR_VALIDATION, VALIDATED) is
+still CREATED-only. BUG-31 blocks the UI path; a `LogbookResults` GET-mutate-POST API-substitute
+attempt reproduced the same generic `HttpMessageNotReadableException` and was not pursued
+further this round (see `runSeed()` comment). Open item for Phase B Chain C/D.
+
 ## 2026-09-02 — Edit Order + Lab Unit Management suites, and the Carbon selector traps
 
 Five new suites (PR #88) and their first real execution (PR #89). Every failure on that first
