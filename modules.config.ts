@@ -84,6 +84,13 @@ const OWNED_ELSEWHERE = [
   'eqaflip',                           // eqa.config.ts
   'reval2',                            // reval2.config.ts
   'admin-route-census', 'app-route-census', // census.config.ts
+  // referral-reception.config.ts. NOT a stylistic split: every Accept/Reject case needs a
+  // referral in the "Returned" bucket, and nothing inside the instance can put one there
+  // (only the peer-lab poll writes COMPLETED). Subjects are minted by
+  // scripts/mint-returned-referral.sh against a local stack, so on the shared CI target
+  // these cases would fail for want of fixtures, every night, saying nothing about the
+  // product. See ci-suites.json `excluded`.
+  'ogc803-804-referral-accept-reject',
 ];
 
 const EXCLUDED = OWNED_ELSEWHERE.join('|');
