@@ -208,6 +208,42 @@ jobs:
         if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
         run: npx playwright test -c all-tc.config.ts --project=setup --reporter=line
 
+      # SEED THE STACK. ONCE PER SHARD, BEFORE ANY SUITE.
+      #
+      # Every shard boots its OWN ephemeral stack, and that stack starts empty: no
+      # patients, no orders, no referring clinic, no reference labs. Two configs carry
+      # their own seed dependencies (modules, regression-chains); the other twenty-six do
+      # not, and on a shared instance they never had to, because somebody else's data was
+      # lying around. Here there is nobody else.
+      #
+      # Measured on run 34993104951, shard 3, all inside one suite (all-tc):
+      #     no referrals in any view; run the referral seed                        x3
+      #     no outstanding referrals on this instance                              x3
+      #     no referral carries a returned result payload                          x3
+      #     seedOrder(RE03): order not created -- no referring clinic configured   x3
+      # Twelve failures, none of them a product finding, and the last three are a spec
+      # trying to seed its own order and failing because the type-5 organization that
+      # data.setup.ts creates was not there either.
+      #
+      # Seeding HERE rather than adding dependencies to twenty-six configs is deliberate:
+      # the suites in a shard run sequentially against the same stack, so the data only
+      # needs to exist once. Per-config dependencies would re-run the same setups up to
+      # twenty-six times against an instance that already has them.
+      #
+      # All three setups are idempotent and non-fatal by their own contract, and this step
+      # is `continue-on-error` on top of that: a seeding problem must degrade the suites
+      # (which then say what is missing) rather than stop the run before it starts.
+      - name: Seed the stack
+        if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
+        continue-on-error: true
+        run: |
+          # Two commands, not three: Playwright runs a project's DEPENDENCIES, and both of
+          # these declare data.setup.ts, so the baseline patient and its orders come along
+          # with the first. data.setup is idempotent, so the second finding it already
+          # there costs a lookup.
+          npx playwright test -c regression-chains.config.ts --project=chain-fixtures --reporter=line
+          npx playwright test -c modules.config.ts --project=referral-data --reporter=line
+
       # WHAT THIS RUN COVERS
       # Everything. ci-suites.json is the source of truth: it lists the configs CI runs
       # and, for anything deliberately left out, the reason. scripts/check-ci-coverage.mjs
