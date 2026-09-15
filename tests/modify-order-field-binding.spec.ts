@@ -1,10 +1,54 @@
 /**
  * OpenELIS Global — Modify Order (Edit Order): field-binding and save-gate regressions.
  *
- * FLIP-WHEN-FIXED. Every assertion in this file encodes BROKEN behaviour observed live on
- * 2026-09-01 against testing.openelis-global.org (v3.2.2.0). A failure here is good news:
- * it means the defect was fixed and the assertion should be inverted, not that the harness
- * drifted. Each test names what the fixed assertion should become.
+ * FLIP-WHEN-FIXED. Every assertion in this file encodes behaviour measured live. A
+ * [DEFECT] case asserts the BROKEN behaviour, so a failure is good news: it means the
+ * defect was fixed and the assertion should be inverted, not that the harness drifted.
+ *
+ * ============================================================================
+ * 2026-09-15 — FOUR OF THE SIX DEFECT CASES WENT RED. THEY HAVE BEEN FLIPPED.
+ * ============================================================================
+ * The whole config was run against a LOCAL develop stack
+ * (itechuw/openelis-global-2:develop, image built 2026-09-11, reported version
+ * 3.2.2.0, BASE=https://localhost:10443) on 2026-09-15:
+ *
+ *     6 failed · 1 skipped · 2 passed
+ *
+ * That is the flip-when-fixed signal this file exists to raise, and the six
+ * failures were NOT one fault: they were five different consequences of the
+ * same product change plus one harness fault of our own.
+ *
+ *   MO-1  RED   the ORDER step no longer has an inline Lab Number input at all.
+ *               A live DOM dump of every input on the step (2026-09-15) lists
+ *               `#reassign-labNo` — inside the hidden accession-REASSIGNMENT
+ *               modal — and nothing else labNo-shaped. The number is a heading.
+ *               The mis-binding to `newAccessionNumber` is gone because the
+ *               mis-bound control is gone.                       -> FLIPPED
+ *   MO-2  RED   `input#order_nextVisitDate` now renders "14/10/2026", which is
+ *               exactly the order's nextVisitDate.               -> FLIPPED
+ *   MO-3  GREEN Received Date is STILL fabricated: the order carries no
+ *               receivedDate and the field shows "14/09/2026" (today). Left
+ *               exactly as it was — see its own note.            -> UNCHANGED
+ *   MO-4  RED   form state now carries "QA_AUTO Referring Clinic";
+ *               loadOrderValues no longer blanks referringSiteName. -> FLIPPED
+ *   MO-5  RED   its premise (an empty, unvalidated Lab Number input) dissolved
+ *               with the input. RETARGETED — see the case.
+ *   MO-6  RED   not a defect case at all: a positive assertion whose first line
+ *               filled the removed `#labNo`. Our locator, our fault. REPAIRED.
+ *   MO-7  RED   `[data-cy="generate-labNumber"]` does not exist on the ORDER
+ *               step. The only generate affordance left is
+ *               `[data-cy="reassign-generate-labNumber"]`, which lives in the
+ *               hidden reassignment modal.                       -> FLIPPED
+ *
+ * The four flipped cases keep their IDs and each carries a note recording what
+ * it used to assert. The tables and narrative below are the ORIGINAL 2026-09-01
+ * findings and are kept deliberately: they are the evidence the ticket was
+ * raised on, and deleting them would erase why these cases exist.
+ */
+
+/*
+ * ORIGINAL FINDINGS, 2026-09-01, testing.openelis-global.org (v3.2.2.0)
+ * --------------------------------------------------------------------
  *
  * THE SHAPE OF THE DEFECT
  * -----------------------
@@ -198,22 +242,39 @@ async function findEditableOrder(page: Page): Promise<OrderPayload> {
 }
 
 /**
- * The Lab Number input on the ORDER step.
+ * The Lab Number input that USED to sit on the ORDER step.
  *
- * MEASURED ON THE DEVELOP BUILD 2026-09-14, and it matters: this input is not
- * there any more. The ORDER step now shows the number as the heading "Lab
- * Number: DEV...", with no inline text box, and the only `labNo`-ish control in
- * the DOM is `#reassign-labNo` — which lives inside a hidden Carbon MODAL
- * (`.cds--modal-content`, `visibility: hidden`) and is the accession
- * REASSIGNMENT dialog, a different control with a different job. It is
- * deliberately NOT matched here: quietly re-pointing the selector at it would
- * turn a fixed defect into a green test against something else entirely.
+ * MEASURED ON THE DEVELOP BUILD 2026-09-14, confirmed again 2026-09-15: this
+ * input is not there any more. The ORDER step shows the number as the heading
+ * "Lab Number: DEV...", with no inline text box, and the only `labNo`-ish
+ * control in the DOM is `#reassign-labNo` — which lives inside a hidden Carbon
+ * MODAL (`.cds--modal-content`, `visibility: hidden`) and is the accession
+ * REASSIGNMENT dialog, a different control with a different job.
  *
- * So MO-1/MO-5/MO-6/MO-7 fail on this build, and that is the FLIP-WHEN-FIXED
- * signal this file exists to raise — see the header. Confirm against the ticket
- * and invert the assertions; do not "repair" the selector.
+ * The selector is KEPT, and is still never re-pointed at the reassignment
+ * control, because its job changed rather than ended: MO-1 and MO-7 now assert
+ * that nothing matching it comes back. Quietly aiming it at `#reassign-labNo`
+ * would turn a fixed defect into a green test against something else entirely.
  */
 const LAB_NO = '#labNo';
+
+/**
+ * The accession-REASSIGNMENT controls, which are a different feature: they
+ * change a specimen's identifier on purpose, from inside a modal the user has
+ * to open. MO-1 and MO-7 assert they are present-but-not-reachable from the
+ * ORDER step, which is what makes "the Lab Number field is gone" a fix rather
+ * than a relocation of the same hazard.
+ */
+const REASSIGN_LAB_NO = '#reassign-labNo';
+const REASSIGN_GENERATE = '[data-cy="reassign-generate-labNumber"]';
+
+/**
+ * The note every flipped case carries, so the flip is auditable from the test
+ * rather than only from the git history.
+ */
+const FLIP_EVIDENCE =
+  'flipped 2026-09-15 on the evidence of a red assert-the-defect run of ' +
+  'modify-order.config.ts against the local develop stack (6 failed / 1 skipped / 2 passed)';
 
 /** Walks the three-step wizard to the ORDER step, where the fields under test live. */
 async function openOrderStep(page: Page, accession: string): Promise<void> {
@@ -280,7 +341,25 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('Modify Order — field binding and save gate (FLIP-WHEN-FIXED)', () => {
-  test('MO-1: [DEFECT] the required Lab Number field renders empty although the order number is loaded and shown above it', async ({ page }) => {
+  test('MO-1: the Lab Number is read-only text on the ORDER step — no input bound to newAccessionNumber', async ({ page }) => {
+    // FLIPPED 2026-09-15. THIS CASE USED TO ASSERT THE DEFECT:
+    //   'MO-1: [DEFECT] the required Lab Number field renders empty although the order
+    //    number is loaded and shown above it'
+    // and its subject assertion was
+    //   await expect(page.locator('#labNo')).toHaveValue('')
+    // with the comment "the input is bound to newAccessionNumber (empty) instead of
+    // sampleOrderItems.labNo". Measured 2026-09-01 on testing.openelis-global.org v3.2.2.0.
+    //
+    // EVIDENCE FOR THE FLIP: a red assert-the-defect run of modify-order.config.ts against
+    // the local develop stack on 2026-09-15 (6 failed / 1 skipped / 2 passed). MO-1 failed
+    // with "element(s) not found" for '#labNo' after the full 15s expect timeout. A DOM dump
+    // of every input on the ORDER step, taken on the same build, contains no `#labNo`: the
+    // number is a heading, and the one labNo-shaped control in the document is
+    // `#reassign-labNo`, inside the hidden reassignment modal. The mis-binding is gone
+    // because the mis-bound control is gone.
+    //
+    // WHAT IT GUARDS NOW: the number stays visible and correct, form state still carries it,
+    // and no editable Lab Number field reappears on the ORDER step.
     const order = await findEditableOrder(page);
     await openOrderStep(page, order.accessionNumber);
 
@@ -297,30 +376,69 @@ test.describe('Modify Order — field binding and save gate (FLIP-WHEN-FIXED)', 
     expect(state, 'the ORDER step form state is reachable').toBeTruthy();
     expect(state.labNo, 'the value is present in form state the whole time').toBe(order.accessionNumber);
 
-    // WHEN FIXED: expect(page.locator(LAB_NO)).toHaveValue(order.accessionNumber)
+    // The subject of the flip: there is no editable Lab Number box on this step at all,
+    // so there is nothing left for the newAccessionNumber binding to mis-populate.
     await expect(
       page.locator(LAB_NO),
-      'DEFECT: the input is bound to newAccessionNumber (empty) instead of sampleOrderItems.labNo',
-    ).toHaveValue('');
-    expect(state.newAccessionNumber, 'the property the input IS bound to is empty on an ordinary edit').toBe('');
+      `FIXED (${FLIP_EVIDENCE}): the ORDER step must not carry an inline Lab Number input. ` +
+      'One reappearing here is the regression this case exists to catch, because the binding ' +
+      'that made it empty was never corrected — the control was removed.',
+    ).toHaveCount(0);
+
+    // And the fix must not simply have MOVED the hazard onto the step: the only labNo
+    // control in the document belongs to the accession-REASSIGNMENT modal, and that modal
+    // is not open, so nothing here can edit the identifier by accident.
+    await expect(
+      page.locator(REASSIGN_LAB_NO),
+      'the reassignment dialog still exists (if it does not, this assertion is guarding nothing ' +
+      'and the case needs re-measuring rather than relaxing)',
+    ).toHaveCount(1);
+    await expect(
+      page.locator(REASSIGN_LAB_NO),
+      'the reassignment Lab Number input is inside a closed modal, not on the ORDER step',
+    ).toBeHidden();
+
+    // Nothing has armed a reassignment just by loading the order.
+    expect(
+      state.newAccessionNumber || '',
+      'no new accession number is armed on an ordinary edit',
+    ).toBe('');
   });
 
-  test('MO-2: [DEFECT] Date of next visit renders empty although the order carries one', async ({ page }) => {
+  test('MO-2: Date of next visit is rendered from the order that was loaded', async ({ page }) => {
+    // FLIPPED 2026-09-15. THIS CASE USED TO ASSERT THE DEFECT:
+    //   'MO-2: [DEFECT] Date of next visit renders empty although the order carries one'
+    // with the subject assertion
+    //   await expect(page.locator('input#order_nextVisitDate')).toHaveValue('')
+    // Measured 2026-09-01 on testing.openelis-global.org v3.2.2.0: the payload and the React
+    // form state both carried the date and the input rendered blank.
+    //
+    // EVIDENCE FOR THE FLIP: the red assert-the-defect run on the local develop stack,
+    // 2026-09-15 (6 failed / 1 skipped / 2 passed). MO-2 failed with received "14/10/2026"
+    // — which is exactly the order's nextVisitDate. The field renders the value now.
+    //
+    // WHAT IT GUARDS NOW: the rendered value and the form state agree with the payload, in
+    // that order, so a re-broken binding shows up as a blank field rather than as nothing.
     const order = await findEditableOrder(page);
-    test.skip(!order.nextVisitDate, 'located order has no next-visit date to drop');
+    test.skip(!order.nextVisitDate, 'located order has no next-visit date to render');
     await openOrderStep(page, order.accessionNumber);
 
     const state = await formState(page);
     expect(state.nextVisitDate, 'the date is present in form state').toBe(order.nextVisitDate);
 
-    // WHEN FIXED: expect(...).toHaveValue(order.nextVisitDate)
     await expect(
       page.locator('input#order_nextVisitDate'),
-      'DEFECT: a populated next-visit date is not rendered into its field',
-    ).toHaveValue('');
+      `FIXED (${FLIP_EVIDENCE}): a populated next-visit date must reach its field`,
+    ).toHaveValue(order.nextVisitDate!);
   });
 
   test('MO-3: [DEFECT] Received Date is pre-filled with today although the order has no received date', async ({ page }) => {
+    // STILL OPEN, and deliberately untouched. Re-measured 2026-09-15 on the local develop
+    // stack: the order carries no receivedDate and `input#order_receivedDate` renders
+    // "14/09/2026" — today. This case is the ONLY one of the four original [DEFECT] render
+    // findings that survived the pass which fixed MO-1, MO-2 and MO-4, so it is also the
+    // evidence that the flips above were not a harness-wide drift: the same helper, the same
+    // fixture and the same step read one field as fixed and this one as still broken.
     const order = await findEditableOrder(page);
     test.skip(!!order.receivedDate, 'located order already has a received date; nothing to fabricate');
     await openOrderStep(page, order.accessionNumber);
@@ -333,7 +451,24 @@ test.describe('Modify Order — field binding and save gate (FLIP-WHEN-FIXED)', 
     ).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
   });
 
-  test('MO-4: [DEFECT] the required Search Site Name is blanked in form state while the screen still shows it', async ({ page }) => {
+  test('MO-4: the Search Site Name survives load — form state agrees with the screen', async ({ page }) => {
+    // FLIPPED 2026-09-15. THIS CASE USED TO ASSERT THE DEFECT:
+    //   'MO-4: [DEFECT] the required Search Site Name is blanked in form state while the
+    //    screen still shows it'
+    // with the subject assertion
+    //   expect(state.referringSiteName).toBe('')
+    // and the explanation that ModifyOrder.jsx's loadOrderValues ran
+    //   data.sampleOrderItems.referringSiteName = "";
+    // so the AutoComplete's display was masking an empty required field. Measured
+    // 2026-09-01 on testing.openelis-global.org v3.2.2.0.
+    //
+    // EVIDENCE FOR THE FLIP: the red assert-the-defect run on the local develop stack,
+    // 2026-09-15 (6 failed / 1 skipped / 2 passed). MO-4 failed with received
+    // "QA_AUTO Referring Clinic" — the payload's referringSiteName, intact in form state.
+    //
+    // WHAT IT GUARDS NOW: display and state agree. Both halves are asserted, because the
+    // defect was precisely that they DISAGREED; checking only the visible one is what let
+    // the bug live for as long as it did.
     const order = await findEditableOrder(page);
     test.skip(!order.referringSiteName, 'located order has no referring site');
     await openOrderStep(page, order.accessionNumber);
@@ -349,56 +484,155 @@ test.describe('Modify Order — field binding and save gate (FLIP-WHEN-FIXED)', 
     const displayed = await page.locator('#siteName').inputValue();
     expect(displayed, 'the site name is shown on screen').toContain(order.referringSiteName);
 
-    // ...while ModifyOrder.jsx's loadOrderValues has already emptied the value behind it.
-    // WHEN FIXED: expect(state.referringSiteName).toBe(order.referringSiteName)
+    // ...and the value behind the display now matches it, instead of having been emptied by
+    // loadOrderValues.
     const state = await formState(page);
     expect(
       state.referringSiteName,
-      'DEFECT: loadOrderValues discards referringSiteName on load; the display is masking an empty required field',
-    ).toBe('');
+      `FIXED (${FLIP_EVIDENCE}): loadOrderValues must keep referringSiteName, so the required ` +
+      'field the user can see is the one the form will submit',
+    ).toBe(order.referringSiteName);
   });
 
-  test('MO-5: [DEFECT] Submit is enabled with the required Lab Number empty, and blocked with NO visible error when an unmarked field is', async ({ page }) => {
+  test('MO-5: [DEFECT] the field that hard-blocks Submit is not marked required, and its error is never wired to the input', async ({ page }) => {
+    // RETARGETED 2026-09-15. THIS CASE USED TO ASSERT THE DEFECT:
+    //   'MO-5: [DEFECT] Submit is enabled with the required Lab Number empty, and blocked
+    //    with NO visible error when an unmarked field is'
+    // Its subject assertion was
+    //   await expect(page.locator('#labNo')).toHaveValue('');
+    //   await expect(submit).toBeEnabled();   // "the asterisked Lab Number field is not
+    //                                         //  validated at all"
+    // Measured 2026-09-01 on testing.openelis-global.org v3.2.2.0.
+    //
+    // ITS PREMISE DISSOLVED. On the local develop stack (red run, 2026-09-15) MO-5 failed
+    // at its very first line, "element(s) not found" for '#labNo', for the same reason as
+    // MO-1: the ORDER step has no inline Lab Number input any more. An asterisked field
+    // that is not validated cannot be asserted about once the field is gone.
+    //
+    // RETARGETED RATHER THAN DELETED, because the SECOND half of the original case — the
+    // half about ModifyOrderEntryValidationSchema gating Submit invisibly — is the half
+    // OGC-1191 suggested fix 4 is still open on, and it is the half with a user-visible
+    // cost: a dead Submit button with no stated reason. Deleting the case would have taken
+    // that coverage with it.
+    //
+    // BUT THE MEASUREMENT MOVED THE TARGET, AND THIS IS WORTH READING BEFORE TRUSTING THE
+    // BRIEFING THAT SENT ME HERE. The claim was that the schema's errors "are never
+    // RENDERED". That is no longer true. Measured live on the ORDER step, 2026-09-15,
+    // by emptying #requesterLastName:
+    //
+    //     Submit           enabled -> DISABLED           (it gates, as before)
+    //     rendered text    "Error / Requester Last Name is required"
+    //     the element      div.cds--inline-notification__subtitle, inside a Carbon
+    //                      InlineNotification
+    //     #requesterLastName  aria-invalid    = null
+    //                         aria-describedby = null
+    //     .cds--form-requirement count          = 0
+    //     [aria-invalid="true"] count           = 0
+    //     labels bearing "*"                    = ["Search Site Name *"]
+    //
+    // So a human-readable message DOES appear, and part of fix 4 has landed. What has NOT
+    // landed is everything that connects that message to the field it is about: the input
+    // is never marked invalid, the notification is never associated with it, and the field
+    // is not marked required BEFORE you break it — a user filling the form in has no way to
+    // know that Requester's LastName is the one that will stop them.
+    //
+    // This case asserts THAT, in the file's assert-the-defect convention: it is green while
+    // the association is missing and turns red when fix 4 is finished.
     const order = await findEditableOrder(page);
     await openOrderStep(page, order.accessionNumber);
 
-    // Lab Number carries a red asterisk and is empty — yet the form is submittable.
-    await expect(page.locator(LAB_NO)).toHaveValue('');
-    // WHEN FIXED: expect(submit).toBeDisabled() while labNo is empty
-    const submit = page.getByRole('button', { name: 'Submit', exact: true });
-    await expect(
-      submit,
-      'DEFECT: the asterisked Lab Number field is not validated at all',
-    ).toBeEnabled();
+    // PRECONDITION 1 — the control this case is about is on the step and populated. Without
+    // this, everything below would "pass" on a page that simply failed to render.
+    const lastName = page.locator('#requesterLastName');
+    await expect(lastName, 'Requester LastName is on the ORDER step').toBeVisible();
+    expect(
+      await lastName.inputValue(),
+      'the fixture order carries a requester last name, so emptying it is a change of state',
+    ).not.toBe('');
 
-    // The inverse half: the field that DOES block has no asterisk and no error text.
+    // PRECONDITION 2 — Submit is live before we break anything.
+    const submit = page.getByRole('button', { name: 'Submit', exact: true });
+    await expect(submit, 'Submit is enabled on a valid, untouched order').toBeEnabled();
+
+    // DEFECT, part 1: the field that will hard-block Submit carries no required marker
+    // while it is still valid. Nothing on the screen warns the user in advance.
     const markedRequired = await page
       .locator('label')
       .evaluateAll((ls) =>
         ls.filter((l) => (l as HTMLElement).innerText.includes('*')).map((l) => (l as HTMLElement).innerText.trim()),
       );
     expect(
+      markedRequired.length,
+      'at least one field IS asterisked, so a zero here would mean the markers did not render ' +
+      'at all and the assertion below would be meaningless',
+    ).toBeGreaterThan(0);
+    expect(
       markedRequired.join(' | '),
-      'DEFECT: Requester LastName hard-blocks Submit but is never marked required',
+      "DEFECT: Requester's LastName hard-blocks Submit but is never marked required. " +
+      'WHEN FIXED: this label carries an asterisk like Search Site Name does, and this ' +
+      'assertion inverts to .toMatch(/LastName/i).',
     ).not.toMatch(/LastName/i);
 
-    // And when it does block, nothing on the page says so.
-    const visibleErrors = await page
-      .locator('.cds--form-requirement, [aria-invalid="true"]')
-      .count();
+    await lastName.fill('');
+    await page.waitForTimeout(1500);
+
+    // The gate itself works, and so does the message. Asserted as the positive control for
+    // the defect below: if Submit did not disable, or no message appeared, the association
+    // assertions would be probing a state that never happened.
+    await expect(
+      submit,
+      'emptying Requester LastName disables Submit (this is the behaviour under discussion; ' +
+      'if it stops happening, this case is measuring nothing)',
+    ).toBeDisabled();
+    const notice = page.locator('.cds--inline-notification').filter({ hasText: /Requester Last Name is required/i });
+    await expect(
+      notice,
+      'a human-readable reason IS rendered — part of OGC-1191 suggested fix 4 has landed ' +
+      '(measured 2026-09-15; the ticket text predates it)',
+    ).toBeVisible();
+
+    // DEFECT, part 2: the message is not connected to the field in any way a browser, a
+    // screen reader or a keyboard user can follow.
     expect(
-      visibleErrors,
-      'DEFECT: the validation errors that gate Submit are never rendered — the user sees a dead button and no reason',
+      await lastName.getAttribute('aria-invalid'),
+      'DEFECT: the input that is blocking the save is never marked invalid. WHEN FIXED: ' +
+      "this is 'true' and the assertion inverts.",
+    ).toBeNull();
+    expect(
+      await lastName.getAttribute('aria-describedby'),
+      'DEFECT: the error notification is never associated with the field it is about. ' +
+      'WHEN FIXED: this points at the element carrying the message.',
+    ).toBeNull();
+    expect(
+      await page.locator('.cds--form-requirement').count(),
+      "DEFECT: Carbon's own inline-error slot for the field is unused; the message lives in " +
+      'a page-level notification instead. WHEN FIXED: at least one form requirement renders ' +
+      'against the offending field.',
     ).toBe(0);
   });
 
-  test('MO-6: a plain save preserves every field — the render desync does NOT corrupt data', async ({ page }) => {
+  test('MO-6: a plain save preserves every field — opening and submitting an order changes nothing', async ({ page }) => {
     // Guards the ticket against over-claiming. Measured 2026-09-01: an ordinary save with the
     // Lab Number typed back correctly produced an empty before/after diff.
+    //
+    // REPAIRED 2026-09-15. THIS CASE IS NOT A DEFECT CASE — it is a positive assertion, and
+    // it was failing for a reason that had nothing to do with the product: its first line was
+    //   await page.locator('#labNo').fill(order.accessionNumber);
+    // which timed out with "waiting for locator('#labNo')" because that input no longer
+    // exists (see MO-1). The fill was only ever there to put back a value the DEFECT had
+    // blanked; with the defect fixed and the input gone there is nothing to type back, so
+    // the line is deleted rather than re-pointed. The case now does what its title says:
+    // open the order, submit it untouched, and prove the round trip is lossless.
     const order = await findEditableOrder(page);
     await openOrderStep(page, order.accessionNumber);
 
-    await page.locator(LAB_NO).fill(order.accessionNumber);
+    // The removed fill, asserted rather than assumed: if an editable Lab Number input comes
+    // back, this case must be re-examined instead of quietly submitting an empty one.
+    await expect(
+      page.locator(LAB_NO),
+      'there is no Lab Number input to type back into (see MO-1)',
+    ).toHaveCount(0);
+
     const submit = page.getByRole('button', { name: 'Submit', exact: true });
     await expect(submit).toBeEnabled();
     await submit.click();
@@ -413,35 +647,71 @@ test.describe('Modify Order — field binding and save gate (FLIP-WHEN-FIXED)', 
     expect(after!.tests.sort(), 'the ordered tests are untouched').toEqual(order.tests.sort());
   });
 
-  test('MO-7: [DEFECT] Generate arms a NEW accession number on a screen whose job is editing an existing order', async ({ page }) => {
-    // Non-destructive proof of the hazard: shows Generate loads a different identifier and
-    // that Submit will act on it. The end-to-end consequence is MO-7-DESTRUCTIVE below.
+  test('MO-7: the ORDER step offers no Generate control that could mint a new accession number', async ({ page }) => {
+    // FLIPPED 2026-09-15. THIS CASE USED TO ASSERT THE DEFECT:
+    //   'MO-7: [DEFECT] Generate arms a NEW accession number on a screen whose job is
+    //    editing an existing order'
+    // It clicked `[data-cy="generate-labNumber"]` and asserted that form state's
+    // newAccessionNumber came back different from the order's own accession number while
+    // Submit stayed enabled — the non-destructive proof of the reassignment hazard measured
+    // end to end on 2026-09-01 (DEV...519 -> DEV...644, with PRINT LABELS then offering the
+    // dead number). That narrative is kept in the header; it is why this case exists.
+    //
+    // EVIDENCE FOR THE FLIP: the red assert-the-defect run on the local develop stack,
+    // 2026-09-15 (6 failed / 1 skipped / 2 passed). MO-7 failed with a click timeout on
+    // `[data-cy="generate-labNumber"]` — the control is not on the ORDER step. A DOM scan of
+    // every generate-ish anchor and button on the same step found exactly one,
+    // `[data-cy="reassign-generate-labNumber"]`, and it is inside the closed accession
+    // REASSIGNMENT modal.
+    //
+    // WHAT IT GUARDS NOW: the hazard was removed, not relocated. Reassignment still exists
+    // as a deliberate feature behind a modal; what is gone is the one-click path to it from
+    // a screen whose job is editing. If either the old control returns, or the reassignment
+    // control becomes reachable without opening its dialog, this case goes red.
     const order = await findEditableOrder(page);
     await openOrderStep(page, order.accessionNumber);
 
-    await page.locator('[data-cy="generate-labNumber"]').click();
-    await expect
-      .poll(async () => (await formState(page)).newAccessionNumber, { timeout: 15000 })
-      .not.toBe('');
-
-    const state = await formState(page);
-    // WHEN FIXED: Generate should not be offered on Modify Order at all, or must require an
-    // explicit "reassign this sample's accession number" confirmation.
-    expect(
-      state.newAccessionNumber,
-      'DEFECT: Generate mints a fresh accession number while editing an existing order',
-    ).not.toBe(order.accessionNumber);
-    expect(state.accessionNumber, 'the order still believes it is the original').toBe(order.accessionNumber);
     await expect(
-      page.getByRole('button', { name: 'Submit', exact: true }),
-      'DEFECT: nothing stands between that generated number and a one-click commit',
-    ).toBeEnabled();
+      page.locator('[data-cy="generate-labNumber"]'),
+      `FIXED (${FLIP_EVIDENCE}): no Generate control may sit on the ORDER step — clicking one ` +
+      "silently reassigned the specimen's identifier",
+    ).toHaveCount(0);
+
+    await expect(
+      page.locator(REASSIGN_GENERATE),
+      'the reassignment Generate still exists as a deliberate feature (if it does not, this ' +
+      'case is guarding nothing and needs re-measuring rather than relaxing)',
+    ).toHaveCount(1);
+    await expect(
+      page.locator(REASSIGN_GENERATE),
+      'and it is not reachable from the ORDER step: it lives inside the closed reassignment modal',
+    ).toBeHidden();
+
+    // Loading and sitting on the order arms no reassignment at all.
+    const state = await formState(page);
+    expect(state, 'the ORDER step form state is reachable').toBeTruthy();
+    expect(state.accessionNumber, 'the order still believes it is the original').toBe(order.accessionNumber);
+    expect(
+      state.newAccessionNumber || '',
+      `FIXED (${FLIP_EVIDENCE}): no new accession number is armed on the ORDER step`,
+    ).toBe('');
   });
 
   test('MO-7-DESTRUCTIVE: [DEFECT] submitting after Generate silently reassigns the accession number and then offers the OLD one to print', async ({ page }) => {
+    // KEPT, UNCHANGED, AND STILL OPT-IN — but read this before running it. 2026-09-15: its
+    // premise went with MO-7's. `[data-cy="generate-labNumber"]` is not on the ORDER step on
+    // the develop build, so with MO_DESTRUCTIVE=1 this case now FAILS at the click rather
+    // than reproducing anything. That is a stated failure, not a mystery.
+    //
+    // It is not flipped, because there is nothing to invert: the inverse of "submitting
+    // after Generate reassigns the specimen" is MO-7 above, which asserts there is no
+    // Generate to submit after. It is not deleted either, because it is the only executable
+    // record of the end-to-end reassignment that OGC-1191 was raised on, and a build where
+    // the ORDER step regains a Generate control is exactly when someone will want to run it.
     test.skip(
       !RUN_DESTRUCTIVE,
-      'orphans a real accession number on the target instance — run with MO_DESTRUCTIVE=1 to reproduce',
+      'orphans a real accession number on the target instance — run with MO_DESTRUCTIVE=1 to ' +
+      'reproduce; on develop it now fails at the Generate click because that control is gone (see MO-7)',
     );
 
     const order = await findEditableOrder(page);
