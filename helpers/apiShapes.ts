@@ -142,7 +142,19 @@ export interface LogbookEntry {
   [k: string]: unknown;
 }
 
-export const LOGBOOK_FILTER_PARAM = 'testUnitId' as const;
+/**
+ * The lab-unit filter on `/rest/LogbookResults`.
+ *
+ * CORRECTED 2026-09-16, and the old value cost three chains. This was
+ * `'testUnitId'`, captured on 2026-05-13 and annotated "correct param: testUnitId, NOT
+ * testSectionId". The controller binds NEITHER a `testUnitId` param nor anything like it;
+ * it validates field errors on `testSectionId`, and the unified worklist
+ * (`UnifiedResults.tsx`) sends exactly that. An unknown query param is not an error, so
+ * the filter silently did nothing and the call came back with an empty `testResult` --
+ * which `acquireAnyAccession` then reported as "the dashboard says orders exist but the
+ * Logbook has none", i.e. a suspected product gap. It was our parameter name.
+ */
+export const LOGBOOK_FILTER_PARAM = 'testSectionId' as const;
 
 // =============================================================================
 // Sample edit / order lookup
