@@ -114,6 +114,15 @@
       "shard": 4
     },
     {
+      "config": "qa.config.ts",
+      "why": "the /qa module on demo-png — QC, EQA (schemes and cycles), QI and QMS. This is the ONLY suite that targets a different instance, because it has to: develop and testing do not carry this module at all, and pointing it at them does not fail loudly, it silently loads a different application. Its own canaries catch that, but the env below is what keeps them from firing every night for a non-reason.",
+      "shard": 2,
+      "env": {
+        "BASE": "https://pngdemo.openelis-global.org",
+        "AUTH_STATE_FILE": ".auth/png.json"
+      }
+    },
+    {
       "config": "reval2.config.ts",
       "why": "revalidation tier 2",
       "shard": 4
