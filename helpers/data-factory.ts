@@ -90,7 +90,14 @@ export function writeTestData(data: TestDataState): void {
   fs.writeFileSync(TEST_DATA_PATH, JSON.stringify(data, null, 2));
 }
 
-function emptyState(): TestDataState {
+/**
+ * A blank TestDataState. Exported because a caller that runs several order creations in
+ * PARALLEL needs one state per call -- `createOrderViaAPI` writes the accession into
+ * `state[orderKey]`, so a shared state would have them overwriting each other and the
+ * caller would see one accession where it created ten. tests/chains/chain-l is that
+ * caller.
+ */
+export function emptyState(): TestDataState {
   return {
     patient: {
       nationalId: TEST_PATIENT.nationalId,

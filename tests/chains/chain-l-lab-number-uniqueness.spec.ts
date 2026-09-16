@@ -33,6 +33,7 @@
 
 import { test, expect } from '@playwright/test';
 import { BASE, apiCall, markStep, requireStep } from './_common';
+import { createOrderViaAPI, emptyState } from '../../helpers/data-factory';
 
 const BURST_SIZE = 10; // small enough to be fast, large enough to surface races
 
@@ -113,75 +114,80 @@ test.describe.serial('Chain L — Lab Number Uniqueness', () => {
   // ---------------------------------------------------------------------------
   test('Step 2 — Burst-create concurrent orders (PERSIST × N)', async ({ page }) => {
     requireStep('L', 2, !(!patientPK || !testId), '!patientPK || !testId');
-    await page.goto(BASE);
+    await page.goto(BASE, { waitUntil: 'domcontentloaded' });
+    await page.waitForLoadState('networkidle').catch(() => undefined);
 
-    // KNOWN STALE, 2026-09-15. This payload is a hand-rolled shape that the endpoint does
-    // not accept: all ten POSTs answer 400. The real contract is the one
-    // `helpers/data-factory.ts:createOrderViaAPI` carries -- it took a full session to
-    // establish and has four conditions the shape below satisfies none of: a `sampleXML`
-    // string rather than a `sampleItems` array, a `labNo` generated per order from
-    // `/rest/SampleEntryGenerateScanProvider`, a `referringSiteId` from a type-5
-    // organization, and the WHOLE patient block rather than three fields of it.
+    // REBUILT 2026-09-15. THIS STEP USED TO POST A HAND-ROLLED PAYLOAD
+    //   { patientProperties: {patientPK, nationalId, patientUpdateStatus},
+    //     sampleOrderItems: {...}, sampleItems: [{sampleTypeId, tests:[{testId}]}] }
+    // which /rest/SamplePatientEntry rejects. All ten POSTs answered 400, every run, and
+    // as far as the evidence goes this chain had never created an order -- the suite it is
+    // named for could not have detected a duplicate lab number if one existed.
     //
-    // Left in place deliberately rather than quietly deleted: the 400s are this chain's
-    // own bug, not the product refusing a valid order, and the failure message below now
-    // says so. Fixing it means rebuilding the burst on createOrderViaAPI's payload with a
-    // separately generated accession per request, which is the only way this chain can
-    // test what it is named for.
-    const payload = {
-      patientProperties: { patientPK, nationalId: patientNationalId, patientUpdateStatus: 'UPDATE' },
-      sampleOrderItems: {
-        newSampleEntry: 'true',
-        collectionDate: new Date().toISOString().slice(0, 10),
-        receivedDate: new Date().toISOString().slice(0, 10),
-        priority: 'ROUTINE',
-        paymentStatus: 'NONE',
-      },
-      sampleItems: [{ sampleTypeId, tests: [{ testId, isReportable: true }] }],
-    };
+    // It now goes through `createOrderViaAPI`, the payload established in
+    // helpers/data-factory.ts and validated against the wizard's own output. Four
+    // conditions the old shape met none of: `sampleXML` rather than a `sampleItems`
+    // array, a `labNo` generated per order from /rest/SampleEntryGenerateScanProvider, a
+    // `referringSiteId` from a type-5 organization, and the WHOLE patient block.
+    //
+    // WHAT THE CONCURRENCY NOW EXERCISES, and it is the right thing: each of the N calls
+    // generates its OWN accession and then posts an order with it, and they all run at
+    // once. So the burst covers both halves of the risk -- a generator handing the same
+    // number to two callers, and two orders being accepted against one number. The old
+    // shape, even had it worked, posted one pre-computed payload N times.
+    //
+    // Every call gets its own TestDataState: createOrderViaAPI writes the accession into
+    // state[orderKey], so a shared state would have them overwriting each other.
+    const burst = await Promise.all(
+      Array.from({ length: BURST_SIZE }, async (_unused, i) => {
+        const state = emptyState();
+        state.patient.systemId = patientPK;
+        state.patient.nationalId = patientNationalId;
+        try {
+          const accession = await createOrderViaAPI(page, state, `chain-L burst ${i}`, 'primaryOrder');
+          return { accession, detail: state.setupErrors.join(' | ') };
+        } catch (e) {
+          return { accession: null as string | null, detail: (e as Error).message };
+        }
+      })
+    );
 
-    // Fire BURST_SIZE POSTs in parallel via Promise.all inside page.evaluate
-    // so they share one Chrome page context (matches a real concurrent-
-    // user workload more closely than sequential fetches).
-    const results = await page.evaluate(async ({ payload, burst }) => {
-      const csrf = localStorage.getItem('CSRF') || '';
-      const headers = {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': csrf,
-        Accept: 'application/json',
-      };
-      const promises = [] as Promise<{ ok: boolean; status: number; accession?: string }>[];
-      for (let i = 0; i < burst; i++) {
-        promises.push(
-          fetch('/api/OpenELIS-Global/rest/SamplePatientEntry', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers,
-            body: JSON.stringify(payload),
-          }).then(async r => {
-            const text = await r.text();
-            let acc: string | undefined;
-            try { acc = (JSON.parse(text) as { accessionNumber?: string }).accessionNumber; } catch { /* ignore */ }
-            return { ok: r.ok, status: r.status, accession: acc };
-          }).catch(e => ({ ok: false, status: 0, accession: String(e) }))
-        );
-      }
-      return Promise.all(promises);
-    }, { payload, burst: BURST_SIZE });
-
-    const successCount = results.filter(r => r.ok && r.accession).length;
-    for (const r of results) {
-      if (r.ok && r.accession) accessions.push(r.accession);
-    }
+    // `accessions` is a const array shared with Steps 3 and 4 -- push into it, do not
+    // reassign it.
+    accessions.push(...burst.map((b) => b.accession).filter((a): a is string => !!a));
+    const successCount = accessions.length;
 
     if (successCount === 0) {
-      markStep('L', 2, 'FAIL',
-        `All ${BURST_SIZE} concurrent SamplePatientEntry POSTs failed (THIS CHAIN'S PAYLOAD IS STALE -- see the comment above; not a product refusal)`,
-        `Statuses: ${results.map(r => r.status).join(',')}. Cannot test uniqueness without successful writes.`);
-      expect(successCount).toBeGreaterThan(0); return;
+      markStep(
+        'L',
+        2,
+        'FAIL',
+        `All ${BURST_SIZE} concurrent order creations failed`,
+        `Details: ${burst.map((b) => b.detail).filter(Boolean).slice(0, 3).join(' || ') || '(none reported)'}. ` +
+          `Cannot test uniqueness without successful writes.`
+      );
+      expect(successCount).toBeGreaterThan(0);
+      return;
     }
-    markStep('L', 2, 'PASS',
-      `${successCount}/${BURST_SIZE} orders created. Accessions: [${accessions.join(', ')}]`);
+
+    // A partial burst still tests uniqueness across whatever DID land, and Step 3 is the
+    // real check. But WHY the others failed is the most interesting output this chain can
+    // produce -- a write lost under 10-way concurrency is the neighbourhood of the defect
+    // it is named for -- so the reasons are logged here rather than only on a total
+    // failure. Measured 2026-09-15 on the local develop stack: 9 of 10 landed.
+    const lost = burst.filter((b) => !b.accession);
+    markStep(
+      'L',
+      2,
+      'PASS',
+      `${successCount}/${BURST_SIZE} orders created. Accessions: [${accessions.join(', ')}]` +
+        (lost.length
+          ? ` — ${lost.length} LOST under concurrency: ${lost
+              .map((b) => b.detail || '(no reason reported)')
+              .join(' || ')
+              .slice(0, 400)}`
+          : '')
+    );
   });
 
   // ---------------------------------------------------------------------------
