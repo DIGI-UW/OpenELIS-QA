@@ -42,10 +42,27 @@ test.describe.serial('Chain G — Cold-Chain Excursion', () => {
     const r = await apiCall<ColdStorageDevice[] | { devices?: ColdStorageDevice[] }>(
       page, '/api/OpenELIS-Global/rest/cold-storage/devices'
     );
+    // 404 IS NOT A DEFECT HERE, and calling it one was costing a nightly FAIL.
+    // Checked against the product source 2026-09-16: there is NO cold-storage controller
+    // anywhere in src/main/java -- not at this path, not at another. Cold Storage
+    // Monitoring is not built on this build, so a 404 is the honest answer to a question
+    // about a feature that does not exist. That is a declared GAP, which is exactly what
+    // the register is for; a FAIL says "the product is broken" and it is not.
+    //
+    // Any OTHER failure status still fails: a 500 from a path that supposedly has no
+    // controller would mean something is there and unwell, which is worth knowing.
+    if (r.status === 404) {
+      markStep('G', 1, 'GAP',
+        'Cold Storage Monitoring is not deployed on this build (no cold-storage controller exists)',
+        `Chain G cannot run until the feature ships. Re-check by grepping the backend for a ` +
+        `cold-storage RequestMapping; when one appears, this chain wakes up on its own.`);
+      test.info().annotations.push({ type: 'gap', description: 'cold storage feature not built' });
+      return;
+    }
     if (!r.ok) {
       markStep('G', 1, 'FAIL',
         `Cold Storage devices endpoint HTTP ${r.status}`,
-        `Either the endpoint is at a different path or Cold Storage Monitoring is not deployed.`);
+        `Not a 404, so something answers this path and is unwell. Characterize before filing.`);
       expect(r.ok).toBeTruthy(); return;
     }
     const list = Array.isArray(r.body) ? r.body : ((r.body as { devices?: ColdStorageDevice[] } | null)?.devices || []);

@@ -19,9 +19,31 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { BASE, apiCall, markStep } from './_common';
+import { BASE, acquireAnyAccession, apiCall, markStep } from './_common';
 
 interface AuditEntry { id?: string; userId?: string; action?: string; entity?: string; entityId?: string; oldValue?: string; newValue?: string; timestamp?: string; }
+
+
+/** The accession this chain audits. Resolved once in Step 1. */
+let auditAccession = '';
+
+/**
+ * Read one accession's audit trail. `/rest/AuditTrailReport` requires `accessionNumber`
+ * and is ADMIN-only; it answers `{accessionNumber, log[], sampleOrderItems,
+ * patientProperties}` -- note `log`, not `entries`.
+ */
+async function readAuditTrail(page: import('@playwright/test').Page) {
+  return apiCall<{ log?: AuditEntry[]; entries?: AuditEntry[] } | AuditEntry[]>(
+    page,
+    `/api/OpenELIS-Global/rest/AuditTrailReport?accessionNumber=${encodeURIComponent(auditAccession)}`
+  );
+}
+
+function auditEntriesOf(body: unknown): AuditEntry[] {
+  if (Array.isArray(body)) return body as AuditEntry[];
+  const b = body as { log?: AuditEntry[]; entries?: AuditEntry[] } | null;
+  return b?.log ?? b?.entries ?? [];
+}
 
 test.describe.serial('Chain J — Audit Trail Coverage', () => {
   let baselineCount = 0;
@@ -32,19 +54,33 @@ test.describe.serial('Chain J — Audit Trail Coverage', () => {
     console.log(`[Chain J] BASE=${BASE}`);
   });
 
-  test('Step 1 — Capture baseline audit count for today (FUNCTION)', async ({ page }) => {
+  test('Step 1 — Baseline one accession\'s audit trail (FUNCTION)', async ({ page }) => {
     await page.goto(BASE);
     await page.waitForLoadState('networkidle');
-    const today = new Date().toISOString().slice(0, 10);
-    const r = await apiCall<{ entries?: AuditEntry[] } | AuditEntry[]>(
-      page, `/api/OpenELIS-Global/rest/AuditTrail?startDate=${today}&endDate=${today}`
-    );
-    if (!r.ok) {
-      markStep('J', 1, 'FAIL', `AuditTrail HTTP ${r.status}`); expect(r.ok).toBeTruthy(); return;
+
+    const acq = await acquireAnyAccession(page);
+    if (!acq.accession) {
+      markStep('J', 1, 'GAP', `No accession to audit (${acq.detail})`, 'Seed an order then re-run.');
+      test.info().annotations.push({ type: 'gap', description: 'no accession available' });
+      return;
     }
-    const entries = Array.isArray(r.body) ? r.body : ((r.body as { entries?: AuditEntry[] } | null)?.entries || []);
-    baselineCount = entries.length;
-    markStep('J', 1, 'PASS', `Baseline audit count for today = ${baselineCount}`);
+    auditAccession = acq.accession;
+
+    const r = await readAuditTrail(page);
+    if (!r.ok) {
+      markStep(
+        'J',
+        1,
+        'FAIL',
+        `AuditTrailReport HTTP ${r.status} for accession ${auditAccession}`,
+        'The endpoint exists and takes accessionNumber; a non-2xx on a real accession is a ' +
+          'product failure, not a declarable gap.'
+      );
+      expect(r.ok).toBeTruthy();
+      return;
+    }
+    baselineCount = auditEntriesOf(r.body).length;
+    markStep('J', 1, 'PASS', `Baseline audit rows for ${auditAccession} = ${baselineCount}`);
   });
 
   test('Step 2 — Edit a reference range (PERSIST, sensitive action 1)', async ({ page }) => {
@@ -95,14 +131,11 @@ test.describe.serial('Chain J — Audit Trail Coverage', () => {
     await page.goto(BASE);
     await page.waitForTimeout(2000); // audit may be async
 
-    const today = new Date().toISOString().slice(0, 10);
-    const r = await apiCall<{ entries?: AuditEntry[] } | AuditEntry[]>(
-      page, `/api/OpenELIS-Global/rest/AuditTrail?startDate=${today}&endDate=${today}`
-    );
+    const r = await readAuditTrail(page);
     if (!r.ok) {
       markStep('J', 4, 'FAIL', `AuditTrail HTTP ${r.status}`); expect(r.ok).toBeTruthy(); return;
     }
-    const entries = Array.isArray(r.body) ? r.body : ((r.body as { entries?: AuditEntry[] } | null)?.entries || []);
+    const entries = auditEntriesOf(r.body);
     const newCount = entries.length - baselineCount;
     const successfulActions = probedActions.filter(a => a.success);
 
@@ -141,17 +174,14 @@ test.describe.serial('Chain J — Audit Trail Coverage', () => {
 
   test('Step 5 — Audit entry has who/when/what fields populated (REPORTABLE)', async ({ page }) => {
     await page.goto(BASE);
-    const today = new Date().toISOString().slice(0, 10);
-    const r = await apiCall<{ entries?: AuditEntry[] } | AuditEntry[]>(
-      page, `/api/OpenELIS-Global/rest/AuditTrail?startDate=${today}&endDate=${today}`
-    );
+    const r = await readAuditTrail(page);
     if (!r.ok) {
       markStep('J', 5, 'FAIL', `AuditTrail read returned HTTP ${r.status}`,
         'The endpoint exists on this build, so a non-2xx is a failure and not a declarable gap ' +
         '(known-gaps.ts, "WHAT DOES NOT [belong here]").');
       return;
     }
-    const entries = Array.isArray(r.body) ? r.body : ((r.body as { entries?: AuditEntry[] } | null)?.entries || []);
+    const entries = auditEntriesOf(r.body);
     const recent = entries.find(e =>
       e.newValue?.includes('QA_AUTO_chain-j') || e.oldValue?.includes('QA_AUTO_chain-j')
     );
