@@ -78,9 +78,16 @@ export async function apiCall<T = unknown>(
         headers,
         credentials: 'same-origin',
       };
+      // CSRF goes on ANY state-changing verb, not only on calls that carry a body.
+      // Until 2026-09-16 the token was attached inside the `body !== undefined` branch,
+      // so a body-less POST/PUT/DELETE went out unprotected and came back 403 -- which
+      // read as an authorization finding about the product. Chain Y's exportPdf probe was
+      // the case that exposed it.
+      if ((init.method || 'GET') !== 'GET') {
+        headers['X-CSRF-Token'] = csrf;
+      }
       if (init.body !== undefined) {
         headers['Content-Type'] = 'application/json';
-        headers['X-CSRF-Token'] = csrf;
         reqInit.body = JSON.stringify(init.body);
       }
       try {

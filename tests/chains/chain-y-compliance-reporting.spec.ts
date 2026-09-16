@@ -121,7 +121,22 @@ test.describe.serial('Chain Y — SILNAS compliance reporting', () => {
     // No environmental sample id reliably in scope on a fresh instance; probe the
     // contract with a benign id. 200 (PDF) or 400/404 (no such sample) prove it is
     // wired; a 500 here would itself be a finding to characterize.
-    const r = await apiCall(page, COMPLIANCE_REPORT_EXPORT_PDF(1), { accept: 'application/pdf', expectBinary: true });
+    //
+    // METHOD CORRECTED 2026-09-16. This probe used GET and had been reporting
+    // "exportPdf HTTP 405" as a gap in the product. 405 Method Not Allowed was the server
+    // being right: `ComplianceReportRestController` maps exportPdf as @PostMapping. Our
+    // verb, our 405. A 405 is now treated as the failure it is -- an assertion about the
+    // method contract -- rather than an unexplained gap.
+    const r = await apiCall(page, COMPLIANCE_REPORT_EXPORT_PDF(1), {
+      method: 'POST',
+      accept: 'application/pdf',
+      expectBinary: true,
+    });
+    expect(
+      r.status,
+      `exportPdf answered 405 to a POST. The mapping is @PostMapping("/exportPdf") under ` +
+        `@RequestMapping("/rest/complianceReport"); a 405 now means the verb changed.`
+    ).not.toBe(405);
     if (r.status === 200) {
       markStep('Y', 5, 'PASS', 'exportPdf returned a certificate for sample 1 (Laporan Hasil PDF path wired)');
       expect(r.status).toBe(200);
