@@ -517,11 +517,16 @@ export interface AcquireAccessionResult {
  * UI Dashboard tile drill-down and capture the real queue endpoint.
  */
 export async function acquireAnyAccession(page: import('@playwright/test').Page): Promise<AcquireAccessionResult> {
-  // 1. Try LogbookResults unfiltered
-  const lb = await apiCall<{ testResult?: Array<{ accessionNumber?: string }> }>(
-    page,
-    '/api/OpenELIS-Global/rest/LogbookResults'
-  );
+  // THE QUERY THE REAL SCREEN SENDS. `UnifiedResults.tsx` always sets doRange=false and
+  // finished=false, and filters by testSectionId. Calling LogbookResults bare is not the
+  // same question: `finished` defaults false but `doRange` binds as a primitive boolean,
+  // and the screen's own contract is the one worth reproducing. Getting this wrong is how
+  // three chains spent months reporting "the dashboard says orders exist but the Logbook
+  // has none" as a suspected product gap.
+  const LOGBOOK_BASE = '/api/OpenELIS-Global/rest/LogbookResults?doRange=false&finished=false';
+
+  // 1. Try LogbookResults with no unit filter
+  const lb = await apiCall<{ testResult?: Array<{ accessionNumber?: string }> }>(page, LOGBOOK_BASE);
   if (lb.ok && typeof lb.body === 'object' && lb.body !== null) {
     const items = (lb.body as { testResult?: Array<{ accessionNumber?: string }> }).testResult || [];
     if (items.length > 0 && items[0].accessionNumber) {
@@ -537,7 +542,7 @@ export async function acquireAnyAccession(page: import('@playwright/test').Page)
   for (const [name, id] of Object.entries(LAB_UNIT_IDS)) {
     const r = await apiCall<{ testResult?: Array<{ accessionNumber?: string }> }>(
       page,
-      `/api/OpenELIS-Global/rest/LogbookResults?${LOGBOOK_FILTER_PARAM}=${id}`
+      `${LOGBOOK_BASE}&${LOGBOOK_FILTER_PARAM}=${id}`
     );
     if (!r.ok || typeof r.body !== 'object' || r.body === null) continue;
     const items = (r.body as { testResult?: Array<{ accessionNumber?: string }> }).testResult || [];
