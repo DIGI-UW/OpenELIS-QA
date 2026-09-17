@@ -40,7 +40,12 @@ import { dirname, join, relative } from 'node:path';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ALLOWLIST = join(ROOT, '.orphan-allowlist.json');
-const SKIP_DIRS = new Set(['node_modules', 'archive', 'test-results', 'playwright-report', 'regression-results', '.git', 'evals']);
+// 'scratch' is the working directory for throwaway probes — one-off specs written to read a
+// contract off a live instance and then discarded. It is gitignored, so those files are not
+// part of the repository and it is not this gate's business whether a config can run them.
+// Same exclusion as scripts/check-ci-coverage.mjs; the two gates ask different questions but
+// they walk the same tree and should see the same tree.
+const SKIP_DIRS = new Set(['node_modules', 'archive', 'test-results', 'playwright-report', 'regression-results', '.git', 'evals', 'scratch']);
 
 function walk(dir, out = []) {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
