@@ -12,7 +12,7 @@
  * Run: npx playwright test -c qa.config.ts --project=qa-surfaces
  */
 import { test, expect } from '@playwright/test';
-import { QA_SURFACES, STUB_ROUTES, HEADLESS_ROUTES } from './_qa-surface-map';
+import { QA_SURFACES, BREADCRUMB_TITLE_ROUTES } from './_qa-surface-map';
 
 const BASE = process.env.BASE ?? 'https://pngdemo.openelis-global.org';
 
@@ -25,6 +25,10 @@ interface Visit {
   buttons: string[];
   rows: number;
   rootLen: number;
+  headingTags: string[];
+  ariaHeadings: number;
+  titleIsHeading: boolean | null;
+  biggestText: Array<{ tag: string; fs: number; txt: string }>;
   calls: string[];
   failedCalls: string[];
 }
@@ -66,6 +70,31 @@ async function visit(page: import('@playwright/test').Page, route: string): Prom
       buttons: Array.from(main.querySelectorAll('button')).map(t).filter(Boolean),
       rows: main.querySelectorAll('tbody tr').length,
       rootLen: (document.getElementById('root')?.innerHTML || '').length,
+      // Real heading ELEMENTS, excluding the session-timeout modal, which is present on every
+      // route and is not the page's heading. `headings` above is text; this is the markup.
+      headingTags: Array.from(main.querySelectorAll('h1,h2,h3,h4,h5,h6'))
+        .filter((e) => (e.textContent || '').trim() !== 'Still There?')
+        .map((e) => `${e.tagName}: ${(e.textContent || '').trim().slice(0, 50)}`),
+      ariaHeadings: Array.from(main.querySelectorAll('[role="heading"]')).length,
+      // The largest text actually painted, and — the part that matters — whether that element
+      // sits inside a heading. A page can carry an <h4> section heading and still have no
+      // heading on its TITLE, which is exactly the shape of the defect this catches, so
+      // counting headings is not enough; the title element itself has to be checked.
+      titleIsHeading: (() => {
+        const painted = Array.from(main.querySelectorAll('*'))
+          .filter((e) => e.children.length === 0 && (e.textContent || '').trim())
+          .map((e) => ({ el: e, fs: parseFloat(getComputedStyle(e).fontSize) }))
+          .filter((x) => x.fs >= 24 && (x.el.textContent || '').trim() !== 'Still There?')
+          .sort((a, b) => b.fs - a.fs)[0];
+        if (!painted) return null;
+        return !!painted.el.closest('h1,h2,h3,h4,h5,h6,[role="heading"]');
+      })(),
+      biggestText: Array.from(main.querySelectorAll('*'))
+        .filter((e) => e.children.length === 0 && (e.textContent || '').trim())
+        .map((e) => ({ tag: e.tagName, fs: parseFloat(getComputedStyle(e).fontSize), txt: (e.textContent || '').trim().slice(0, 50) }))
+        .filter((x) => x.fs >= 24 && x.txt !== 'Still There?')
+        .sort((a, b) => b.fs - a.fs)
+        .slice(0, 4),
     };
   });
   page.off('request', onReq);
@@ -114,22 +143,6 @@ test.describe('QA module screens', () => {
 
   // ── Findings, pinned ─────────────────────────────────────────────────────────────────
 
-  for (const route of STUB_ROUTES) {
-    test(`QA-S-STUB-${route.split('/').pop()} — ${route} does something (SPEC)`, async ({ page }) => {
-      test.fail(); // In the QC sidebar, and renders a heading and nothing else: no table, no
-                   // controls, and no REST call of any kind. A user can navigate to it and
-                   // gets no sign that it is unfinished.
-      const r = await visit(page, route);
-      const shellCalls = /site-branding|open-configuration|supportedlocales|properties|database-cleaning|menu|notifications|configuration-properties/;
-      const ownCalls = r.calls.filter((c) => !shellCalls.test(c));
-      const evidence = `columns=${r.columns.length} buttons=${r.buttons.length} ownRestCalls=${ownCalls.length}`;
-      expect(
-        r.columns.length + r.buttons.length + ownCalls.length,
-        `${route} renders only the heading "${r.headings.join(' / ')}" (${evidence})`
-      ).toBeGreaterThan(0);
-    });
-  }
-
   // RETRACTED 2026-09-16, and kept as a note rather than deleted.
   //
   // The census showed /qa/qc/alerts and /qa/qc/dashboard rendering an identical page with the
@@ -142,14 +155,42 @@ test.describe('QA module screens', () => {
   // Two screens rendering the same chrome is not evidence about which tab is active. Read
   // aria-selected, not the tab list.
 
-  for (const route of HEADLESS_ROUTES) {
-    test(`QA-S-HEADING-${route.split('/').pop()} — ${route} names itself (SPEC)`, async ({ page }) => {
-      test.fail(); // Renders no h1, h2 or h3 at all, where twenty of the twenty-two /qa screens
-                   // do. A screen reader has nothing to announce for the page, and a user
-                   // arriving by deep link has nothing to orient on. It is also a plain
-                   // inconsistency inside one module.
+  for (const route of BREADCRUMB_TITLE_ROUTES) {
+    test(`QA-S-TITLE-${route.split('/').pop()} — ${route} marks its page title up as a heading (SPEC)`, async ({ page }) => {
+      test.fail(); // The title is rendered by a `page-title-breadcrumb` component as a row of
+                   // <button class="page-title-breadcrumb-link"> and
+                   // <span class="page-title-breadcrumb-current"> at 28px — visually the largest
+                   // text on the page and unmistakably its title — with no h1..h6 and no
+                   // role="heading". The only heading in the DOM is the session-timeout modal.
+                   //
+                   // Three consequences, in the order a lab would meet them:
+                   //   1. Heading navigation, which is how screen-reader users move around a
+                   //      page, finds nothing here.
+                   //   2. On /qa/qc/rule-config the outline starts at <h4> "Configured Rule
+                   //      Sets" with nothing above it — a heading-order break as well as a
+                   //      missing one.
+                   //   3. There is no fallback: document.title is "OpenELIS" on every route, so
+                   //      the page has no programmatic name at all.
+                   //
+                   // WCAG 1.3.1 Info and Relationships (A): a visual heading has to be marked up
+                   // as one. The other twenty /qa screens already do it — /qa/eqa/management has
+                   // <h2>Program Administration</h2> with <h4> sections beneath — so this is one
+                   // component out of step, not a module-wide pattern.
+                   //
+                   // It also duplicates the real Carbon <nav class="cds--breadcrumb"> directly
+                   // above it, so the fix can be as small as making the current segment an <h1>.
       const r = await visit(page, route);
-      expect(r.headings, `${route} renders a heading`).not.toEqual([]);
+
+      // Assert the SPEC, and say what was actually painted, so a failure reads as evidence.
+      // The question is whether the page's OWN TITLE is a heading — not whether the page has
+      // any heading at all. /qa/qc/rule-config has an <h4> for a section and would pass a
+      // heading count while its title is still a row of buttons.
+      const biggest = r.biggestText[0];
+      expect(
+        r.titleIsHeading,
+        `${route} paints its title as ${biggest ? `<${biggest.tag}> at ${biggest.fs}px ("${biggest.txt}")` : 'no large text'}, `
+        + `which is not inside any heading element. Headings present: ${JSON.stringify(r.headingTags)}`
+      ).toBe(true);
     });
   }
 });

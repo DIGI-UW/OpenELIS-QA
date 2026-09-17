@@ -15,6 +15,11 @@ import { defineConfig, devices } from '@playwright/test';
 // AUTH_STATE_FILE keeps this instance's session in its own file. Reusing a storageState
 // captured against another host does not error — it silently measures a logged-OUT app,
 // where every route answers 200 and issues no data calls.
+// TARGET WILL MOVE. This module is heading for `develop` once it passes QC, and when it lands
+// the right target is whatever the rest of the suite already points at — testing, or the
+// ephemeral develop stack. At that point this default and the `env` block in ci-suites.json
+// are the only two edits needed; nothing in the specs is pngdemo-specific. Until then, the
+// canaries below are what stop a premature switch from reading as a product failure.
 const BASE = process.env.BASE ?? 'https://pngdemo.openelis-global.org';
 const ADMIN_STATE = process.env.AUTH_STATE_FILE ?? '.auth/png.json';
 

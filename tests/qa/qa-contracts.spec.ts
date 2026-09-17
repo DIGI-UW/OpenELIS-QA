@@ -92,34 +92,18 @@ test.describe('QA module REST contracts', () => {
 
   // ── Findings, pinned ─────────────────────────────────────────────────────────────────
 
-  test('QA-C-QC-GUARDS — the QC surface uses one authorization model (SPEC)', async ({ page }) => {
-    test.fail(); // The /qa module introduces an authority model — qa.view.eqa, qa.manage.eqa,
-                 // qa.eqa.participant, qa.eqa.provider, qa.manage.qi, qa.view.qms,
-                 // qa.manage.accreditation — and EQA, QI and QMS are guarded with it throughout.
-                 // /rest/qc/* is the exception: QCRestController, QCViolationRestController,
-                 // QCChartDataRestController and QCAlertRestController are all still guarded
-                 // class-wide by hasAnyRole('ANALYSER_IMPORT','ADMIN'), while three export
-                 // endpoints and /qc/dashboard/bench have been moved to hasAuthority('qa.view.qc').
-                 // QCExportRestController's own comment says it is "the first @PreAuthorize on
-                 // the /rest/qc/* surface", so this is a migration in progress.
-                 //
-                 // The consequence is a user granted qa.view.qc who can export QC data but
-                 // cannot read the control lots the export is drawn from. This step asserts the
-                 // END STATE, so it goes green when the migration finishes.
-                 //
-                 // Asserted as a code fact rather than probed as a persona, because proving it
-                 // by request needs a user holding qa.view.qc and NOT ANALYSER_IMPORT/ADMIN,
-                 // which this instance does not carry. Retire this when such a persona exists
-                 // and replace it with a real 403/200 matrix.
-    const legacyGuarded = [
-      'QCRestController',
-      'QCViolationRestController',
-      'QCChartDataRestController',
-      'QCAlertRestController',
-    ];
-    expect(
-      legacyGuarded,
-      'no /rest/qc controller is still guarded by hasAnyRole(ANALYSER_IMPORT, ADMIN) while its siblings use hasAuthority(qa.view.qc)'
-    ).toEqual([]);
-  });
+  // NOT ASSERTED, and recorded rather than dropped.
+  //
+  // The /qa module introduces an authority model — qa.view.eqa, qa.manage.eqa,
+  // qa.eqa.participant, qa.eqa.provider, qa.manage.qi, qa.view.qms, qa.manage.accreditation —
+  // and EQA, QI and QMS use it throughout. /rest/qc/* is mid-migration: QCRestController,
+  // QCViolationRestController, QCChartDataRestController and QCAlertRestController are still
+  // guarded class-wide by hasAnyRole('ANALYSER_IMPORT','ADMIN'), while three exports and
+  // /qc/dashboard/bench have moved to hasAuthority('qa.view.qc'). QCExportRestController's own
+  // comment calls itself "the first @PreAuthorize on the /rest/qc/* surface".
+  //
+  // Casey's call, 2026-09-17: not a concern. A migration in progress is not a defect, and a
+  // tripwire on it would go red nightly for as long as the migration takes. Left here so the
+  // split is documented rather than rediscovered; if it is still split once the module lands
+  // on develop, that is the moment to ask, not now.
 });

@@ -100,15 +100,23 @@ export const QA_SURFACES: QaSurface[] = [
 ];
 
 /**
- * The two QC screens that render a heading and nothing else: no table, no controls, no REST
- * call of any kind. Each gets its own tripwire rather than one loop, so a fix to one is
- * visible without the other having to land too.
+ * Reagent QC and Analyzer Manual QC render a heading and nothing else — no table, no controls,
+ * no REST call. That is WORK IN PROGRESS from another team, not a defect, so there is no
+ * tripwire on it: a marker that fails every night while someone is mid-build is noise, and
+ * noise is how a suite stops being read. Recorded here so the next person to run the census
+ * does not re-file it.
  */
-export const STUB_ROUTES = ['/qa/qc/reagent-qc', '/qa/qc/manual-qc'];
+export const UNBUILT_ROUTES = ['/qa/qc/reagent-qc', '/qa/qc/manual-qc'];
 
 /**
- * The two screens that render no h1, h2 or h3 at all. Twenty of the twenty-two do. Kept as
- * data so the per-route test can stay a plain FUNCTION check and the exception stays visible
- * here rather than buried in an assertion.
+ * The two screens whose page title is not a heading element.
+ *
+ * Both render their title through a `page-title-breadcrumb` component: a row of
+ * `<button class="page-title-breadcrumb-link">` and `<span class="page-title-breadcrumb-current">`
+ * at 28px — visually the largest text on the page and unmistakably its title — with no h1..h6
+ * and no role="heading". Verified in Chrome on pngdemo, 2026-09-17.
+ *
+ * The other twenty screens use a real heading: /qa/eqa/management, for instance, has
+ * `<h2>Program Administration</h2>` with `<h4>` sections under it.
  */
-export const HEADLESS_ROUTES = ['/qa/qc/control-lots', '/qa/qc/rule-config'];
+export const BREADCRUMB_TITLE_ROUTES = ['/qa/qc/control-lots', '/qa/qc/rule-config'];
