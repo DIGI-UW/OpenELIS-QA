@@ -25,9 +25,11 @@
 import { chromium, request as playwrightRequest, expect, type Page, type APIRequestContext } from '@playwright/test';
 import fs from 'fs';
 
-// AUTH_STATE_FILE lets a run against a DIFFERENT host keep its own session file, so a probe
-// against one instance cannot clobber the shared state another run is using (or, worse,
-// silently reuse it and measure a logged-out app).
+// AUTH_STATE_FILE lets a run against a DIFFERENT host keep its own session file, so a suite
+// aimed at one instance cannot clobber the shared state another suite is using — or, worse,
+// silently reuse it. A storageState from the wrong host does not error: it renders the login
+// page, answers 200 on every route, and issues no data calls, which reads exactly like an
+// application that is not wired up.
 export const AUTH_STATE_PATH = process.env.AUTH_STATE_FILE ?? '.auth/user.json';
 
 export const OE_USER = process.env.OE_USER ?? 'admin';
