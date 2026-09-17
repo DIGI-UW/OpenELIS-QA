@@ -101,21 +101,48 @@ test.describe.serial('Chain Z — Compliance standards admin CRUD', () => {
     if (!featurePresent) { markStep('Z', 2, 'GAP', 'Skipped — feature absent (Step 1)'); return; }
     await page.goto(BASE);
     // Prefer cloning the server's own DTO (most faithful); else a minimal body.
+    // ComplianceStandard validates name, issuingBody, regulationNumber, version,
+    // effectiveDate, countryRegion, status and isPreSeeded, and the table carries a
+    // natural key on (name, regulationNumber, version) plus a unique fhirUuid.
+    // Cloning the seed DTO verbatim therefore 400s on the duplicated fhirUuid --
+    // which is what this step used to report as a product fault. Strip the
+    // server-owned identity columns and fill any required field the seed row left
+    // blank, so a 400 from here on means the CONTRACT changed, not that we sent junk.
+    const SERVER_OWNED = ['id', 'fhirUuid', 'lastupdated', 'lastUpdated', 'parameterGroups',
+      'supersededByStandard', 'supersededByStandardId'];
     let body: Record<string, unknown>;
     if (seedDto) {
       body = { ...seedDto };
-      delete (body as { id?: unknown }).id;
-      if ('name' in body) body.name = QA_NAME;
-      if ('standardName' in body) body.standardName = QA_NAME;
-      if ('active' in body) body.active = true;
+      for (const k of SERVER_OWNED) delete body[k];
+      body.name = QA_NAME;
     } else {
-      body = { name: QA_NAME, standardName: QA_NAME, active: true };
+      body = { name: QA_NAME };
     }
+    // ComplianceStandard is deserialized strictly: an unknown property makes Spring
+    // answer 400 HttpMessageNotReadableException before validation ever runs. The
+    // `standardName` / `active` keys this step used to send do not exist on the
+    // entity, and that -- not a product fault -- is what produced the 400 we chased.
+    delete body.standardName;
+    delete body.active;
+    const REQUIRED: Record<string, unknown> = {
+      issuingBody: 'QA_AUTO',
+      regulationNumber: `QA-${Date.now()}`,
+      version: '1.0',
+      effectiveDate: new Date().toISOString().slice(0, 10),
+      countryRegion: 'QA',
+      status: 'DRAFT',
+      isPreSeeded: false,
+    };
+    for (const [k, v] of Object.entries(REQUIRED)) {
+      if (body[k] === undefined || body[k] === null || body[k] === '') body[k] = v;
+    }
+    // The natural key must not collide with the row we cloned from.
+    body.regulationNumber = REQUIRED.regulationNumber;
     const before = listToArray((await apiCall(page, COMPLIANCE_STANDARDS)).body).length;
     const create = await apiCall<StdRow>(page, COMPLIANCE_STANDARDS, { method: 'POST', body });
     if (!create.ok) {
       markStep('Z', 2, create.status === 403 ? 'GAP' : 'GAP',
-        `Create returned HTTP ${create.status}${create.status === 403 ? ' (needs GLOBAL_ADMIN)' : ' — clone body rejected; capture exact DTO'}`,
+        `Create returned HTTP ${create.status}${create.status === 403 ? ' (needs GLOBAL_ADMIN)' : ' — body satisfies every declared constraint; treat as a contract change'}`,
         `POST ${COMPLIANCE_STANDARDS}`);
       test.info().annotations.push({ type: 'gap', description: `standard create HTTP ${create.status}` });
       return;

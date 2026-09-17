@@ -668,7 +668,7 @@ export async function findVectorLot(
 // entry, sample shipment, aliquot) into deep round-trips with landing checks.
 // =============================================================================
 
-const API = '/api/OpenELIS-Global/rest';
+export const API = '/api/OpenELIS-Global/rest';
 
 // --- Chain O — Referral (Referred-Out Tests) -------------------------------
 /** GET — Struts form model; after a search it carries `referralDisplayItems[]`.
