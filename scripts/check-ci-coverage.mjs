@@ -48,6 +48,12 @@ const SKIP_DIRS = new Set([
   // is the same root cause wearing a different hat: a foreign tree inside ours that every
   // walk has to know about.
   'app',
+  // 'scratch' is the working directory for throwaway probes — one-off specs written to read
+  // a contract off a live instance and then discarded. They are gitignored, so they are not
+  // part of the repository and it is not this gate's business whether CI runs them. Without
+  // this, every probe left on disk reports as an uncovered spec and the gate cries wolf about
+  // files that do not exist as far as git is concerned.
+  'scratch',
 ]);
 const MAP_ONLY = process.argv.includes('--map');
 
