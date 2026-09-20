@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, getFutureDate, navigateViaMenu, tryNavigateToURL, selectSampleType, discoverFhirBase } from '../helpers/test-helpers';
+import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, getFutureDate, navigateViaMenu, tryNavigateToURL, selectSampleType, discoverFhirBase, orderWizardForward } from '../helpers/test-helpers';
 
 /**
  * System & Miscellaneous Tests
@@ -795,7 +795,7 @@ test.describe('Error Handling and Edge Cases (TC-ERR)', () => {
     await page.waitForTimeout(500);
 
     // Try to advance
-    const nextBtn = page.getByRole('button', { name: /next|search/i }).first();
+    const nextBtn = orderWizardForward(page);
     if (await nextBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
       await nextBtn.click();
       await page.waitForTimeout(1500);
@@ -863,7 +863,7 @@ test.describe('Error Handling and Edge Cases (TC-ERR)', () => {
     await page.waitForTimeout(2000);
 
     // Navigate through the wizard quickly to get to submit
-    const nextBtn = page.getByRole('button', { name: /next/i }).first();
+    const nextBtn = orderWizardForward(page);
     for (let i = 0; i < 4 && await nextBtn.isVisible({ timeout: 1000 }).catch(() => false); i++) {
       await nextBtn.click();
       await page.waitForTimeout(500);

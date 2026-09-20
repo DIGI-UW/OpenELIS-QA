@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, navigateToAdminItem, getDateRange, getFutureDateRange } from '../helpers/test-helpers';
+import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, navigateToAdminItem, getDateRange, getFutureDateRange, orderWizardForward } from '../helpers/test-helpers';
 
 /**
  * Referral Workflow Test Suite
@@ -32,7 +32,7 @@ test.describe('Referral Management (TC-REF)', () => {
     await page.waitForTimeout(2000);
 
     // Navigate to Add Sample step
-    const nextBtn = page.getByRole('button', { name: /next/i }).first();
+    const nextBtn = orderWizardForward(page);
     for (let i = 0; i < 2 && await nextBtn.isVisible({ timeout: 1000 }).catch(() => false); i++) {
       await nextBtn.click();
       await page.waitForTimeout(1000);

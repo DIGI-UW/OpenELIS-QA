@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, getFutureDate, navigateViaMenu, tryNavigateToURL, selectSampleType } from '../helpers/test-helpers';
+import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, getFutureDate, navigateViaMenu, tryNavigateToURL, selectSampleType, orderWizardForward, selectOrderProgram } from '../helpers/test-helpers';
 
 /**
  * Non-Conforming Samples and Events Test Suite
@@ -19,11 +19,11 @@ test.describe('Non-conforming samples (TC-NC)', () => {
     // Step 1: Patient Info
     await page.locator('input[placeholder*="patient" i], input[id*="patientId" i]').first().fill('0123456');
     await page.keyboard.press('Enter');
-    await page.getByRole('button', { name: /Next/i }).first().click();
+    await orderWizardForward(page).click();
 
     // Step 2: Program Selection
-    await page.getByText(/Routine Testing/i).click();
-    await page.getByRole('button', { name: /Next/i }).click();
+    await selectOrderProgram(page);
+    await orderWizardForward(page).click();
 
     // Step 3: Add Sample — select Whole Blood
     await selectSampleType(page, '4');
@@ -44,9 +44,9 @@ test.describe('Non-conforming samples (TC-NC)', () => {
 
     await page.locator('input[placeholder*="patient" i]').first().fill('0123456');
     await page.keyboard.press('Enter');
-    await page.getByRole('button', { name: /Next/i }).first().click();
-    await page.getByText(/Routine Testing/i).click();
-    await page.getByRole('button', { name: /Next/i }).click();
+    await orderWizardForward(page).click();
+    await selectOrderProgram(page);
+    await orderWizardForward(page).click();
     await selectSampleType(page, '4');
 
     // Click the Reject Sample checkbox/label
@@ -81,9 +81,9 @@ test.describe('Non-conforming samples (TC-NC)', () => {
     // Complete Add Order flow with rejected sample
     await page.locator('input[placeholder*="patient" i]').first().fill('0123456');
     await page.keyboard.press('Enter');
-    await page.getByRole('button', { name: /Next/i }).first().click();
-    await page.getByText(/Routine Testing/i).click();
-    await page.getByRole('button', { name: /Next/i }).click();
+    await orderWizardForward(page).click();
+    await selectOrderProgram(page);
+    await orderWizardForward(page).click();
     await selectSampleType(page, '4');
 
     // Check Reject Sample
@@ -105,7 +105,7 @@ test.describe('Non-conforming samples (TC-NC)', () => {
       await hgbCb.check();
     }
 
-    await page.getByRole('button', { name: /Next/i }).click();
+    await orderWizardForward(page).click();
 
     // Add Order step
     await page.getByText('Generate', { exact: false }).click();
