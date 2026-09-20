@@ -33,7 +33,7 @@
  *   npx playwright test --project=chain-a
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import {
   BASE,
   apiCall,
@@ -43,6 +43,8 @@ import {
   markStep,
   ChainOrderRef,
   readResultsForLabNumber,
+  recallChainState,
+  rememberChainState,
   requireStep,
   validateResultsForLabNumber,
 } from './_common';
@@ -68,6 +70,74 @@ test.describe('Chain A — Order Lifecycle', () => {
   let order: ChainOrderRef | null = null;
   const enteredResultValue = '12.5'; // arbitrary numeric we expect to round-trip
 
+  /**
+   * The order this chain is working on, surviving a worker restart.
+   *
+   * A failed step retries in a fresh worker, where the module-level `order` above
+   * is undefined again — so every later step in that worker used to BLOCK on
+   * `!order` and report a cascade for a chain whose Step 1 had succeeded. Step 1
+   * writes the order to the run's output directory; this reads it back. If Step 1
+   * never succeeded there is nothing to read and the step BLOCKs, as it should.
+   */
+  const currentOrder = (): ChainOrderRef | null => {
+    if (!order) order = recallChainState<ChainOrderRef>('A');
+    return order;
+  };
+
+  /** The Patient Status Report the Routine Reports screen sends. See Step 5. */
+  const REPORT = 'patientCILNSP_vreduit';
+  const reportUrl = (accession: string) =>
+    `/api/OpenELIS-Global/ReportPrint?report=${REPORT}&type=patient`
+    + `&accessionDirect=${encodeURIComponent(accession)}`
+    + `&highAccessionDirect=${encodeURIComponent(accession)}`;
+
+  /**
+   * FHIR base paths, in the order fhir-integration.spec.ts established: the
+   * app-mounted one first, then the two standalone mounts.
+   */
+  const fhirBases = ['/api/OpenELIS-Global/fhir', '/fhir', '/hapi-fhir-jpaserver/fhir'];
+
+  interface FhirObservation {
+    id?: string;
+    valueQuantity?: { value?: number; unit?: string };
+    valueString?: string;
+    basedOn?: Array<{ reference?: string }>;
+  }
+  interface FhirLookup {
+    base: string;
+    serviceRequestId: string;
+    observations: FhirObservation[];
+  }
+
+  /**
+   * Resolve an accession to its Observations the way the data is actually linked:
+   * the accession identifies a ServiceRequest, and the Observation points back at
+   * it through basedOn. Returns what it found rather than asserting, so Step 7 and
+   * Step 8 can each report the half they are responsible for.
+   */
+  async function fetchObservationBundle(page: Page, accession: string): Promise<FhirLookup> {
+    type Bundle = { entry?: Array<{ resource?: Record<string, unknown> }> };
+    for (const base of fhirBases) {
+      const sr = await apiCall<Bundle>(
+        page, `${base}/ServiceRequest?identifier=${encodeURIComponent(accession)}`,
+        { accept: 'application/fhir+json' });
+      if (!sr.ok) continue;
+
+      const srEntry = ((sr.body as Bundle)?.entry || [])[0]?.resource as { id?: string } | undefined;
+      const serviceRequestId = String(srEntry?.id ?? '');
+      if (!serviceRequestId) return { base, serviceRequestId: '', observations: [] };
+
+      const obs = await apiCall<Bundle>(
+        page, `${base}/Observation?based-on=ServiceRequest/${encodeURIComponent(serviceRequestId)}`,
+        { accept: 'application/fhir+json' });
+      const observations = (((obs.body as Bundle)?.entry) || [])
+        .map(e => e.resource as FhirObservation)
+        .filter(Boolean);
+      return { base, serviceRequestId, observations };
+    }
+    return { base: '', serviceRequestId: '', observations: [] };
+  }
+
   test.beforeAll(() => {
     // Soft sanity print so the per-step logs make sense in CI output.
     // eslint-disable-next-line no-console
@@ -90,6 +160,7 @@ test.describe('Chain A — Order Lifecycle', () => {
       expect(order, 'No QA_AUTO_ order available — seed first per SKILL §0.6a').not.toBeNull();
       return;
     }
+    rememberChainState('A', order);
     markStep('A', 1, 'PASS',
       `Acquired order ${order.accession} (${order.source}) for patient ${order.patientNationalId} / test ${order.testName}`);
     expect(order.accession.length).toBeGreaterThan(0);
@@ -104,7 +175,7 @@ test.describe('Chain A — Order Lifecycle', () => {
   // the round-trip pattern.
   // ---------------------------------------------------------------------------
   test('Step 2 — Patient-order linkage (ROUND-TRIP, BUG-37 check)', async ({ page }) => {
-    requireStep('A', 2, !!order, '!order');
+    requireStep('A', 2, !!currentOrder(), '!order');
 
     await page.goto(BASE);
     const readback = await apiCall<{ patientSearchResults?: Array<{ nationalId?: string; firstName?: string; lastName?: string }> }>(
@@ -165,7 +236,7 @@ test.describe('Chain A — Order Lifecycle', () => {
   // Acceptance criterion: PERSIST
   // ---------------------------------------------------------------------------
   test('Step 3 — Enter result via API substitute (PERSIST, BUG-31 workaround)', async ({ page }) => {
-    requireStep('A', 3, !!order, '!order');
+    requireStep('A', 3, !!currentOrder(), '!order');
 
     await page.goto(BASE);
 
@@ -210,7 +281,7 @@ test.describe('Chain A — Order Lifecycle', () => {
   // Acceptance criterion: PERSIST
   // ---------------------------------------------------------------------------
   test('Step 4 — Validate the result (PERSIST)', async ({ page }) => {
-    requireStep('A', 4, !!order, '!order');
+    requireStep('A', 4, !!currentOrder(), '!order');
 
     await page.goto(BASE);
 
@@ -246,20 +317,29 @@ test.describe('Chain A — Order Lifecycle', () => {
   // Acceptance criterion: REPORTABLE (a PDF must be produced)
   // ---------------------------------------------------------------------------
   test('Step 5 — Generate Patient Status Report PDF (REPORTABLE)', async ({ page }) => {
-    requireStep('A', 5, !!order, '!order');
+    requireStep('A', 5, !!currentOrder(), '!order');
 
     await page.goto(BASE);
 
     // Report generation uses the JSP ReportPrint endpoint (not the
     // /rest/report/* false-positive path — see SKILL §6.5).
-    const url =
-      `/api/OpenELIS-Global/ReportPrint?report=patient&type=patient` +
-      `&accessionNumber=${encodeURIComponent(order!.accession)}`;
+    //
+    // This step asked for `report=patient&accessionNumber=<labNo>` and had been
+    // answering HTTP 500 on every run. Neither half was real:
+    //   * ReportImplementationFactory.getReportCreator() matches the report name
+    //     against a fixed list, and "patient" is not in it. An unmatched name
+    //     returns null, the controller writes nothing, and the request 500s.
+    //   * the accession is passed as accessionDirect + highAccessionDirect (a
+    //     lab-number RANGE); there is no accessionNumber parameter here.
+    // Both are taken from PatientStatusReport.jsx / ReportByLabNo.jsx, which is
+    // what the Routine Reports screen itself sends, and verified live
+    // 2026-09-20: this URL returns a 3.2KB %PDF where the old one returned 500.
+    const url = reportUrl(order!.accession);
 
     const response = await apiCall<string>(page, url, { accept: 'application/pdf', expectBinary: true });
 
     if (!response.ok) {
-      markStep('A', 5, 'FAIL', `ReportPrint returned HTTP ${response.status}`);
+      markStep('A', 5, 'FAIL', `ReportPrint (${REPORT}) returned HTTP ${response.status}`);
       expect(response.ok, `ReportPrint returned ${response.status}`).toBeTruthy();
       return;
     }
@@ -273,7 +353,7 @@ test.describe('Chain A — Order Lifecycle', () => {
       expect(isPdf, 'ReportPrint did not return a PDF').toBeTruthy();
       return;
     }
-    markStep('A', 5, 'PASS', `PDF generated, ${buf.length} bytes`);
+    markStep('A', 5, 'PASS', `PDF generated by ${REPORT}, ${buf.length} bytes`);
 
     // Stash for Step 6
     (order as ChainOrderRef & { pdf?: Buffer }).pdf = buf;
@@ -285,12 +365,25 @@ test.describe('Chain A — Order Lifecycle', () => {
   // Acceptance criterion: REPORTABLE (content matches)
   // ---------------------------------------------------------------------------
   test('Step 6 — Lab number present on PDF (REPORTABLE)', async ({ page }) => {
-    requireStep('A', 6, !!order, '!order');
+    requireStep('A', 6, !!currentOrder(), '!order');
     const withPdf = order as ChainOrderRef & { pdf?: Buffer };
     if (!withPdf.pdf) {
-      markStep('A', 6, 'BLOCKED', 'No PDF from Step 5',
-        'Step 5 must produce the PDF this step reads. A cascade, not a gap: fix Step 5.');
-      return; // unreachable: the markStep BLOCKED above skips (declared gap) or fails.
+      // Not a cascade, and no longer a reason to BLOCK: a failed step retries in a
+      // fresh worker where Step 5's buffer no longer exists, and report generation
+      // is an idempotent GET. Fetch it again rather than reporting a blockage that
+      // says nothing about the product.
+      await page.goto(BASE);
+      const again = await apiCall<string>(page, reportUrl(order!.accession),
+        { accept: 'application/pdf', expectBinary: true });
+      if (!again.ok) {
+        markStep('A', 6, 'FAIL',
+          `No PDF from Step 5, and re-generating it returned HTTP ${again.status}`);
+        return;
+      }
+      withPdf.pdf = Buffer.from(String(again.body), 'base64');
+      // eslint-disable-next-line no-console
+      console.log('[Chain A · Step 6] re-generated the report (worker restart), '
+        + `${withPdf.pdf.length} bytes`);
     }
 
     const text = extractPdfText(withPdf.pdf);
@@ -306,78 +399,118 @@ test.describe('Chain A — Order Lifecycle', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // Step 7 — Fetch FHIR Observation
+  // Step 7 — Reach the order's Observation in FHIR
   // SKILL §11 Chain A row + Phase 8 BW-DEEP evidence
-  // Acceptance criterion: CROSS-LINK (UI write → FHIR read)
+  // Acceptance criterion: CROSS-LINK (UI write -> FHIR read)
+  //
+  // How this used to work, and why it proved nothing:
+  //   GET fhir/Observation?identifier=<accession>, PASS on HTTP 200.
+  // An Observation's identifier is its `result_uuid`, never the lab number, so
+  // that search answers 200 with total=0 for every accession that has ever
+  // existed — and the step passed on it every run, then handed Step 8 an empty
+  // bundle to report as a product failure.
+  //
+  // The route that actually exists, measured 2026-09-20 on a freshly resulted
+  // accession:
+  //   ServiceRequest?identifier=<accession>          -> 1 entry, id = analysis uuid
+  //   Observation?based-on=ServiceRequest/<that id>  -> the result Observation,
+  //                                                     basedOn pointing back
+  // Both hops are asserted, because they fail for different reasons: no
+  // ServiceRequest means the ORDER never reached FHIR; a ServiceRequest with no
+  // Observation means the RESULT did not.
   // ---------------------------------------------------------------------------
-  test('Step 7 — Fetch FHIR Observation (CROSS-LINK)', async ({ page }) => {
-    requireStep('A', 7, !!order, '!order');
+  test('Step 7 — Reach the order Observation through its ServiceRequest (CROSS-LINK)', async ({ page }) => {
+    requireStep('A', 7, !!currentOrder(), '!order');
     await page.goto(BASE);
 
-    // Path discovery: try the documented working path first
-    // (`/api/OpenELIS-Global/fhir`), fall back to `/fhir` and
-    // `/hapi-fhir-jpaserver/fhir` per the existing fhir-integration.spec.ts.
-    const candidates = [
-      `/api/OpenELIS-Global/fhir/Observation?identifier=${encodeURIComponent(order!.accession)}`,
-      `/fhir/Observation?identifier=${encodeURIComponent(order!.accession)}`,
-      `/hapi-fhir-jpaserver/fhir/Observation?identifier=${encodeURIComponent(order!.accession)}`,
-    ];
-
-    let resp: Awaited<ReturnType<typeof apiCall<{ entry?: Array<{ resource?: { valueQuantity?: { value?: number }; valueString?: string } }> }>>> | null = null;
-    for (const path of candidates) {
-      const r = await apiCall<{ entry?: Array<{ resource?: { valueQuantity?: { value?: number }; valueString?: string } }> }>(
-        page,
-        path,
-        { accept: 'application/fhir+json' }
-      );
-      if (r.ok) {
-        resp = r;
-        markStep('A', 7, 'PASS', `FHIR Observation fetched via ${path} (HTTP ${r.status})`);
-        break;
-      }
-    }
-    if (!resp) {
-      markStep('A', 7, 'FAIL', 'No FHIR Observation endpoint responded with 200');
-      expect(resp, 'FHIR Observation not reachable').not.toBeNull();
+    const found = await fetchObservationBundle(page, order!.accession);
+    if (!found.base) {
+      markStep('A', 7, 'FAIL',
+        `No FHIR endpoint answered for ${order!.accession}`,
+        `Tried: ${fhirBases.join(', ')}. This is reachability, not a mapping question.`);
+      expect(found.base, 'no FHIR endpoint answered').not.toBe('');
       return;
     }
-    (order as ChainOrderRef & { fhir?: typeof resp.body }).fhir = resp.body;
+    if (!found.serviceRequestId) {
+      markStep('A', 7, 'FAIL',
+        `No ServiceRequest carries accession ${order!.accession} (searched ${found.base})`,
+        `The order itself never reached FHIR, so there is nothing for a result to hang off. `
+        + `This is the CROSS-LINK failure the chain exists to catch, not a search-syntax problem: `
+        + `the same search returns the ServiceRequest for an order that did publish.`);
+      expect(found.serviceRequestId, 'no ServiceRequest carries this accession').not.toBe('');
+      return;
+    }
+
+    markStep('A', 7, 'PASS',
+      `ServiceRequest ${found.serviceRequestId} found for ${order!.accession} via ${found.base}; `
+      + `${found.observations.length} Observation(s) hang off it`);
+    (order as ChainOrderRef & { fhir?: FhirLookup }).fhir = found;
   });
 
   // ---------------------------------------------------------------------------
-  // Step 8 — FHIR Observation value matches entered result
+  // Step 8 — The FHIR Observation carries the value the LIS stored
   // SKILL §7.5 Round-trip Write Verification
   // Acceptance criterion: ROUND-TRIP
+  //
+  // Compared against what the LIS ITSELF stored, not against the string this
+  // chain typed: the product rounds a result to the test's significant digits,
+  // so entering 12.5 on a test that reports whole numbers stores 12 and
+  // publishes 12. Asserting the typed string would report a FHIR mapping defect
+  // for correct rounding. What matters here is that FHIR and the LIS agree.
   // ---------------------------------------------------------------------------
-  test('Step 8 — FHIR Observation value matches entered result (ROUND-TRIP)', async ({ page }) => {
-    requireStep('A', 8, !!order, '!order');
-    const withFhir = order as ChainOrderRef & { fhir?: { entry?: Array<{ resource?: { valueQuantity?: { value?: number }; valueString?: string } }> } };
-    if (!withFhir.fhir || typeof withFhir.fhir !== 'object') {
-      markStep('A', 8, 'BLOCKED', 'No FHIR payload from Step 7',
-        'Step 7 must fetch the Observation this step reads. A cascade, not a gap: fix Step 7.');
-      return; // unreachable: the markStep BLOCKED above skips (declared gap) or fails.
-    }
+  test('Step 8 — FHIR Observation matches the stored result (ROUND-TRIP)', async ({ page }) => {
+    requireStep('A', 8, !!currentOrder(), '!order');
+    await page.goto(BASE);
 
-    const entries = withFhir.fhir.entry || [];
-    if (entries.length === 0) {
+    // Re-fetch rather than BLOCK when Step 7's payload is missing: a failed step
+    // retries in a fresh worker, and this is an idempotent read.
+    const withFhir = order as ChainOrderRef & { fhir?: FhirLookup };
+    let lookup = withFhir.fhir;
+    if (!lookup || typeof lookup !== 'object') {
+      lookup = await fetchObservationBundle(page, order!.accession);
+      // eslint-disable-next-line no-console
+      console.log('[Chain A · Step 8] re-fetched the FHIR bundle (worker restart)');
+    }
+    if (!lookup.serviceRequestId) {
       markStep('A', 8, 'FAIL',
-        `FHIR bundle empty for accession ${order!.accession}`,
-        `Either Step 3 result entry did not surface in FHIR (CROSS-LINK gap), or the search identifier was wrong.`);
-      expect(entries.length, 'FHIR bundle is empty').toBeGreaterThan(0);
+        `No ServiceRequest for ${order!.accession}, so no Observation can be checked`,
+        `Step 7 reports the same thing; fix the publish, not this step.`);
+      expect(lookup.serviceRequestId, 'no ServiceRequest for this accession').not.toBe('');
+      return;
+    }
+    if (!lookup.observations.length) {
+      markStep('A', 8, 'FAIL',
+        `ServiceRequest ${lookup.serviceRequestId} exists for ${order!.accession} but carries no Observation`,
+        `The order reached FHIR and the result did not. Either the result was never `
+        + `persisted (Step 3), never validated (Step 4), or the result publish is broken.`);
+      expect(lookup.observations.length, 'ServiceRequest carries no Observation').toBeGreaterThan(0);
       return;
     }
 
-    const values = entries
-      .map(e => e.resource?.valueQuantity?.value?.toString() ?? e.resource?.valueString)
-      .filter(Boolean);
-    const matched = values.some(v => v === enteredResultValue);
+    // What the LIS stored, read from its own result form.
+    const stored = await readResultsForLabNumber(page, order!.accession);
+    const storedValues = Array.from(stored.values.values()).filter(v => v !== '');
+    const fhirValues = lookup.observations
+      .map(o => (o.valueQuantity?.value !== undefined ? String(o.valueQuantity.value) : o.valueString))
+      .filter((v): v is string => !!v);
+
+    const same = (a: string, b: string) => {
+      const na = Number(a);
+      const nb = Number(b);
+      return Number.isFinite(na) && Number.isFinite(nb) ? Math.abs(na - nb) < 0.005 : a === b;
+    };
+    const matched = fhirValues.some(f => storedValues.some(sv => same(f, sv)));
     if (!matched) {
       markStep('A', 8, 'FAIL',
-        `Entered value ${enteredResultValue} not found in FHIR Observation entries: ${values.join(', ')}`,
-        `The result was either not persisted (Step 3 BLOCKED), not validated (Step 4 BLOCKED), or the FHIR projection drops the value.`);
-      expect(matched, `FHIR value mismatch`).toBeTruthy();
+        `FHIR and the LIS disagree on ${order!.accession}: FHIR has [${fhirValues.join(', ')}], `
+        + `the LIS stored [${storedValues.join(', ')}]`,
+        `A value present on both sides but different is a mapping defect; the typed value was `
+        + `${enteredResultValue}, which the product may legitimately round.`);
+      expect(matched, 'FHIR value does not match the stored result').toBeTruthy();
       return;
     }
-    markStep('A', 8, 'PASS', `Round-trip confirmed: entered ${enteredResultValue} appears in FHIR Observation`);
+    markStep('A', 8, 'PASS',
+      `Round-trip confirmed: FHIR [${fhirValues.join(', ')}] agrees with the stored result `
+      + `[${storedValues.join(', ')}] (typed ${enteredResultValue})`);
   });
 });

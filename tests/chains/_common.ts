@@ -41,6 +41,8 @@
 
 import { Page, expect, test } from '@playwright/test';
 import * as zlib from 'zlib';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { resolveOrderPath, seedDomainOrder } from './domain-seed';
 import { isDeclaredGap, gapsAreStrict } from './known-gaps';
 
@@ -1165,4 +1167,59 @@ export async function readResultsForLabNumber(
   console.log(`[readResultsForLabNumber] ${labNumber}: ${rows.length} row(s) under "${shape}" — `
     + Array.from(values.entries()).map(([k, v]) => `${k}=${v}`).join(', '));
   return { ok: true, status: get.status, values, shape };
+}
+
+// -----------------------------------------------------------------------------
+// Chain state that survives a retry in a fresh worker
+// -----------------------------------------------------------------------------
+
+/**
+ * Why this exists.
+ *
+ * A chain's steps share module-level state (Chain A's `order`, Chain D's rule and
+ * accession). When a step FAILS, Playwright retries it in a NEW worker process,
+ * and every step after it in that worker starts with that state undefined — so one
+ * real failure was reported as itself plus four or five BLOCKED steps, all of them
+ * saying "precondition unmet: !order" about a chain whose Step 1 had in fact
+ * succeeded. Three consecutive nightlies read that way, and the blocked steps
+ * buried the one failure that mattered.
+ *
+ * The state is written under the PROJECT's output directory, which Playwright
+ * clears at the start of every run, so a later run can never read an earlier
+ * run's accession. It is a rehydration of THIS run's own state, not a cache.
+ *
+ * What it deliberately does NOT do: invent state. If Step 1 never succeeded
+ * nothing was ever written, the recall returns null, and the step still BLOCKs —
+ * which is the honest report, because that chain genuinely has no order.
+ */
+function chainStateDir(): string {
+  return path.join(test.info().project.outputDir, '.chain-state');
+}
+
+export function rememberChainState(chain: string, state: unknown): void {
+  try {
+    const dir = chainStateDir();
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, `chain-${chain}.json`), JSON.stringify(state), 'utf8');
+  } catch (e) {
+    // Never fail a step over bookkeeping; the cost of losing this is a BLOCKED
+    // step on retry, which is where we started.
+    // eslint-disable-next-line no-console
+    console.log(`[chainState] could not remember chain ${chain}: ${String(e)}`);
+  }
+}
+
+export function recallChainState<T>(chain: string): T | null {
+  try {
+    const file = path.join(chainStateDir(), `chain-${chain}.json`);
+    if (!fs.existsSync(file)) return null;
+    const state = JSON.parse(fs.readFileSync(file, 'utf8')) as T;
+    // eslint-disable-next-line no-console
+    console.log(`[chainState] chain ${chain}: rehydrated after a worker restart`);
+    return state;
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.log(`[chainState] could not recall chain ${chain}: ${String(e)}`);
+    return null;
+  }
 }

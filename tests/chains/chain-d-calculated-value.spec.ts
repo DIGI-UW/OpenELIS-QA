@@ -43,6 +43,8 @@ import {
   enterResultsForLabNumber,
   markStep,
   readResultsForLabNumber,
+  recallChainState,
+  rememberChainState,
   requireStep,
 } from './_common';
 
@@ -57,7 +59,12 @@ interface CalcRule {
   id?: string;
   name?: string;
   sampleId?: string;
-  testId?: string;                // the test this rule PRODUCES
+  // NUMBER on the wire. The server sends `"testId":4`; this was declared as a
+  // string, and Step 5 compared it with `includes()` against the string ids the
+  // result form serves. 4 !== '4', so the step reported "CALC ENGINE DID NOT
+  // FIRE ... but the accession carries [4,5]" — naming the very test it claimed
+  // was missing. Everything below goes through outputTestId().
+  testId?: string | number;       // the test this rule PRODUCES
   result?: string;                // human-readable formula description
   operations?: CalcOperation[];
   toggled?: boolean;
@@ -72,6 +79,49 @@ test.describe.serial('Chain D — Calculated Value', () => {
   // For each operand testId, the value we'll enter; we use stable values
   // so the expected calc result is deterministic.
   const operandValues = new Map<string, number>();
+
+  /**
+   * Chain D's state, surviving a worker restart.
+   *
+   * Same reason as Chain A: a failed step retries in a NEW worker, where every
+   * module-level value above is undefined again, and the remaining steps used to
+   * BLOCK on `!testAccession || !rule` and report a cascade around one real
+   * failure. Written to the run's own output directory, which Playwright clears
+   * at the start of every run, so this can only ever rehydrate THIS run.
+   */
+  interface ChainDState {
+    rule: CalcRule | null;
+    operandTestIds: string[];
+    sampleId: string | null;
+    testAccession: string | null;
+    operandValues: Array<[string, number]>;
+  }
+
+  /**
+   * The rule's output test id, as a string.
+   *
+   * Ids arrive as numbers from /rest/test-calculations and as strings from the
+   * result form, and a mixed-type comparison here manufactures a calc-engine
+   * defect out of a correctly working engine. Every comparison uses this.
+   */
+  const outputTestId = (): string => String(rule?.testId ?? '');
+
+  const remember = () => rememberChainState('D', {
+    rule, operandTestIds, sampleId, testAccession,
+    operandValues: Array.from(operandValues.entries()),
+  } as ChainDState);
+
+  /** Rehydrate anything this worker is missing. Never invents: absent stays absent. */
+  const recall = () => {
+    if (rule && testAccession) return;
+    const saved = recallChainState<ChainDState>('D');
+    if (!saved) return;
+    rule = rule ?? saved.rule;
+    sampleId = sampleId ?? saved.sampleId;
+    testAccession = testAccession ?? saved.testAccession;
+    if (!operandTestIds.length) operandTestIds = saved.operandTestIds || [];
+    if (!operandValues.size) for (const [k, v] of saved.operandValues || []) operandValues.set(k, v);
+  };
 
   test.beforeAll(() => {
     // eslint-disable-next-line no-console
@@ -135,6 +185,7 @@ test.describe.serial('Chain D — Calculated Value', () => {
 
     markStep('D', 1, 'PASS',
       `Selected rule id=${rule.id} "${rule.name || ''}" — produces testId=${rule.testId}, operands=[${operandTestIds.join(',')}], formula=${rule.result || 'unknown'}`);
+    remember();
   });
 
   // ---------------------------------------------------------------------------
@@ -143,6 +194,7 @@ test.describe.serial('Chain D — Calculated Value', () => {
   // Acceptance criterion: PERSIST
   // ---------------------------------------------------------------------------
   test('Step 2 — Seed an accession carrying all operand tests (PERSIST)', async ({ page }) => {
+    recall();
     requireStep('D', 2, !!rule, '!rule');
     await page.goto(BASE);
 
@@ -201,6 +253,7 @@ test.describe.serial('Chain D — Calculated Value', () => {
       + `[${absent.join(',')}] — it carries [${Array.from(back.values.keys()).join(',')}]`).toEqual([]);
 
     testAccession = order.labNo;
+    remember();
     markStep('D', 2, 'PASS',
       `Seeded ${testAccession} on sample type ${order.sampleTypeId} "${order.sampleTypeName}" `
       + `with operand tests [${order.testIds.join(',')}]${order.bug37 ? ' — WARNING: no patient linkage (BUG-37)' : ''}`);
@@ -212,6 +265,7 @@ test.describe.serial('Chain D — Calculated Value', () => {
   // Acceptance criterion: PERSIST
   // ---------------------------------------------------------------------------
   test('Step 3 — Enter every operand result via API (PERSIST, §11.5)', async ({ page }) => {
+    recall();
     requireStep('D', 3, !!testAccession, '!testAccession');
     await page.goto(BASE);
 
@@ -249,6 +303,7 @@ test.describe.serial('Chain D — Calculated Value', () => {
   // Acceptance criterion: ROUND-TRIP
   // ---------------------------------------------------------------------------
   test('Step 4 — Verify all operand results persisted (ROUND-TRIP)', async ({ page }) => {
+    recall();
     requireStep('D', 4, !!testAccession, '!testAccession');
     await page.goto(BASE);
     // Read back on the labNumber-keyed surface. This used to read
@@ -278,6 +333,7 @@ test.describe.serial('Chain D — Calculated Value', () => {
   // Acceptance criterion: CROSS-LINK
   // ---------------------------------------------------------------------------
   test('Step 5 — Calculated test present on accession (CROSS-LINK)', async ({ page }) => {
+    recall();
     requireStep('D', 5, !(!testAccession || !rule), '!testAccession || !rule');
     await page.goto(BASE);
     await page.waitForTimeout(4000); // grace for async server-side calc (row appears after save, sometimes only on a later read)
@@ -304,17 +360,17 @@ test.describe.serial('Chain D — Calculated Value', () => {
       expect(allTestIds.length, 'result form returned no analyses').toBeGreaterThan(0);
       return;
     }
-    const found = rule!.testId ? allTestIds.includes(rule!.testId) : false;
+    const found = outputTestId() !== '' && allTestIds.includes(outputTestId());
     if (!found) {
       markStep('D', 5, 'FAIL',
-        `CALC ENGINE DID NOT FIRE: rule id=${rule!.id} should have produced testId=${rule!.testId} on ${testAccession}, but the accession carries [${allTestIds.join(',')}]`,
+        `CALC ENGINE DID NOT FIRE: rule id=${rule!.id} should have produced testId=${outputTestId()} on ${testAccession}, but the accession carries [${allTestIds.join(',')}]`,
         `Definitive answer to Phase 28's unverified question: the calc engine does NOT compute on API-direct writes. ` +
         `File new bug: "Calculated value engine does not fire on API result writes" or similar.`);
-      expect(allTestIds, `Calc engine did not produce testId=${rule!.testId}`).toContain(rule!.testId);
+      expect(allTestIds, `Calc engine did not produce testId=${outputTestId()}`).toContain(outputTestId());
       return;
     }
     markStep('D', 5, 'PASS',
-      `CALC ENGINE FIRED: testId=${rule!.testId} present on ${testAccession} after operand entries`);
+      `CALC ENGINE FIRED: testId=${outputTestId()} present on ${testAccession} after operand entries`);
   });
 
   // ---------------------------------------------------------------------------
@@ -323,6 +379,7 @@ test.describe.serial('Chain D — Calculated Value', () => {
   // Acceptance criterion: ROUND-TRIP
   // ---------------------------------------------------------------------------
   test('Step 6 — Calculated value has a result row (ROUND-TRIP)', async ({ page }) => {
+    recall();
     requireStep('D', 6, !(!testAccession || !rule), '!testAccession || !rule');
     await page.goto(BASE);
 
@@ -335,7 +392,7 @@ test.describe.serial('Chain D — Calculated Value', () => {
       return;
     }
     const items = Array.from(read.values.entries()).map(([testId, value]) => ({ testId, value }));
-    const calcRow = items.find(r => r.testId === rule!.testId);
+    const calcRow = items.find(r => String(r.testId) === outputTestId());
     if (!calcRow || !calcRow.value) {
       markStep('D', 6, 'FAIL',
         `Calc test row present (Step 5) but value is empty`,
@@ -343,13 +400,13 @@ test.describe.serial('Chain D — Calculated Value', () => {
       expect(calcRow?.value, 'Calc value missing').toBeTruthy();
       return;
     }
-    markStep('D', 6, 'PASS', `Calc test ${rule!.testId} has value ${calcRow.value}`);
+    markStep('D', 6, 'PASS', `Calc test ${outputTestId()} has value ${calcRow.value}`);
 
     // Stash for Step 7's math check
     test.info().attachments.push({
       name: 'calc-result.json',
       contentType: 'application/json',
-      body: Buffer.from(JSON.stringify({ accession: testAccession, calcTestId: rule!.testId, calcValue: calcRow.value, operands: Array.from(operandValues.entries()) })),
+      body: Buffer.from(JSON.stringify({ accession: testAccession, calcTestId: outputTestId(), calcValue: calcRow.value, operands: Array.from(operandValues.entries()) })),
     });
   });
 
@@ -367,6 +424,7 @@ test.describe.serial('Chain D — Calculated Value', () => {
   // open that question with the OpenELIS team.
   // ---------------------------------------------------------------------------
   test('Step 7 — Calc value math is plausible (REPORTABLE)', async ({ page }) => {
+    recall();
     requireStep('D', 7, !(!testAccession || !rule), '!testAccession || !rule');
     await page.goto(BASE);
     const read = await readResultsForLabNumber(page, testAccession!);
@@ -377,10 +435,10 @@ test.describe.serial('Chain D — Calculated Value', () => {
       return;
     }
     const items = Array.from(read.values.entries()).map(([testId, value]) => ({ testId, value }));
-    const calcRow = items.find(r => r.testId === rule!.testId);
+    const calcRow = items.find(r => String(r.testId) === outputTestId());
     if (!calcRow?.value) {
       markStep('D', 7, 'FAIL',
-        `Calc engine wrote no value for output test ${rule!.testId} on ${testAccession}`,
+        `Calc engine wrote no value for output test ${outputTestId()} on ${testAccession}`,
         `LogbookResults returned ${items.length} row(s), none of them the rule's output test with a ` +
         `value. Steps 5-6 posted the trigger, so an empty output is the calculated-value gap this ` +
         `chain exists to detect — not a reason to opt out.`);
@@ -396,9 +454,9 @@ test.describe.serial('Chain D — Calculated Value', () => {
       const dv = String(calcRow.value).trim();
       if (dv.length > 0) {
         markStep('D', 7, 'PASS',
-          `Select-list calc output: ${rule!.testId} = "${dv}" (dictionary value set by relational rule; numeric plausibility N/A)`);
+          `Select-list calc output: ${outputTestId()} = "${dv}" (dictionary value set by relational rule; numeric plausibility N/A)`);
       } else {
-        markStep('D', 7, 'FAIL', `Dictionary calc output present but empty for testId=${rule!.testId}`);
+        markStep('D', 7, 'FAIL', `Dictionary calc output present but empty for testId=${outputTestId()}`);
         expect(dv.length, 'Dictionary calc value empty').toBeGreaterThan(0);
       }
       return;
