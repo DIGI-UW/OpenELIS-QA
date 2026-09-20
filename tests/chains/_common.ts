@@ -157,17 +157,34 @@ export async function findOrSeedOrder(page: Page): Promise<ChainOrderRef | null>
     if (!dom) return null;
     // The domain lane keys off a lab number; the chain contract wants an accession, and on this
     // build they are the same string (verified live: the dashboard lab number is what
-    // /order/clinical/qa?order=<value> resolves). patientPK/testId are left blank deliberately -
-    // a chain that needs them must look them up, rather than inherit a guess from here.
+    // /order/clinical/qa?order=<value> resolves).
+    //
+    // These fields used to be returned BLANK, on the reasoning that a chain needing them should
+    // look them up rather than inherit a guess. In practice no chain did: Chain A Step 2 compared
+    // the order's (empty) nationalId against the one the server returned and reported a BUG-37
+    // failure every night, on an order whose patient linkage was in fact fine. Resolving them here,
+    // from the same lab number, is the lookup - not a guess.
+    const dLb = await apiCall<{ testResult?: Array<{ testId?: string; testName?: string; sampleType?: string }> }>(
+      page, `/api/OpenELIS-Global/rest/LogbookResults?labNumber=${encodeURIComponent(dom.labNumber)}`
+    );
+    const dRow = ((dLb.ok && dLb.body && (dLb.body as { testResult?: Array<{ testId?: string; testName?: string; sampleType?: string }> }).testResult) || [])[0];
+    const dPs = await apiCall<{ patientSearchResults?: Array<{ patientID?: string; nationalId?: string }> }>(
+      page, `/api/OpenELIS-Global/rest/patient-search-results?labNumber=${encodeURIComponent(dom.labNumber)}`
+    );
+    const dPat = ((dPs.ok && dPs.body && (dPs.body as { patientSearchResults?: Array<{ patientID?: string; nationalId?: string }> }).patientSearchResults) || [])[0];
+    // eslint-disable-next-line no-console
+    console.log(`[findOrSeedOrder] domain lane ${dom.labNumber} resolved to patientPK=${(dPat && dPat.patientID) || 'NONE'} `
+      + `nationalId=${(dPat && dPat.nationalId) || 'NONE'} test=${(dRow && dRow.testName) || 'NONE'}`);
+
     return {
       accession: dom.labNumber,
-      patientNationalId: '',
-      patientID: '',
-      testId: '',
-      testName: '',
-      sampleType: '',
+      patientNationalId: (dPat && dPat.nationalId) || '',
+      patientID: (dPat && dPat.patientID) || '',
+      testId: (dRow && dRow.testId) || '',
+      testName: (dRow && dRow.testName) || '',
+      sampleType: (dRow && dRow.sampleType) || '',
       source: dom.source,
-      bug37: false,
+      bug37: !dPat,
     } as ChainOrderRef;
   }
 
@@ -209,25 +226,85 @@ export async function findOrSeedOrder(page: Page): Promise<ChainOrderRef | null>
   }
 
   // --- Step b: seed a fresh patient + order ----------------------------------
-  // Implemented 2026-08-05. Previously parked with `return null`, which made
-  // every one of the 12 chains bail at Step 1 on an instance with no
-  // pre-existing QA data.
-  //
-  // The recipe below is copied from the live-proven
-  // tests/docs/seed-env-results.docs.spec.ts, NOT inferred from docs (§6.5b):
-  //   * navigate to /SamplePatientEntry first — the entry-form REST calls are
-  //     route-scoped and return nothing from an unrelated page;
-  //   * sample types come from the SamplePatientEntry form response
-  //     (`sampleTypes`), because /rest/displayList/SAMPLE_TYPE_ACTIVE omits
-  //     several types on this build;
-  //   * a type's tests come from /rest/sample-type-tests?sampleType=<id>,
-  //     because test-display-beans returns nothing for some types here;
-  //   * the accession comes from GET /rest/SampleEntryGenerateScanProvider,
-  //     whose payload is {body:"<labNo>"}.
-  const log = (m: string) => {
+  // Delegates to createLegacyOrder(), which carries the proven-good legacy
+  // contract (real labNo + sampleXML). See that function for the field-by-field
+  // provenance notes.
+  const seeded = await createLegacyOrder(page, { log: (m) => {
     // eslint-disable-next-line no-console
     console.log(`[findOrSeedOrder] ${m}`);
+  } });
+  if (!seeded) return null;
+
+  return {
+    accession: seeded.labNo,
+    patientNationalId: seeded.nationalId,
+    patientID: seeded.patientID,
+    testId: seeded.testId,
+    testName: seeded.testName,
+    sampleType: seeded.sampleType,
+    source: 'seeded',
+    bug37: seeded.bug37,
   };
+}
+
+/**
+ * Result of a legacy-lane order creation.
+ *
+ * `missingTestIds` is non-empty when the caller asked for specific tests and no
+ * single sample type on this instance binds all of them. The order is still
+ * created (with whatever intersection was available) so the caller can decide
+ * whether a partial order is usable, rather than getting a bare null.
+ */
+export interface LegacyOrderResult {
+  labNo: string;
+  nationalId: string;
+  patientID: string;
+  sampleTypeId: string;
+  sampleTypeName: string;
+  testIds: string[];
+  missingTestIds: string[];
+  /** First ordered test, as the read-back reports it (chain-order-ref shape). */
+  testId: string;
+  testName: string;
+  sampleType: string;
+  bug37: boolean;
+}
+
+/**
+ * Create one order through the LEGACY lane (POST /rest/SamplePatientEntry).
+ *
+ * This is the only shape the controller accepts, and every field below is
+ * there because the server rejects the order without it (verified live,
+ * 2026-08-05/06, and again 2026-09-20):
+ *
+ *   * `sampleXML` — a `<samples><sample .../></samples>` string. The controller
+ *     reads `sampleItem.attributeValue("tests").split(",")`
+ *     (SamplePatientEntryFormValidator:79), so multiple tests go in ONE
+ *     comma-separated attribute. There is no `sampleItems` array on this
+ *     contract; a JSON body that carries one is silently test-less and 400s.
+ *   * `labNo` — must be non-blank and must come from
+ *     GET /rest/SampleEntryGenerateScanProvider (payload `{body:"<labNo>"}`).
+ *   * patient name `QAAUTO` — the name validator rejects underscores/digits.
+ *   * `nationalId` must match ^[-a-z0-9/]*$.
+ *   * sample types whose display name exceeds 40 chars 500 the insert
+ *     (character varying(40)); bisected live 2026-08-06.
+ *   * the form's own `sampleTypes` list is used rather than
+ *     /rest/displayList/SAMPLE_TYPE_ACTIVE, which omits several types here,
+ *     and a type's tests come from /rest/sample-type-tests?sampleType=<id>,
+ *     because test-display-beans returns nothing for some types.
+ *
+ * Pass `testIds` to order specific tests (Chain D's calc operands); omit it to
+ * take the first sample type that has any test bound.
+ */
+export async function createLegacyOrder(
+  page: Page,
+  opts: { testIds?: string[]; sampleTypeId?: string; log?: (m: string) => void } = {},
+): Promise<LegacyOrderResult | null> {
+  const log = opts.log || ((m: string) => {
+    // eslint-disable-next-line no-console
+    console.log(`[createLegacyOrder] ${m}`);
+  });
+  const wanted = (opts.testIds || []).map(String).filter(Boolean);
 
   await page.goto('/SamplePatientEntry', { waitUntil: 'domcontentloaded' }).catch(() => undefined);
   await page.waitForTimeout(2500);
@@ -236,32 +313,53 @@ export async function findOrSeedOrder(page: Page): Promise<ChainOrderRef | null>
   const entry = (entryRes.ok ? entryRes.body : null) as null | {
     sampleTypes?: Array<{ id: string; value: string }>;
     currentDate?: string;
-    sampleOrderItems?: { providersList?: Array<{ id?: string }> };
   };
   if (!entry || !entry.sampleTypes || !entry.sampleTypes.length) {
     log(`seed failed — SamplePatientEntry form returned no sampleTypes (HTTP ${entryRes.status})`);
     return null;
   }
 
-  // First sample type that actually has a test bound to it.
-  let sid = '', tid = '', stName = '', testName = '';
+  // Pick the sample type to order against.
+  //   * no testIds asked for: first type with any bound test (the historic behaviour);
+  //   * testIds asked for: the type that binds the MOST of them, with opts.sampleTypeId
+  //     winning ties so a calc rule's own sample type is honoured when it works.
+  let sid = '', stName = '', chosen: string[] = [], firstTestName = '';
+  let bestScore = -1;
   for (const st of entry.sampleTypes) {
+    if (!st.value || st.value.length > 40) continue;
     const stt = await apiCall<{ tests?: Array<{ id: string; value?: string; name?: string }> }>(
       page, `/api/OpenELIS-Global/rest/sample-type-tests?sampleType=${encodeURIComponent(st.id)}`
     );
     const tests = (stt.ok && stt.body && (stt.body as { tests?: Array<{ id: string; value?: string; name?: string }> }).tests) || [];
-    // Skip sample types whose display name exceeds 40 chars: POST /rest/SamplePatientEntry
-    // returns HTTP 500 (value too long for type character varying(40)) for those on this
-    // build. Bisected live 2026-08-06 — 39-char name OK, 46- and 47-char names 500.
-    if (tests.length && st.value.length <= 40) {
-      sid = String(st.id); tid = String(tests[0].id);
-      stName = st.value; testName = tests[0].value || tests[0].name || '';
+    if (!tests.length) continue;
+
+    if (!wanted.length) {
+      sid = String(st.id); stName = st.value;
+      chosen = [String(tests[0].id)];
+      firstTestName = tests[0].value || tests[0].name || '';
       break;
     }
+
+    const have = wanted.filter(w => tests.some(t => String(t.id) === w));
+    const score = have.length + (opts.sampleTypeId && String(st.id) === String(opts.sampleTypeId) ? 0.5 : 0);
+    if (score > bestScore) {
+      bestScore = score;
+      sid = String(st.id); stName = st.value; chosen = have;
+      const t0 = tests.find(t => String(t.id) === have[0]);
+      firstTestName = (t0 && (t0.value || t0.name)) || '';
+    }
+    if (have.length === wanted.length) break;
   }
-  if (!sid || !tid) {
-    log(`seed failed — no sample type with a bound test (checked ${entry.sampleTypes.length})`);
+
+  if (!sid || !chosen.length) {
+    log(wanted.length
+      ? `seed failed — no sample type binds any of the requested tests [${wanted.join(',')}] (checked ${entry.sampleTypes.length} types)`
+      : `seed failed — no sample type with a bound test (checked ${entry.sampleTypes.length})`);
     return null;
+  }
+  const missingTestIds = wanted.filter(w => !chosen.includes(w));
+  if (missingTestIds.length) {
+    log(`WARNING — sample type ${sid} "${stName}" binds ${chosen.length}/${wanted.length} requested tests; missing [${missingTestIds.join(',')}]`);
   }
 
   const genRes = await apiCall<{ body?: string }>(page, '/api/OpenELIS-Global/rest/SampleEntryGenerateScanProvider');
@@ -276,7 +374,7 @@ export async function findOrSeedOrder(page: Page): Promise<ChainOrderRef | null>
     return `${p2(n.getDate())}/${p2(n.getMonth() + 1)}/${n.getFullYear()}`;
   })();
   const q = String.fromCharCode(39);
-  const xml = `<?xml version="1.0" encoding="utf-8"?><samples><sample sampleID=${q}${sid}${q} date=${q}${d}${q} time=${q}${q} collector=${q}QA${q} quantity=${q}${q} uom=${q}${q} tests=${q}${tid}${q} testSectionMap=${q}${q} testSampleTypeMap=${q}${q} panels=${q}${q} rejected=${q}false${q} rejectReasonId=${q}${q} initialConditionIds=${q}${q} numOrderLabels=${q}1${q} numSpecimenLabels=${q}1${q}/></samples>`;
+  const xml = `<?xml version="1.0" encoding="utf-8"?><samples><sample sampleID=${q}${sid}${q} date=${q}${d}${q} time=${q}${q} collector=${q}QA${q} quantity=${q}${q} uom=${q}${q} tests=${q}${chosen.join(',')}${q} testSectionMap=${q}${q} testSampleTypeMap=${q}${q} panels=${q}${q} rejected=${q}false${q} rejectReasonId=${q}${q} initialConditionIds=${q}${q} numOrderLabels=${q}1${q} numSpecimenLabels=${q}1${q}/></samples>`;
   const nationalId = `qa-auto-chain-${Math.floor((Date.now() / 1000) % 1000000)}`;
 
   const body = {
@@ -298,7 +396,7 @@ export async function findOrSeedOrder(page: Page): Promise<ChainOrderRef | null>
 
   const post = await apiCall<unknown>(page, '/api/OpenELIS-Global/rest/SamplePatientEntry', { method: 'POST', body });
   if (!post.ok) {
-    log(`seed failed — SamplePatientEntry POST HTTP ${post.status}: ${JSON.stringify(post.body).slice(0, 250)}`);
+    log(`seed failed — SamplePatientEntry POST HTTP ${post.status}: ${JSON.stringify(post.body).slice(0, 400)}`);
     return null;
   }
   await page.waitForTimeout(1500);
@@ -314,16 +412,19 @@ export async function findOrSeedOrder(page: Page): Promise<ChainOrderRef | null>
   );
   const row = ((lb.ok && lb.body && (lb.body as { testResult?: Array<{ testId?: string; testName?: string; sampleType?: string }> }).testResult) || [])[0];
 
-  log(`seeded ${labNo} (${(row && row.testName) || testName} / ${(row && row.sampleType) || stName}) patientPK=${(found && found.patientID) || 'NONE'}${found ? '' : ' — WARNING: no patient linkage (BUG-37 signature)'}`);
+  log(`seeded ${labNo} (${(row && row.testName) || firstTestName} / ${(row && row.sampleType) || stName}) tests=[${chosen.join(',')}] patientPK=${(found && found.patientID) || 'NONE'}${found ? '' : ' — WARNING: no patient linkage (BUG-37 signature)'}`);
 
   return {
-    accession: labNo,
-    patientNationalId: nationalId,
+    labNo,
+    nationalId,
     patientID: (found && found.patientID) || '',
-    testId: (row && row.testId) || tid,
-    testName: (row && row.testName) || testName,
+    sampleTypeId: sid,
+    sampleTypeName: stName,
+    testIds: chosen,
+    missingTestIds,
+    testId: (row && row.testId) || chosen[0],
+    testName: (row && row.testName) || firstTestName,
     sampleType: (row && row.sampleType) || stName,
-    source: 'seeded',
     bug37: !found,
   };
 }
@@ -909,4 +1010,159 @@ export function buildClinicalOrderSeedBody(opts: {
     },
     initialSampleConditionList: [], testSectionList: [], warning: false, useReferral: false,
   };
+}
+
+// -----------------------------------------------------------------------------
+// Result entry and validation (the live-proven read-modify-write contract)
+// -----------------------------------------------------------------------------
+
+/**
+ * POST /rest/LogbookResults is NOT a "send me the values you want" endpoint.
+ * LogbookResultsRestController.showReactLogbookResultsUpdate binds the whole
+ * `LogbookResultsForm` and then reads the page of results it stashed in the
+ * HTTP session under RESULTS_SESSION_CACHE on the preceding GET; a POST whose
+ * body is a hand-built list is either rejected by the @Validated group or
+ * treated as a stale page. The list field is `testResult`, not `resultList`.
+ *
+ * So: GET the form, mutate the items in place, POST the SAME object back. This
+ * is the recipe from tests/docs/seed-env-results.docs.spec.ts, which is the
+ * live-proven seeder - not inferred from a controller read.
+ *
+ * Per-item fields that matter:
+ *   resultValue + shadowResultValue - the value, twice (the form diffs them);
+ *   isModified - without it the item is filtered out as untouched;
+ *   reportable - 'N' means not reportable, anything else true;
+ *   `result` - must be DELETED, it is the server-side entity echo.
+ */
+export interface ResultEntryOutcome {
+  ok: boolean;
+  status: number;
+  /** testId -> value actually submitted, for the caller's read-back assertion. */
+  entered: Map<string, string>;
+  reason: string;
+}
+
+export async function enterResultsForLabNumber(
+  page: Page,
+  labNumber: string,
+  opts: { valueByTestId?: Record<string, string>; defaultNumeric?: string } = {},
+): Promise<ResultEntryOutcome> {
+  const empty = new Map<string, string>();
+  const get = await apiCall<{ testResult?: Array<Record<string, unknown>> }>(
+    page, `/api/OpenELIS-Global/rest/LogbookResults?labNumber=${encodeURIComponent(labNumber)}`
+  );
+  if (!get.ok) {
+    return { ok: false, status: get.status, entered: empty, reason: `LogbookResults GET HTTP ${get.status}` };
+  }
+  const form = (typeof get.body === 'object' && get.body !== null) ? get.body as Record<string, unknown> : null;
+  const items = (form && (form.testResult as Array<Record<string, unknown>> | undefined)) || [];
+  if (!items.length) {
+    return { ok: false, status: get.status, entered: empty,
+      reason: `LogbookResults GET returned no testResult rows for ${labNumber} — nothing to enter` };
+  }
+
+  const entered = new Map<string, string>();
+  for (const item of items) {
+    const testId = String(item.testId ?? '');
+    const type = String(item.resultType ?? '').toUpperCase();
+    const dict = item.dictionaryResults as Array<{ id?: string }> | undefined;
+    // Dictionary/multi-select results must carry an option id, not a number.
+    const fallback = (type === 'D' || type === 'M')
+      ? String(item.defaultResultValue || (dict && dict[0] && dict[0].id) || '1')
+      : (opts.defaultNumeric || '5.5');
+    const value = (opts.valueByTestId && opts.valueByTestId[testId]) || fallback;
+
+    item.reportable = item.reportable === 'N' ? false : true;
+    item.resultValue = value;
+    item.shadowResultValue = value;
+    item.isModified = true;
+    delete item.result;
+    if (testId) entered.set(testId, value);
+  }
+
+  const post = await apiCall<unknown>(page, '/api/OpenELIS-Global/rest/LogbookResults', { method: 'POST', body: form });
+  return {
+    ok: post.ok,
+    status: post.status,
+    entered: post.ok ? entered : empty,
+    reason: post.ok
+      ? `entered ${entered.size} result(s) on ${labNumber}`
+      : `LogbookResults POST HTTP ${post.status}: ${JSON.stringify(post.body).slice(0, 300)}`,
+  };
+}
+
+/**
+ * Accept every pending result on an accession. Same read-modify-write shape as
+ * above, against /rest/AccessionValidation, whose list field IS `resultList`
+ * and whose per-item flag is `isAccepted`.
+ */
+export async function validateResultsForLabNumber(
+  page: Page,
+  labNumber: string,
+): Promise<{ ok: boolean; status: number; count: number; reason: string }> {
+  const get = await apiCall<{ resultList?: Array<Record<string, unknown>> }>(
+    page, `/api/OpenELIS-Global/rest/AccessionValidation?accessionNumber=${encodeURIComponent(labNumber)}`
+  );
+  if (!get.ok) {
+    return { ok: false, status: get.status, count: 0, reason: `AccessionValidation GET HTTP ${get.status}` };
+  }
+  const form = (typeof get.body === 'object' && get.body !== null) ? get.body as Record<string, unknown> : null;
+  const items = (form && (form.resultList as Array<Record<string, unknown>> | undefined)) || [];
+  if (!items.length) {
+    return { ok: false, status: get.status, count: 0,
+      reason: `AccessionValidation GET returned no resultList rows for ${labNumber} — nothing pending validation` };
+  }
+  for (const it of items) it.isAccepted = true;
+
+  const post = await apiCall<unknown>(page, '/api/OpenELIS-Global/rest/AccessionValidation', { method: 'POST', body: form });
+  return {
+    ok: post.ok,
+    status: post.status,
+    count: items.length,
+    reason: post.ok
+      ? `accepted ${items.length} result(s) on ${labNumber}`
+      : `AccessionValidation POST HTTP ${post.status}: ${JSON.stringify(post.body).slice(0, 300)}`,
+  };
+}
+
+/**
+ * Read back the values currently stored against a lab number.
+ *
+ * Two traps this exists to avoid, both of which produced silent false results:
+ *   * the GET is keyed by `labNumber`; `accessionNumber` is the parameter the
+ *     VALIDATION surface takes, and LogbookResults answers it with an empty page
+ *     rather than an error, so a read-back written against it always looks like
+ *     "nothing was saved";
+ *   * the rows come back under `testResult` (the form's own field), and the
+ *     value is `resultValue`. Some older chain code read `resultList[].value`,
+ *     which is the AccessionValidation shape.
+ *
+ * Accepts either shape and logs which one answered, so the run itself reports
+ * any future drift instead of silently returning an empty map.
+ */
+export async function readResultsForLabNumber(
+  page: Page,
+  labNumber: string,
+): Promise<{ ok: boolean; status: number; values: Map<string, string>; shape: string }> {
+  const get = await apiCall<Record<string, unknown>>(
+    page, `/api/OpenELIS-Global/rest/LogbookResults?labNumber=${encodeURIComponent(labNumber)}`
+  );
+  const values = new Map<string, string>();
+  if (!get.ok || typeof get.body !== 'object' || get.body === null) {
+    return { ok: false, status: get.status, values, shape: 'none' };
+  }
+  const body = get.body as Record<string, unknown>;
+  const fromTestResult = (body.testResult as Array<Record<string, unknown>> | undefined) || [];
+  const fromResultList = (body.resultList as Array<Record<string, unknown>> | undefined) || [];
+  const rows = fromTestResult.length ? fromTestResult : fromResultList;
+  const shape = fromTestResult.length ? 'testResult' : (fromResultList.length ? 'resultList' : 'empty');
+  for (const r of rows) {
+    const testId = String(r.testId ?? '');
+    const v = r.resultValue ?? r.value ?? '';
+    if (testId) values.set(testId, String(v ?? ''));
+  }
+  // eslint-disable-next-line no-console
+  console.log(`[readResultsForLabNumber] ${labNumber}: ${rows.length} row(s) under "${shape}" — `
+    + Array.from(values.entries()).map(([k, v]) => `${k}=${v}`).join(', '));
+  return { ok: true, status: get.status, values, shape };
 }

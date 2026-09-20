@@ -39,7 +39,10 @@ import { test, expect } from '@playwright/test';
 import {
   BASE,
   apiCall,
+  createLegacyOrder,
+  enterResultsForLabNumber,
   markStep,
+  readResultsForLabNumber,
   requireStep,
 } from './_common';
 
@@ -143,64 +146,64 @@ test.describe.serial('Chain D — Calculated Value', () => {
     requireStep('D', 2, !!rule, '!rule');
     await page.goto(BASE);
 
-    // Reuse a QA_AUTO_ patient. The standard findOrSeedOrder in _common.ts
-    // only creates a single-test order, so Chain D issues its own order
-    // creation against the discovered operands. Patient acquisition reuses
-    // the same patient-search-results probe.
-    const patientResp = await apiCall<{ patientSearchResults?: Array<{ nationalId?: string; patientID?: string }> }>(
-      page, `/api/OpenELIS-Global/rest/patient-search-results?lastName=QA_AUTO`
-    );
-    if (!patientResp.ok) {
-      markStep('D', 2, 'FAIL', `patient-search-results returned HTTP ${patientResp.status}`);
-      expect(patientResp.ok).toBeTruthy();
-      return;
-    }
-    const patients = (typeof patientResp.body === 'object' && patientResp.body !== null)
-      ? ((patientResp.body as { patientSearchResults?: Array<{ nationalId?: string; patientID?: string }> }).patientSearchResults || [])
-      : [];
-    if (patients.length === 0) {
-      markStep('D', 2, 'FAIL', 'No QA_AUTO_ patient available; run seed-data first.');
-      expect(patients.length).toBeGreaterThan(0);
-      return;
-    }
-    const p = patients[0];
+    // The standard findOrSeedOrder() in _common.ts only creates a single-test
+    // order, so Chain D orders the discovered operands itself.
+    // Legacy-lane order creation. Step 2 used to POST an invented JSON body
+    // (`sampleItems` / `collectionDate`, no labNo) which the controller cannot
+    // read — it 400'd on every nightly run since the chain was written, and the
+    // markStep only printed the status, so the body never made it into the log.
+    // createLegacyOrder() carries the contract the server actually accepts
+    // (real labNo from the generator + sampleXML whose `tests` attribute is the
+    // comma-separated operand list) and returns the response body on failure.
+    // ORDER_PATH DEVIATION, stated out loud rather than silently: this step always uses
+    // the LEGACY lane, even when the run sets ORDER_PATH=domain. The domain wizard cannot
+    // order an arbitrary set of tests (it walks a three-lane UI), and a calc rule only
+    // fires when every one of its operands is on the sample. Retire this deviation when
+    // the domain lane can take an explicit test list.
+    // eslint-disable-next-line no-console
+    console.log(`[Chain D · Step 2] ORDER_PATH=${process.env.ORDER_PATH ?? '(unset)'} — using the LEGACY lane regardless (see note above)`);
 
-    // Build a multi-test order POST. Sample type is taken from the rule
-    // if available; otherwise default to 1 (Urines on most instances).
-    const payload = {
-      patientProperties: { patientPK: p.patientID, nationalId: p.nationalId, patientUpdateStatus: 'UPDATE' },
-      sampleOrderItems: {
-        newSampleEntry: 'true',
-        collectionDate: new Date().toISOString().slice(0, 10),
-        receivedDate: new Date().toISOString().slice(0, 10),
-        priority: 'ROUTINE',
-        paymentStatus: 'NONE',
+    let failReason = '';
+    const order = await createLegacyOrder(page, {
+      testIds: operandTestIds,
+      sampleTypeId: sampleId || undefined,
+      log: (m) => {
+        failReason = m;
+        // eslint-disable-next-line no-console
+        console.log(`[Chain D · Step 2] ${m}`);
       },
-      sampleItems: [
-        {
-          sampleTypeId: sampleId || '1',
-          tests: operandTestIds.map(tid => ({ testId: tid, isReportable: true })),
-        },
-      ],
-    };
-    const create = await apiCall<{ accessionNumber?: string }>(
-      page, '/api/OpenELIS-Global/rest/SamplePatientEntry',
-      { method: 'POST', body: payload }
-    );
-    if (!create.ok) {
-      markStep('D', 2, 'FAIL', `SamplePatientEntry POST returned HTTP ${create.status}`);
-      expect(create.ok).toBeTruthy();
+    });
+    if (!order) {
+      // markStep FAIL raises; the reason carries the server's own response body.
+      markStep('D', 2, 'FAIL', `Order creation failed: ${failReason || 'no detail'}`);
       return;
     }
-    testAccession = (typeof create.body === 'object' && create.body !== null)
-      ? (create.body as { accessionNumber?: string }).accessionNumber || null
-      : null;
-    if (!testAccession) {
-      markStep('D', 2, 'FAIL', 'Order created but no accession returned');
-      expect(testAccession).toBeTruthy();
+    // A partial order cannot exercise the calc engine: the rule will not fire
+    // without every operand present, so a missing operand would read as a calc
+    // bug at Step 6 when it is really a fixture gap on this instance.
+    if (order.missingTestIds.length) {
+      markStep('D', 2, 'GAP',
+        `No sample type on this instance binds all operands of rule ${rule!.id}: `
+        + `got [${order.testIds.join(',')}] on sample type ${order.sampleTypeId} "${order.sampleTypeName}", `
+        + `missing [${order.missingTestIds.join(',')}]. The calc rule is unorderable here, so Steps 3-7 `
+        + `would read a fixture gap as a calc-engine defect.`);
       return;
     }
-    markStep('D', 2, 'PASS', `Seeded ${testAccession} with operand tests [${operandTestIds.join(',')}]`);
+    // PERSIST round-trip, on a different surface than the one that created the order
+    // (SKILL 7.5): the accession must actually CARRY every operand, or Steps 3-7 are
+    // measuring the wrong thing. The old version of this step asserted nothing beyond
+    // the POST's HTTP status. The rows come back unresulted at this point, so what is
+    // asserted here is presence of the test, not a value.
+    const back = await readResultsForLabNumber(page, order.labNo);
+    const absent = operandTestIds.filter(tid => !back.values.has(tid));
+    expect(absent,
+      `Order ${order.labNo} was created but the result form does not carry operand test(s) `
+      + `[${absent.join(',')}] — it carries [${Array.from(back.values.keys()).join(',')}]`).toEqual([]);
+
+    testAccession = order.labNo;
+    markStep('D', 2, 'PASS',
+      `Seeded ${testAccession} on sample type ${order.sampleTypeId} "${order.sampleTypeName}" `
+      + `with operand tests [${order.testIds.join(',')}]${order.bug37 ? ' — WARNING: no patient linkage (BUG-37)' : ''}`);
   });
 
   // ---------------------------------------------------------------------------
@@ -212,27 +215,32 @@ test.describe.serial('Chain D — Calculated Value', () => {
     requireStep('D', 3, !!testAccession, '!testAccession');
     await page.goto(BASE);
 
-    const resultList = operandTestIds.map(tid => ({
-      accessionNumber: testAccession,
-      testId: tid,
-      value: String(operandValues.get(tid)),
-      isAccept: true,
-      isReject: false,
-    }));
-    const post = await apiCall<unknown>(
-      page,
-      '/api/OpenELIS-Global/rest/LogbookResults',
-      { method: 'POST', body: { paging: { totalPages: 1 }, resultList } }
-    );
-    if (!post.ok) {
+    // Same correction as Chain A Step 3: POST /rest/LogbookResults binds a whole
+    // LogbookResultsForm (`testResult`, reconciled against the page cached in the
+    // session by the preceding GET), not a hand-built `resultList`. The old body
+    // here returned HTTP 400 every run, which left the calc engine untested.
+    const res = await enterResultsForLabNumber(page, testAccession!, {
+      valueByTestId: Object.fromEntries(
+        operandTestIds.map(tid => [tid, String(operandValues.get(tid))]),
+      ),
+    });
+    if (!res.ok) {
       markStep('D', 3, 'BLOCKED',
-        `Bulk LogbookResults POST returned HTTP ${post.status}`,
+        `Operand result entry failed: ${res.reason}`,
         `API substitute failed; can't probe whether the calc engine fires.`);
-      test.info().annotations.push({ type: 'blocked', description: `LogbookResults POST ${post.status}` });
+      test.info().annotations.push({ type: 'blocked', description: res.reason });
       return;
     }
+    // The engine only fires when EVERY operand carries a value, so a partial
+    // write has to be caught here rather than read as a calc failure at Step 5.
+    const notEntered = operandTestIds.filter(tid => !res.entered.has(tid));
+    expect(notEntered,
+      `Operand test(s) [${notEntered.join(',')}] were not on the result form for ${testAccession} — `
+      + `the form carried [${Array.from(res.entered.keys()).join(',')}]`).toEqual([]);
+
     markStep('D', 3, 'PASS',
-      `Posted ${resultList.length} operand results: ${resultList.map(r => `${r.testId}=${r.value}`).join(', ')}`);
+      `Entered ${operandTestIds.length} operand result(s): `
+      + operandTestIds.map(tid => `${tid}=${operandValues.get(tid)}`).join(', '));
   });
 
   // ---------------------------------------------------------------------------
@@ -243,26 +251,21 @@ test.describe.serial('Chain D — Calculated Value', () => {
   test('Step 4 — Verify all operand results persisted (ROUND-TRIP)', async ({ page }) => {
     requireStep('D', 4, !!testAccession, '!testAccession');
     await page.goto(BASE);
-    const read = await apiCall<{ resultList?: Array<{ testId?: string; value?: string }> }>(
-      page,
-      `/api/OpenELIS-Global/rest/LogbookResults?accessionNumber=${encodeURIComponent(testAccession!)}`
-    );
+    // Read back on the labNumber-keyed surface. This used to read
+    // `resultList[].value` from an `accessionNumber=` GET, which that endpoint
+    // answers with an empty page - so the round-trip could never see anything.
+    const read = await readResultsForLabNumber(page, testAccession!);
     if (!read.ok) {
       markStep('D', 4, 'FAIL', `Read-back HTTP ${read.status}`);
-      expect(read.ok).toBeTruthy();
       return;
     }
-    const items = (typeof read.body === 'object' && read.body !== null)
-      ? ((read.body as { resultList?: Array<{ testId?: string; value?: string }> }).resultList || [])
-      : [];
-    const missing = operandTestIds.filter(tid =>
-      !items.some(r => r.testId === tid && r.value === String(operandValues.get(tid)))
-    );
+    const missing = operandTestIds.filter(tid => read.values.get(tid) !== String(operandValues.get(tid)));
     if (missing.length > 0) {
       markStep('D', 4, 'FAIL',
-        `${missing.length} of ${operandTestIds.length} operands missing from read-back: [${missing.join(',')}]`,
-        `Either Step 3 silently dropped some values (BUG-8 class) or partial-write semantics.`);
-      expect(missing.length).toBe(0);
+        `${missing.length} of ${operandTestIds.length} operands missing or wrong on read-back: [${missing.join(',')}]`,
+        `Expected ${operandTestIds.map(t => `${t}=${operandValues.get(t)}`).join(', ')}; `
+        + `read ${Array.from(read.values.entries()).map(([k, v]) => `${k}=${v}`).join(', ')}. `
+        + `Either Step 3 silently dropped some values (BUG-8 class) or partial-write semantics.`);
       return;
     }
     markStep('D', 4, 'PASS', `All ${operandTestIds.length} operand results round-tripped`);
@@ -279,35 +282,35 @@ test.describe.serial('Chain D — Calculated Value', () => {
     await page.goto(BASE);
     await page.waitForTimeout(4000); // grace for async server-side calc (row appears after save, sometimes only on a later read)
 
-    const orderRead = await apiCall<{
-      tests?: Array<{ testId?: string }>;
-      sampleItems?: Array<{ tests?: Array<{ testId?: string }> }>;
-    }>(page, `/api/OpenELIS-Global/rest/SampleEdit?labNumber=${encodeURIComponent(testAccession!)}`);
+    // This step used to read GET /rest/SampleEdit?labNumber=, which returns the BLANK
+    // form scaffold on this build regardless of the lab number (the same trap Chain A
+    // Step 2 documents). It therefore reported "accession only carries []" every run -
+    // a manufactured "calc engine did not fire" finding that says nothing about the
+    // engine. The result form is the surface that actually lists every analysis on the
+    // sample, including one the engine added.
+    const orderRead = await readResultsForLabNumber(page, testAccession!);
     if (!orderRead.ok) {
-      markStep('D', 5, 'FAIL', `SampleEdit returned HTTP ${orderRead.status}`);
-      expect(orderRead.ok).toBeTruthy();
+      markStep('D', 5, 'FAIL', `LogbookResults read returned HTTP ${orderRead.status}`);
       return;
     }
-    const allTestIds: string[] = [];
-    const body = orderRead.body as {
-      tests?: Array<{ testId?: string }>;
-      sampleItems?: Array<{ tests?: Array<{ testId?: string }> }>;
-    };
-    if (Array.isArray(body?.tests)) {
-      for (const t of body.tests) if (t.testId) allTestIds.push(t.testId);
-    }
-    if (Array.isArray(body?.sampleItems)) {
-      for (const si of body.sampleItems) {
-        if (Array.isArray(si.tests)) for (const t of si.tests) if (t.testId) allTestIds.push(t.testId);
-      }
+    const allTestIds = Array.from(orderRead.values.keys());
+    if (!allTestIds.length) {
+      // No rows at all is a read problem, not an engine verdict. Say so rather than
+      // blaming the calc engine for an empty page.
+      markStep('D', 5, 'FAIL',
+        `Read-back for ${testAccession} returned no analyses at all`,
+        `Step 3 entered results against this accession, so an empty result form is a harness `
+        + `or data problem - it is NOT evidence about the calculated-value engine.`);
+      expect(allTestIds.length, 'result form returned no analyses').toBeGreaterThan(0);
+      return;
     }
     const found = rule!.testId ? allTestIds.includes(rule!.testId) : false;
     if (!found) {
       markStep('D', 5, 'FAIL',
-        `CALC ENGINE DID NOT FIRE: rule id=${rule!.id} should have produced testId=${rule!.testId} on ${testAccession}, but accession only carries [${allTestIds.join(',')}]`,
+        `CALC ENGINE DID NOT FIRE: rule id=${rule!.id} should have produced testId=${rule!.testId} on ${testAccession}, but the accession carries [${allTestIds.join(',')}]`,
         `Definitive answer to Phase 28's unverified question: the calc engine does NOT compute on API-direct writes. ` +
         `File new bug: "Calculated value engine does not fire on API result writes" or similar.`);
-      expect(found, `Calc engine did not produce testId=${rule!.testId}`).toBeTruthy();
+      expect(allTestIds, `Calc engine did not produce testId=${rule!.testId}`).toContain(rule!.testId);
       return;
     }
     markStep('D', 5, 'PASS',
@@ -323,18 +326,15 @@ test.describe.serial('Chain D — Calculated Value', () => {
     requireStep('D', 6, !(!testAccession || !rule), '!testAccession || !rule');
     await page.goto(BASE);
 
-    const read = await apiCall<{ resultList?: Array<{ testId?: string; value?: string }> }>(
-      page,
-      `/api/OpenELIS-Global/rest/LogbookResults?accessionNumber=${encodeURIComponent(testAccession!)}`
-    );
+    // labNumber-keyed read (see readResultsForLabNumber): the accessionNumber
+    // parameter returns an empty page from this endpoint, so the old version of
+    // this step could only ever report "no calc row".
+    const read = await readResultsForLabNumber(page, testAccession!);
     if (!read.ok) {
       markStep('D', 6, 'FAIL', `Read returned HTTP ${read.status}`);
-      expect(read.ok).toBeTruthy();
       return;
     }
-    const items = (typeof read.body === 'object' && read.body !== null)
-      ? ((read.body as { resultList?: Array<{ testId?: string; value?: string }> }).resultList || [])
-      : [];
+    const items = Array.from(read.values.entries()).map(([testId, value]) => ({ testId, value }));
     const calcRow = items.find(r => r.testId === rule!.testId);
     if (!calcRow || !calcRow.value) {
       markStep('D', 6, 'FAIL',
@@ -369,19 +369,14 @@ test.describe.serial('Chain D — Calculated Value', () => {
   test('Step 7 — Calc value math is plausible (REPORTABLE)', async ({ page }) => {
     requireStep('D', 7, !(!testAccession || !rule), '!testAccession || !rule');
     await page.goto(BASE);
-    const read = await apiCall<{ resultList?: Array<{ testId?: string; value?: string }> }>(
-      page,
-      `/api/OpenELIS-Global/rest/LogbookResults?accessionNumber=${encodeURIComponent(testAccession!)}`
-    );
+    const read = await readResultsForLabNumber(page, testAccession!);
     if (!read.ok) {
       markStep('D', 7, 'FAIL', `LogbookResults read returned HTTP ${read.status}`,
         'The endpoint exists on this build, so a non-2xx is a failure and not a declarable gap ' +
         '(known-gaps.ts, "WHAT DOES NOT [belong here]").');
       return;
     }
-    const items = (typeof read.body === 'object' && read.body !== null)
-      ? ((read.body as { resultList?: Array<{ testId?: string; value?: string }> }).resultList || [])
-      : [];
+    const items = Array.from(read.values.entries()).map(([testId, value]) => ({ testId, value }));
     const calcRow = items.find(r => r.testId === rule!.testId);
     if (!calcRow?.value) {
       markStep('D', 7, 'FAIL',
