@@ -92,9 +92,130 @@ setup('seed the floor the regression chains need', async ({ page }) => {
     } catch (e) {
       log.push(`order seed FAILED: ${(e as Error).message}`);
     }
+    // ---- one calculation rule ----------------------------------------------
+    // Chain D reads /rest/test-calculations and fails outright when the list is
+    // empty. On 2026-09-19 it found rule id=1; on 2026-09-20 the same read
+    // returned []. The controller does no filtering (getAll(), no role or unit
+    // scope), so an empty list means the table really was empty — the chain was
+    // depending on rules somebody else happened to leave behind.
+    //
+    // The recipe below is the one from tests/docs/seed-calc.docs.spec.ts, which
+    // is live-proven, not inferred. Its two hard-won constraints:
+    //   * a test may hold only ONE role across the whole calc+reflex system, and
+    //     a DEACTIVATED rule still occupies it (there is no API delete), so every
+    //     test already named by a calc or reflex rule is tainted and unusable;
+    //   * operand and target must be numeric (resultType "N") and must belong to
+    //     the calc's own sample type — test-display-beans leaks tests orderable on
+    //     other types, and the parenthetical in the name is what disambiguates.
+    // Because base-dataset linkages are invisible over REST, no candidate can be
+    // known-good in advance: the server is the oracle, and a failed create rolls
+    // back whole (the save is @Transactional), so trying combinations is safe.
+    try {
+      log.push(...(await seedChainCalcRule(page)));
+    } catch (e) {
+      log.push(`calc rule seed FAILED: ${(e as Error).message}`);
+    }
   } catch (e) {
     log.push(`chain seed aborted: ${(e as Error).message}`);
   }
 
   console.log(['CHAIN FIXTURE SEED', `  target ${BASE}`, ...log.map((l) => `  ${l}`)].join('\n'));
 });
+
+/**
+ * Guarantee at least one ACTIVE calculation rule with a TEST_RESULT operand, which
+ * is precisely what Chain D Step 1 looks for. Returns log lines; never throws.
+ */
+async function seedChainCalcRule(page: import('@playwright/test').Page): Promise<string[]> {
+  const out: string[] = [];
+  const P = '/api/OpenELIS-Global';
+  const getJson = async <T>(path: string): Promise<T | null> => {
+    const r = await page.request.get(`${P}${path}`);
+    return r.ok() ? ((await r.json().catch(() => null)) as T) : null;
+  };
+
+  interface Calc { id?: number; name?: string; active?: boolean; testId?: number;
+    operations?: Array<{ type?: string; value?: string }>; }
+  const calcs = (await getJson<Calc[]>('/rest/test-calculations')) || [];
+  const usable = calcs.find(c => c.active !== false
+    && (c.operations || []).some(o => o.type === 'TEST_RESULT' && o.value));
+  if (usable) {
+    out.push(`calc rules: ${calcs.length}, at least one usable (id=${usable.id} "${usable.name}") — not seeding`);
+    return out;
+  }
+
+  // Taint: every test already named by a calc or a reflex rule is spoken for.
+  interface Reflex { conditions?: Array<{ testId?: number }>; actions?: Array<{ reflexTestId?: number }>; }
+  const reflexes = (await getJson<Reflex[]>('/rest/reflexrules')) || [];
+  const taint = new Set<string>();
+  for (const c of calcs) {
+    if (c.testId != null) taint.add(String(c.testId));
+    for (const o of c.operations || []) if (o.type === 'TEST_RESULT' && o.value != null) taint.add(String(o.value));
+  }
+  for (const r of reflexes) {
+    for (const c of r.conditions || []) if (c.testId != null) taint.add(String(c.testId));
+    for (const a of r.actions || []) if (a.reflexTestId != null) taint.add(String(a.reflexTestId));
+  }
+
+  interface IdValue { id?: string; value?: string }
+  interface Bean { id?: string; value?: string; resultType?: string }
+  const sampleTypes = (await getJson<IdValue[]>('/rest/displayList/SAMPLE_TYPE_ACTIVE')) || [];
+  const pools: Array<{ st: IdValue; tests: Bean[] }> = [];
+  for (const st of sampleTypes) {
+    const beans = (await getJson<Bean[]>(`/rest/test-display-beans?sampleType=${st.id}`)) || [];
+    const fit = beans.filter(b => String(b.resultType) === 'N'
+      && !taint.has(String(b.id))
+      && String(b.value || '').includes(`(${st.value})`));
+    if (fit.length >= 2) pools.push({ st, tests: fit });
+  }
+  if (!pools.length) {
+    out.push('calc rule seed: no sample type has two untainted numeric tests — Chain D will report the gap');
+    return out;
+  }
+
+  const post = async (calc: unknown) => page.evaluate(async ({ base, body }) => {
+    const csrf = localStorage.getItem('CSRF') || '';
+    const r = await fetch(`${base}/rest/test-calculation`, {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+      body: JSON.stringify(body),
+    });
+    return { ok: r.ok, status: r.status, text: (await r.text().catch(() => '')).slice(0, 200) };
+  }, { base: P, body: calc });
+
+  // The server is the oracle: try combinations until one is accepted.
+  let attempts = 0;
+  for (const pool of pools) {
+    for (let t = 0; t < pool.tests.length && attempts < 12; t++) {
+      for (let o = 0; o < pool.tests.length && attempts < 12; o++) {
+        if (t === o) continue;
+        attempts++;
+        const target = pool.tests[t];
+        const operand = pool.tests[o];
+        const res = await post({
+          name: `QA-AUTO Chain D Calc ${Date.now() % 100000}`,
+          sampleId: Number(pool.st.id), testId: Number(target.id),
+          result: '', note: 'Seeded by chain-seed.setup.ts so Chain D always has a rule.',
+          toggled: true, active: true,
+          operations: [
+            { id: null, order: 0, type: 'TEST_RESULT', value: String(operand.id), sampleId: Number(pool.st.id) },
+            { id: null, order: 1, type: 'MATH_FUNCTION', value: '*' },
+            { id: null, order: 2, type: 'INTEGER', value: '2' },
+          ],
+        });
+        if (res.ok) {
+          // Read back on the list the chain itself reads, not on the POST's status.
+          const after = (await getJson<Calc[]>('/rest/test-calculations')) || [];
+          const ok = after.some(c => c.active !== false
+            && (c.operations || []).some(x => x.type === 'TEST_RESULT' && x.value));
+          out.push(ok
+            ? `seeded calc rule: ${operand.value} * 2 -> ${target.value} on ${pool.st.value} (${after.length} rule(s) now)`
+            : `calc rule POST accepted but the list still has no usable rule (${after.length} row(s))`);
+          return out;
+        }
+      }
+    }
+  }
+  out.push(`calc rule seed: ${attempts} combination(s) all refused — every candidate is spoken for by a base linkage`);
+  return out;
+}
