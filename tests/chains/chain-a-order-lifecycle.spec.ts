@@ -37,11 +37,14 @@ import { test, expect } from '@playwright/test';
 import {
   BASE,
   apiCall,
+  enterResultsForLabNumber,
   findOrSeedOrder,
   extractPdfText,
   markStep,
   ChainOrderRef,
+  readResultsForLabNumber,
   requireStep,
+  validateResultsForLabNumber,
 } from './_common';
 
 // SERIAL REMOVED 2026-09-05 (harness reference 12.10).
@@ -124,14 +127,36 @@ test.describe('Chain A — Order Lifecycle', () => {
       ? ((readback.body as { patientSearchResults?: Array<{ nationalId?: string }> }).patientSearchResults || [])[0]?.nationalId
       : undefined;
 
-    if (linkedNationalId !== order!.patientNationalId) {
-      markStep('A', 2, 'FAIL',
-        `Patient-order linkage broken (BUG-37): expected nationalId ${order!.patientNationalId}, got ${linkedNationalId ?? '(none)'}`,
-        `This is the canonical BUG-37 symptom. Order persisted but sample_human row was not written.`);
-      expect(linkedNationalId, 'BUG-37: patient-order linkage broken').toBe(order!.patientNationalId);
+    // What can honestly be asserted depends on where the order came from.
+    //
+    // SEEDED: this run created the patient, so the exact nationalId is known and the
+    // check is an identity match.
+    //
+    // REUSED: the patient is someone else's - the harness has no expected identity to
+    // compare against, and asserting one produced a nightly false BUG-37 for months
+    // (the domain lane returned an empty nationalId, so every reused order "failed").
+    // The checkable symptom is the real one: BUG-37 is the sample_human row not being
+    // written, which shows up as the lab number resolving to NO patient at all.
+    if (order!.source === 'seeded') {
+      if (linkedNationalId !== order!.patientNationalId) {
+        markStep('A', 2, 'FAIL',
+          `Patient-order linkage broken (BUG-37): expected nationalId ${order!.patientNationalId}, got ${linkedNationalId ?? '(none)'}`,
+          `This is the canonical BUG-37 symptom. Order persisted but sample_human row was not written.`);
+        return;
+      }
+      markStep('A', 2, 'PASS', `Seeded patient ${linkedNationalId} correctly linked to order ${order!.accession}`);
       return;
     }
-    markStep('A', 2, 'PASS', `Patient ${linkedNationalId} correctly linked to order ${order!.accession}`);
+
+    if (!linkedNationalId) {
+      markStep('A', 2, 'FAIL',
+        `Patient-order linkage broken (BUG-37): order ${order!.accession} resolves to no patient`,
+        `Order persisted but sample_human row was not written. Reused order, so only presence is asserted, not identity.`);
+      return;
+    }
+    markStep('A', 2, 'PASS',
+      `Reused order ${order!.accession} resolves to patient ${linkedNationalId} `
+      + `(presence check - identity is only asserted for orders this run seeded)`);
   });
 
   // ---------------------------------------------------------------------------
@@ -144,40 +169,39 @@ test.describe('Chain A — Order Lifecycle', () => {
 
     await page.goto(BASE);
 
-    // BUG-31: the Carbon Accept checkbox click would hang for ~60s. Per
-    // §11.5 we don't click it; we POST the result update directly. The
-    // result-update endpoint is /rest/LogbookResults (POST). Payload
-    // shape inferred from Phase 8 BV-DEEP TestModify writes.
-    const payload = {
-      paging: { totalPages: 1 },
-      resultList: [
-        {
-          accessionNumber: order!.accession,
-          testId: order!.testId,
-          value: enteredResultValue,
-          isAccept: true,
-          isReject: false,
-        },
-      ],
-    };
+    // BUG-31: the Carbon Accept checkbox click would hang for ~60s. Per §11.5 we
+    // don't click it; we write the result through the API instead.
+    //
+    // This step used to POST a hand-built `{ paging, resultList: [...] }` body,
+    // "shape inferred from Phase 8 BV-DEEP TestModify writes". It was inferred
+    // wrongly and returned HTTP 400 on every run: the controller binds a whole
+    // LogbookResultsForm whose list field is `testResult`, and it reconciles the
+    // POST against the page it cached in the session on the preceding GET. A
+    // hand-built list is a stale page by definition. enterResultsForLabNumber()
+    // does the read-modify-write the seeder has always used.
+    const res = await enterResultsForLabNumber(page, order!.accession, {
+      valueByTestId: order!.testId ? { [order!.testId]: enteredResultValue } : undefined,
+      defaultNumeric: enteredResultValue,
+    });
 
-    const post = await apiCall<{ savedCount?: number }>(
-      page,
-      '/api/OpenELIS-Global/rest/LogbookResults',
-      { method: 'POST', body: payload }
-    );
-
-    if (!post.ok) {
+    if (!res.ok) {
       markStep('A', 3, 'BLOCKED',
-        `Result API substitute returned HTTP ${post.status}`,
-        `Per §11.5 Blocking-Bug Etiquette: marking BLOCKED, chain continues. ` +
-        `Resolve by adding a tested API path or by waiting for BUG-31 fix.`);
-      // BLOCKED is not a hard failure — chain continues. Use a soft
-      // assertion so Playwright reports PARTIAL.
-      test.info().annotations.push({ type: 'blocked', description: 'BUG-31 + missing API substitute' });
+        `Result API substitute failed: ${res.reason}`,
+        `Per §11.5 Blocking-Bug Etiquette: marking BLOCKED, chain continues.`);
+      test.info().annotations.push({ type: 'blocked', description: res.reason });
       return;
     }
-    markStep('A', 3, 'PASS', `Result POST returned HTTP ${post.status}`);
+
+    // PERSIST is the declared criterion, so assert the write landed rather than
+    // trusting a 200 (SKILL 7.5).
+    const back = await readResultsForLabNumber(page, order!.accession);
+    const landed = Array.from(res.entered.entries()).filter(([tid]) => !!back.values.get(tid));
+    expect(landed.length,
+      `Result POST reported success but no entered value read back on ${order!.accession} `
+      + `(submitted [${Array.from(res.entered.keys()).join(',')}], read back `
+      + `[${Array.from(back.values.entries()).map(([k, v]) => `${k}=${v}`).join(', ')}])`).toBeGreaterThan(0);
+
+    markStep('A', 3, 'PASS', `${res.reason}; ${landed.length} value(s) verified on read-back`);
   });
 
   // ---------------------------------------------------------------------------
@@ -190,32 +214,30 @@ test.describe('Chain A — Order Lifecycle', () => {
 
     await page.goto(BASE);
 
-    // Validation Routine page POSTs to /rest/ResultValidation. Payload
-    // shape from Phase 20E EU suite (full validation workflow E2E).
-    const payload = {
-      paging: { totalPages: 1 },
-      validationList: [
-        {
-          accessionNumber: order!.accession,
-          testId: order!.testId,
-          accepted: true,
-          rejected: false,
-        },
-      ],
-    };
-    const post = await apiCall<unknown>(
-      page,
-      '/api/OpenELIS-Global/rest/ResultValidation',
-      { method: 'POST', body: payload }
-    );
+    // /rest/ResultValidation with a hand-built `validationList` was invented and
+    // never worked. The surface the Validation page actually uses is
+    // /rest/AccessionValidation, read-modify-written the same way as result entry:
+    // GET the form, flip `isAccepted` on each row of `resultList`, POST it back.
+    const val = await validateResultsForLabNumber(page, order!.accession);
 
-    if (!post.ok) {
-      markStep('A', 4, 'BLOCKED', `Validation API returned HTTP ${post.status}`,
-        `Per §11.5: BLOCKED, chain continues.`);
-      test.info().annotations.push({ type: 'blocked', description: `validation POST ${post.status}` });
+    if (!val.ok) {
+      markStep('A', 4, 'BLOCKED', `Validation failed: ${val.reason}`, `Per §11.5: BLOCKED, chain continues.`);
+      test.info().annotations.push({ type: 'blocked', description: val.reason });
       return;
     }
-    markStep('A', 4, 'PASS', `Validation POST returned HTTP ${post.status}`);
+    // PERSIST: nothing should still be sitting in the validation queue for this
+    // accession once every row has been accepted.
+    const pending = await apiCall<{ resultList?: Array<unknown> }>(
+      page, `/api/OpenELIS-Global/rest/AccessionValidation?accessionNumber=${encodeURIComponent(order!.accession)}`
+    );
+    const stillPending = ((pending.ok && typeof pending.body === 'object' && pending.body !== null
+      ? (pending.body as { resultList?: Array<unknown> }).resultList
+      : []) || []).length;
+    expect(stillPending,
+      `Validation POST reported success but ${stillPending} row(s) are still pending validation on ${order!.accession}`)
+      .toBe(0);
+
+    markStep('A', 4, 'PASS', `${val.reason}; validation queue for ${order!.accession} is now empty`);
   });
 
   // ---------------------------------------------------------------------------

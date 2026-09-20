@@ -96,25 +96,44 @@ export async function seedDomainOrder(page: Page, domain: DomainLane = 'clinical
   const log = (m: string) => console.log('[seedDomainOrder:' + domain + '] ' + m);
 
   const existing = await listDashboardOrders(page, domain);
-  if (existing.length) {
-    // Prefer the furthest-along order: a chain that needs results wants one past intake.
-    const score = (p: string) => {
-      const m = /^([0-9]+)\/([0-9]+)/.exec(p);
-      return m ? Number(m[1]) / Number(m[2]) : 0;
-    };
-    const best = existing.slice().sort((a, b) => score(b.progress) - score(a.progress))[0];
+
+  // Prefer the furthest-along order that still has work left in it.
+  //
+  // This used to be a plain "furthest along wins", which on `testing` picked a 3/3
+  // COMPLETE order out of 65 - and a completed order is the one thing a chain cannot
+  // use: there is nothing left to enter a result against, so Chain A's Steps 3-8 all
+  // blocked off it every night. Completion is a disqualifier here, not a ranking.
+  const score = (p: string) => {
+    const m = /^([0-9]+)\/([0-9]+)/.exec(p);
+    return m ? Number(m[1]) / Number(m[2]) : 0;
+  };
+  const rank = (a: { progress: string }, b: { progress: string }) => score(b.progress) - score(a.progress);
+  const workable = existing.filter((o) => score(o.progress) < 1).sort(rank);
+
+  if (workable.length) {
+    const best = workable[0];
     log('reusing ' + best.labNumber + ' (progress ' + (best.progress || 'unknown') + ') from '
-      + existing.length + ' order(s) on the ' + domain + ' dashboard');
+      + workable.length + ' workable of ' + existing.length + ' order(s) on the ' + domain + ' dashboard');
     return { labNumber: best.labNumber, domain, source: 'reused', progress: best.progress, path: 'domain' };
   }
 
-  log('no existing orders on the ' + domain + ' dashboard - attempting creation through the enter form');
+  log(existing.length
+    ? 'all ' + existing.length + ' order(s) on the ' + domain + ' dashboard are complete - creating a fresh one'
+    : 'no existing orders on the ' + domain + ' dashboard - attempting creation through the enter form');
   const created = await createDomainOrder(page, domain);
-  if (!created) {
-    log('creation did not produce a persisted order; see finding 2 in the header of this file');
-    return null;
+  if (created) return created;
+
+  log('creation did not produce a persisted order; see finding 2 in the header of this file');
+  if (existing.length) {
+    // Last resort: hand back a completed order so steps that only READ (render,
+    // report, FHIR) still have something to work on. Steps that need to write will
+    // fail against it, and that failure is honest - it says creation is broken.
+    const fallback = existing.slice().sort(rank)[0];
+    log('falling back to COMPLETE order ' + fallback.labNumber + ' (progress '
+      + (fallback.progress || 'unknown') + ') - write steps are expected to fail against it');
+    return { labNumber: fallback.labNumber, domain, source: 'reused', progress: fallback.progress, path: 'domain' };
   }
-  return created;
+  return null;
 }
 
 async function createDomainOrder(page: Page, domain: DomainLane): Promise<DomainOrderRef | null> {
