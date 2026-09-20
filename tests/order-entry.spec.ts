@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange } from '../helpers/test-helpers';
+import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, orderWizardForward, selectOrderProgram } from '../helpers/test-helpers';
 
 /**
  * Order Entry and Batch Workflow Test Suites
@@ -70,7 +70,7 @@ test.describe('Add Order workflow', () => {
     await page.getByText(/Next/i).first().click();
 
     // Step 2: Program Selection — Routine Testing
-    await page.getByText(/Routine Testing/i).click();
+    await selectOrderProgram(page);
     await page.getByRole('button', { name: /Next/i }).click();
 
     // Step 3: Add Sample — select Whole Blood
@@ -167,7 +167,7 @@ test.describe('Referral section (Add Order)', () => {
     await page.keyboard.press('Enter');
     await page.getByRole('button', { name: /Next/i }).first().click();
     // Program selection
-    await page.getByText(/Routine Testing/i).click();
+    await selectOrderProgram(page);
     await page.getByRole('button', { name: /Next/i }).click();
     // Add Sample — select Whole Blood
     await selectSampleType(page, '4');
@@ -185,7 +185,7 @@ test.describe('Referral section (Add Order)', () => {
     await page.locator('input[placeholder*="patient" i]').first().fill('0123456');
     await page.keyboard.press('Enter');
     await page.getByRole('button', { name: /Next/i }).first().click();
-    await page.getByText(/Routine Testing/i).click();
+    await selectOrderProgram(page);
     await page.getByRole('button', { name: /Next/i }).click();
     await selectSampleType(page, '4');
 
@@ -209,7 +209,7 @@ test.describe('Referral section (Add Order)', () => {
       await page.locator('input[placeholder*="patient" i]').first().fill('0123456');
       await page.keyboard.press('Enter');
       await page.getByRole('button', { name: /Next/i }).first().click();
-      await page.getByText(/Routine Testing/i).click();
+      await selectOrderProgram(page);
       await page.getByRole('button', { name: /Next/i }).click();
       await selectSampleType(page, '4');
 
@@ -259,7 +259,7 @@ test.describe('Referral section (Add Order)', () => {
       await page.locator('input[placeholder*="patient" i]').first().fill('0123456');
       await page.keyboard.press('Enter');
       await page.getByRole('button', { name: /Next/i }).first().click();
-      await page.getByText(/Routine Testing/i).click();
+      await selectOrderProgram(page);
       await page.getByRole('button', { name: /Next/i }).click();
       await selectSampleType(page, '4');
       await page.getByText(/HGB\(Whole Blood\)/i).click();
@@ -298,7 +298,7 @@ test.describe('Multi-Patient Batch Workflow (TC-BATCH)', () => {
     }
 
     // Next
-    const nextBtn = page.getByRole('button', { name: /next/i }).first();
+    const nextBtn = orderWizardForward(page);
     for (let i = 0; i < 3 && await nextBtn.isVisible({ timeout: 1000 }).catch(() => false); i++) {
       await nextBtn.click();
       await page.waitForTimeout(1000);

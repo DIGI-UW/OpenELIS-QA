@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange } from '../helpers/test-helpers';
+import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, orderWizardForward } from '../helpers/test-helpers';
 
 /**
  * Performance and Data Integrity Tests
@@ -29,7 +29,7 @@ test.describe('Performance Smoke (TC-PERF)', () => {
     await page.waitForTimeout(1500);
 
     const timings: number[] = [];
-    const nextBtn = page.getByRole('button', { name: /next/i }).first();
+    const nextBtn = orderWizardForward(page);
 
     for (let step = 0; step < 3; step++) {
       if (!(await nextBtn.isVisible({ timeout: 2000 }).catch(() => false))) break;

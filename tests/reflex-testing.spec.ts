@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, QA_PREFIX, TIMEOUT, login } from '../helpers/test-helpers';
+import { BASE, ADMIN, QA_PREFIX, TIMEOUT, login, orderWizardForward } from '../helpers/test-helpers';
 
 /**
  * Reflex Testing Suite — Phase 28
@@ -201,7 +201,7 @@ test.describe('Reflex Testing — Order Integration (Phase 28)', () => {
     expect(page.url()).toContain('SamplePatientEntry');
 
     // Should have Next/Previous navigation buttons
-    const nextBtn = page.getByRole('button', { name: /next/i });
+    const nextBtn = orderWizardForward(page);
     await expect(nextBtn).toBeVisible();
   });
 

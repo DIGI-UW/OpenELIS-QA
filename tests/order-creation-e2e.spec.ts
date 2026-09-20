@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, QA_PREFIX, QA_ID_PREFIX, login } from '../helpers/test-helpers';
+import { BASE, ADMIN, QA_PREFIX, QA_ID_PREFIX, login, orderWizardForward } from '../helpers/test-helpers';
 
 /**
  * Order Creation E2E Test Suite — Phase 32
@@ -556,7 +556,7 @@ test.describe('Suite ORD-E2E-EXT — Order Creation E2E Extended', () => {
     await page.waitForLoadState('networkidle', { timeout: 10000 });
 
     // Click Next without filling in patient info
-    const nextBtn = page.getByRole('button', { name: /next/i }).first();
+    const nextBtn = orderWizardForward(page);
     if (await nextBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
       await nextBtn.click();
       await page.waitForTimeout(1000);
@@ -634,7 +634,7 @@ test.describe('Suite ORD-E2E-EXT — Order Creation E2E Extended', () => {
       await page.keyboard.press('Enter');
       await page.waitForTimeout(1500);
 
-      const nextBtn = page.getByRole('button', { name: /next/i }).first();
+      const nextBtn = orderWizardForward(page);
       if (await nextBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
         await nextBtn.click();
         await page.waitForTimeout(1500);

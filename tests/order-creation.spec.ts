@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, QA_PREFIX, TIMEOUT, login } from '../helpers/test-helpers';
+import { BASE, ADMIN, QA_PREFIX, TIMEOUT, login, orderWizardForward } from '../helpers/test-helpers';
 
 /**
  * Order Creation & Result Entry Test Suite — Phase 30
@@ -63,7 +63,7 @@ test.describe('Order Creation Wizard (Phase 30)', () => {
     await expect(page.getByRole('button', { name: /new patient/i })).toBeVisible();
 
     // Verify Next button
-    await expect(page.getByRole('button', { name: /next/i })).toBeVisible();
+    await expect(orderWizardForward(page)).toBeVisible();
   });
 
   test('TC-ORDER-02: New Patient form has required fields', async ({ page }) => {
@@ -193,7 +193,7 @@ test.describe('Order Creation Wizard (Phase 30)', () => {
     });
 
     // Click Next
-    await page.getByRole('button', { name: /next/i }).click();
+    await orderWizardForward(page).click();
     await page.waitForTimeout(1000);
 
     // With National ID + Age + Gender filled, the wizard should advance to Step 2.
@@ -422,7 +422,7 @@ test.describe('Order Wizard Extended (TC-ORDER-EXT)', () => {
     }
 
     // Advance to Step 2
-    const nextBtn = page.getByRole('button', { name: /next/i }).first();
+    const nextBtn = orderWizardForward(page);
     if (await nextBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
       await nextBtn.click();
       await page.waitForTimeout(1000);

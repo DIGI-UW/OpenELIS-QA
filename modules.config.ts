@@ -124,7 +124,22 @@ export default defineConfig({
     launchOptions: process.env.PW_CHROME ? { executablePath: process.env.PW_CHROME } : {},
   },
   projects: [
-    { name: 'setup', testMatch: /(^|\/)auth\.setup\.ts$/ },
+    // A fixture is not a check, so it does not get the test-policy timeout.
+    //
+    // The 30s budget below the `timeout:` line is a statement ABOUT TESTS: a check
+    // that takes longer than that has found slowness worth reporting. Logging in is
+    // not a check. It drives a cold SPA that loads ~450 modules before it renders an
+    // authenticated surface, and on 2026-09-20 it exceeded 30s twice in a row against
+    // testing and took the WHOLE run with it: "1 failed [setup] · 53 did not run".
+    // Nothing in that report says anything about the product.
+    //
+    // Same budget and same reasoning as the `data` project further down. Raise it with
+    // PW_SETUP_TIMEOUT when an instance is genuinely slower.
+    {
+      name: 'setup',
+      testMatch: /(^|\/)auth\.setup\.ts$/,
+      timeout: Number(process.env.PW_SETUP_TIMEOUT ?? 120_000),
+    },
     // BASELINE DATA (added 2026-09-08). `data.setup.ts` creates the patient
     // "Abby Sebby" (nationalId 0123456) and two orders, and writes their
     // accessions to `.auth/test-data.json`. Seventeen module specs import

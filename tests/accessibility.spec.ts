@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange } from '../helpers/test-helpers';
+import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, orderWizardForward } from '../helpers/test-helpers';
 
 /**
  * Accessibility Tests
@@ -129,7 +129,7 @@ test.describe('Accessibility WCAG Smoke (TC-A11Y)', () => {
     await page.waitForTimeout(1500);
 
     // Try to advance without filling required fields
-    const nextBtn = page.getByRole('button', { name: /next|submit/i }).first();
+    const nextBtn = orderWizardForward(page);
     if (await nextBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
       await nextBtn.click();
       await page.waitForTimeout(1000);
@@ -285,7 +285,7 @@ test.describe('Accessibility Extended (TC-A11Y-EXT)', () => {
     await page.waitForLoadState('networkidle');
 
     // Submit the form without filling required fields to trigger validation errors
-    const nextBtn = page.getByRole('button', { name: /next|submit/i }).first();
+    const nextBtn = orderWizardForward(page);
     if (await nextBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
       await nextBtn.click();
       await page.waitForTimeout(1000);

@@ -943,3 +943,48 @@ export async function checkCarbonRadio(page: Page, radioInput: Locator): Promise
 function cssEscapeId(id: string): string {
   return id.replace(/(["\\])/g, '\\$1');
 }
+
+/**
+ * The Add Order wizard's forward button (Next, and Submit on the last step).
+ *
+ * WHY THIS IS NOT `getByRole('button', { name: /next/i })`.
+ * Carbon's pagination control renders a button whose accessible name is
+ * "Next Page", and it is DISABLED whenever there is no next page. On every
+ * order-wizard page that also carries a paginated table, `/next/i` matched that
+ * button first, and `.first()` picked it: Playwright then waited 30 seconds for
+ * a permanently disabled element and the test timed out. Eighteen failures
+ * across nine files on the 2026-09-20 develop-stack run were this one locator,
+ * and none of them said anything about the product.
+ *
+ * `button.forwardButton` is the wizard's own class (addOrder/Index.jsx puts it
+ * on both the Next and the Submit button, inside .navigationButtonsLayout), so
+ * it cannot collide with pagination, and it keeps working when the button's
+ * label is translated — which `/next/i` does not.
+ */
+export function orderWizardForward(page: Page): Locator {
+  return page.locator('button.forwardButton');
+}
+
+/**
+ * Choose a program on the Add Order wizard's Program step.
+ *
+ * WHY THIS IS NOT `page.getByText(/Routine Testing/i).click()`.
+ * The program picker is a Carbon `<Select>` — a real `<select>` element — and
+ * "Routine Testing" is an `<option>` inside it. An `<option>` is never "visible"
+ * to Playwright, so a click on it retries until the test times out. Four cases
+ * in non-conforming.spec.ts spent 90 seconds each doing that, and the failure
+ * read as a product problem with the Program step.
+ *
+ * Selecting by LABEL rather than by id: the program ids differ per instance
+ * (they come from /rest/user-programs), so a hardcoded id would pass on one
+ * deployment and silently pick the wrong program on another.
+ *
+ * Returns false when the picker is not on screen, so a caller can say so rather
+ * than assert against a step it never reached.
+ */
+export async function selectOrderProgram(page: Page, label = 'Routine Testing'): Promise<boolean> {
+  const select = page.locator('#additionalQuestionsSelect');
+  if (!(await select.isVisible({ timeout: 5_000 }).catch(() => false))) return false;
+  await select.selectOption({ label });
+  return true;
+}

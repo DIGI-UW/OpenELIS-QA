@@ -45,7 +45,23 @@ export default defineConfig({
   reporter: [['list'], ['json', { outputFile: 'regression-results/chains.json' }], ['./tests/helpers/session-guard-reporter.ts']],
   use: { ...devices['Desktop Chrome'], baseURL: BASE, headless: true, ignoreHTTPSErrors: true, trace: 'retain-on-failure' },
   projects: [
-    { name: 'setup', testDir: '.', testMatch: /auth\.setup\.ts/ },
+    // A fixture is not a check, so it does not get the test-policy timeout.
+    //
+    // The 30s budget below the `timeout:` line is a statement ABOUT TESTS: a check
+    // that takes longer than that has found slowness worth reporting. Logging in is
+    // not a check. It drives a cold SPA that loads ~450 modules before it renders an
+    // authenticated surface, and on 2026-09-20 it exceeded 30s twice in a row against
+    // testing and took the WHOLE run with it: "1 failed [setup] · 53 did not run".
+    // Nothing in that report says anything about the product.
+    //
+    // Same budget and same reasoning as the `data` project further down. Raise it with
+    // PW_SETUP_TIMEOUT when an instance is genuinely slower.
+    {
+      name: 'setup',
+      testDir: '.',
+      testMatch: /auth\.setup\.ts/,
+      timeout: Number(process.env.PW_SETUP_TIMEOUT ?? 120_000),
+    },
     // FIXTURES. Until 2026-09-15 this config depended on `setup` and nothing else, and on
     // the develop-stack nightly that meant the chains ran against a BARE instance every
     // night: each shard boots its own ephemeral stack, and the config that seeds
