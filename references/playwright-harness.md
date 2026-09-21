@@ -3187,3 +3187,63 @@ target, not the collection — so the `--list` check stays manual.
 Related: §12.30 (an absent request is not evidence about the product) is the
 same failure at the network layer. This is it at the collection layer: the
 absent *test* is not evidence either, and both are silent by default.
+
+### 12.32 A `test.fixme` that cites product behaviour is an unverified claim, not coverage
+
+`label-presets.spec.ts` reported **4 passed, 1 skipped** for three months while no label
+preset on the instance could be edited at all (OGC-1227). The whole failure fits in the
+skip reason:
+
+```
+test.fixme(true, 'Carbon modal form write not reliably automatable;
+                  product Save persists for a real user')
+```
+
+Both halves were false. The Carbon `NumberInput` steppers drive the controlled input
+without complaint — the write was always automatable. And "product Save persists for a
+real user" was never measured; it was inherited from a sibling suite's note about the Test
+Catalog editor and carried across. It is also *the exact proposition the skipped test
+existed to check*.
+
+**The rule.** A `test.fixme` on a write case may cite a **harness** limitation — a hang, a
+pool-exhausting action, a dependency the runner cannot reach. It may not cite a **product**
+claim. "It works for a real user" is the hypothesis under test, so citing it as grounds for
+skipping is circular, and it converts an untested path into a line the next reader takes as
+settled. When auditing a suite, treat every fixme whose stated reason is product behaviour
+as UNCOVERED, not as covered-elsewhere.
+
+The structural half of this is §5.5: with the one PERSIST case skipped, everything left in
+that file asserted RENDER or FUNCTION, so the module was capped at M1 — and the report said
+so. Pass count is what made it look healthy. Read the maturity column.
+
+**What the four write assertions are for.** `helpers/silentSave.ts` exists because
+OGC-1227 failed in four independent ways, and a test asserting any three of them would
+still have passed:
+
+| Assertion | The failure it catches | How it showed up in OGC-1227 |
+|---|---|---|
+| `assertWriteIssued` | the control never talks to the server | — (would catch a dead Save button; invisible to any DOM assertion) |
+| `assertWriteSucceeded` | non-2xx | `PUT` → 400 `HttpMessageNotReadableException`, and → 500 on a well-formed body |
+| `assertUserVisibleOutcome` | 2xx with no confirmation, or a failure with no visible error | no success notification exists in the editor at all |
+| `assertRoundTrip` | the write reports success and the record did not change | `fields` omitted → 200, and the preset's label content deleted |
+
+Three notes carried from that run, each of which cost time:
+
+1. **Assert the status, not the absence of a banner.** The 400 *did* render an
+   `InlineNotification`. It read "Save failed", it sat at the top of a scrollable modal
+   body, and the user was looking at the dimension fields below the fold. "No red text on
+   screen" is not evidence, and neither is "the modal closed".
+2. **Read back on a different surface, and diff more than the field you changed.** Defect 3
+   returned the correct dimensions in its own response and had quietly emptied `fields`.
+   Hence `alsoRequireUnchanged` — the collateral-damage set is not optional on a write that
+   replaces a collection.
+3. **Order the assertions so each defect is reported as itself.** Check the user-visible
+   outcome *before* the status. Otherwise a silent success is masked by a green status and
+   the separate feedback defect never gets filed.
+
+**Probing safely.** The in-page `apiWrite` returns `{status, body}` rather than throwing, so
+a spec can assert a *specific* failure — that is what lets TC-LP-07 distinguish "empty → 1
+field is 200" from "1 → 1 field is 500", which is the whole diagnosis of Defect 2. When
+probing a write by hand, do it against a duplicated scratch record, not a System one: this
+investigation established Defect 3 by discovering it the hard way, on three real System
+presets, and had to restore them. A `POST /{id}/duplicate` first would have cost one call.
