@@ -235,16 +235,22 @@ test.describe('API CRUD Survey — GET Endpoints (Phase 29)', () => {
     expect(result.status).toBe(200);
   });
 
-  test('TC-API-14: GET /rest/BarcodeConfiguration returns settings', async ({ page }) => {
+  test('TC-API-14: the site-wide barcode settings API returns settings', async ({ page }) => {
+    // `/rest/BarcodeConfiguration` does not exist and answers 404. That name
+    // belongs to a JSP SCREEN at /BarcodeConfiguration (it returns HTML), not to
+    // a REST endpoint, and this case asserted 200 on the REST spelling every run.
+    // The barcode settings that a client actually reads are served by
+    // SiteWideBarcodeSettingsRestController at /api/siteSettings/barcode.
     const result = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const res = await fetch('/api/OpenELIS-Global/rest/BarcodeConfiguration', {
-        headers: { 'X-CSRF-Token': csrf },
+      const res = await fetch('/api/OpenELIS-Global/api/siteSettings/barcode', {
+        headers: { 'X-CSRF-Token': csrf, Accept: 'application/json' },
       });
-      return { status: res.status };
+      const text = await res.text().catch(() => '');
+      return { status: res.status, body: text.slice(0, 200) };
     });
 
-    expect(result.status).toBe(200);
+    expect(result.status, `site-wide barcode settings answered ${result.status}: ${result.body}`).toBe(200);
   });
 
   test('TC-API-15: GET /rest/SiteInformation returns config', async ({ page }) => {

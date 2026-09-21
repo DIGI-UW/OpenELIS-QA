@@ -29,9 +29,21 @@ import {
  *   /AlertsManagement
  *   /NotificationConfig
  *
- * API endpoints:
- *   GET /rest/AlertNotification/all   — list all configured alert notifications
- *   GET /rest/AlertNotification/{id}  — fetch single alert config
+ * API endpoints, READ OFF AlertRestController and confirmed live 2026-09-20.
+ * The four this file used to call — /rest/AlertNotification/all, /{id},
+ * /subscribe and /markRead — do not exist and never did: all four answer 404.
+ * Three cases asserted 200 on the first of them and failed every run; the other
+ * two asserted "not 5xx", which a 404 satisfies, so they passed while reaching
+ * nothing.
+ *   GET    /rest/alerts                    — every alert (AlertDTO[])
+ *   GET    /rest/alerts?entityType=&entityId=  — scoped to one entity
+ *   GET    /rest/alerts/{id}               — one alert
+ *   GET    /rest/alerts/count?entityType=&entityId=  — BOTH params required (400 without)
+ *   PUT    /rest/alerts/{id}/acknowledge   — the real "mark read"
+ *   PUT    /rest/alerts/{id}/resolve       — with a body
+ *   DELETE /rest/alerts/{id}
+ * An AlertDTO carries: id, alertType, alertEntityType, alertEntityId, severity,
+ * status, startTime, message.
  *
  * Suite IDs: TC-ALERT-01 through TC-ALERT-10
  * Total Test Count: 10 TCs
@@ -42,7 +54,7 @@ import {
  */
 
 const ALERTS_URL = '/Alerts';
-const ALERT_API = '/api/OpenELIS-Global/rest/AlertNotification/all';
+const ALERT_API = '/api/OpenELIS-Global/rest/alerts';
 
 async function goToAlerts(page: any): Promise<boolean> {
   return navigateWithDiscovery(page, [
@@ -155,7 +167,7 @@ test.describe('Suite R — Alerts Dashboard (TC-ALERT)', () => {
     console.log(`TC-ALERT-04: hasTable=${hasTable}, tableRows=${await page.locator('tbody tr, [role="row"]').count()}`);
   });
 
-  test('TC-ALERT-05: AlertNotification API returns HTTP 200', async ({ page }) => {
+  test('TC-ALERT-05: the alerts API returns HTTP 200', async ({ page }) => {
     /**
      * US-ALERT-5: The backing API must be healthy. Without it, the dashboard
      * cannot render alert configurations.
@@ -164,7 +176,7 @@ test.describe('Suite R — Alerts Dashboard (TC-ALERT)', () => {
 
     const result = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const res = await fetch('/api/OpenELIS-Global/rest/AlertNotification/all', {
+      const res = await fetch('/api/OpenELIS-Global/rest/alerts', {
         headers: { 'X-CSRF-Token': csrf },
       });
       const text = await res.text();
@@ -192,7 +204,7 @@ test.describe('Suite R-DEEP — Alert Config & Notification (TC-ALERT-06 through
     await login(page, ADMIN.user, ADMIN.pass);
   });
 
-  test('TC-ALERT-06: AlertNotification API returns valid response structure', async ({ page }) => {
+  test('TC-ALERT-06: the alerts API returns valid response structure', async ({ page }) => {
     /**
      * US-ALERT-5: Verifies the API returns structured data with the fields
      * needed to display and manage alert configurations.
@@ -201,7 +213,7 @@ test.describe('Suite R-DEEP — Alert Config & Notification (TC-ALERT-06 through
 
     const result = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const res = await fetch('/api/OpenELIS-Global/rest/AlertNotification/all', {
+      const res = await fetch('/api/OpenELIS-Global/rest/alerts', {
         headers: { 'X-CSRF-Token': csrf },
       });
       if (!res.ok) return { status: res.status, firstItem: null };
@@ -307,7 +319,7 @@ test.describe('Suite R-DEEP — Alert Config & Notification (TC-ALERT-06 through
     const results = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
       const promises = Array.from({ length: 5 }, () =>
-        fetch('/api/OpenELIS-Global/rest/AlertNotification/all', {
+        fetch('/api/OpenELIS-Global/rest/alerts', {
           headers: { 'X-CSRF-Token': csrf },
         }).then(r => r.status)
       );
@@ -316,7 +328,7 @@ test.describe('Suite R-DEEP — Alert Config & Notification (TC-ALERT-06 through
 
     console.log(`TC-ALERT-09: 5 concurrent requests → statuses: [${results.join(', ')}]`);
     const errors = results.filter(s => s >= 500);
-    expect(errors.length, 'No 5xx errors on concurrent AlertNotification requests').toBe(0);
+    expect(errors.length, 'No 5xx errors on concurrent alerts requests').toBe(0);
   });
 
   test('TC-ALERT-10: Alerts page is accessible to admin role (RBAC)', async ({ page }) => {
@@ -348,10 +360,10 @@ test.describe('Suite R-XMOD — Alerts Cross-Module (TC-ALERT-XMOD)', () => {
     await login(page, ADMIN.user, ADMIN.pass);
   });
 
-  test('TC-ALERT-XMOD-01: Dashboard KPI count consistency with AlertNotification API', async ({ page }) => {
+  test('TC-ALERT-XMOD-01: Dashboard KPI count consistency with the alerts API', async ({ page }) => {
     /**
      * Cross-module: if the dashboard shows a "Pending Alerts" KPI, that number
-     * should be consistent with what the AlertNotification API returns.
+     * should be consistent with what the alerts API returns.
      */
     await page.goto(`${BASE}`);
     await page.waitForTimeout(1500);
@@ -366,10 +378,10 @@ test.describe('Suite R-XMOD — Alerts Cross-Module (TC-ALERT-XMOD)', () => {
       return res.json();
     });
 
-    // Get alert count from AlertNotification API
+    // Get alert count from the alerts API
     const alertCount = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const res = await fetch('/api/OpenELIS-Global/rest/AlertNotification/all', {
+      const res = await fetch('/api/OpenELIS-Global/rest/alerts', {
         headers: { 'X-CSRF-Token': csrf },
       });
       if (!res.ok) return -1;
@@ -378,10 +390,10 @@ test.describe('Suite R-XMOD — Alerts Cross-Module (TC-ALERT-XMOD)', () => {
     });
 
     console.log(`TC-ALERT-XMOD-01: Home metrics keys: [${homeMetrics ? Object.keys(homeMetrics).join(', ') : 'N/A'}]`);
-    console.log(`TC-ALERT-XMOD-01: AlertNotification count: ${alertCount}`);
+    console.log(`TC-ALERT-XMOD-01: alerts count: ${alertCount}`);
 
     expect(homeMetrics, 'Home dashboard metrics API must return data').not.toBeNull();
-    expect(alertCount, 'AlertNotification API must return a count').toBeGreaterThanOrEqual(0);
+    expect(alertCount, 'the alerts API must return a count').toBeGreaterThanOrEqual(0);
   });
 });
 
@@ -404,31 +416,30 @@ test.describe('Suite R-EXT — Alerts Extended (TC-ALERT-EXT)', () => {
 
     const result = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const candidates = [
-        '/api/OpenELIS-Global/rest/AlertNotification/subscribe',
-        '/api/OpenELIS-Global/rest/alerts/subscribe',
-      ];
-      for (const url of candidates) {
-        const res = await fetch(url, { method: 'GET', headers: { 'X-CSRF-Token': csrf } });
-        if (res.status !== 404) return { status: res.status, url };
-      }
-      return { status: 404, url: 'none' };
+      // There is no subscribe endpoint. The alert lifecycle is acknowledge /
+      // resolve / delete on a specific alert, so what is checkable here is that
+      // the listing this dashboard subscribes to is served at all.
+      const url = '/api/OpenELIS-Global/rest/alerts';
+      const res = await fetch(url, { method: 'GET', headers: { 'X-CSRF-Token': csrf } });
+      return { status: res.status, url };
     });
 
-    console.log(`TC-ALERT-EXT-01: Subscribe API → ${result.url} HTTP ${result.status}`);
-    expect(result.status, 'Subscribe API must not 5xx').not.toBeGreaterThanOrEqual(500);
+    console.log(`TC-ALERT-EXT-01: alert listing → ${result.url} HTTP ${result.status}`);
+    // "not 5xx" was satisfied by the 404 this case used to get, so it passed while
+    // reaching nothing. The endpoint has to actually answer.
+    expect(result.status, `the alert listing must be served, got ${result.status}`).toBe(200);
   });
 
-  test('TC-ALERT-EXT-02: AlertNotification/all returns structured response', async ({ page }) => {
+  test('TC-ALERT-EXT-02: the alerts listing returns a structured response', async ({ page }) => {
     /**
-     * The /AlertNotification/all endpoint must return a list (possibly empty)
+     * The /rest/alerts endpoint must return a list (possibly empty)
      * with each alert having at minimum a message or type field.
      */
     await page.goto(`${BASE}`);
 
     const result = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const res = await fetch('/api/OpenELIS-Global/rest/AlertNotification/all', {
+      const res = await fetch('/api/OpenELIS-Global/rest/alerts', {
         headers: { 'X-CSRF-Token': csrf },
       });
       if (!res.ok) return { status: res.status, count: -1, hasStructure: false };
@@ -442,7 +453,7 @@ test.describe('Suite R-EXT — Alerts Extended (TC-ALERT-EXT)', () => {
       };
     });
 
-    console.log(`TC-ALERT-EXT-02: /AlertNotification/all → ${result.status}, count=${result.count}, structured=${result.hasStructure}`);
+    console.log(`TC-ALERT-EXT-02: /rest/alerts → ${result.status}, count=${result.count}, structured=${result.hasStructure}`);
     expect(result.status).toBe(200);
     if (result.count > 0) {
       expect(result.hasStructure, 'Alert objects must have identifiable fields').toBe(true);
@@ -505,7 +516,7 @@ test.describe('Suite R-EXT — Alerts Extended (TC-ALERT-EXT)', () => {
     }
   });
 
-  test('TC-ALERT-EXT-06: Mark-read action on alerts does not 5xx', async ({ page }) => {
+  test('TC-ALERT-EXT-06: acknowledging an alert is accepted', async ({ page }) => {
     /**
      * Phase 15 confirmed: the MarkRead button is functional.
      * The mark-read API must return a non-5xx response.
@@ -514,18 +525,31 @@ test.describe('Suite R-EXT — Alerts Extended (TC-ALERT-EXT)', () => {
 
     const result = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const candidates = [
-        '/api/OpenELIS-Global/rest/AlertNotification/markRead',
-        '/api/OpenELIS-Global/rest/alerts/markRead',
-      ];
-      for (const url of candidates) {
-        const res = await fetch(url, { method: 'GET', headers: { 'X-CSRF-Token': csrf } });
-        if (res.status !== 404) return { status: res.status, url };
+      // The real mark-read is PUT /rest/alerts/{id}/acknowledge, so it needs an
+      // alert to act on. With none on the instance there is nothing to mark read
+      // and the case says so rather than asserting against a made-up route.
+      const list = await fetch('/api/OpenELIS-Global/rest/alerts', { headers: { 'X-CSRF-Token': csrf } });
+      const alerts = list.ok ? await list.json().catch(() => []) : [];
+      if (!Array.isArray(alerts) || alerts.length === 0) {
+        return { status: list.status, url: '/rest/alerts', empty: true };
       }
-      return { status: 404, url: 'none' };
+      // acknowledge takes a BODY (AcknowledgeAlertRequest {notes}); a bodyless PUT
+      // answers 400, which is the request being wrong rather than the endpoint.
+      const url = `/api/OpenELIS-Global/rest/alerts/${alerts[0].id}/acknowledge`;
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: { 'X-CSRF-Token': csrf, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: 'QA automated acknowledgement' }),
+      });
+      const text = await res.text().catch(() => '');
+      return { status: res.status, url, empty: false, body: text.slice(0, 200) };
     });
 
-    console.log(`TC-ALERT-EXT-06: MarkRead API → ${result.url} HTTP ${result.status}`);
-    expect(result.status, 'MarkRead API must not 5xx').not.toBeGreaterThanOrEqual(500);
+    console.log(`TC-ALERT-EXT-06: acknowledge → ${result.url} HTTP ${result.status} empty=${result.empty}`);
+    if (result.empty) {
+      expect(result.status, 'the alert listing must be served even when empty').toBe(200);
+      return;
+    }
+    expect(result.status, `acknowledge answered ${result.status}: ${result.body ?? ''}`).toBeLessThan(400);
   });
 });
