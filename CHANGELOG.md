@@ -1,6 +1,71 @@
 # Changelog
 
 
+## 2026-09-21 - the silent-save contract; Label Presets write coverage (testing 3.2.2.0)
+
+No label preset on testing could be edited at all (OGC-1227). This suite reported
+**4 passed, 1 skipped** throughout. It missed the defect because its only PERSIST case was
+
+    test.fixme(true, 'Carbon modal form write not reliably automatable;
+                      product Save persists for a real user')
+
+and everything else asserted RENDER or FUNCTION. The write turned out to be perfectly
+drivable. The fixme was not a harness limitation -- it was an unverified claim about the
+product, recorded as a reason to skip the only case that would have caught the bug.
+
+**What the product does (live-captured 2026-09-21, filed as OGC-1227)**
+- `PUT /api/OpenELIS-Global/api/labelPresets/{id}` -> **400 HttpMessageNotReadableException**
+  for the payload the editor actually sends. `LabelPresetEditor.handleSubmit` spreads `form`,
+  whose `fields` came verbatim from the GET, so the body carries `id` / `sourceType` /
+  `lastupdated`; `LabelPresetForm.FieldEntry` declares only `fieldKey` / `isRequired` /
+  `displayOrder`. One unknown key is enough.
+- A **well-formed** PUT -> **500** whenever the preset already has fields. `applyForm()` does
+  `fields.clear()` then re-adds against `@OneToMany(orphanRemoval = true)`. Empty->1 is 200,
+  1->1 is 500. All five System presets ship with one `LAB_NUMBER` field.
+- A PUT that **omits** `fields` -> **200**, and deletes the preset's label content.
+  `LabelPresetForm.fields` defaults to an empty list, so absent and `[]` are the same thing.
+
+**Added -- `helpers/silentSave.ts`**
+The generic contract, adoptable by any suite with a write. A save may only be graded PASS
+when all four hold, because each failed independently above:
+- `assertWriteIssued` -- a mutating request was actually sent (catches the dead Save button,
+  which no DOM assertion can see).
+- `assertWriteSucceeded` -- the status is 2xx, and the server's body is quoted on failure.
+  Assert the status, never the absence of a visible error: OGC-1227's 400 *did* render a
+  banner, inside a scrollable modal body above the fold the user was looking at.
+- `assertUserVisibleOutcome` -- a 2xx shows a confirmation and a non-2xx shows an error. A
+  save that succeeds silently is its own defect; grade it as one.
+- `assertRoundTrip` -- re-read on a **different** surface than the write response, diffing
+  every field plus an `alsoRequireUnchanged` set. A write echoing its own request body proves
+  nothing, and checking only the field you changed misses collateral damage -- Defect 3
+  returned correct dimensions while quietly emptying `fields`.
+
+Also `apiGet` / `apiWrite` (in-page fetch on the browser's own session and CSRF token, returning
+status + body rather than throwing, so a spec can assert a *specific* failure), `captureWrites`,
+and `saveWriteEvidence`, which attaches every write window to the report pass or fail -- a
+passing capture is what the next author reads instead of re-inferring a payload shape (SS6.5b).
+
+**Changed -- `label-presets.spec.ts`**
+- TC-LP-05 un-fixme'd and driven end to end through the real editor (Carbon stepper, then Save),
+  under the full four-part contract.
+- TC-LP-06 the editor's own payload shape must be accepted (Defect 1).
+- TC-LP-07 a second save carrying the same fields is idempotent, not a 500 (Defect 2).
+- TC-LP-08 a partial update omitting `fields` does not delete them (Defect 3, data loss).
+- TC-LP-09 a successful save shows a confirmation (Defect 4 -- the original report was
+  "there is no indication that it worked").
+- TC-LP-10 saving does not rename the preset (Defect 5: the client lower-cases the name on
+  every save, so the first successful edit renames "Order Label" to "order label").
+
+TC-LP-05/06/07/08/10 **fail on 3.2.2.0 by design** -- they are the acceptance test for OGC-1227.
+Destructive cases never touch a System preset: they duplicate into a `QaAuto` scratch preset and
+deactivate it afterwards (deactivate, never hard-delete). TC-LP-05 and TC-LP-10 restore the
+System preset in a `finally`.
+
+**Rule going forward:** a `test.fixme` on a write case may cite a *harness* limitation, never a
+product claim. "It works for a real user" is the hypothesis under test, not a reason to skip it.
+Any existing fixme whose stated reason is product behaviour should be treated as uncovered.
+
+
 ## 2026-09-14 - seed-data payload correction (branch build, 52.88.37.243)
 
 Bulk seed (`--project=seed-data`) 400'd on every order (`HttpMessageNotReadableException`)
