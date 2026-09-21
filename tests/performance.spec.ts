@@ -420,7 +420,7 @@ test.describe('Performance Extended — API Latency & Throughput (TC-PERF-EXT)',
     const result = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
       const start = Date.now();
-      const res = await fetch('/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=26CPHL00008V', {
+      const res = await fetch('/api/OpenELIS-Global/rest/accession-results?accessionNumber=26CPHL00008V', {
         headers: { 'X-CSRF-Token': csrf },
       });
       const elapsed = Date.now() - start;

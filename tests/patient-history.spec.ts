@@ -36,7 +36,7 @@ const KNOWN_ACCESSION = ACCESSION;
  *
  * API endpoints:
  *   GET /rest/patient/history?patientId=<id>
- *   GET /rest/AccessionResults?nationalId=<id>
+ *   GET /rest/accession-results?nationalId=<id>
  *
  * Suite IDs: TC-HIST-01 through TC-HIST-10
  * Total Test Count: 10 TCs
@@ -185,7 +185,7 @@ test.describe('Suite H-DEEP-EXT — Patient History API (TC-HIST-06–10)', () =
       const csrf = localStorage.getItem('CSRF') || '';
       const candidates = [
         `/api/OpenELIS-Global/rest/patient/history?nationalId=${params.patientId}`,
-        `/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=${params.accession}`,
+        `/api/OpenELIS-Global/rest/accession-results?accessionNumber=${params.accession}`,
         `/api/OpenELIS-Global/rest/patientHistory?patientId=${params.patientId}`,
       ];
       for (const url of candidates) {
@@ -237,7 +237,7 @@ test.describe('Suite H-DEEP-EXT — Patient History API (TC-HIST-06–10)', () =
     const [accResult, patResult] = await Promise.all([
       page.evaluate(async (accession: string) => {
         const csrf = localStorage.getItem('CSRF') || '';
-        const res = await fetch(`/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=${accession}`, {
+        const res = await fetch(`/api/OpenELIS-Global/rest/accession-results?accessionNumber=${accession}`, {
           headers: { 'X-CSRF-Token': csrf },
         });
         return { status: res.status, ok: res.ok };

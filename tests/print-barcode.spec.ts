@@ -274,7 +274,7 @@ test.describe('Suite BB-DEEP — Barcode API & Label Content (TC-BARCODE-06–10
 
     const accResult = await page.evaluate(async (acc) => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const res = await fetch(`/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=${acc}`, {
+      const res = await fetch(`/api/OpenELIS-Global/rest/accession-results?accessionNumber=${acc}`, {
         headers: { 'X-CSRF-Token': csrf },
       });
       if (!res.ok) return { status: res.status, labNo: null, hasPatient: false };
@@ -347,7 +347,7 @@ test.describe('Suite BB-EXT — Barcode Extended (TC-BARCODE-EXT)', () => {
     const result = await page.evaluate(async (acc: string) => {
       const csrf = localStorage.getItem('CSRF') || '';
       const t0 = Date.now();
-      const res = await fetch(`/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=${acc}`, {
+      const res = await fetch(`/api/OpenELIS-Global/rest/accession-results?accessionNumber=${acc}`, {
         headers: { 'X-CSRF-Token': csrf },
       });
       return { status: res.status, elapsed: Date.now() - t0 };
@@ -392,7 +392,7 @@ test.describe('Suite BB-EXT — Barcode Extended (TC-BARCODE-EXT)', () => {
     const results = await page.evaluate(async (acc: string) => {
       const csrf = localStorage.getItem('CSRF') || '';
       const calls = Array.from({ length: 5 }, () =>
-        fetch(`/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=${acc}`, {
+        fetch(`/api/OpenELIS-Global/rest/accession-results?accessionNumber=${acc}`, {
           headers: { 'X-CSRF-Token': csrf },
         }).then(r => r.status).catch(() => -1)
       );
@@ -441,7 +441,7 @@ test.describe('Suite BB-EXT — Barcode Extended (TC-BARCODE-EXT)', () => {
 
     const result = await page.evaluate(async (acc: string) => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const res = await fetch(`/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=${acc}`, {
+      const res = await fetch(`/api/OpenELIS-Global/rest/accession-results?accessionNumber=${acc}`, {
         headers: { 'X-CSRF-Token': csrf },
       });
       if (!res.ok) return { status: res.status, hasAccession: false };

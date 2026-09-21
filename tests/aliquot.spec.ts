@@ -401,7 +401,7 @@ test.describe('Suite AP-DEEP — Aliquot Deep Validation (TC-ALQ-09–16)', () =
         fetch('/api/OpenELIS-Global/rest/AliquotOrder', {
           headers: { 'X-CSRF-Token': csrf },
         }).then(r => r.status),
-        fetch('/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=26CPHL00008V', {
+        fetch('/api/OpenELIS-Global/rest/accession-results?accessionNumber=26CPHL00008V', {
           headers: { 'X-CSRF-Token': csrf },
         }).then(r => r.status),
       ]);

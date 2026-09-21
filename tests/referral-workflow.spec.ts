@@ -363,7 +363,7 @@ test.describe('Referral Extended — API & Search (TC-REF-EXT)', () => {
       const csrf = localStorage.getItem('CSRF') || '';
 
       // Check known accession in AccessionResults
-      const accRes = await fetch('/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=26CPHL00008K', {
+      const accRes = await fetch('/api/OpenELIS-Global/rest/accession-results?accessionNumber=26CPHL00008K', {
         headers: { 'X-CSRF-Token': csrf },
       });
 

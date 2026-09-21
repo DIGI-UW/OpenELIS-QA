@@ -456,7 +456,7 @@ test.describe('Order Wizard Extended (TC-ORDER-EXT)', () => {
 
     const result = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const res = await fetch('/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=26CPHL00008V', {
+      const res = await fetch('/api/OpenELIS-Global/rest/accession-results?accessionNumber=26CPHL00008V', {
         headers: { 'X-CSRF-Token': csrf },
       });
       if (!res.ok) return { status: res.status, labNo: null };

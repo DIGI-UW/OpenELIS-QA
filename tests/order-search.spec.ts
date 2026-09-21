@@ -253,7 +253,7 @@ test.describe('Suite J-DEEP — Order Search Extended (TC-OS-06 through TC-OS-08
      */
     const result = await page.evaluate(async (accession: string) => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const res = await fetch(`/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=${accession}`, {
+      const res = await fetch(`/api/OpenELIS-Global/rest/accession-results?accessionNumber=${accession}`, {
         headers: { 'X-CSRF-Token': csrf },
       });
       const text = await res.text();
@@ -286,7 +286,7 @@ test.describe('Suite J-DEEP — Order Search Extended (TC-OS-06 through TC-OS-08
       const csrf = localStorage.getItem('CSRF') || '';
       // Try multiple endpoint patterns for date-range order search
       const endpoints = [
-        `/api/OpenELIS-Global/rest/AccessionResults?startDate=${start}&endDate=${end}`,
+        `/api/OpenELIS-Global/rest/accession-results?startDate=${start}&endDate=${end}`,
         `/api/OpenELIS-Global/rest/OrderSearch?startDate=${start}&endDate=${end}`,
         `/api/OpenELIS-Global/rest/SamplePatientEntry?startDate=${start}&endDate=${end}`,
       ];
@@ -323,7 +323,7 @@ test.describe('Suite J-XMOD — Order Tracing Across Modules', () => {
     // Check AccessionResults for the known order
     const accessionResult = await page.evaluate(async (accession: string) => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const res = await fetch(`/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=${accession}`, {
+      const res = await fetch(`/api/OpenELIS-Global/rest/accession-results?accessionNumber=${accession}`, {
         headers: { 'X-CSRF-Token': csrf },
       });
       if (!res.ok) return { found: false, status: res.status };
@@ -357,7 +357,7 @@ test.describe('Suite J-XMOD — Order Tracing Across Modules', () => {
      */
     const result = await page.evaluate(async (accession: string) => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const res = await fetch(`/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=${accession}`, {
+      const res = await fetch(`/api/OpenELIS-Global/rest/accession-results?accessionNumber=${accession}`, {
         headers: { 'X-CSRF-Token': csrf },
       });
       if (!res.ok) return { status: res.status, labNo: null };
@@ -463,7 +463,7 @@ test.describe('Suite J-EXT — Order Search API & Validation (TC-OS-09–16)', (
 
     const result = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
-      const res = await fetch('/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=26CPHL00008V', {
+      const res = await fetch('/api/OpenELIS-Global/rest/accession-results?accessionNumber=26CPHL00008V', {
         headers: { 'X-CSRF-Token': csrf },
       });
       return { status: res.status, ok: res.ok };
@@ -529,7 +529,7 @@ test.describe('Suite J-EXT — Order Search API & Validation (TC-OS-09–16)', (
       const csrf = localStorage.getItem('CSRF') || '';
       const accessions = ['26CPHL00008V', '26CPHL00008K', '26CPHL00008M'];
       const requests = accessions.map(acc =>
-        fetch(`/api/OpenELIS-Global/rest/AccessionResults?accessionNumber=${acc}`, {
+        fetch(`/api/OpenELIS-Global/rest/accession-results?accessionNumber=${acc}`, {
           headers: { 'X-CSRF-Token': csrf },
         }).then(r => r.status)
       );
