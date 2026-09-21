@@ -988,3 +988,45 @@ export async function selectOrderProgram(page: Page, label = 'Routine Testing'):
   await select.selectOption({ label });
   return true;
 }
+
+/**
+ * Establish an authenticated same-origin context for a test that ONLY calls the
+ * API, without booting the single-page app.
+ *
+ * WHY THIS IS NOT `login(page, ...)`.
+ * With a storageState from the setup project, `login()` already skips the
+ * credential form — but it still navigates to BASE, and BASE is the SPA. That
+ * navigation is not cheap. Measured on testing, 2026-09-21, four consecutive
+ * fresh pages:
+ *     page.goto(BASE)                      48.9s   (domcontentloaded)
+ *     page.goto(BASE + '/favicon.ico')     48.3s, 54.8s
+ *     page.goto(BASE + '/rest/<anything>')  0.7s
+ * The same-origin REST prefix is handled by the Spring dispatcher and returns
+ * immediately; everything else falls through to the SPA, which loads ~450
+ * modules before DOMContentLoaded. (The server is not the problem: curl fetches
+ * favicon.ico in 1.0s. It is the browser booting the app.)
+ *
+ * api-crud-survey.spec.ts pays that toll in a beforeEach for every one of its
+ * ~28 cases — roughly twenty minutes of a run spent loading an app that none of
+ * those cases looks at — and it is why a slow afternoon turns into a cascade of
+ * "Test timeout exceeded while running beforeEach" rather than one slow test.
+ *
+ * A navigation is still required: helpers and specs read the CSRF token out of
+ * localStorage, and Playwright only applies the stored origin state once the
+ * page is ON that origin (reference 6.6 — skipping the navigation entirely
+ * traded login failures for SecurityError on localStorage). This navigates to
+ * the cheapest stable 200 on the REST prefix instead of to the app.
+ *
+ * Verified after this navigation: localStorage.CSRF is present (96 chars) and
+ * an authenticated fetch to /rest/test-list returns 200 with all 164 tests.
+ *
+ * Use it ONLY for API-only tests. Anything that touches the UI needs the app,
+ * and must keep using login().
+ */
+export async function apiSession(page: Page): Promise<void> {
+  // math-functions is a static enum list (528 bytes, no data dependency), so it
+  // stays cheap and present on an instance with no clinical data at all.
+  await page.goto(`${BASE}/api/OpenELIS-Global/rest/math-functions`, {
+    waitUntil: 'domcontentloaded',
+  });
+}

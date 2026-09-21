@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, login } from '../helpers/test-helpers';
+import { apiSession } from '../helpers/test-helpers';
 
 /**
  * Deep Endpoint Testing Suite — Phase 31
@@ -43,7 +43,10 @@ const API_BASE = '/api/OpenELIS-Global';
 
 test.describe('Deep GET Endpoint Structure (Phase 31)', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, ADMIN.user, ADMIN.pass);
+    // API-only file: no page.goto, no locator, no getByRole anywhere in it.
+    // apiSession() gives it an authenticated origin without booting the SPA,
+    // which login() would do at a measured ~49s per test.
+    await apiSession(page);
   });
 
   test('TC-DEEP-01: TestSectionCreate returns active and inactive sections', async ({ page }) => {
@@ -317,7 +320,10 @@ test.describe('Deep GET Endpoint Structure (Phase 31)', () => {
 
 test.describe('Parameterized GET Tests (Phase 31)', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, ADMIN.user, ADMIN.pass);
+    // API-only file: no page.goto, no locator, no getByRole anywhere in it.
+    // apiSession() gives it an authenticated origin without booting the SPA,
+    // which login() would do at a measured ~49s per test.
+    await apiSession(page);
   });
 
   test('TC-DEEP-12: WorkPlanByTest accepts ?type=Hematology parameter', async ({ page }) => {
@@ -380,7 +386,10 @@ test.describe('Parameterized GET Tests (Phase 31)', () => {
 
 test.describe('POST Operation Probing (Phase 31)', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, ADMIN.user, ADMIN.pass);
+    // API-only file: no page.goto, no locator, no getByRole anywhere in it.
+    // apiSession() gives it an authenticated origin without booting the SPA,
+    // which login() would do at a measured ~49s per test.
+    await apiSession(page);
   });
 
   test('TC-DEEP-16: TestSectionCreate POST returns 400 (needs proper form bean)', async ({ page }) => {
@@ -454,7 +463,10 @@ test.describe('POST Operation Probing (Phase 31)', () => {
 
 test.describe('Config Endpoint Validation (Phase 31)', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, ADMIN.user, ADMIN.pass);
+    // API-only file: no page.goto, no locator, no getByRole anywhere in it.
+    // apiSession() gives it an authenticated origin without booting the SPA,
+    // which login() would do at a measured ~49s per test.
+    await apiSession(page);
   });
 
   test('TC-DEEP-20: SampleEntryConfig returns siteInfoDomain form', async ({ page }) => {
@@ -506,7 +518,10 @@ test.describe('Config Endpoint Validation (Phase 31)', () => {
 
 test.describe('Admin Form Structure Validation (Phase 31)', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, ADMIN.user, ADMIN.pass);
+    // API-only file: no page.goto, no locator, no getByRole anywhere in it.
+    // apiSession() gives it an authenticated origin without booting the SPA,
+    // which login() would do at a measured ~49s per test.
+    await apiSession(page);
   });
 
   test('TC-DEEP-23: TestAdd form has complete metadata for test creation', async ({ page }) => {
