@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, QA_PREFIX, login } from '../helpers/test-helpers';
+import { apiSession } from '../helpers/test-helpers';
 
 /**
  * API CRUD Survey Test Suite — Phase 29
@@ -33,7 +33,10 @@ const API_BASE = '/api/OpenELIS-Global';
 
 test.describe('API CRUD Survey — GET Endpoints (Phase 29)', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, ADMIN.user, ADMIN.pass);
+    // Every case in this file is an API call. apiSession() gives it an
+    // authenticated origin without booting the SPA, which login() would do at a
+    // measured ~49s per test. See the helper for the numbers.
+    await apiSession(page);
   });
 
   test('TC-API-01: GET /rest/test-list returns test catalog', async ({ page }) => {
@@ -312,7 +315,10 @@ test.describe('API CRUD Survey — GET Endpoints (Phase 29)', () => {
 
 test.describe('API CRUD Survey — POST Endpoints (Phase 29)', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, ADMIN.user, ADMIN.pass);
+    // Every case in this file is an API call. apiSession() gives it an
+    // authenticated origin without booting the SPA, which login() would do at a
+    // measured ~49s per test. See the helper for the numbers.
+    await apiSession(page);
   });
 
   test('TC-WRITE-01: POST /rest/UnifiedSystemUser returns 400 (BUG-3 IMPROVED)', async ({ page }) => {
@@ -374,7 +380,10 @@ test.describe('API CRUD Survey — POST Endpoints (Phase 29)', () => {
 
 test.describe('API CRUD Survey — Cross-Module Data Consistency (Phase 29)', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, ADMIN.user, ADMIN.pass);
+    // Every case in this file is an API call. apiSession() gives it an
+    // authenticated origin without booting the SPA, which login() would do at a
+    // measured ~49s per test. See the helper for the numbers.
+    await apiSession(page);
   });
 
   test('TC-XMOD-01: Test catalog count matches between TestAdd and test-list endpoints', async ({ page }) => {
@@ -477,7 +486,10 @@ test.describe('API CRUD Survey — Cross-Module Data Consistency (Phase 29)', ()
 
 test.describe('BUG-31 Workaround — Logbook Results Survey (Phase 29)', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, ADMIN.user, ADMIN.pass);
+    // Every case in this file is an API call. apiSession() gives it an
+    // authenticated origin without booting the SPA, which login() would do at a
+    // measured ~49s per test. See the helper for the numbers.
+    await apiSession(page);
   });
 
   test('TC-BUG31-WK-01: All 13 logbook sections accessible via API', async ({ page }) => {
