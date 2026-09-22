@@ -99,12 +99,47 @@ const MODULE_MATCH = new RegExp(`(^|/)tests/(?!(?:${EXCLUDED})\\.spec\\.ts$)[^/]
 
 export default defineConfig({
   testDir: '.',
-  // 30s, not 90s. Casey's rule, 2026-09-05: "if it's longer than 30 seconds,
-  // it's a defect anyway". This is a policy, not a tuning knob — a click that
-  // has not landed in 30s is a finding, and waiting another minute to confirm
-  // it buys nothing. The first sweep spent most of its wall clock here: shard 6
-  // alone had 50 click timeouts at 90s each, ~75 minutes of pure waiting.
-  timeout: Number(process.env.PW_TIMEOUT ?? 30_000),
+  // TWO BUDGETS, TWO DIFFERENT QUESTIONS. Casey's rule, 2026-09-05: "if it's
+  // longer than 30 seconds, it's a defect anyway" — and, 2026-09-22: "30 seconds
+  // to respond to a click seems like a defect, but not to complete a TC".
+  //
+  // The rule is about A CLICK, and `expect.timeout` below is where it lives: a
+  // wait that has not resolved in 15s fails, tighter than the rule demands. That
+  // is what stops a stuck suite burning wall clock — shard 6 of the first sweep
+  // had 50 click timeouts at 90s each, ~75 minutes of pure waiting, and nothing
+  // here reintroduces that.
+  //
+  // `timeout` is a different question: how long a whole TEST CASE may take. It
+  // was set to 30s as well, which applied the click rule to a case that
+  // legitimately does several navigations plus a save. Measured on testing
+  // 2026-09-22, ONE Edit Order page load took 28.3s, 32.4s and 50.6s on three
+  // consecutive runs — so the case budget was shorter than a single page load,
+  // and a UI test could not distinguish "the product is broken" from "the page
+  // had not finished rendering". In the 2026-09-22 nightly, 81 of 281 failures
+  // (29%) were this timeout, and each failed canary cascade-skipped the cases
+  // behind it, so the suite reported nothing about those paths at all.
+  //
+  // THE COST, stated because it is real: a failure that used to give up at 30s
+  // may now take up to 120s. On the measured sample, roughly two in five ran to
+  // the ceiling, so expect the nightly to get longer, not shorter. What it buys
+  // is the diagnosis — TC-CAT-02 reported "timeout" at 30s and "the API returns
+  // 500" at 120s. The same test, one number, from noise to a finding.
+  //
+  // WHERE THE CLICK RULE ACTUALLY LIVES: `use.actionTimeout` below, NOT here and
+  // NOT in expect.timeout. This caught me out — `expect.timeout` governs
+  // assertions only, and page.click()/locator.click() are ACTIONS, so with
+  // actionTimeout unset they inherit the whole case budget. Raising `timeout`
+  // alone would therefore have made a stuck click wait 120s instead of 30s —
+  // exactly the "75 minutes of pure waiting" this config was written to prevent.
+  // Verified on testing 2026-09-22: 12 of 29 system-misc failures were
+  // `page.click: Test timeout exceeded`, i.e. clicks that never land, which is a
+  // finding under Casey's rule and must keep failing fast.
+  //
+  // THE REAL FIX IS NOT HERE. A 48s SPA boot is itself a defect by the rule at
+  // the top of this comment. This budget stops the harness lying about it; it
+  // does not make the product fast. Where a suite does not need the SPA at all,
+  // apiSession() is better than any of these numbers (api-crud: 20m -> 3.3m).
+  timeout: Number(process.env.PW_TIMEOUT ?? 120_000),
   expect: { timeout: 15_000 },
   fullyParallel: false,
   workers: Number(process.env.PW_WORKERS ?? 1),
@@ -118,6 +153,14 @@ export default defineConfig({
     ...devices['Desktop Chrome'],
     baseURL: BASE,
     headless: true,
+    // Casey's click rule, enforced where it bites: a click that has not landed
+    // in 30s is a finding, and waiting longer buys nothing. This is what keeps
+    // the raised case budget above from turning a stuck click into a 120s wait.
+    actionTimeout: 30_000,
+    // A page load is NOT a click. Measured on testing 2026-09-22, one Edit Order
+    // load took 28.3s / 32.4s / 50.6s, so navigation gets its own, larger budget
+    // — bounded, so a hung navigation cannot eat the whole case.
+    navigationTimeout: 90_000,
     ignoreHTTPSErrors: true,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
