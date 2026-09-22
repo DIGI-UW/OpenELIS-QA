@@ -35,7 +35,17 @@ export default defineConfig({
   reporter: [['line'], ['html', { open: 'never' }]],
   use: { ...devices['Desktop Chrome'], baseURL: BASE, headless: true, ignoreHTTPSErrors: true },
   projects: [
-    { name: 'setup', testMatch: /auth\.setup\.ts/ },
+    // ANCHORED. `/auth\.setup\.ts/` is unanchored and therefore also matches
+    // `analyzer-auth.setup.ts`, which authenticates against a DIFFERENT instance
+    // (analyzers.openelis-global.org) with its own credentials. Every run of this
+    // config then waited on that instance before touching its own target, and
+    // when the analyzers box is unreachable the whole suite stalls in setup with
+    // nothing to show for it — observed 2026-09-22, twice, at 180s.
+    {
+      name: 'setup',
+      testMatch: /(^|\/)auth\.setup\.ts$/,
+      timeout: Number(process.env.PW_SETUP_TIMEOUT ?? 120_000),
+    },
     {
       name: 'qa-surfaces',
       testMatch: /tests\/qa\/qa-surfaces\.spec\.ts/,
