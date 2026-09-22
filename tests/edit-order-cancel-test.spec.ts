@@ -161,15 +161,15 @@ async function openSampleStep(page: Page, acc: string): Promise<void> {
 
 test.describe.configure({ mode: 'serial' });
 
-// TIMEOUT, measured 2026-09-22. Every case here opens Edit Order, and the SPA boot on
-// testing costs ~30-50s before the page's heading exists. modules.config.ts sets a 30s
-// per-test budget, which is a deliberate policy for API-shaped checks but is shorter than
-// one page load here: on 2026-09-22 the EO-CANCEL-01 canary timed out at 30s and
-// cascade-skipped all five remaining cases, reporting nothing about the product. Re-run at
-// 180s, the same canary passed in 28.3s. So the file raises its own budget rather than
-// leaving a suite that cannot answer the question it exists to answer.
+// TIMEOUT, measured here on 2026-09-22 and since fixed in modules.config.ts.
+// Every case in this file opens Edit Order, and the SPA boot on testing costs 28.3s,
+// 32.4s and 50.6s across three consecutive runs — longer than the 30s per-CASE budget
+// the config used to set. The EO-CANCEL-01 canary timed out and cascade-skipped all five
+// remaining cases, so the suite reported nothing about the product at all. That evidence
+// is what moved the config's case budget to 120s (the click budget stays at expect: 15s),
+// so this file no longer needs an override of its own — but the measurement is kept here
+// because this is where it was taken.
 test.describe('Edit Order — cancelling a placed test', () => {
-  test.beforeEach(() => test.setTimeout(120_000));
   // Seeded HERE rather than in a beforeAll hook, and both halves of that matter: a page
   // from `browser.newPage()` carries no storage state (so every seeding call would be
   // unauthenticated) and starts on about:blank, where reading `localStorage` for the CSRF
@@ -272,7 +272,6 @@ test.describe('Edit Order — cancelling a placed test', () => {
 });
 
 test.describe('Edit Order — removing a whole sample', () => {
-  test.beforeEach(() => test.setTimeout(120_000));
   test('EO-REMOVE-01 [canary]: a two-test sample lists both tests and offers Remove Sample on the sample row', async ({
     page,
   }) => {

@@ -29,7 +29,12 @@ import { BASE } from './helpers/base-url';
 export default defineConfig({
   testDir: '.',
   testMatch: /(^|\/)tests\/ogc803-804-referral-accept-reject\.spec\.ts$/,
-  timeout: Number(process.env.PW_TIMEOUT ?? 30_000),
+  // Same split as modules.config.ts (see the long note there): `expect` is the
+  // click budget and keeps Casey's 30s rule, tighter at 15s; `timeout` is the
+  // whole-case budget, which at 30s was shorter than one Edit Order page load
+  // (28.3s / 32.4s / 50.6s measured on testing 2026-09-22). This file collects a
+  // UI spec, so it had the same defect.
+  timeout: Number(process.env.PW_TIMEOUT ?? 120_000),
   expect: { timeout: 15_000 },
   fullyParallel: false,
   workers: 1,
