@@ -18,7 +18,17 @@ export default defineConfig({
   fullyParallel: false,
   use: { ...devices['Desktop Chrome'], baseURL: BASE, headless: true, ignoreHTTPSErrors: true },
   projects: [
-    { name: 'setup', testMatch: /auth\.setup\.ts/ },
+    // ANCHORED. Unanchored, this also matches `analyzer-auth.setup.ts`, which
+    // authenticates against a DIFFERENT instance (analyzers.openelis-global.org)
+    // with its own credentials — so every run waited on that box before touching
+    // its own target, and stalled in setup for 180s when it was unreachable
+    // (observed 2026-09-22). all-tc.config.ts already excludes that file from its
+    // own project list for the same reason; the setup project had not caught up.
+    {
+      name: 'setup',
+      testMatch: /(^|\/)auth\.setup\.ts$/,
+      timeout: Number(process.env.PW_SETUP_TIMEOUT ?? 120_000),
+    },
     {
       name: 'test-catalog',
       testMatch: /(test-catalog-.*|results-.*)\.spec\.ts/,
