@@ -14223,6 +14223,24 @@ repository created a panel, which is where the panel's DOMAIN is decided.
 - **Flip condition**: a FAILURE means the endpoint started reporting the failure — assert the error instead.
 - **Result**: see run log
 
+### Part G — New-Test Lifecycle (2 TCs, added 2026-09-22)
+
+Written after settling OGC-1116 and the OGC-1119 FR-20/21 case by hand. Both took a
+live instance and a sequence of calls; neither had coverage. Both cases create their
+own test and leave it INACTIVE, so no orderable QA row is left in Add Order.
+
+### TC-DEEP-32: a new test reaches /rest/test-list only after it is complete and activated
+- **Steps**: 1) POST a new test 2) set full-coverage ranges 3) read completeness and try to activate 4) try to activate via basic-info 5) add a primary result component 6) activate 7) re-read /rest/test-list 8) deactivate and re-read
+- **Expected**: a fresh test is absent from the list; completeness reports `NO_PRIMARY_RESULT_TYPE` and activate is refused 422; `PUT basic-info {active:true}` is refused 409 `{"conflict":"activation"}` (deliberate - it is not an activation back door); after a primary component, activate returns 200 with `active` and `orderable` both true and the test appears in /rest/test-list, which Add Order reads; deactivation via basic-info returns 200 and removes it again.
+- **Answers**: OGC-1116, and re-confirms OGC-1115's deactivate path.
+- **Result**: PASS 2026-09-22 against testing.
+
+### TC-DEEP-33: narrowing an open-ended reference range reports the uncovered tail
+- **Steps**: 1) PUT one male range 0..unbounded 2) PUT the same range narrowed to 15..30
+- **Expected**: the open-ended range reports `COMPLETE` with no gaps; the narrowed one reports `GAP` with exactly `[[0,15],[30,"Infinity"]]`. The unbounded tail is the half a naive implementation misses.
+- **Answers**: OGC-1119 FR-20/21.
+- **Result**: PASS 2026-09-22 against testing.
+
 ### TC-DEEP-30: FLIP-WHEN-FIXED — the domain guard refuses with an empty body
 - **Steps**: 1) create a CLINICAL panel and add one clinical test 2) PUT /panels/{id}/basic-info {domain:'ENVIRONMENTAL'} 3) re-read
 - **Expected (current, defective)**: 422 with a zero-length body, stored domain unchanged. The guard is correct per the OGC-224 FRS; the empty body is why the editor can only show a generic save error, or nothing at all.
