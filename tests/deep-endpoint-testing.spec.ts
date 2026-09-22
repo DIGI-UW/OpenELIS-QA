@@ -761,14 +761,33 @@ test.describe('Admin Form Structure Validation (Phase 31)', () => {
 //     domain, active} — PanelBasicInfoSection.jsx:91-108. The POST in that pair
 //     sends NO domain, so the PUT is the only thing that carries the operator's
 //     choice, and TC-DEEP-28 is what proves the pair works.
-//   * The LEGACY screen cannot express a domain at all. PanelCreateForm has no
-//     domain field, and PanelCreateRestController.createPanel() (line 190)
-//     never calls setDomain. Every panel created there is CLINICAL. TC-DEEP-29
-//     pins that, so it fails the day it is fixed.
-//   * The domain guard refuses to move a panel away from its member tests
-//     (TestCatalogEditorRestController:2143-2148) and answers 422 with an EMPTY
-//     BODY. TC-DEEP-30 pins the empty body, because that is why the editor can
-//     only say "error.panel.save": the server hands it nothing to say.
+//   * The LEGACY screen COULD NOT express a domain at all, and reported a
+//     success it had not achieved: PanelCreateForm had no domain field,
+//     createPanel() never called setDomain, and a failed insert was swallowed
+//     at DEBUG under a 200 that echoed the submitted name back. That is the
+//     four-defect report filed as OGC-1232.
+//   * The domain guard refused to move a panel away from its member tests
+//     (TestCatalogEditorRestController:2143-2148) with a BODYLESS 422, which is
+//     why the editor could only say "error.panel.save": the server handed it
+//     nothing to say.
+//
+// OGC-1232 (PR #4384) replaced both. The contract these three cases now hold,
+// read off the PR diff rather than its prose:
+//   * POST /rest/PanelCreate takes an optional `domain` in any case, files the
+//     panel under it, defaults to CLINICAL when it is absent, and answers with
+//     the OUTCOME instead of the form — 400 with the field errors, 409
+//     {"error":"duplicate"} on a name clash, 500 on any other insert failure,
+//     200 with `createdPanelId` when the panel exists. TC-DEEP-29 and
+//     TC-DEEP-31 hold that.
+//   * PUT .../panels/{id}/basic-info answers a refusal with a 422 whose body
+//     carries `refusal` — one of name.required, name.tooLong,
+//     description.tooLong, domain.unknown, domain.conflict,
+//     activation.needsTest — and, for domain.conflict, a `domainConflict`
+//     naming the requested domain, the panel, and every member test in the way
+//     as {testId, name, domain}. Nothing is written by a refused save, not even
+//     a rename that travelled with it. TC-DEEP-30 holds that, both halves.
+//   * Names are capped at 20 characters and descriptions at 60, so the panels
+//     seeded here stay short on purpose.
 //
 // These create rows. Casey, 2026-09-22 and standing: "These will always be test
 // instances" — seed freely; the rows are named QA-PNL* so they are findable.
@@ -883,7 +902,7 @@ test.describe('Panel creation write path (2026-09-22)', () => {
     expect(result.readDomain, 'a fresh read must show the chosen domain').toBe('ENVIRONMENTAL');
   });
 
-  test('TC-DEEP-29: FLIP-WHEN-FIXED — legacy /rest/PanelCreate is CLINICAL-only', async ({ page }) => {
+  test('TC-DEEP-29: legacy /rest/PanelCreate files a panel under the requested domain', async ({ page }) => {
     const result = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
       const H = { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf };
@@ -894,92 +913,71 @@ test.describe('Panel creation write path (2026-09-22)', () => {
       const sampleTypeId = types.length ? String(types[0]?.id ?? '') : '';
       const stamp = String(Date.now()).slice(-6);
 
-      // (a) Ask for a domain. PanelCreateForm has no such property, so Jackson
-      // refuses the whole request — 400, HttpMessageNotReadableException. The
-      // domain is not merely ignored here: it cannot be expressed at all.
-      const withDomain = await fetch(`${B}/PanelCreate`, {
-        method: 'POST', headers: H,
-        body: JSON.stringify({
-          panelEnglishName: `QA-PNLD-${stamp}`, panelFrenchName: `QA-PNLD-${stamp}`,
-          sampleTypeId, panelLoinc: '99999-9', domain: 'ENVIRONMENTAL',
-        }),
-      });
+      const create = (name: string, loinc: string, domain?: string) =>
+        fetch(`${B}/PanelCreate`, {
+          method: 'POST', headers: H,
+          body: JSON.stringify({
+            panelEnglishName: name, panelFrenchName: name, sampleTypeId,
+            panelLoinc: loinc, ...(domain ? { domain } : {}),
+          }),
+        });
+      const storedDomain = async (name: string) => {
+        const panels = await (await fetch(
+          `${B}/test-catalog/panels?includeInactive=true`, { headers: H },
+        )).json();
+        const mine = Array.isArray(panels)
+          ? panels.find((p: { name?: string }) => p?.name === name) : null;
+        return mine ? (mine.domain ?? null) : undefined;
+      };
 
-      // (b) The same create the legacy screen really sends. A LOINC is required
-      // in practice (see TC-DEEP-31), so one is supplied.
-      const name = `QA-PNLL-${stamp}`;
-      const ok = await fetch(`${B}/PanelCreate`, {
-        method: 'POST', headers: H,
-        body: JSON.stringify({
-          panelEnglishName: name, panelFrenchName: name,
-          sampleTypeId, panelLoinc: '99999-9',
-        }),
-      });
-      const panels = await (await fetch(
-        `${B}/test-catalog/panels?includeInactive=true`, { headers: H },
-      )).json();
-      const mine = Array.isArray(panels) ? panels.find((p: { name?: string }) => p?.name === name) : null;
+      // (a) the domain the operator chose, lower-cased on purpose: the form
+      // takes it in any case (PanelCreateForm.domain -> Domain.fromRaw).
+      const envName = `QA-PNLE9-${stamp}`;
+      const env = await create(envName, '99997-1', 'environmental');
+      const envBody = await env.json().catch(() => null);
+
+      // (b) no domain at all, which is what the screen sent before OGC-1232.
+      const plainName = `QA-PNLL9-${stamp}`;
+      const plain = await create(plainName, '99997-2');
+
+      // (c) a domain that is not one of the three.
+      const bogusName = `QA-PNLX9-${stamp}`;
+      const bogus = await create(bogusName, '99997-3', 'MARINE');
+      const bogusBody = await bogus.text();
+
       return {
         sampleTypeId,
-        withDomainStatus: withDomain.status,
-        okStatus: ok.status,
-        found: !!mine,
-        domain: mine?.domain ?? null,
+        envStatus: env.status,
+        envCreatedId: envBody?.createdPanelId ?? null,
+        envDomain: await storedDomain(envName),
+        plainStatus: plain.status,
+        plainDomain: await storedDomain(plainName),
+        bogusStatus: bogus.status,
+        bogusBodyLength: bogusBody.trim().length,
+        bogusDomain: await storedDomain(bogusName),
       };
     });
 
     expect(result.sampleTypeId, 'the legacy create needs an active sample type').toBeTruthy();
-    // The form cannot carry a domain — a request that names one is rejected
-    // outright rather than honoured or quietly dropped.
-    expect(result.withDomainStatus,
-      'PanelCreateForm has no domain property, so a domain makes the body unreadable').toBe(400);
-    expect(result.okStatus, 'the legacy create must be accepted').toBe(200);
-    expect(result.found, 'the legacy create must actually persist a panel').toBe(true);
-    // THE DEFECT, asserted as it stands: createPanel() never calls setDomain, so
-    // the panel lands on CLINICAL and no request can say otherwise. When the
-    // legacy screen learns about domains this flips to a FAILURE, which is the
-    // signal to rewrite this case to assert the requested domain.
-    expect(result.domain,
-      'DEFECT: legacy PanelCreate can only store CLINICAL').toBe('CLINICAL');
+    // OGC-1232: PanelCreateForm gained `domain`, and createPanel() now calls
+    // setDomain. The screen Casey could not get past CLINICAL can express the
+    // other two domains, and the answer carries the id of what it made.
+    expect(result.envStatus, 'a domain-bearing legacy create must be accepted').toBe(200);
+    expect(result.envCreatedId, 'a 200 must name the panel it created').toBeTruthy();
+    expect(result.envDomain, 'the panel must be filed under the domain the form named').toBe('ENVIRONMENTAL');
+    // The old default is preserved, deliberately: a form that names no domain
+    // still makes a clinical panel, so the screen's existing users see no change.
+    expect(result.plainStatus, 'a domainless legacy create must still be accepted').toBe(200);
+    expect(result.plainDomain, 'a create that names no domain still defaults to CLINICAL').toBe('CLINICAL');
+    // An unknown domain is refused outright rather than normalised to CLINICAL,
+    // which is how the pre-fix code lost the operator's choice.
+    expect(result.bogusStatus, 'a domain outside the enum must be refused').toBe(400);
+    expect(result.bogusBodyLength,
+      'the 400 must carry the field errors, so the screen can name the bad field').toBeGreaterThan(0);
+    expect(result.bogusDomain, 'a refused create must write nothing').toBeUndefined();
   });
 
-  test('TC-DEEP-31: FLIP-WHEN-FIXED — legacy /rest/PanelCreate answers 200 and creates nothing without a LOINC', async ({ page }) => {
-    const result = await page.evaluate(async () => {
-      const csrf = localStorage.getItem('CSRF') || '';
-      const H = { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf };
-      const B = '/api/OpenELIS-Global/rest';
-      const form = await (await fetch(`${B}/PanelCreate`, { headers: H })).json();
-      const types: Array<{ id?: unknown }> = Array.isArray(form?.existingSampleTypeList)
-        ? form.existingSampleTypeList : [];
-      const sampleTypeId = types.length ? String(types[0]?.id ?? '') : '';
-      const name = `QA-PNLN-${String(Date.now()).slice(-6)}`;
-      const post = await fetch(`${B}/PanelCreate`, {
-        method: 'POST', headers: H,
-        body: JSON.stringify({
-          panelEnglishName: name, panelFrenchName: name, sampleTypeId, panelLoinc: '',
-        }),
-      });
-      const body = await post.text();
-      const panels = await (await fetch(
-        `${B}/test-catalog/panels?includeInactive=true`, { headers: H },
-      )).json();
-      const found = Array.isArray(panels) && panels.some((p: { name?: string }) => p?.name === name);
-      return { sampleTypeId, status: post.status, echoedName: body.includes(name), found };
-    });
-
-    expect(result.sampleTypeId, 'the legacy create needs an active sample type').toBeTruthy();
-    // THE DEFECT: postPanelCreate() swallows the insert failure —
-    // `catch (LIMSRuntimeException e) { LogEvent.logDebug(e); }`
-    // (PanelCreateRestController:145) — then returns the form with HTTP 200 and
-    // the submitted name echoed back. Nothing was written. The screen has no way
-    // to tell an operator that their panel does not exist.
-    expect(result.status, 'the endpoint answers 200 even when the insert fails').toBe(200);
-    expect(result.echoedName, 'and echoes the name back, which reads as success').toBe(true);
-    expect(result.found,
-      'DEFECT: no panel was created, and the 200 said otherwise').toBe(false);
-  });
-
-  test('TC-DEEP-30: FLIP-WHEN-FIXED — the domain guard refuses with an empty body', async ({ page }) => {
+  test('TC-DEEP-30: the domain guard names the member tests standing in the way', async ({ page }) => {
     const result = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
       const H = { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf };
@@ -987,8 +985,12 @@ test.describe('Panel creation write path (2026-09-22)', () => {
       // Seed a panel that HAS a clinical member test, so the guard has something
       // to refuse. Nothing here depends on the instance's existing panels.
       const tests = await (await fetch(`${B}/tests?domain=CLINICAL&pageSize=1`, { headers: H })).json();
-      const testId = tests?.rows?.[0]?.testId ?? null;
+      const member = tests?.rows?.[0] ?? null;
+      const testId = member?.testId ?? null;
+      // Both names stay inside PANEL_NAME_MAX_LENGTH (20), so the refusal under
+      // test is the domain guard and not name.tooLong.
       const name = `QA-PNLG-${String(Date.now()).slice(-6)}`;
+      const renamed = `QA-PNLR-${String(Date.now()).slice(-6)}`;
       const created = await (await fetch(`${B}/panels`, {
         method: 'POST', headers: H, body: JSON.stringify({ name, active: false, domain: 'CLINICAL' }),
       })).json().catch(() => null);
@@ -999,20 +1001,34 @@ test.describe('Panel creation write path (2026-09-22)', () => {
             body: JSON.stringify({ tests: [{ testId, position: 1 }] }),
           })
         : null;
+      // The move carries a RENAME as well as the domain, because the rename is
+      // what used to reach the display localization before the guard refused.
       const move = id
         ? await fetch(`${B}/panels/${id}/basic-info`, {
-            method: 'PUT', headers: H, body: JSON.stringify({ domain: 'ENVIRONMENTAL' }),
+            method: 'PUT', headers: H,
+            body: JSON.stringify({ name: renamed, description: '', domain: 'ENVIRONMENTAL', active: false }),
           })
         : null;
-      const moveBody = move ? await move.text() : null;
+      const moveBody = move ? await move.json().catch(() => null) : null;
       const read = id ? await (await fetch(`${B}/panels/${id}`, { headers: H })).json().catch(() => null) : null;
+      const offenders: Array<{ testId?: unknown; name?: unknown; domain?: unknown }> =
+        Array.isArray(moveBody?.domainConflict?.tests) ? moveBody.domainConflict.tests : [];
       return {
-        testId,
+        testId: testId === null ? null : String(testId),
+        memberName: member?.name ?? null,
         id,
+        name,
         addStatus: addTests?.status ?? 0,
         moveStatus: move?.status ?? 0,
-        moveBodyLength: moveBody === null ? -1 : moveBody.trim().length,
+        refusal: moveBody?.refusal ?? null,
+        conflictDomain: moveBody?.domainConflict?.domain ?? null,
+        conflictPanelId: moveBody?.domainConflict?.panelId == null
+          ? null : String(moveBody.domainConflict.panelId),
+        offenderIds: offenders.map((t) => String(t.testId)),
+        offendersNamed: offenders.every((t) => typeof t.name === 'string' && t.name.length > 0),
+        offenderDomains: offenders.map((t) => t.domain),
         readDomain: read?.domain ?? null,
+        readName: read?.name ?? null,
         readTestCount: read?.testCount ?? null,
       };
     });
@@ -1021,17 +1037,96 @@ test.describe('Panel creation write path (2026-09-22)', () => {
     expect(result.id, 'the guard probe needs its own panel').toBeTruthy();
     expect(result.addStatus, 'a clinical test must be accepted into a clinical panel').toBe(200);
     expect(result.readTestCount, 'the seeded panel must really have a member').toBe(1);
-    // The guard itself is correct per the OGC-224 FRS: a panel never mixes
-    // domains. What is wrong is HOW it refuses.
+    // The guard itself is unchanged and correct per the OGC-224 FRS: a panel
+    // never mixes domains. OGC-1232 changed HOW it refuses.
     expect(result.moveStatus, 'moving a panel away from its member tests must be refused').toBe(422);
-    // THE DEFECT: the refusal carries no body, so the editor has no reason to
-    // show and falls back to a generic "error.panel.save" — or, as observed in
-    // Chrome on testing 2026-09-22, shows nothing at all while leaving the radio
-    // on the domain that was NOT saved. A body here flips this to a FAILURE,
-    // which is the signal that the server started explaining itself.
-    expect(result.moveBodyLength,
-      'DEFECT: the 422 is empty — the UI has nothing to tell the operator').toBe(0);
+    expect(result.refusal, 'the refusal must name the rule that refused it').toBe('domain.conflict');
+    expect(result.conflictDomain, 'the conflict must name the domain that was asked for').toBe('ENVIRONMENTAL');
+    expect(result.conflictPanelId, 'the conflict must name the panel it is about').toBe(String(result.id));
+    // The whole point of the change: the operator is told WHICH tests block the
+    // move, by id and by name, so the fix is actionable without guesswork.
+    expect(result.offenderIds, 'the conflict must name the member test in the way')
+      .toContain(String(result.testId));
+    expect(result.offendersNamed, 'each named test must carry a human-readable name').toBe(true);
+    expect(result.offenderDomains,
+      'each named test must say which domain it belongs to').toContain('CLINICAL');
+    // No partial write: the rename travelled with the refused move and must not
+    // have landed. This is the half the first report missed.
     expect(result.readDomain, 'the refused move must leave the stored domain alone').toBe('CLINICAL');
+    expect(result.readName, 'a refused save must not rename the panel either').toBe(result.name);
+  });
+
+  test('TC-DEEP-31: legacy /rest/PanelCreate reports a refused create instead of answering 200', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const H = { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf };
+      const B = '/api/OpenELIS-Global/rest';
+      const form = await (await fetch(`${B}/PanelCreate`, { headers: H })).json();
+      const types: Array<{ id?: unknown }> = Array.isArray(form?.existingSampleTypeList)
+        ? form.existingSampleTypeList : [];
+      const sampleTypeId = types.length ? String(types[0]?.id ?? '') : '';
+      const stamp = String(Date.now()).slice(-6);
+
+      const create = (name: string, loinc: string) =>
+        fetch(`${B}/PanelCreate`, {
+          method: 'POST', headers: H,
+          body: JSON.stringify({
+            panelEnglishName: name, panelFrenchName: name, sampleTypeId, panelLoinc: loinc,
+          }),
+        });
+      const countNamed = async (name: string) => {
+        const panels = await (await fetch(
+          `${B}/test-catalog/panels?includeInactive=true`, { headers: H },
+        )).json();
+        return Array.isArray(panels)
+          ? panels.filter((p: { name?: string }) => p?.name === name).length : -1;
+      };
+
+      // (a) blank LOINC — @NotBlank on PanelCreateForm.panelLoinc. The insert
+      // never runs; before OGC-1232 this answered 200 with the name echoed.
+      const blankName = `QA-PNLN-${stamp}`;
+      const blank = await create(blankName, '');
+      const blankBody = await blank.text();
+
+      // (b) the same name twice — the second insert throws
+      // LIMSDuplicateRecordException, which used to be swallowed at DEBUG.
+      const dupName = `QA-PNLD-${stamp}`;
+      const first = await create(dupName, '99996-1');
+      const firstBody = await first.json().catch(() => null);
+      const second = await create(dupName, '99996-2');
+      const secondBody = await second.json().catch(() => null);
+
+      return {
+        sampleTypeId,
+        blankStatus: blank.status,
+        blankEchoedName: blankBody.includes(blankName),
+        blankBodyLength: blankBody.trim().length,
+        blankCount: await countNamed(blankName),
+        firstStatus: first.status,
+        firstCreatedId: firstBody?.createdPanelId ?? null,
+        secondStatus: second.status,
+        secondError: secondBody?.error ?? null,
+        dupCount: await countNamed(dupName),
+      };
+    });
+
+    expect(result.sampleTypeId, 'the legacy create needs an active sample type').toBeTruthy();
+    // OGC-1232: postPanelCreate() answers with the outcome instead of the form.
+    // A validation failure is a 400 carrying the field errors, and the caller
+    // can no longer read it as success.
+    expect(result.blankStatus, 'a create that fails validation must not answer 200').toBe(400);
+    expect(result.blankBodyLength,
+      'the 400 must carry the field errors the screen shows').toBeGreaterThan(0);
+    expect(result.blankEchoedName,
+      'the refusal must not echo the submitted name back, which read as success').toBe(false);
+    expect(result.blankCount, 'a refused create must leave no panel behind').toBe(0);
+    // A duplicate is now a 409 that says so, rather than a 200 over a swallowed
+    // LIMSDuplicateRecordException.
+    expect(result.firstStatus, 'the first create must be accepted').toBe(200);
+    expect(result.firstCreatedId, 'a 200 must name the panel it created').toBeTruthy();
+    expect(result.secondStatus, 'a duplicate name must be refused with 409').toBe(409);
+    expect(result.secondError, 'the 409 must say what was wrong').toBe('duplicate');
+    expect(result.dupCount, 'the refused duplicate must not have created a second panel').toBe(1);
   });
 });
 
