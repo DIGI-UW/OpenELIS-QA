@@ -1,3 +1,31 @@
+/*
+ * CENSUS ASSERTIONS REPLACED 2026-09-22.
+ *
+ * Seven cases in this file asserted a MINIMUM COUNT of rows — "at least 15
+ * active test sections", "at least 164 tests", "at least 30 units of measure",
+ * "exactly 24 sample types". Every one of those numbers was read off whatever
+ * instance the case was first written against, and every one of them fails on
+ * an instance configured differently: testing serves 10 active sections and the
+ * case demanded 15. A failure there reports the size of somebody's catalog, not
+ * whether the endpoint works, and it fails loudest on exactly the instance a
+ * new deployment would use.
+ *
+ * What replaced them, per Casey 2026-09-22 ("I want to prove the endpoint
+ * works"):
+ *   * the envelope is asserted by SHAPE — the list is present and is an array,
+ *     not absent and not a scalar, which is what a half-populated form looks
+ *     like;
+ *   * a selection list the screen CANNOT FUNCTION WITHOUT is asserted non-empty
+ *     (a Test Add form with no sample types cannot add a test). That holds on
+ *     any working instance without naming a number;
+ *   * the first row is asserted to carry the fields the screen reads;
+ *   * a list that is a fixed ENUM keeps its exact count, because there the
+ *     count IS the contract — statusSelectionList is the four electronic-order
+ *     states, not a configurable catalog;
+ *   * where two endpoints serve the same list, they are asserted to AGREE.
+ *     TestAdd and TestModifyEntry both publish sampleTypeList; a mismatch is a
+ *     real defect on any instance, and no threshold can catch it.
+ */
 import { test, expect } from '@playwright/test';
 import { apiSession } from '../helpers/test-helpers';
 
@@ -61,18 +89,31 @@ test.describe('Deep GET Endpoint Structure (Phase 31)', () => {
         formName: data.formName,
         activeCount: data.existingTestUnitList?.length || 0,
         inactiveCount: data.inactiveTestUnitList?.length || 0,
-        hasEnglishNames: Array.isArray(data.existingEnglishNames),
-        hasFrenchNames: Array.isArray(data.existingFrenchNames),
+        activeIsArray: Array.isArray(data.existingTestUnitList),
+        inactiveIsArray: Array.isArray(data.inactiveTestUnitList),
+        hasEnglishNames: typeof data.existingEnglishNames === 'string',
+        hasFrenchNames: typeof data.existingFrenchNames === 'string',
         firstActive: data.existingTestUnitList?.[0],
       };
     });
 
     expect(result.status).toBe(200);
     expect(result.formName).toBe('testSectionCreateForm');
-    expect(result.activeCount).toBeGreaterThanOrEqual(15);
-    expect(result.inactiveCount).toBeGreaterThanOrEqual(8);
-    expect(result.hasEnglishNames).toBe(true);
-    expect(result.hasFrenchNames).toBe(true);
+    // The screen cannot list test units it was not given, so BOTH lists must be
+    // arrays and the active one must have something in it. How many is the
+    // instance's business: testing has 10 active sections and this case used to
+    // demand 15.
+    expect(result.activeIsArray, 'existingTestUnitList must be an array').toBe(true);
+    expect(result.inactiveIsArray, 'inactiveTestUnitList must be an array').toBe(true);
+    expect(result.activeCount, 'a configured instance must serve at least one active test unit').toBeGreaterThan(0);
+    // existingEnglishNames / existingFrenchNames are STRINGS — the controller
+    // joins the configured names into one blob (getExistingTestNames returns a
+    // String, and every *CreateForm declares these as String). These assertions
+    // used to be Array.isArray(...) === true, which is false for a string, so
+    // they had never once passed on any instance. Same defect shape as the
+    // census thresholds: an expectation about a contract nobody checked.
+    expect(result.hasEnglishNames, 'existingEnglishNames must be the joined name string').toBe(true);
+    expect(result.hasFrenchNames, 'existingFrenchNames must be the joined name string').toBe(true);
     expect(result.firstActive).toHaveProperty('id');
     expect(result.firstActive).toHaveProperty('value');
   });
@@ -155,6 +196,7 @@ test.describe('Deep GET Endpoint Structure (Phase 31)', () => {
         status: res.status,
         facilityCount: data.referralFacilitySelectionList?.length || 0,
         testCount: data.testSelectionList?.length || 0,
+        testIsArray: Array.isArray(data.testSelectionList),
         statusCount: data.statusSelectionList?.length || 0,
         firstStatus: data.statusSelectionList?.[0],
         eOrderCount: data.eOrders?.length || 0,
@@ -162,8 +204,22 @@ test.describe('Deep GET Endpoint Structure (Phase 31)', () => {
     });
 
     expect(result.status).toBe(200);
-    expect(result.testCount).toBeGreaterThanOrEqual(164);
-    expect(result.statusCount).toBe(4); // Cancelled, Entered, Realized, Unrealized
+    // The test list is a catalog, so its size is configuration; that it is
+    // served at all, and not empty, is the contract. 164 was this instance's
+    // catalog on the day the case was written.
+    expect(result.testIsArray, 'testSelectionList must be an array').toBe(true);
+    expect(result.testCount, 'the order-search form cannot filter by test with no tests').toBeGreaterThan(0);
+    // statusCount stays EXACT, because this list is an enum and not a catalog:
+    // StatusService.ExternalOrderStatus is Entered, Cancelled, Realized,
+    // NonConforming, AwaitingSpecimen. That is FIVE. The old assertion demanded
+    // 4 and named them "Cancelled, Entered, Realized, Unrealized" - a count that
+    // was already stale (AwaitingSpecimen was added by OGC-1145) and a name,
+    // "Unrealized", that is not in the enum at all. If the enum grows again this
+    // should fail and be updated deliberately; that is the point of pinning an
+    // enum rather than a catalog.
+    expect(result.statusCount,
+      'ExternalOrderStatus has five members: Entered, Cancelled, Realized, NonConforming, AwaitingSpecimen')
+      .toBe(5);
     expect(result.firstStatus).toHaveProperty('id');
     expect(result.firstStatus).toHaveProperty('value');
   });
@@ -178,6 +234,7 @@ test.describe('Deep GET Endpoint Structure (Phase 31)', () => {
       return {
         status: res.status,
         providerCount: data.menuList?.length || 0,
+        menuIsArray: Array.isArray(data.menuList),
         totalRecords: data.totalRecordCount,
         firstProvider: data.menuList?.[0] ? {
           hasId: !!data.menuList[0].id,
@@ -188,11 +245,23 @@ test.describe('Deep GET Endpoint Structure (Phase 31)', () => {
     });
 
     expect(result.status).toBe(200);
-    expect(result.providerCount).toBeGreaterThanOrEqual(4);
+    // menuList is a paged view of whatever providers exist. Its length is the
+    // instance's provider count; what this case can honestly claim is that the
+    // list is served and that its paging header agrees with it.
+    expect(result.menuIsArray, 'menuList must be an array').toBe(true);
+    expect(result.totalRecords, 'totalRecordCount must be reported alongside menuList').not.toBeUndefined();
+    expect(Number(result.totalRecords) >= result.providerCount,
+      `totalRecordCount ${result.totalRecords} is smaller than the ${result.providerCount} rows served`).toBe(true);
     if (result.firstProvider) {
       expect(result.firstProvider.hasId).toBe(true);
       expect(result.firstProvider.hasPerson).toBe(true);
-      expect(result.firstProvider.hasFhirUuid).toBe(true);
+      // fhirUuid is NOT required. Provider.fhirUuid is a nullable UUID and
+      // getFhirUuidAsString() returns "" when it is unset, so a provider that
+      // predates FHIR sync legitimately has none. Asserting it on an arbitrary
+      // first row reported the state of one record, not a contract. Logged so a
+      // reader can still see the coverage.
+      // eslint-disable-next-line no-console
+      console.log(`TC-DEEP-06: first provider fhirUuid present = ${result.firstProvider.hasFhirUuid}`);
     }
   });
 
@@ -208,16 +277,51 @@ test.describe('Deep GET Endpoint Structure (Phase 31)', () => {
         existingPanels: data.existingPanelList?.length || 0,
         inactivePanels: data.inactivePanelList?.length || 0,
         sampleTypes: data.existingSampleTypeList?.length || 0,
-        hasEnglishNames: Array.isArray(data.existingEnglishNames),
-        hasFrenchNames: Array.isArray(data.existingFrenchNames),
+        panelsIsArray: Array.isArray(data.existingPanelList),
+        inactiveIsArray: Array.isArray(data.inactivePanelList),
+        sampleTypesIsArray: Array.isArray(data.existingSampleTypeList),
+        // existingPanelList is a List<SampleTypePanel>: ONE ENTRY PER ACTIVE
+        // SAMPLE TYPE, each {typeOfSampleName, panels?}. So its length is the
+        // sample-type count, never the panel count - which is what the old
+        // "at least 15 panels" assertion was really measuring.
+        panelGroupNames: Array.isArray(data.existingPanelList)
+          ? data.existingPanelList.map((g: { typeOfSampleName?: unknown }) => String(g?.typeOfSampleName ?? '')).sort()
+          : null,
+        inactiveGroupNames: Array.isArray(data.inactivePanelList)
+          ? data.inactivePanelList.map((g: { typeOfSampleName?: unknown }) => String(g?.typeOfSampleName ?? '')).sort()
+          : null,
+        sampleTypeNames: Array.isArray(data.existingSampleTypeList)
+          ? data.existingSampleTypeList.map((t: { value?: unknown }) => String(t?.value ?? '')).sort()
+          : null,
+        hasEnglishNames: typeof data.existingEnglishNames === 'string',
+        hasFrenchNames: typeof data.existingFrenchNames === 'string',
       };
     });
 
     expect(result.status).toBe(200);
-    expect(result.existingPanels).toBeGreaterThanOrEqual(15); // baseline 23 panels
-    expect(result.sampleTypes).toBeGreaterThanOrEqual(15);    // baseline 23 sample types
-    expect(result.hasEnglishNames).toBe(true);
-    expect(result.hasFrenchNames).toBe(true);
+    // Panels and sample types are both catalogs. What the Panel Create screen
+    // needs is that all four lists arrive as arrays and that a panel cannot be
+    // built without a sample type to hang it on.
+    expect(result.panelsIsArray, 'existingPanelList must be an array').toBe(true);
+    expect(result.inactiveIsArray, 'inactivePanelList must be an array').toBe(true);
+    expect(result.sampleTypesIsArray, 'existingSampleTypeList must be an array').toBe(true);
+    expect(result.sampleTypes, 'a panel cannot be created without a sample type').toBeGreaterThan(0);
+    // The real contract, from PanelCreateController.setupDisplayItems: both panel
+    // lists are built by walking SAMPLE_TYPE_ACTIVE, so each carries exactly one
+    // group per active sample type. A group missing from either list is a form
+    // the screen cannot render, on an instance with any number of panels.
+    expect(result.panelGroupNames,
+      'existingPanelList must carry one group per active sample type').toEqual(result.sampleTypeNames);
+    expect(result.inactiveGroupNames,
+      'inactivePanelList must carry one group per active sample type').toEqual(result.sampleTypeNames);
+    // existingEnglishNames / existingFrenchNames are STRINGS — the controller
+    // joins the configured names into one blob (getExistingTestNames returns a
+    // String, and every *CreateForm declares these as String). These assertions
+    // used to be Array.isArray(...) === true, which is false for a string, so
+    // they had never once passed on any instance. Same defect shape as the
+    // census thresholds: an expectation about a contract nobody checked.
+    expect(result.hasEnglishNames, 'existingEnglishNames must be the joined name string').toBe(true);
+    expect(result.hasFrenchNames, 'existingFrenchNames must be the joined name string').toBe(true);
   });
 
   test('TC-DEEP-08: TestAdd returns full form metadata', async ({ page }) => {
@@ -233,6 +337,10 @@ test.describe('Deep GET Endpoint Structure (Phase 31)', () => {
         uomCount: data.uomList?.length || 0,
         resultTypeCount: data.resultTypeList?.length || 0,
         labUnitCount: data.labUnitList?.length || 0,
+        sampleTypeIsArray: Array.isArray(data.sampleTypeList),
+        uomIsArray: Array.isArray(data.uomList),
+        resultTypeIsArray: Array.isArray(data.resultTypeList),
+        labUnitIsArray: Array.isArray(data.labUnitList),
         hasPanelList: Array.isArray(data.panelList),
         hasAgeRangeList: Array.isArray(data.ageRangeList),
       };
@@ -240,10 +348,18 @@ test.describe('Deep GET Endpoint Structure (Phase 31)', () => {
 
     expect(result.status).toBe(200);
     // Use lower bounds — catalog may grow over time
-    expect(result.sampleTypeCount).toBeGreaterThanOrEqual(20); // baseline 24
-    expect(result.uomCount).toBeGreaterThanOrEqual(30);        // baseline 37
-    expect(result.resultTypeCount).toBeGreaterThanOrEqual(4);  // baseline 6
-    expect(result.labUnitCount).toBeGreaterThanOrEqual(15);    // baseline 23
+    // Four selection lists the Test Add form cannot work without. Asserted
+    // non-empty and array-shaped rather than against this instance's counts
+    // (which were 24 / 37 / 6 / 23 on the day the case was written).
+    for (const [name, count, isArray] of [
+      ['sampleTypeList', result.sampleTypeCount, result.sampleTypeIsArray],
+      ['uomList', result.uomCount, result.uomIsArray],
+      ['resultTypeList', result.resultTypeCount, result.resultTypeIsArray],
+      ['labUnitList', result.labUnitCount, result.labUnitIsArray],
+    ] as Array<[string, number, boolean]>) {
+      expect(isArray, `${name} must be an array`).toBe(true);
+      expect(count, `Test Add cannot add a test with an empty ${name}`).toBeGreaterThan(0);
+    }
     expect(result.hasPanelList).toBe(true);
     expect(result.hasAgeRangeList).toBe(true);
   });
@@ -255,17 +371,36 @@ test.describe('Deep GET Endpoint Structure (Phase 31)', () => {
         headers: { 'X-CSRF-Token': csrf },
       });
       const data = await res.json();
+      // TestAdd publishes the same sampleTypeList. Two screens disagreeing about
+      // which sample types exist is a real defect on ANY instance, and no count
+      // threshold can catch it — which is what this case asserted before
+      // (exactly 24, the number this instance happened to hold that week).
+      const addRes = await fetch('/api/OpenELIS-Global/rest/TestAdd', {
+        headers: { 'X-CSRF-Token': csrf },
+      });
+      const addData = addRes.ok ? await addRes.json() : null;
+      const ids = (l: unknown) => (Array.isArray(l) ? l.map((x: { id?: unknown }) => String(x?.id ?? '')).sort() : null);
       return {
         status: res.status,
         sampleTypeCount: data.sampleTypeList?.length || 0,
+        sampleTypeIsArray: Array.isArray(data.sampleTypeList),
         hasJsonWad: data.jsonWad !== undefined,
         formName: data.formName,
+        modifyIds: ids(data.sampleTypeList),
+        addStatus: addRes.status,
+        addIds: ids(addData?.sampleTypeList),
       };
     });
 
     expect(result.status).toBe(200);
-    expect(result.sampleTypeCount).toBe(24);
+    expect(result.sampleTypeIsArray, 'sampleTypeList must be an array').toBe(true);
+    expect(result.sampleTypeCount, 'a test cannot be modified with no sample types to choose from').toBeGreaterThan(0);
     expect(result.formName).toBeTruthy();
+    expect(result.addStatus, 'TestAdd must answer so the two lists can be compared').toBe(200);
+    expect(result.modifyIds,
+      `TestModifyEntry and TestAdd disagree about the sample types: `
+      + `TestModifyEntry served ${result.modifyIds?.length} and TestAdd ${result.addIds?.length}`)
+      .toEqual(result.addIds);
   });
 
   test('TC-DEEP-10: SampleBatchEntrySetup returns large form metadata', async ({ page }) => {
@@ -564,8 +699,8 @@ test.describe('Admin Form Structure Validation (Phase 31)', () => {
         hasExistingPanels: Array.isArray(data.existingPanelList),
         hasInactivePanels: Array.isArray(data.inactivePanelList),
         hasSampleTypes: Array.isArray(data.existingSampleTypeList),
-        hasEnglishNames: Array.isArray(data.existingEnglishNames),
-        hasFrenchNames: Array.isArray(data.existingFrenchNames),
+        hasEnglishNames: typeof data.existingEnglishNames === 'string',
+        hasFrenchNames: typeof data.existingFrenchNames === 'string',
       };
     });
 
@@ -573,8 +708,14 @@ test.describe('Admin Form Structure Validation (Phase 31)', () => {
     expect(result.hasExistingPanels).toBe(true);
     expect(result.hasInactivePanels).toBe(true);
     expect(result.hasSampleTypes).toBe(true);
-    expect(result.hasEnglishNames).toBe(true);
-    expect(result.hasFrenchNames).toBe(true);
+    // existingEnglishNames / existingFrenchNames are STRINGS — the controller
+    // joins the configured names into one blob (getExistingTestNames returns a
+    // String, and every *CreateForm declares these as String). These assertions
+    // used to be Array.isArray(...) === true, which is false for a string, so
+    // they had never once passed on any instance. Same defect shape as the
+    // census thresholds: an expectation about a contract nobody checked.
+    expect(result.hasEnglishNames, 'existingEnglishNames must be the joined name string').toBe(true);
+    expect(result.hasFrenchNames, 'existingFrenchNames must be the joined name string').toBe(true);
   });
 
   test('TC-DEEP-25: SiteInformation returns site configuration', async ({ page }) => {
