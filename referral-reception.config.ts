@@ -44,6 +44,11 @@ export default defineConfig({
   retries: 0,
   reporter: [['line'], ['json', { outputFile: 'regression-results/referral-reception.json' }]],
   use: {
+    // Casey's click rule lives here, not in the case budget: actions inherit
+    // `timeout` when actionTimeout is unset, so raising the case budget without
+    // this would make a stuck click wait 120s. See modules.config.ts.
+    actionTimeout: 30_000,
+    navigationTimeout: 90_000,
     ...devices['Desktop Chrome'],
     baseURL: BASE,
     headless: true,

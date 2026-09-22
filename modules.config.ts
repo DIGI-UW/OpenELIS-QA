@@ -125,10 +125,20 @@ export default defineConfig({
   // is the diagnosis — TC-CAT-02 reported "timeout" at 30s and "the API returns
   // 500" at 120s. The same test, one number, from noise to a finding.
   //
+  // WHERE THE CLICK RULE ACTUALLY LIVES: `use.actionTimeout` below, NOT here and
+  // NOT in expect.timeout. This caught me out — `expect.timeout` governs
+  // assertions only, and page.click()/locator.click() are ACTIONS, so with
+  // actionTimeout unset they inherit the whole case budget. Raising `timeout`
+  // alone would therefore have made a stuck click wait 120s instead of 30s —
+  // exactly the "75 minutes of pure waiting" this config was written to prevent.
+  // Verified on testing 2026-09-22: 12 of 29 system-misc failures were
+  // `page.click: Test timeout exceeded`, i.e. clicks that never land, which is a
+  // finding under Casey's rule and must keep failing fast.
+  //
   // THE REAL FIX IS NOT HERE. A 48s SPA boot is itself a defect by the rule at
   // the top of this comment. This budget stops the harness lying about it; it
   // does not make the product fast. Where a suite does not need the SPA at all,
-  // apiSession() is better than either number (api-crud: 20m -> 3.3m).
+  // apiSession() is better than any of these numbers (api-crud: 20m -> 3.3m).
   timeout: Number(process.env.PW_TIMEOUT ?? 120_000),
   expect: { timeout: 15_000 },
   fullyParallel: false,
@@ -143,6 +153,14 @@ export default defineConfig({
     ...devices['Desktop Chrome'],
     baseURL: BASE,
     headless: true,
+    // Casey's click rule, enforced where it bites: a click that has not landed
+    // in 30s is a finding, and waiting longer buys nothing. This is what keeps
+    // the raised case budget above from turning a stuck click into a 120s wait.
+    actionTimeout: 30_000,
+    // A page load is NOT a click. Measured on testing 2026-09-22, one Edit Order
+    // load took 28.3s / 32.4s / 50.6s, so navigation gets its own, larger budget
+    // — bounded, so a hung navigation cannot eat the whole case.
+    navigationTimeout: 90_000,
     ignoreHTTPSErrors: true,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
