@@ -209,21 +209,45 @@ test.describe('API CRUD Survey — GET Endpoints (Phase 29)', () => {
     expect(result.status).toBe(200); // Was 500 in v3.2.1.3
   });
 
-  test('TC-API-12: GET /rest/PanelCreate returns panel list', async ({ page }) => {
+  test('TC-API-12: GET /rest/PanelCreate groups panels by every active sample type', async ({ page }) => {
     const result = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
       const res = await fetch('/api/OpenELIS-Global/rest/PanelCreate', {
         headers: { 'X-CSRF-Token': csrf },
       });
       const data = await res.json();
+      // WHAT existingPanelList ACTUALLY IS. PanelCreateController.setupDisplayItems
+      // builds it by walking SAMPLE_TYPE_ACTIVE and emitting one SampleTypePanel
+      // per active sample type — {typeOfSampleName, panels?} — so its length is
+      // the SAMPLE-TYPE count and its rows carry no panel id at all. The old
+      // assertion, "at least 20 panels", was counting sample types and calling
+      // them panels; testing serves 14 and it failed every run. Measured row:
+      // {"typeOfSampleName":"Fluid"} — `panels` is omitted entirely for a sample
+      // type that has none.
+      const groups = Array.isArray(data.existingPanelList) ? data.existingPanelList : null;
+      const names = (l: unknown, key: string) => (Array.isArray(l)
+        ? l.map((x: Record<string, unknown>) => String(x?.[key] ?? '')).sort()
+        : null);
       return {
         status: res.status,
-        panelCount: data.existingPanelList?.length,
+        isArray: Array.isArray(data.existingPanelList),
+        groupCount: groups ? groups.length : -1,
+        groupNames: names(data.existingPanelList, 'typeOfSampleName'),
+        sampleTypeNames: names(data.existingSampleTypeList, 'value'),
+        // A group's panels, when present, must be a list — not a scalar.
+        badPanelsShape: groups
+          ? groups.filter(g => g.panels !== undefined && g.panels !== null && !Array.isArray(g.panels)).length
+          : -1,
       };
     });
 
     expect(result.status).toBe(200);
-    expect(result.panelCount).toBeGreaterThanOrEqual(20);
+    expect(result.isArray, 'existingPanelList must be an array').toBe(true);
+    // The checkable contract, true on any instance: one group per active sample
+    // type, and every group's panels is a list when it is there at all.
+    expect(result.groupNames,
+      'existingPanelList must carry exactly one group per active sample type').toEqual(result.sampleTypeNames);
+    expect(result.badPanelsShape, 'a group\'s panels must be a list when present').toBe(0);
   });
 
   test('TC-API-13: GET /rest/ProviderMenu returns providers', async ({ page }) => {
