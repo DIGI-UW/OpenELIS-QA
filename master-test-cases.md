@@ -14191,10 +14191,15 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 - **Expected**: 200 with site info
 - **Result**: PASS — 200 OK. Site configuration data returned.
 
-### Part F — Panel Creation Write Path (5 TCs, added 2026-09-22)
+### Part F — Panel Creation Write Path (6 TCs, added 2026-09-22)
 
 Added because every panel case above this line was a GET. Nothing in the
 repository created a panel, which is where the panel's DOMAIN is decided.
+
+TC-DEEP-29, TC-DEEP-30 and TC-DEEP-31 first landed as FLIP-WHEN-FIXED markers
+pinning the four defects reported as OGC-1232. They were rewritten to the fixed
+contract (PR #4384) and now assert the behaviour the operator should get, so a
+regression on any of the four reads as a plain failure.
 
 ### TC-DEEP-26: POST /rest/test-catalog/panels — create and read back
 - **Steps**: 1) POST {name, active:false} 2) GET the returned id
@@ -14211,16 +14216,22 @@ repository created a panel, which is where the panel's DOMAIN is decided.
 - **Expected**: both the save response and an independent read show ENVIRONMENTAL
 - **Result**: see run log
 
-### TC-DEEP-29: FLIP-WHEN-FIXED — legacy /rest/PanelCreate is CLINICAL-only
-- **Steps**: 1) GET /rest/PanelCreate for an active sample type 2) POST a create that names a `domain` 3) POST the create the screen really sends 4) find the panel in /rest/test-catalog/panels?includeInactive=true
-- **Expected (current, defective)**: the domain-bearing request is rejected 400 (PanelCreateForm has no such property, so the body is unreadable — the domain cannot be expressed at all); the plain create returns 200 and the panel persists with domain CLINICAL, because createPanel() never calls setDomain.
-- **Flip condition**: a FAILURE here means the legacy screen learned about domains — rewrite to assert the requested domain.
+### TC-DEEP-29: legacy /rest/PanelCreate files a panel under the requested domain
+- **Steps**: 1) GET /rest/PanelCreate for an active sample type 2) POST a create naming `domain: 'environmental'` (lower case on purpose) 3) POST a create naming no domain 4) POST a create naming `domain: 'MARINE'` 5) read each name back from /rest/test-catalog/panels?includeInactive=true
+- **Expected**: the domain-bearing create returns 200 with `createdPanelId` and the panel is stored ENVIRONMENTAL; the domainless create returns 200 and defaults to CLINICAL, so the screen's existing users see no change; the unknown domain is refused 400 with the field errors in the body and nothing is written.
+- **Covers**: OGC-1232 defects 1 and 2 (the screen could not express a domain, and everything it made was CLINICAL).
 - **Result**: see run log
 
-### TC-DEEP-31: FLIP-WHEN-FIXED — legacy /rest/PanelCreate answers 200 and creates nothing without a LOINC
-- **Steps**: 1) POST a legacy create with panelLoinc: '' 2) re-list the panels
-- **Expected (current, defective)**: HTTP 200 with the submitted name echoed back, and NO panel created. postPanelCreate() swallows the insert failure at DEBUG (PanelCreateRestController:145) and returns the form regardless, so the screen reports success for a panel that does not exist.
-- **Flip condition**: a FAILURE means the endpoint started reporting the failure — assert the error instead.
+### TC-DEEP-30: the domain guard names the member tests standing in the way
+- **Steps**: 1) create a CLINICAL panel and add one clinical test 2) PUT /panels/{id}/basic-info carrying BOTH a rename and `domain:'ENVIRONMENTAL'` 3) re-read the panel
+- **Expected**: 422 whose body carries `refusal: 'domain.conflict'` and a `domainConflict` naming the requested domain, the panel id, and the member test as {testId, name, domain}; the stored domain is still CLINICAL **and** the rename did not land either (a refused save used to reach the display localization first).
+- **Covers**: OGC-1232 defect 3, plus the partial-write half mozzy found on top of the original report.
+- **Result**: see run log
+
+### TC-DEEP-31: legacy /rest/PanelCreate reports a refused create instead of answering 200
+- **Steps**: 1) POST a legacy create with `panelLoinc: ''` 2) count panels of that name 3) POST the same name twice with valid LOINCs 4) count panels of that name
+- **Expected**: the blank LOINC is refused 400 (@NotBlank on PanelCreateForm.panelLoinc) with the field errors in the body, the submitted name is NOT echoed back, and no panel exists; the first duplicate create returns 200 with `createdPanelId`, the second is refused 409 `{"error":"duplicate"}`, and exactly one panel of that name exists.
+- **Covers**: OGC-1232 defect 2 — postPanelCreate() used to swallow the insert failure at DEBUG and answer 200 with the name echoed, so the screen reported success for a panel that did not exist.
 - **Result**: see run log
 
 ### Part G — New-Test Lifecycle (2 TCs, added 2026-09-22)
@@ -14240,12 +14251,6 @@ own test and leave it INACTIVE, so no orderable QA row is left in Add Order.
 - **Expected**: the open-ended range reports `COMPLETE` with no gaps; the narrowed one reports `GAP` with exactly `[[0,15],[30,"Infinity"]]`. The unbounded tail is the half a naive implementation misses.
 - **Answers**: OGC-1119 FR-20/21.
 - **Result**: PASS 2026-09-22 against testing.
-
-### TC-DEEP-30: FLIP-WHEN-FIXED — the domain guard refuses with an empty body
-- **Steps**: 1) create a CLINICAL panel and add one clinical test 2) PUT /panels/{id}/basic-info {domain:'ENVIRONMENTAL'} 3) re-read
-- **Expected (current, defective)**: 422 with a zero-length body, stored domain unchanged. The guard is correct per the OGC-224 FRS; the empty body is why the editor can only show a generic save error, or nothing at all.
-- **Flip condition**: a FAILURE means the server started explaining the refusal — assert the message instead.
-- **Result**: see run log
 
 
 ---
