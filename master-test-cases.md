@@ -14191,6 +14191,44 @@ These tests were executed on 2026-03-27 in the **new React/Carbon UI** against O
 - **Expected**: 200 with site info
 - **Result**: PASS — 200 OK. Site configuration data returned.
 
+### Part F — Panel Creation Write Path (5 TCs, added 2026-09-22)
+
+Added because every panel case above this line was a GET. Nothing in the
+repository created a panel, which is where the panel's DOMAIN is decided.
+
+### TC-DEEP-26: POST /rest/test-catalog/panels — create and read back
+- **Steps**: 1) POST {name, active:false} 2) GET the returned id
+- **Expected**: 201 with an id; the panel reads back under that name, inactive, zero tests, domain CLINICAL (the documented default, Panel.java:38)
+- **Result**: see run log
+
+### TC-DEEP-27: POST /rest/test-catalog/panels — non-clinical domain
+- **Steps**: 1) POST {name, active:false, domain:'VECTOR'} 2) GET the returned id
+- **Expected**: the stored domain is VECTOR (CreatePanelRequest.domain, OGC-1140)
+- **Result**: see run log
+
+### TC-DEEP-28: Panel Editor two-step create persists the chosen domain
+- **Steps**: 1) POST {name, active:false} with NO domain, as PanelBasicInfoSection.jsx:94 does 2) PUT /panels/{id}/basic-info {name, description, domain:'ENVIRONMENTAL', active:false} 3) re-read the panel
+- **Expected**: both the save response and an independent read show ENVIRONMENTAL
+- **Result**: see run log
+
+### TC-DEEP-29: FLIP-WHEN-FIXED — legacy /rest/PanelCreate is CLINICAL-only
+- **Steps**: 1) GET /rest/PanelCreate for an active sample type 2) POST a create that names a `domain` 3) POST the create the screen really sends 4) find the panel in /rest/test-catalog/panels?includeInactive=true
+- **Expected (current, defective)**: the domain-bearing request is rejected 400 (PanelCreateForm has no such property, so the body is unreadable — the domain cannot be expressed at all); the plain create returns 200 and the panel persists with domain CLINICAL, because createPanel() never calls setDomain.
+- **Flip condition**: a FAILURE here means the legacy screen learned about domains — rewrite to assert the requested domain.
+- **Result**: see run log
+
+### TC-DEEP-31: FLIP-WHEN-FIXED — legacy /rest/PanelCreate answers 200 and creates nothing without a LOINC
+- **Steps**: 1) POST a legacy create with panelLoinc: '' 2) re-list the panels
+- **Expected (current, defective)**: HTTP 200 with the submitted name echoed back, and NO panel created. postPanelCreate() swallows the insert failure at DEBUG (PanelCreateRestController:145) and returns the form regardless, so the screen reports success for a panel that does not exist.
+- **Flip condition**: a FAILURE means the endpoint started reporting the failure — assert the error instead.
+- **Result**: see run log
+
+### TC-DEEP-30: FLIP-WHEN-FIXED — the domain guard refuses with an empty body
+- **Steps**: 1) create a CLINICAL panel and add one clinical test 2) PUT /panels/{id}/basic-info {domain:'ENVIRONMENTAL'} 3) re-read
+- **Expected (current, defective)**: 422 with a zero-length body, stored domain unchanged. The guard is correct per the OGC-224 FRS; the empty body is why the editor can only show a generic save error, or nothing at all.
+- **Flip condition**: a FAILURE means the server started explaining the refusal — assert the message instead.
+- **Result**: see run log
+
 
 ---
 

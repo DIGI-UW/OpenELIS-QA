@@ -735,3 +735,302 @@ test.describe('Admin Form Structure Validation (Phase 31)', () => {
     expect(result.status).toBe(200);
   });
 });
+
+// ─────────────────────────────────────────────────────────────
+// Section F: Panel creation, walked (2026-09-22)
+//
+// Everything above this line about panels is a GET. TC-DEEP-07 and TC-DEEP-24
+// both read /rest/PanelCreate and assert its lists arrive; neither ever created
+// a panel, so nothing in this repository covered the write path — which is
+// exactly where the panel DOMAIN is decided, and exactly what Casey could not
+// get to work ("even if I have environmental tests, I can't seem to make
+// environmental panels ... it just sticks at clinical", 2026-09-22).
+//
+// The contract, read off origin/develop @ 1e5d582 before these cases were
+// written:
+//   * Panel.domain (panel/valueholder/Panel.java:38) defaults to "CLINICAL",
+//     and Domain.normalize() sends every blank or unrecognized value to
+//     CLINICAL. So a create path that never SETS a domain silently mints a
+//     clinical panel; it does not fail, and nothing in the response says so.
+//   * The Test Catalog editor CAN express a domain, two ways:
+//     POST /rest/test-catalog/panels carries CreatePanelRequest.domain
+//     (OGC-1140, inline create from a test), and
+//     PUT /rest/test-catalog/panels/{id}/basic-info carries
+//     PanelBasicInfoRequest.domain (OGC-224). The Panel Editor's Save uses BOTH,
+//     in that order: POST {name, active:false} then PUT {name, description,
+//     domain, active} — PanelBasicInfoSection.jsx:91-108. The POST in that pair
+//     sends NO domain, so the PUT is the only thing that carries the operator's
+//     choice, and TC-DEEP-28 is what proves the pair works.
+//   * The LEGACY screen cannot express a domain at all. PanelCreateForm has no
+//     domain field, and PanelCreateRestController.createPanel() (line 190)
+//     never calls setDomain. Every panel created there is CLINICAL. TC-DEEP-29
+//     pins that, so it fails the day it is fixed.
+//   * The domain guard refuses to move a panel away from its member tests
+//     (TestCatalogEditorRestController:2143-2148) and answers 422 with an EMPTY
+//     BODY. TC-DEEP-30 pins the empty body, because that is why the editor can
+//     only say "error.panel.save": the server hands it nothing to say.
+//
+// These create rows. Casey, 2026-09-22 and standing: "These will always be test
+// instances" — seed freely; the rows are named QA-PNL* so they are findable.
+// ─────────────────────────────────────────────────────────────
+
+test.describe('Panel creation write path (2026-09-22)', () => {
+  test.beforeEach(async ({ page }) => {
+    await apiSession(page);
+  });
+
+  test('TC-DEEP-26: POST /rest/test-catalog/panels creates a readable panel', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const H = { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf };
+      const name = `QA-PNL-${String(Date.now()).slice(-6)}`;
+      const post = await fetch('/api/OpenELIS-Global/rest/test-catalog/panels', {
+        method: 'POST', headers: H, body: JSON.stringify({ name, active: false }),
+      });
+      const created = await post.json().catch(() => null);
+      const id = created?.id ?? null;
+      const get = id
+        ? await fetch(`/api/OpenELIS-Global/rest/test-catalog/panels/${id}`, { headers: H })
+        : null;
+      const read = get ? await get.json().catch(() => null) : null;
+      return {
+        name,
+        postStatus: post.status,
+        id,
+        getStatus: get?.status ?? 0,
+        readName: read?.name ?? null,
+        readDomain: read?.domain ?? null,
+        readActive: read?.active ?? null,
+        readTestCount: read?.testCount ?? null,
+      };
+    });
+
+    expect(result.postStatus, 'POST /test-catalog/panels must create (201)').toBe(201);
+    expect(result.id, 'the create response must carry the new panel id').toBeTruthy();
+    expect(result.getStatus, 'the created panel must be readable back').toBe(200);
+    expect(result.readName, 'the panel must come back under the name it was created with').toBe(result.name);
+    // Panel.java:38 — a create that names no domain lands on CLINICAL. This is
+    // the DEFAULT, asserted so that a change of default is visible here.
+    expect(result.readDomain, 'a domainless create defaults to CLINICAL (Panel.java:38)').toBe('CLINICAL');
+    expect(result.readActive, 'a panel created with active:false starts inactive').toBe(false);
+    expect(result.readTestCount, 'a fresh panel has no member tests').toBe(0);
+  });
+
+  test('TC-DEEP-27: POST /rest/test-catalog/panels honours a non-clinical domain', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const H = { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf };
+      const name = `QA-PNLV-${String(Date.now()).slice(-6)}`;
+      const post = await fetch('/api/OpenELIS-Global/rest/test-catalog/panels', {
+        method: 'POST', headers: H, body: JSON.stringify({ name, active: false, domain: 'VECTOR' }),
+      });
+      const created = await post.json().catch(() => null);
+      const id = created?.id ?? null;
+      const get = id
+        ? await fetch(`/api/OpenELIS-Global/rest/test-catalog/panels/${id}`, { headers: H })
+        : null;
+      const read = get ? await get.json().catch(() => null) : null;
+      return { postStatus: post.status, id, getStatus: get?.status ?? 0, readDomain: read?.domain ?? null };
+    });
+
+    expect(result.postStatus).toBe(201);
+    expect(result.id).toBeTruthy();
+    expect(result.getStatus).toBe(200);
+    // CreatePanelRequest.domain -> panel.setDomain(Domain.normalize(body.domain)).
+    // If this reads CLINICAL, the create path is dropping the caller's choice —
+    // the defect Casey reported, at the API level.
+    expect(result.readDomain, 'the created panel must keep the domain the create asked for').toBe('VECTOR');
+  });
+
+  test('TC-DEEP-28: the Panel Editor two-step create persists the chosen domain', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const H = { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf };
+      const name = `QA-PNLE-${String(Date.now()).slice(-6)}`;
+      // Step 1 — exactly what PanelBasicInfoSection.jsx:94 posts: no domain.
+      const post = await fetch('/api/OpenELIS-Global/rest/test-catalog/panels', {
+        method: 'POST', headers: H, body: JSON.stringify({ name, active: false }),
+      });
+      const created = await post.json().catch(() => null);
+      const id = created?.id ?? null;
+      // Step 2 — exactly what saveExisting() PUTs, carrying the radio choice.
+      const put = id
+        ? await fetch(`/api/OpenELIS-Global/rest/test-catalog/panels/${id}/basic-info`, {
+            method: 'PUT', headers: H,
+            body: JSON.stringify({ name, description: '', domain: 'ENVIRONMENTAL', active: false }),
+          })
+        : null;
+      const saved = put ? await put.json().catch(() => null) : null;
+      const get = id
+        ? await fetch(`/api/OpenELIS-Global/rest/test-catalog/panels/${id}`, { headers: H })
+        : null;
+      const read = get ? await get.json().catch(() => null) : null;
+      return {
+        postStatus: post.status,
+        id,
+        putStatus: put?.status ?? 0,
+        savedDomain: saved?.domain ?? null,
+        readDomain: read?.domain ?? null,
+      };
+    });
+
+    expect(result.postStatus).toBe(201);
+    expect(result.putStatus, 'the basic-info save must succeed on a fresh panel').toBe(200);
+    // Both the PUT's own answer and an independent re-read, because a save that
+    // echoes the right value and stores the wrong one is the failure mode that
+    // makes an operator say "it sticks at clinical".
+    expect(result.savedDomain, 'the save must answer with the chosen domain').toBe('ENVIRONMENTAL');
+    expect(result.readDomain, 'a fresh read must show the chosen domain').toBe('ENVIRONMENTAL');
+  });
+
+  test('TC-DEEP-29: FLIP-WHEN-FIXED — legacy /rest/PanelCreate is CLINICAL-only', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const H = { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf };
+      const B = '/api/OpenELIS-Global/rest';
+      const form = await (await fetch(`${B}/PanelCreate`, { headers: H })).json();
+      const types: Array<{ id?: unknown }> = Array.isArray(form?.existingSampleTypeList)
+        ? form.existingSampleTypeList : [];
+      const sampleTypeId = types.length ? String(types[0]?.id ?? '') : '';
+      const stamp = String(Date.now()).slice(-6);
+
+      // (a) Ask for a domain. PanelCreateForm has no such property, so Jackson
+      // refuses the whole request — 400, HttpMessageNotReadableException. The
+      // domain is not merely ignored here: it cannot be expressed at all.
+      const withDomain = await fetch(`${B}/PanelCreate`, {
+        method: 'POST', headers: H,
+        body: JSON.stringify({
+          panelEnglishName: `QA-PNLD-${stamp}`, panelFrenchName: `QA-PNLD-${stamp}`,
+          sampleTypeId, panelLoinc: '99999-9', domain: 'ENVIRONMENTAL',
+        }),
+      });
+
+      // (b) The same create the legacy screen really sends. A LOINC is required
+      // in practice (see TC-DEEP-31), so one is supplied.
+      const name = `QA-PNLL-${stamp}`;
+      const ok = await fetch(`${B}/PanelCreate`, {
+        method: 'POST', headers: H,
+        body: JSON.stringify({
+          panelEnglishName: name, panelFrenchName: name,
+          sampleTypeId, panelLoinc: '99999-9',
+        }),
+      });
+      const panels = await (await fetch(
+        `${B}/test-catalog/panels?includeInactive=true`, { headers: H },
+      )).json();
+      const mine = Array.isArray(panels) ? panels.find((p: { name?: string }) => p?.name === name) : null;
+      return {
+        sampleTypeId,
+        withDomainStatus: withDomain.status,
+        okStatus: ok.status,
+        found: !!mine,
+        domain: mine?.domain ?? null,
+      };
+    });
+
+    expect(result.sampleTypeId, 'the legacy create needs an active sample type').toBeTruthy();
+    // The form cannot carry a domain — a request that names one is rejected
+    // outright rather than honoured or quietly dropped.
+    expect(result.withDomainStatus,
+      'PanelCreateForm has no domain property, so a domain makes the body unreadable').toBe(400);
+    expect(result.okStatus, 'the legacy create must be accepted').toBe(200);
+    expect(result.found, 'the legacy create must actually persist a panel').toBe(true);
+    // THE DEFECT, asserted as it stands: createPanel() never calls setDomain, so
+    // the panel lands on CLINICAL and no request can say otherwise. When the
+    // legacy screen learns about domains this flips to a FAILURE, which is the
+    // signal to rewrite this case to assert the requested domain.
+    expect(result.domain,
+      'DEFECT: legacy PanelCreate can only store CLINICAL').toBe('CLINICAL');
+  });
+
+  test('TC-DEEP-31: FLIP-WHEN-FIXED — legacy /rest/PanelCreate answers 200 and creates nothing without a LOINC', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const H = { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf };
+      const B = '/api/OpenELIS-Global/rest';
+      const form = await (await fetch(`${B}/PanelCreate`, { headers: H })).json();
+      const types: Array<{ id?: unknown }> = Array.isArray(form?.existingSampleTypeList)
+        ? form.existingSampleTypeList : [];
+      const sampleTypeId = types.length ? String(types[0]?.id ?? '') : '';
+      const name = `QA-PNLN-${String(Date.now()).slice(-6)}`;
+      const post = await fetch(`${B}/PanelCreate`, {
+        method: 'POST', headers: H,
+        body: JSON.stringify({
+          panelEnglishName: name, panelFrenchName: name, sampleTypeId, panelLoinc: '',
+        }),
+      });
+      const body = await post.text();
+      const panels = await (await fetch(
+        `${B}/test-catalog/panels?includeInactive=true`, { headers: H },
+      )).json();
+      const found = Array.isArray(panels) && panels.some((p: { name?: string }) => p?.name === name);
+      return { sampleTypeId, status: post.status, echoedName: body.includes(name), found };
+    });
+
+    expect(result.sampleTypeId, 'the legacy create needs an active sample type').toBeTruthy();
+    // THE DEFECT: postPanelCreate() swallows the insert failure —
+    // `catch (LIMSRuntimeException e) { LogEvent.logDebug(e); }`
+    // (PanelCreateRestController:145) — then returns the form with HTTP 200 and
+    // the submitted name echoed back. Nothing was written. The screen has no way
+    // to tell an operator that their panel does not exist.
+    expect(result.status, 'the endpoint answers 200 even when the insert fails').toBe(200);
+    expect(result.echoedName, 'and echoes the name back, which reads as success').toBe(true);
+    expect(result.found,
+      'DEFECT: no panel was created, and the 200 said otherwise').toBe(false);
+  });
+
+  test('TC-DEEP-30: FLIP-WHEN-FIXED — the domain guard refuses with an empty body', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const H = { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf };
+      const B = '/api/OpenELIS-Global/rest/test-catalog';
+      // Seed a panel that HAS a clinical member test, so the guard has something
+      // to refuse. Nothing here depends on the instance's existing panels.
+      const tests = await (await fetch(`${B}/tests?domain=CLINICAL&pageSize=1`, { headers: H })).json();
+      const testId = tests?.rows?.[0]?.testId ?? null;
+      const name = `QA-PNLG-${String(Date.now()).slice(-6)}`;
+      const created = await (await fetch(`${B}/panels`, {
+        method: 'POST', headers: H, body: JSON.stringify({ name, active: false, domain: 'CLINICAL' }),
+      })).json().catch(() => null);
+      const id = created?.id ?? null;
+      const addTests = id && testId
+        ? await fetch(`${B}/panels/${id}/tests`, {
+            method: 'PUT', headers: H,
+            body: JSON.stringify({ tests: [{ testId, position: 1 }] }),
+          })
+        : null;
+      const move = id
+        ? await fetch(`${B}/panels/${id}/basic-info`, {
+            method: 'PUT', headers: H, body: JSON.stringify({ domain: 'ENVIRONMENTAL' }),
+          })
+        : null;
+      const moveBody = move ? await move.text() : null;
+      const read = id ? await (await fetch(`${B}/panels/${id}`, { headers: H })).json().catch(() => null) : null;
+      return {
+        testId,
+        id,
+        addStatus: addTests?.status ?? 0,
+        moveStatus: move?.status ?? 0,
+        moveBodyLength: moveBody === null ? -1 : moveBody.trim().length,
+        readDomain: read?.domain ?? null,
+        readTestCount: read?.testCount ?? null,
+      };
+    });
+
+    expect(result.testId, 'the guard probe needs one clinical test to seed a member').toBeTruthy();
+    expect(result.id, 'the guard probe needs its own panel').toBeTruthy();
+    expect(result.addStatus, 'a clinical test must be accepted into a clinical panel').toBe(200);
+    expect(result.readTestCount, 'the seeded panel must really have a member').toBe(1);
+    // The guard itself is correct per the OGC-224 FRS: a panel never mixes
+    // domains. What is wrong is HOW it refuses.
+    expect(result.moveStatus, 'moving a panel away from its member tests must be refused').toBe(422);
+    // THE DEFECT: the refusal carries no body, so the editor has no reason to
+    // show and falls back to a generic "error.panel.save" — or, as observed in
+    // Chrome on testing 2026-09-22, shows nothing at all while leaving the radio
+    // on the domain that was NOT saved. A body here flips this to a FAILURE,
+    // which is the signal that the server started explaining itself.
+    expect(result.moveBodyLength,
+      'DEFECT: the 422 is empty — the UI has nothing to tell the operator').toBe(0);
+    expect(result.readDomain, 'the refused move must leave the stored domain alone').toBe('CLINICAL');
+  });
+});
