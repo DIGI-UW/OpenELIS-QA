@@ -1034,3 +1034,229 @@ test.describe('Panel creation write path (2026-09-22)', () => {
     expect(result.readDomain, 'the refused move must leave the stored domain alone').toBe('CLINICAL');
   });
 });
+
+// ─────────────────────────────────────────────────────────────
+// Section G: the new-test lifecycle, walked (2026-09-22)
+//
+// Written after doing this walk by hand to answer OGC-1116 ("newly created
+// tests never become orderable — absent from /rest/test-list") and the FR-20/21
+// coverage-gap case on OGC-1119. Both questions took a live instance and a
+// sequence of six calls to settle, and neither had any coverage here. The next
+// person to ask should get an answer from a run, not from a browser session.
+//
+// Contract, read off origin/develop @ 1e5d582:
+//   * Activation is NOT a basic-info field. `PUT .../basic-info` with
+//     active:true on an inactive test answers 409 {"conflict":"activation"}
+//     ON PURPOSE (TestCatalogEditorRestController:690-694) — the comment there
+//     records that it replaced an earlier 200-and-drop, which "told the caller
+//     the activation had been saved when it had not". Deactivation DOES go
+//     through basic-info. TC-DEEP-32 pins both halves of that asymmetry.
+//   * Activation goes through POST .../activate, and sets `orderable` as well
+//     as `is_active`, by design: "Active ⇒ orderable & importable", and Add
+//     Order filters on is_active='Y' AND orderable=true. So /rest/test-list
+//     membership is the externally observable consequence of activating, which
+//     is exactly what OGC-1116 is about.
+//   * Activation is gated on completeness. A test with no primary result
+//     component is refused with a NAMED reason, not a silent failure.
+//   * The coverage report is computed server-side on every ranges load/save;
+//     CoverageValidationPanel only renders it. So the gap contract is testable
+//     over the API without touching the UI.
+//
+// Both cases create their own test and leave it INACTIVE, so neither puts an
+// orderable QA row into Add Order for whoever else is on the instance.
+// ─────────────────────────────────────────────────────────────
+
+test.describe('New-test lifecycle (2026-09-22)', () => {
+  test.beforeEach(async ({ page }) => {
+    await apiSession(page);
+  });
+
+  test('TC-DEEP-32: a new test reaches /rest/test-list only after it is complete and activated', async ({
+    page,
+  }) => {
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const H = { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf };
+      const B = '/api/OpenELIS-Global/rest/test-catalog';
+      const listNames = async () => {
+        const res = await fetch('/api/OpenELIS-Global/rest/test-list', { headers: H });
+        const rows = await res.json().catch(() => null);
+        return Array.isArray(rows) ? rows.map((r: { value?: unknown }) => String(r?.value ?? '')) : null;
+      };
+
+      const stamp = String(Date.now()).slice(-6);
+      const name = `QA-LIFE-${stamp}`;
+      const labUnits = await (await fetch(`${B}/lab-units`, { headers: H })).json();
+      const sampleTypes = (await (await fetch('/api/OpenELIS-Global/rest/sample-types', { headers: H })).json())
+        ?.data;
+      if (!Array.isArray(labUnits) || !labUnits.length || !Array.isArray(sampleTypes) || !sampleTypes.length) {
+        return { fatal: 'instance has no lab units or no sample types' };
+      }
+
+      const created = await fetch(`${B}/tests`, {
+        method: 'POST', headers: H,
+        body: JSON.stringify({
+          name, reportingName: name, code: `QAL${stamp}`,
+          labUnitId: String(labUnits[0].id), sampleTypeIds: [String(sampleTypes[0].id)],
+          domain: 'CLINICAL', orderable: false,
+        }),
+      });
+      const createdBody = await created.json().catch(() => null);
+      const id = createdBody?.testId ?? null;
+      if (!id) return { fatal: `create failed (${created.status})` };
+
+      const before = await listNames();
+
+      // full range coverage, so the refusal below can only be about completeness
+      const ranges = await fetch(`${B}/tests/${id}/ranges`, {
+        method: 'PUT', headers: H,
+        body: JSON.stringify({ testId: id, ranges: [
+          { gender: 'M', minAge: 0, maxAge: null, lowNormal: 1, highNormal: 9 },
+          { gender: 'F', minAge: 0, maxAge: null, lowNormal: 1, highNormal: 9 },
+        ] }),
+      });
+      const rangesBody = await ranges.json().catch(() => null);
+
+      const incomplete = await (await fetch(`${B}/tests/${id}/completeness`, { headers: H })).json()
+        .catch(() => null);
+      const refused = await fetch(`${B}/tests/${id}/activate`, { method: 'POST', headers: H, body: '{}' });
+
+      // activation is not a basic-info field, and asking there is refused rather than dropped
+      const viaBasicInfo = await fetch(`${B}/tests/${id}/basic-info`, {
+        method: 'PUT', headers: H, body: JSON.stringify({ active: true }),
+      });
+      const viaBasicInfoBody = await viaBasicInfo.json().catch(() => null);
+
+      const components = await fetch(`${B}/tests/${id}/sample-results`, {
+        method: 'PUT', headers: H,
+        body: JSON.stringify({ testId: id, components: [
+          { code: `QAL${stamp}`, label: 'QA lifecycle probe', displayOrder: 1,
+            resultType: 'N', isPrimary: true, significantDigits: 2 },
+        ] }),
+      });
+      const complete = await (await fetch(`${B}/tests/${id}/completeness`, { headers: H })).json()
+        .catch(() => null);
+
+      const activated = await fetch(`${B}/tests/${id}/activate`, { method: 'POST', headers: H, body: '{}' });
+      const activatedBody = await activated.json().catch(() => null);
+      const after = await listNames();
+
+      // leave nothing orderable behind for whoever else is on this instance
+      const deactivated = await fetch(`${B}/tests/${id}/basic-info`, {
+        method: 'PUT', headers: H, body: JSON.stringify({ active: false }),
+      });
+      const cleaned = await listNames();
+
+      const has = (rows: string[] | null) => !!rows && rows.some((v) => v.includes(name));
+      return {
+        id, name,
+        maleCoverage: rangesBody?.coverage?.male?.status ?? null,
+        femaleCoverage: rangesBody?.coverage?.female?.status ?? null,
+        incompleteFlag: incomplete?.complete ?? null,
+        incompleteMissing: Array.isArray(incomplete?.missing) ? incomplete.missing : null,
+        refusedStatus: refused.status,
+        basicInfoStatus: viaBasicInfo.status,
+        basicInfoConflict: viaBasicInfoBody?.conflict ?? null,
+        componentsStatus: components.status,
+        completeFlag: complete?.complete ?? null,
+        activatedStatus: activated.status,
+        activeFlag: activatedBody?.active ?? null,
+        orderableFlag: activatedBody?.orderable ?? null,
+        inListBefore: has(before), inListAfter: has(after),
+        countBefore: before?.length ?? null, countAfter: after?.length ?? null,
+        deactivatedStatus: deactivated.status,
+        inListAfterDeactivate: has(cleaned),
+      };
+    });
+
+    expect(result.fatal, `precondition: ${result.fatal ?? ''}`).toBeUndefined();
+    expect(result.maleCoverage, 'an unbounded range covers the whole age axis').toBe('COMPLETE');
+    expect(result.femaleCoverage, 'an unbounded range covers the whole age axis').toBe('COMPLETE');
+
+    // A fresh test is NOT orderable, and the list is where that is observable.
+    expect(result.inListBefore, 'a new inactive test must not be offerable for ordering').toBe(false);
+
+    // Refused for a NAMED reason. A bare 4xx here would be the old silent failure.
+    expect(result.incompleteFlag, 'a test with no result component is not complete').toBe(false);
+    expect(result.incompleteMissing, 'the completeness report must name what is missing')
+      .toContain('NO_PRIMARY_RESULT_TYPE');
+    expect(result.refusedStatus, 'activating an incomplete test is refused').toBe(422);
+
+    // The asymmetry: basic-info refuses to activate, on purpose, rather than dropping it.
+    expect(result.basicInfoStatus, 'basic-info must not be an activation back door').toBe(409);
+    expect(result.basicInfoConflict, 'and must say why it refused').toBe('activation');
+
+    expect(result.componentsStatus).toBe(200);
+    expect(result.completeFlag, 'a primary result component completes the test').toBe(true);
+
+    // THE OGC-1116 ASSERTION: activation makes it orderable AND it reaches the list.
+    expect(result.activatedStatus, 'a complete test activates').toBe(200);
+    expect(result.activeFlag, 'activation sets is_active').toBe(true);
+    expect(result.orderableFlag, 'activation sets orderable too — "Active implies orderable"').toBe(true);
+    expect(result.inListAfter, 'an activated test must reach /rest/test-list, which Add Order reads')
+      .toBe(true);
+    expect(result.countAfter, 'the list grew by exactly the one test').toBe((result.countBefore ?? 0) + 1);
+
+    // and the lifecycle is reversible (OGC-1115), which is also this case's cleanup
+    expect(result.deactivatedStatus, 'deactivation does go through basic-info').toBe(200);
+    expect(result.inListAfterDeactivate, 'a deactivated test leaves the orderable list').toBe(false);
+  });
+
+  test('TC-DEEP-33: narrowing an open-ended reference range reports the uncovered tail', async ({
+    page,
+  }) => {
+    const result = await page.evaluate(async () => {
+      const csrf = localStorage.getItem('CSRF') || '';
+      const H = { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf };
+      const B = '/api/OpenELIS-Global/rest/test-catalog';
+      const stamp = String(Date.now()).slice(-6);
+      const labUnits = await (await fetch(`${B}/lab-units`, { headers: H })).json();
+      const sampleTypes = (await (await fetch('/api/OpenELIS-Global/rest/sample-types', { headers: H })).json())
+        ?.data;
+      if (!Array.isArray(labUnits) || !labUnits.length || !Array.isArray(sampleTypes) || !sampleTypes.length) {
+        return { fatal: 'instance has no lab units or no sample types' };
+      }
+      // its own test, so no real catalog row's ranges are disturbed
+      const created = await (await fetch(`${B}/tests`, {
+        method: 'POST', headers: H,
+        body: JSON.stringify({
+          name: `QA-GAP-${stamp}`, reportingName: `QA-GAP-${stamp}`, code: `QAG${stamp}`,
+          labUnitId: String(labUnits[0].id), sampleTypeIds: [String(sampleTypes[0].id)],
+          domain: 'CLINICAL', orderable: false,
+        }),
+      })).json().catch(() => null);
+      const id = created?.testId ?? null;
+      if (!id) return { fatal: 'create failed' };
+
+      const put = async (ranges: unknown[]) => {
+        const res = await fetch(`${B}/tests/${id}/ranges`, {
+          method: 'PUT', headers: H, body: JSON.stringify({ testId: id, ranges }),
+        });
+        const body = await res.json().catch(() => null);
+        return { status: res.status, male: body?.coverage?.male ?? null };
+      };
+
+      // "15+": one range from 0 with no upper bound. Covers the whole axis.
+      const open = await put([{ gender: 'M', minAge: 0, maxAge: null, lowNormal: 1, highNormal: 9 }]);
+      // narrowed to 15..30: 0-15 AND everything above 30 are now uncovered.
+      const narrowed = await put([{ gender: 'M', minAge: 15, maxAge: 30, lowNormal: 1, highNormal: 9 }]);
+      return { id, open, narrowed };
+    });
+
+    expect(result.fatal, `precondition: ${result.fatal ?? ''}`).toBeUndefined();
+    expect(result.open.status).toBe(200);
+    expect(result.open.male?.status, 'an unbounded range leaves nothing uncovered').toBe('COMPLETE');
+    expect(result.open.male?.gaps, 'and reports no gaps').toEqual([]);
+
+    // FR-20/21. The tail is the half a naive implementation misses: it is easy to
+    // notice 0-15 went missing and easy to forget that 30..unbounded did too.
+    expect(result.narrowed.status).toBe(200);
+    expect(result.narrowed.male?.status, 'narrowing the range opens a gap').toBe('GAP');
+    const gaps = (result.narrowed.male?.gaps ?? []) as Array<{ fromAge?: unknown; toAge?: unknown }>;
+    expect(gaps.map((g) => [g.fromAge, g.toAge]),
+      'both the leading window and the unbounded tail must be reported').toEqual([
+      [0, 15],
+      [30, 'Infinity'],
+    ]);
+  });
+});
