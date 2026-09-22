@@ -161,7 +161,15 @@ async function openSampleStep(page: Page, acc: string): Promise<void> {
 
 test.describe.configure({ mode: 'serial' });
 
+// TIMEOUT, measured 2026-09-22. Every case here opens Edit Order, and the SPA boot on
+// testing costs ~30-50s before the page's heading exists. modules.config.ts sets a 30s
+// per-test budget, which is a deliberate policy for API-shaped checks but is shorter than
+// one page load here: on 2026-09-22 the EO-CANCEL-01 canary timed out at 30s and
+// cascade-skipped all five remaining cases, reporting nothing about the product. Re-run at
+// 180s, the same canary passed in 28.3s. So the file raises its own budget rather than
+// leaving a suite that cannot answer the question it exists to answer.
 test.describe('Edit Order — cancelling a placed test', () => {
+  test.beforeEach(() => test.setTimeout(120_000));
   // Seeded HERE rather than in a beforeAll hook, and both halves of that matter: a page
   // from `browser.newPage()` carries no storage state (so every seeding call would be
   // unauthenticated) and starts on about:blank, where reading `localStorage` for the CSRF
@@ -264,6 +272,7 @@ test.describe('Edit Order — cancelling a placed test', () => {
 });
 
 test.describe('Edit Order — removing a whole sample', () => {
+  test.beforeEach(() => test.setTimeout(120_000));
   test('EO-REMOVE-01 [canary]: a two-test sample lists both tests and offers Remove Sample on the sample row', async ({
     page,
   }) => {
@@ -345,15 +354,21 @@ test.describe('Edit Order — removing a whole sample', () => {
   test('EO-REMOVE-03: nothing from the removed sample is left on the work the lab is asked to do', async ({
     page,
   }) => {
-    test.fail();
-    // THE SPEC. Removing a sample must cancel every analysis on it. Measured on develop
-    // 2026-09-15, it cancels the sample item and ONLY the ticked row's analysis:
+    // FLIPPED 2026-09-22. This case carried `test.fail()` from 2026-09-15 to 2026-09-22,
+    // asserting the SPEC against a build that did not meet it. On 2026-09-22 it reported
+    // "Expected to fail, but passed" against develop, which is the marker doing its job:
+    // OGC-1221 is fixed (PR #4326, merged as c2a6b943e), so the marker is removed and this
+    // is now an ordinary regression check on the spec.
+    //
+    // THE SPEC. Removing a sample must cancel every analysis on it. As measured on develop
+    // 2026-09-15, BEFORE the fix, it cancelled the sample item and ONLY the ticked row's
+    // analysis:
     //
     //   accession DEV01260000000000228, sample_item 177 status 19 (Canceled)
     //     analysis 151 Glucose  status 14 Test Canceled
     //     analysis 152 Amylase  status  4 Not Tested        <- still live
     //
-    // ROOT CAUSE. `SampleEditServiceImpl.createCancelSampleList` walks the rows and uses a
+    // ROOT CAUSE, as it was. `SampleEditServiceImpl.createCancelSampleList` walked the rows and used a
     // sticky flag to carry "this sample is being removed" from the first row of a sample
     // item to the rest of the group. It resets that flag on any row whose accession number
     // is non-null — that is how it detects the start of the next group. But
@@ -362,9 +377,13 @@ test.describe('Edit Order — removing a whole sample', () => {
     // is not null. The flag therefore resets on EVERY row and the group never extends past
     // the one the user ticked.
     //
-    // The consequence is worse than a no-op: the surviving analyses are still on the
-    // worklist, and Edit Order can no longer see them, because its GET drops the cancelled
-    // sample item they hang from. They cannot be reached to be fixed.
+    // The consequence was worse than a no-op: the surviving analyses stayed on the
+    // worklist, and Edit Order could no longer see them, because its GET drops the cancelled
+    // sample item they hang from. They could not be reached to be fixed.
+    //
+    // THE FIX groups by `sampleItemId` in a Set and drops the sentinel entirely
+    // (SampleEditServiceImpl.java:481-498), so the behaviour no longer depends on row order
+    // or on what the form does to blank accession numbers.
     await page.goto(`${BASE}/Results?accessionNumber=${removeAccession}`, {
       waitUntil: 'domcontentloaded',
     });
