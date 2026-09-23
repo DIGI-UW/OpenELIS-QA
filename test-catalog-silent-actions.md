@@ -15,8 +15,8 @@ Contract for every case: seed through REST, act through the UI, read back throug
 ### TC-SA-01: Sample & Results Copy issues the copy request and claims success
 Canary. Seeds a source and target test, each with a PRIMARY single-select component and disjoint options. Drives the Copy combobox and button. Asserts the POST goes to `copy-from/<source>`, answers 200, and the "Configuration copied." toast appears. **Criterion:** FUNCTION.
 
-### TC-SA-02: After "Configuration copied." the target carries the source options
-FLIP-WHEN-FIXED, Delta-SA1. Asserts the target PRIMARY options equal the source's after Copy (OGC-967 AC: "the table on the current component refreshes with the copied rows"). Fails today because `copyComponentsFromTest` never overwrites a configured component and every test has PRIMARY. **Criterion:** PERSIST.
+### TC-SA-02: Copy asks to confirm a destructive replace, then Save persists the source config
+FLIP-WHEN-FIXED, Delta-SA1. Contract per Casey (2026-09-23): Copy replaces the target configuration; clicking it opens a confirmation modal warning the change is irreversible once saved; confirming stages the source config in the editor and Save commits it. The case asserts the modal, the warning, and the read-back after Save. Fails today: no modal appears, and the backend never overwrites a configured component. **Criterion:** PERSIST.
 
 ### TC-SA-10: A new panel name creates a new panel
 Canary. New Panel form with an unused name mints a new id that reads back by id. **Criterion:** ROUND-TRIP.

@@ -30,7 +30,20 @@ Maturity is rated at the lowest sub-feature. Copy configuration and Sample Type 
 
 ## 3. Delta ledger
 
-All five were driven by hand in Chrome as a user would, with a before/after REST read of the affected record and every toast recorded by a MutationObserver. Revalidation: each reproduced in a second session after a forced logout/re-login, and 3x over the API (2 of 3 gate met for all five).
+All were driven by hand in Chrome as a user would, with a before/after REST read of the affected record and every toast recorded by a MutationObserver.
+
+**Revalidation (corrected 2026-09-23).** An earlier version of this line said each finding reproduced "in a second session after a forced logout/re-login". That was not done and the claim is withdrawn. What was actually done, per finding:
+
+| Delta | Fresh browser tab (UI) | Fresh login (harness `auth.setup` + tripwire) | API repeat | Gate |
+|---|---|---|---|---|
+| SA1 | yes: 175 from 199, options unchanged, "Configuration copied." x2 | TC-SA-02 expected-fail | 3x | 3 of 3 |
+| SA2 | yes: panel 29 active true to false, description overwritten, no toast | TC-SA-11 expected-fail | 3x | 3 of 3 |
+| SA3 | yes: 409, nothing linked, green "+ Create New Method" | TC-SA-21 expected-fail | 3x | 3 of 3 |
+| SA4 | no (already filed as OGC-1156) | TC-SA-31 expected-fail | n/a | 1 of 3, plus existing ticket |
+| SA5 | yes: 200, list count 22 unchanged, "Sample type saved successfully." | TC-SA-32 expected-fail | 3x | 3 of 3 |
+| SA6 | yes: panel 29 description set to "Bilan Biochimique", PUT 500, no message, nothing saved | hit during harness seeding (API) | 4x | 2 of 3 |
+
+Casey ruled 2026-09-23 that panel descriptions do not need to be unique, so SA6 is a defect.
 
 ### Delta-SA1: Copy configuration from test copies nothing and says "Configuration copied." (High)
 
@@ -42,6 +55,7 @@ All five were driven by hand in Chrome as a user would, with a before/after REST
   - The page reloads and scrolls to the top, so the toast is easy to miss. The user's "does absolutely nothing" is accurate for the component they were looking at.
 - **Also:** the frontend `if (res)` is always true for this helper (`postToOpenElisServerJsonResponse` passes `{...body,status}` or `{error,status}` on failure), so a 404 or 500 also toasts "Configuration copied." The controller does not check that the source exists, and unlike the Save path it skips `invalidateHealth()` and the dictionary cache refresh.
 - **Why tests missed it:** FE unit test (`SampleResultsSection.test.jsx:725-738`) mocks the server and checks only the URL. Backend IT `copySampleResults_copiesComponentsOptionsAndInterpretations` copies onto an empty target, the one case the skip never touches. QA had only a docs screenshot capture.
+- **Decision (Casey, 2026-09-23):** Copy replaces the target configuration, behind a confirmation modal warning that the change is irreversible once saved; confirming stages the source config in the editor and Save commits it.
 - **Repro:** open `/MasterListsPage/TestCatalogEditor/175/sample-results`, scroll to "Copy configuration from test", pick Innolia, click "Copy from test". Compare the PRIMARY options before and after.
 
 ### Delta-SA2: Add Panel with an existing name deactivates and rewrites the existing panel (High, data integrity)
@@ -115,7 +129,7 @@ Type Bug, Priority Medium. Body: Delta-SA3, plus the helper contract: `postToOpe
 
 **Draft 4 (comment on OGC-1156, not a new ticket).** "Still present on testing 3.2.2.0 (develop 95d6c64), 2026-09-23. Created QA_ST_0923 through Sample Type Editor > Add with Description 'QA description typed on create'; stored description is 'QA_ST_0923'. Cause: SampleTypeManagement.jsx:498-504 builds the create payload without `description`. Now held by tripwire TC-SA-31 in test-catalog-silent-actions.spec.ts."
 
-**Draft 6 (optional, Low).** `[QA Auto] Panel Editor: saving a description another panel uses returns 500 with no message`. Body: Delta-SA6. Hold until Casey rules on whether descriptions must be unique.
+**Draft 6 (optional, Low).** `[QA Auto] Panel Editor: saving a description another panel uses returns 500 with no message`. Body: Delta-SA6. Casey ruled descriptions need not be unique: this is a defect.
 
 **Draft 5.** `[QA Auto] TC-SA-32 failed: Sample Type create answers 200 and the UI says "saved successfully" when validation refused the name`
 Type Bug, Priority Medium. Body: Delta-SA5. Asks: 400 with field errors from the controller; the UI shows them.

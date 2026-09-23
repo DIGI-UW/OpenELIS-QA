@@ -178,16 +178,25 @@ test.describe('Sample & Results - Copy configuration from test', () => {
       'the UI claims "Configuration copied." (TC-SA-02 checks whether that claim is true)').toBe(true);
   });
 
-  test('TC-SA-02: FLIP-WHEN-FIXED - after "Configuration copied." the target carries the source options', async ({ page }) => {
-    // Delta-SA1. Today: copyComponentsFromTest skips any target component whose code already
-    // exists with a result type. Every test has PRIMARY, so the copy is a no-op for ~162 of 164
-    // tests on testing, and the UI still toasts "Configuration copied."
-    test.fail(true, 'Delta-SA1: copy never overwrites an existing PRIMARY; flips when Replace (OGC-967) ships');
-    const r = await copyViaUi(page);
-    const claimed = r.toasts.some((t) => /copied/i.test(t.text));
-    const after = await primaryOptionNames(page, tgtId);
-    expect(claimed, 'precondition: the UI claimed the copy happened').toBe(true);
-    expect(after, 'OGC-967: "after successful copy, the table on the current component refreshes with the copied rows"').toEqual(srcOpts);
+  test('TC-SA-02: FLIP-WHEN-FIXED - Copy asks to confirm a destructive replace, then Save persists the source config', async ({ page }) => {
+    // Delta-SA1. Contract (Casey, 2026-09-23): Copy REPLACES the target's configuration. Because
+    // that is destructive, clicking Copy opens a confirmation modal warning that the change is
+    // irreversible once saved. Confirming stages the source config in the editor; Save commits it.
+    // Today: no modal, copyComponentsFromTest skips any configured component (every test has
+    // PRIMARY), the target is unchanged, and the UI toasts "Configuration copied."
+    test.fail(true, 'Delta-SA1: no confirm modal and no replace; flips when the confirm-then-Save replace ships');
+    await open(page, `/MasterListsPage/TestCatalogEditor/${tgtId}/sample-results`);
+    await page.locator('#copy-from-test').waitFor({ state: 'visible', timeout: 60_000 });
+    await pickFromCombo(page, 'copy-from-test', srcLabel);
+    await page.getByRole('button', { name: /^copy from test$/i }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog, 'Copy must open a confirmation modal before replacing anything').toBeVisible({ timeout: 10_000 });
+    await expect(dialog, 'the modal must warn that the replace is irreversible once saved').toContainText(/irreversible|cannot be undone|can't be undone/i);
+    await dialog.getByRole('button', { name: /confirm|replace|copy|yes|continue/i }).first().click();
+    await page.getByRole('button', { name: /^save$/i }).last().click();
+    await page.waitForTimeout(2500);
+    expect(await primaryOptionNames(page, tgtId),
+      'after confirm + Save, the target PRIMARY carries the source options (OGC-967: "refreshes with the copied rows")').toEqual(srcOpts);
   });
 });
 
