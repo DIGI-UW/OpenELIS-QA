@@ -299,3 +299,19 @@ BUG-31 for the UI path; API-substitute path unresolved (see runSeed() comment).
 
 No Jira tickets filed -- the only finding was the harness bug above, now fixed at
 source.
+
+## 2026-09-23 -- deep run, Test Catalog silent actions, testing 3.2.2.0 (develop 95d6c64)
+
+Trigger: Casey found "Copy configuration from test" does nothing while toasting success.
+Substrates: Claude in Chrome for every finding (click-through, before/after REST read, toast
+capture); Playwright for encoding (`test-catalog-silent-actions.spec.ts`, 12 cases).
+
+Six deltas, all 2-of-3 revalidated (second session after re-login + 3x API):
+SA1 Copy configuration no-op for any configured target (162/164 tests), false success;
+SA2 Add Panel with an existing name deactivates and rewrites that panel (OGC-1122 side effect);
+SA3 Methods inline create shows success on 409; SA4 Sample Type create drops Description
+(already OGC-1156); SA5 Sample Type create reports success on a validation refusal (200 echo);
+SA6 Panel Save with a duplicate description answers 500 with no visible message (found while seeding).
+
+Maturity of the graded action slice: M1. Report: qa-report-testing-20260923-silent-actions.md.
+No Jira tickets filed; four drafts and one OGC-1156 comment await Casey.
