@@ -21,6 +21,8 @@
 | 3 | Add Order patient photo editability in view mode | On `/SamplePatientEntry` with an existing patient selected, the patient panel is read-only (`fieldset[disabled]`, 12 inputs disabled) but `PatientImageSelector` gets `disabled={false}`. Since PR #3987 portaled the dialogs out of the fieldset, the picker's controls are live (0/11 disabled: Import, Take Photo, Change Image, Confirm) — so the photo is editable where nothing else is. | (a) caller should pass `disabled` in sync ⇒ click opens the read-only **View Photo** viewer; (b) photo capture during order entry is intended ⇒ make it visually explicit and keep it editable | testing v3.2.1.11 (PR #3987) | decides whether the regression suite asserts the viewer or the picker. The spec currently pins OBSERVED behaviour (picker) and fails loudly either way it is resolved. Also gates OGC draft F-1. |
 
 _(append new rows above this line)_
+| 5 | Panel Editor: duplicate name on Add Panel (Delta-SA2) | The OGC-1122 fix made POST /panels create-if-not-exists; the New Panel form then deactivates and rewrites the existing panel | (a) reject OGC-1122 with this as the reason; (b) approve OGC-1122 and file SA2 separately | testing 3.2.2.0 | decides whether TC-SA-11 cites OGC-1122 or a new ticket |
+| 6 | Terminology: code cleared in place | Clearing the code on an existing mapping row and saving deletes the mapping (row filtered out, server soft-deletes it), with "saved" toast | (a) intended: clearing means remove; (b) incomplete row should be refused with a message | code reading, develop 95d6c64 | decides whether a tripwire is written |
 
 ## Resolved
 | # | Question | Casey's answer / decision | Case authored |
@@ -29,6 +31,8 @@ _(append new rows above this line)_
 | 2 | Referral status transitions on `/SampleShipment/reference-lab-results` (target: release, testing v3.2.1.x) | **Casey:** in-transit while shipped (activated `ReferralStatus`, not yet received) → **Received** once the shipment/box is marked received → **Resulted** once a result has been **validated and released**. Tester expectation: after a box is received the referral shows Received; it only shows Resulted after the referred test's result is validated+released. | TODO — author a referral chain asserting the Sent/in-transit → Received → Resulted transitions on the reference-lab view |
 
 ---
+| 7 | Panel description uniqueness (Delta-SA6) | **Casey, 2026-09-23: descriptions do not need to be unique.** The 500 on a duplicate description is a defect. | Included in the single Test Catalog silent-actions bug |
+| 4 | Copy configuration from test semantics | **Casey, 2026-09-23: Copy replaces**, behind a confirmation modal saying the change is irreversible once saved; confirm stages the source config, Save commits. | TC-SA-02 rewritten to this contract |
 
 ## Maintenance
 This file is the collaboration ledger between the skill and Casey. Keep it short by promoting

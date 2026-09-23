@@ -13,6 +13,7 @@
     ]
   },
   "include": [
+    "test-catalog-silent-actions.spec.ts",
     "analyzer-guided-setup.spec.ts",
     "auth.setup.ts",
     "capture-topsave.spec.ts",
