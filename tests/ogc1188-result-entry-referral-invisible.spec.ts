@@ -68,6 +68,16 @@
  * Lab Results dashboard, and no action can rescue it.
  *
  * ============================================================================
+ * STATUS 2026-09-23: FIXED ON testing 3.2.2.0, OGC-1188 ACCEPTED
+ * ============================================================================
+ * RE-1188-02, 03 and 05 reported "Expected to fail, but passed"; their test.fail()
+ * markers are deleted and their assertions kept as they were. RE-1188-04 flipped to a
+ * 400 rather than the 200 it asserted, because the fixed save writes REQUESTED directly
+ * instead of DRAFT; it is rewritten to the shipped contract (see its comment). The
+ * "WHAT THE PRODUCT DOES" section above is the pre-fix measurement, kept as the record
+ * of what each case guards against.
+ *
+ * ============================================================================
  * HOW TO READ THIS FILE — the flip-when-fixed convention
  * ============================================================================
  * Same posture as tests/ogc1192-env-order-visibility.spec.ts and
@@ -523,7 +533,6 @@ test.describe('OGC-1188 — a referral made at Result Entry must be visible and 
    * @Deprecated SENT and SENT is in no bucket. The assertion below is the SPEC.
    */
   test('RE-1188-02: the referral appears on the Reference Lab Results dashboard', async ({ page }) => {
-    test.fail(); // OGC-1188: SENT is in no bucket, so the referral is in no view and counted in no tile.
     await page.goto(BASE, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => !!localStorage.getItem('CSRF'), null, { timeout: 20_000 });
 
@@ -565,7 +574,6 @@ test.describe('OGC-1188 — a referral made at Result Entry must be visible and 
    * versa, is legible from the test report rather than only from a debugger.
    */
   test('RE-1188-03: the status written is a live lifecycle status, not the deprecated SENT', async () => {
-    test.fail(); // OGC-1188: ResultUtil.handleReferrals writes ReferralStatus.SENT, a @Deprecated value.
     expect(
       LIVE_STATUSES,
       `Result Entry wrote referralStatus "${ref.statusAfterSave}" for referral ${ref.referralId}. ` +
@@ -576,18 +584,37 @@ test.describe('OGC-1188 — a referral made at Result Entry must be visible and 
   });
 
   /**
-   * RE-1188-04 — ADVANCEABILITY. The half the ticket text misses, and arguably worse:
-   * even a user who knows the referral exists cannot move it anywhere.
+   * RE-1188-04 — ADVANCEABILITY. The half the ticket text misses: before the fix, even a
+   * user who knew the referral existed could not move it anywhere.
    *
-   * MEASURED TODAY: HTTP 500. `transition()` returns early on the null subcontract, then
-   * `ReferralSubcontractDispatchRestController` calls `subcontract.getId()` on it — an
-   * NPE served as an opaque Internal Server Error. The same call against an Order Entry
-   * referral in DRAFT returns 200 and moves it to REQUESTED.
+   * BEFORE THE FIX (measured 2026-09-15): HTTP 500. `transition()` returned early on the
+   * null subcontract, then `ReferralSubcontractDispatchRestController` called
+   * `subcontract.getId()` on it, an NPE served as an opaque Internal Server Error.
+   *
+   * THE FIXED CONTRACT (testing 3.2.2.0, 2026-09-23). The Result Entry save now writes the
+   * referral already dispatched: REQUESTED, with a referral_subcontract, the same state an
+   * Order Entry referral reaches after dispatch. So dispatching it again is not a legal
+   * move, and the lifecycle guard must say so: 400 "Illegal referral transition for <id>:
+   * REQUESTED -> REQUESTED". That answer is the proof of advanceability. It only comes
+   * from `ReferralStatus.canTransitionTo`, which the pre-fix code never reached because it
+   * bailed out on the missing subcontract. The forward move itself (REQUESTED -> REJECTED)
+   * is asserted by RE-1188-05, which runs next in this serial describe.
+   *
+   * This was a FLIP-WHEN-FIXED marker asserting a 200 from dispatch. It flipped the other
+   * way (400, not 200) because the fix skips DRAFT, so it was rewritten to the shipped
+   * contract rather than having its marker deleted (OGC-1188 acceptance, 2026-09-23).
    */
-  test('RE-1188-04: the referral can be dispatched to the reference lab like any other', async ({ page }) => {
-    test.fail(); // OGC-1188: no referral_subcontract row, so dispatch NPEs -> HTTP 500.
+  test('RE-1188-04: the referral is live in the lifecycle, so a redundant dispatch is refused by the guard, not an NPE', async ({ page }) => {
     await page.goto(BASE, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => !!localStorage.getItem('CSRF'), null, { timeout: 20_000 });
+
+    const before = await readReferralItem(page, ref.labNo);
+    expect(
+      before?.referralStatus,
+      `referral ${ref.referralId} (accession ${ref.labNo}) is "${before?.referralStatus}" right after the ` +
+        `Result Entry save. The fixed build writes REQUESTED, the dispatched state; anything else means ` +
+        `the save path changed and this case's premise needs re-measuring.`
+    ).toBe('REQUESTED');
 
     const res = await raw(page, 'POST', `${REST}/referrals/${ref.referralId}/dispatch-subcontract`, {
       handoffDatetime: `${dmy(new Date())} 09:00`,
@@ -595,17 +622,20 @@ test.describe('OGC-1188 — a referral made at Result Entry must be visible and 
     });
     expect(
       res.status,
-      `POST ${REST}/referrals/${ref.referralId}/dispatch-subcontract -> ${res.status} ` +
-        `${res.body.slice(0, 200)}. A referral created at Result Entry must be dispatchable exactly ` +
-        `like one created at Order Entry, which answers 200 here. 500 is the NPE on the null ` +
-        `subcontract; 400 would mean the transition was refused.`
-    ).toBe(200);
+      `POST ${REST}/referrals/${ref.referralId}/dispatch-subcontract on an already-REQUESTED referral -> ` +
+        `${res.status} ${res.body.slice(0, 200)}. Expected 400 from the lifecycle guard. 500 is the old NPE ` +
+        `on a null subcontract (OGC-1188 is back); 200 would mean REQUESTED -> REQUESTED was accepted.`
+    ).toBe(400);
+    expect(
+      res.body,
+      `dispatch answered 400 but not from the lifecycle guard: ${res.body.slice(0, 200)}. Only ` +
+        `canTransitionTo produces "Illegal referral transition", and only a referral with a subcontract reaches it.`
+    ).toMatch(/Illegal referral transition for \d+: REQUESTED -> REQUESTED/);
 
     const after = await readReferralItem(page, ref.labNo);
     expect(
       after?.referralStatus,
-      `dispatch answered ${res.status} but referral ${ref.referralId} is still ` +
-        `"${after?.referralStatus}" on ${REST}/order/search?labNumber=${ref.labNo}`
+      `the refused dispatch moved referral ${ref.referralId} from REQUESTED to "${after?.referralStatus}".`
     ).toBe('REQUESTED');
   });
 
@@ -618,13 +648,13 @@ test.describe('OGC-1188 — a referral made at Result Entry must be visible and 
    * told it worked. Asserting the STATE after the call, not the status code, is the only
    * way to catch that; a case that stopped at "204, good" would be green on this bug.
    *
-   * Ordered after RE-1188-04 deliberately (the describe is serial): on a fixed build the
-   * referral is REQUESTED by the time this runs, which is the state a reject is legal from.
+   * Ordered after RE-1188-04 deliberately (the describe is serial): on the fixed build the
+   * referral is REQUESTED from the save onward (04 confirms a redundant dispatch leaves it
+   * there), and REQUESTED is a state a reject is legal from.
    */
   test('RE-1188-05: a 2xx reject actually rejects the referral rather than answering success and doing nothing', async ({
     page,
   }) => {
-    test.fail(); // OGC-1188: transition() returns early on the null subcontract; reject is a 204 no-op.
     await page.goto(BASE, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => !!localStorage.getItem('CSRF'), null, { timeout: 20_000 });
 
