@@ -306,7 +306,8 @@ Trigger: Casey found "Copy configuration from test" does nothing while toasting 
 Substrates: Claude in Chrome for every finding (click-through, before/after REST read, toast
 capture); Playwright for encoding (`test-catalog-silent-actions.spec.ts`, 12 cases).
 
-Six deltas, all 2-of-3 revalidated (second session after re-login + 3x API):
+Six deltas, 2-of-3 revalidated by fresh-tab UI check plus harness tripwire (corrected: an earlier
+line claimed a second session after re-login; that was not done, see the report's revalidation table):
 SA1 Copy configuration no-op for any configured target (162/164 tests), false success;
 SA2 Add Panel with an existing name deactivates and rewrites that panel (OGC-1122 side effect);
 SA3 Methods inline create shows success on 409; SA4 Sample Type create drops Description
@@ -315,3 +316,23 @@ SA6 Panel Save with a duplicate description answers 500 with no visible message 
 
 Maturity of the graded action slice: M1. Report: qa-report-testing-20260923-silent-actions.md.
 No Jira tickets filed; four drafts and one OGC-1156 comment await Casey.
+
+## 2026-09-23 -- deep run, Test Catalog section depth, testing 3.2.2.0 (develop 95d6c64)
+
+Trigger: Casey asked whether the Test Catalog suite is reliably complete; answered no, then "both":
+encode the suspected silent failures and give every uncovered editor section a deep case.
+Substrates: Claude in Chrome for findings; Playwright for encoding (`test-catalog-section-depth.spec.ts`,
+26 cases, shared helper `helpers/catalogUi.ts`).
+
+Seven deltas, 2-of-3 (fresh-tab UI + harness tripwire): SD-G1 group Ranges drops specimen scope;
+SD-G2 group Storage has no differs warning and overwrites siblings; SD-M1 Methods copy toasts success
+for nothing copied; SD-M2 Copy pickers do not filter; SD-L1 Localization rename leaves /rest/test-list
+stale; SD-D1 order entry ignores Display Order; SD-D2 Display Order ignores the current test.
+Newly covered and passing: QC Targets, Interpretations, Panel member tests, Reagents, Analyzers and
+Reflex & Calc (read-only), CSV import.
+
+Harness lessons: concurrent runs sharing .auth/user.json signed this run out mid-way (six login-page
+timeouts); catalogUi.open() now re-logs once. A REST read before the first navigation let TC-SD-11 and 21
+record a TypeError as their expected failure; fixed, and tripwire failure reasons are now read from the JSON
+report. Final run: 27/27, every tripwire failing on its spec assertion.
+Terminology cleared-code stays open (open question 6). No Jira tickets filed; one combined bug draft awaits Casey.

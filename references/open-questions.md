@@ -22,7 +22,7 @@
 
 _(append new rows above this line)_
 | 5 | Panel Editor: duplicate name on Add Panel (Delta-SA2) | The OGC-1122 fix made POST /panels create-if-not-exists; the New Panel form then deactivates and rewrites the existing panel | (a) reject OGC-1122 with this as the reason; (b) approve OGC-1122 and file SA2 separately | testing 3.2.2.0 | decides whether TC-SA-11 cites OGC-1122 or a new ticket |
-| 6 | Terminology: code cleared in place | Clearing the code on an existing mapping row and saving deletes the mapping (row filtered out, server soft-deletes it), with "saved" toast | (a) intended: clearing means remove; (b) incomplete row should be refused with a message | code reading, develop 95d6c64 | decides whether a tripwire is written |
+| 6 | Terminology: code cleared in place | Clearing the code on an existing mapping row and saving deletes the mapping (row filtered out, server soft-deletes it), with "saved" toast | (a) intended: clearing means remove; (b) incomplete row should be refused with a message | code reading, develop 95d6c64; UI-confirmed 2026-09-23 ("Terminology mappings saved." toast, mapping gone) | decides whether a tripwire is written |
 
 ## Resolved
 | # | Question | Casey's answer / decision | Case authored |

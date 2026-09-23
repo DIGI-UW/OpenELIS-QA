@@ -40,6 +40,11 @@
       "file": "test-catalog-silent-actions.md",
       "area": "Test Catalog: silent actions (toast vs state)",
       "note": "Feature suite, 2026-09-23. Copy configuration, duplicate-name panel, method 409, sample type create. Report: qa-report-testing-20260923-silent-actions.md."
+    },
+    {
+      "file": "test-catalog-section-depth.md",
+      "area": "Test Catalog: section depth (QC targets, CSV import, interpretations, panels, reagents, localization, display order, group editor)",
+      "note": "Feature suite, 2026-09-23. Report: qa-report-testing-20260923-section-depth.md."
     }
   ],
   "notCatalogues": [
