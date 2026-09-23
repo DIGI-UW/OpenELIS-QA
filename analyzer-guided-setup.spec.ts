@@ -490,7 +490,9 @@ test.describe('TC-ANZ-M3-INSTRUMENT — inline instrument-first setup (FR-B1, B2
     // Δ-D fixed — the escape hatch exists and hands off to Analyzer Types with a returnTo.
     await page.getByText(/isn'?t listed|not listed|add a new (type|profile)/i).first().click();
     await expect(page).toHaveURL(/\/analyzers\/types(\?|$)/, { timeout: TIMEOUT });
-    await page.getByRole('button', { name: /Create Profile/i }).first().click();
+    // 2026-09-23: the analyzers instance renamed the button "Create New Analyzer Type"; testing still
+    // says "Create Profile". Accept either so the case tracks the hand-off, not the label.
+    await page.getByRole('button', { name: /Create (Profile|New Analyzer Type)/i }).first().click();
     await expect(page).toHaveURL(/action=create/, { timeout: TIMEOUT });
 
     // Δ-Y: the modal still collects only a name. The 2026-08-27 build finally SAYS so — "the draft

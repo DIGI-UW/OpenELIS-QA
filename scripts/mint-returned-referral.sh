@@ -40,6 +40,7 @@
 #
 #   ./scripts/mint-returned-referral.sh 4
 #   ./scripts/mint-returned-referral.sh 4 420        # longer wait for a slow poll
+#   PEER_STATUS_REASON="Hemolyzed" ./scripts/mint-returned-referral.sh 4   # peer reason (OGC-804 pre-fill)
 #
 # Environment overrides: WEBAPP_CONTAINER, DB_CONTAINER, STORE_URL.
 set -euo pipefail
@@ -106,6 +107,10 @@ LOINC  = {"coding": [{"system": "http://loinc.org", "code": "2345-7", "display":
 
 # 1. the instance's own Task, acknowledged completed — what a peer OpenELIS does.
 task["status"] = "completed"
+# Optional: the peer's reason text, which the OGC-804 Reject modal pre-fills from.
+import os
+if os.environ.get("PEER_STATUS_REASON"):
+    task["statusReason"] = {"text": os.environ["PEER_STATUS_REASON"]}
 
 # 2. the peer's filler order, basedOn the original ServiceRequest.
 sr = {"resourceType": "ServiceRequest", "id": sr_id,
