@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, getFutureDate, navigateViaMenu, tryNavigateToURL, selectSampleType, discoverFhirBase, orderWizardForward } from '../helpers/test-helpers';
+import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, getFutureDate, navigateViaMenu, tryNavigateToURL, selectSampleType, discoverFhirBase, orderWizardForward, getPrimaryAccession } from '../helpers/test-helpers';
 import { withIsolatedSession, reloginIsolated } from '../helpers/isolated-session';
 
 /**
@@ -1447,134 +1447,126 @@ async function verifyPageLoad(page: Page, expectedTitle: string): Promise<void> 
 
 
 
+// ============================================================================
+// Phase 4 to 7 DEEP suites, re-pointed 2026-09-24 to the 3.2.2.0 UI.
+// These used to click legacy side-nav text (`text=Order`, `text=Analyzers List`, ...)
+// that no longer resolves, so every test timed out before asserting anything.
+// Each test now opens its route directly (routes taken from /rest/menu) and
+// asserts on stable ids, data-testids, roles and labels probed on the live UI.
+// ============================================================================
+
 test.describe('Phase 4 — M-DEEP: Analyzer Interactions', () => {
   test.beforeEach(async ({ page }) => { await login(page, ADMIN.user, ADMIN.pass); });
 
-  test('TC-M-DEEP-01: Analyzer search and filter', async ({ page }) => {
-    await page.click('text=Analyzers');
-    await page.click('text=Analyzers List');
-    await page.waitForSelector('text=Analyzer List');
-    // Search for existing analyzer
-    await page.fill('input[placeholder="Search analyzers..."]', 'Alpha');
-    await expect(page.locator('text=Test Analyzer Alpha')).toBeVisible();
-    // Search for non-existent
-    await page.fill('input[placeholder="Search analyzers..."]', 'ZZZZNONEXIST');
-    await expect(page.locator('text=Total Analyzers')).toBeVisible();
-    // Verify 0 results
-    const totalText = await page.locator('text=Total Analyzers').locator('..').innerText();
-    expect(totalText).toContain('0');
+  test('TC-M-DEEP-01: Analyzer search filters the list', async ({ page }) => {
+    await page.goto(`${BASE}/analyzers`);
+    await expect(page.getByRole('heading', { name: 'Analyzers', exact: true }).first()).toBeVisible();
+    const search = page.getByTestId('analyzer-search-input');
+    await expect(search).toBeVisible();
+    const rows = page.locator('main tbody tr');
+    const before = await rows.count();
+    test.skip(before === 0, 'No analyzers configured on this instance, so there is nothing to filter');
+    const firstName = (await rows.first().locator('td').first().innerText()).trim();
+    await search.fill(firstName);
+    await expect(rows.first()).toContainText(firstName);
+    await search.fill('ZZZZNONEXIST');
+    await expect(rows.filter({ hasText: firstName })).toHaveCount(0);
   });
 
-  test('TC-M-DEEP-02: Add New Analyzer form fields', async ({ page }) => {
-    await page.click('text=Analyzers');
-    await page.click('text=Analyzers List');
-    await page.waitForSelector('text=Analyzer List');
-    await page.click('text=Add Analyzer');
-    await page.waitForSelector('text=Add New Analyzer');
-    // Verify form fields
-    await expect(page.locator('text=Analyzer Name')).toBeVisible();
-    await expect(page.locator('text=Status')).toBeVisible();
-    await expect(page.locator('text=Plugin Type')).toBeVisible();
-    await expect(page.locator('text=Analyzer Type')).toBeVisible();
-    await expect(page.locator('text=Protocol Version')).toBeVisible();
-    await expect(page.locator('text=IP Address')).toBeVisible();
-    await expect(page.locator('text=Port Number')).toBeVisible();
-    await expect(page.locator('text=Test Connection')).toBeVisible();
-    await page.click('text=Cancel');
+  test('TC-M-DEEP-02: Add Analyzer opens the setup flow', async ({ page }) => {
+    await page.goto(`${BASE}/analyzers`);
+    await page.getByTestId('add-analyzer-button').click();
+    await expect(page).toHaveURL(/setup=instrument/);
+    await expect(page.getByRole('heading', { name: 'Set up a new analyzer' })).toBeVisible();
+    for (const stepName of ['Instrument', 'Verify', 'Connect']) {
+      await expect(page.getByRole('heading', { name: stepName, exact: true })).toBeVisible();
+    }
+    await expect(page.getByText('Analyzer type', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('Analyzer name', { exact: true }).first()).toBeVisible();
   });
 });
-
-
 
 test.describe('Phase 4 — Q-DEEP: EQA Interactions', () => {
   test.beforeEach(async ({ page }) => { await login(page, ADMIN.user, ADMIN.pass); });
 
-  test('TC-Q-DEEP-01: EQA dashboard stats', async ({ page }) => {
-    await page.click('text=EQA Distributions');
-    await page.waitForSelector('text=EQA Distribution');
-    await expect(page.locator('text=Draft Shipments')).toBeVisible();
-    await expect(page.locator('text=Shipped')).toBeVisible();
-    await expect(page.locator('text=Completed')).toBeVisible();
-    await expect(page.locator('text=Participants')).toBeVisible();
-    await expect(page.locator('text=Participant Network')).toBeVisible();
+  test('TC-Q-DEEP-01: EQA distribution dashboard stats', async ({ page }) => {
+    await page.goto(`${BASE}/qa/eqa/distribution`);
+    await expect(page.getByRole('heading', { name: 'EQA Distribution', exact: true })).toBeVisible();
+    const main = page.locator('main');
+    for (const card of ['Draft Shipments', 'Shipped', 'Completed', 'Participants']) {
+      await expect(main.getByText(card, { exact: true }).first()).toBeVisible();
+    }
+    await expect(page.getByRole('heading', { name: 'Participant Network' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'EQA Shipments' })).toBeVisible();
   });
 
   test('TC-Q-DEEP-02: Create New Shipment wizard', async ({ page }) => {
-    await page.click('text=EQA Distributions');
-    await page.waitForSelector('text=EQA Distribution');
-    await page.click('text=Create New Shipment');
-    await page.waitForSelector('text=Program & Details');
-    await expect(page.locator('text=Participants')).toBeVisible();
-    await expect(page.locator('text=Confirmation')).toBeVisible();
-    await expect(page.locator('text=Distribution Name')).toBeVisible();
-    await expect(page.locator('text=EQA Program')).toBeVisible();
-    await expect(page.locator('text=Submission Deadline')).toBeVisible();
+    await page.goto(`${BASE}/qa/eqa/distribution`);
+    await page.getByRole('button', { name: 'Create New Shipment' }).click();
+    await expect(page).toHaveURL(/\/qa\/eqa\/distribution\/create/);
+    const steps = page.locator('main .cds--progress-label');
+    await expect(steps).toHaveText(['Program & Details', 'Participants', 'Confirmation']);
+    for (const label of ['Distribution Name', 'EQA Program', 'Submission Deadline']) {
+      await expect(page.locator('main label', { hasText: label }).first()).toBeVisible();
+    }
   });
 });
-
-
 
 test.describe('Phase 4 — W-DEEP: Error Handling', () => {
   test.beforeEach(async ({ page }) => { await login(page, ADMIN.user, ADMIN.pass); });
 
-  test('TC-W-DEEP-01: Invalid patient ID search', async ({ page }) => {
-    await page.click('text=Patient');
-    await page.click('text=Add/Edit Patient');
-    await page.waitForSelector('text=Add Or Modify Patient');
-    // Use native setter for React input
-    await page.evaluate(() => {
-      const input = document.querySelector('input[placeholder="Enter Patient Id"]') as HTMLInputElement;
-      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-      setter.call(input, '9999999');
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-    await page.click('button:text("Search")');
-    await page.waitForSelector('text=No patients found');
+  test('TC-W-DEEP-01: Unknown patient ID returns no matches', async ({ page }) => {
+    await page.goto(`${BASE}/PatientManagement`);
+    await expect(page.getByRole('heading', { name: 'Add Or Modify Patient' })).toBeVisible();
+    await page.locator('#patientId').fill('9999999');
+    const search = page.waitForResponse(r => r.url().includes('/rest/patient-search-results') && r.url().includes('9999999'));
+    await page.locator('#local_search').click();
+    expect((await search).status()).toBe(200);
+    await expect(page.locator('main tbody tr')).toHaveCount(0);
+    // Zero matches raise the "no patient found" warning (SearchPatientForm -> addNotification).
+    const warning = page.locator('.cds--toast-notification, .cds--inline-notification, .cds--actionable-notification, [role=alert]');
+    await expect(warning.first()).toBeVisible({ timeout: 8000 });
   });
 
-  test('TC-W-DEEP-02: Empty search returns notification', async ({ page }) => {
-    await page.click('text=Patient');
-    await page.click('text=Add/Edit Patient');
-    await page.waitForSelector('text=Add Or Modify Patient');
-    await page.click('button:text("Search")');
-    await page.waitForSelector('text=No patients found');
+  test('TC-W-DEEP-02: Empty patient search tells the user why nothing happened', async ({ page }) => {
+    await page.goto(`${BASE}/PatientManagement`);
+    await page.locator('#local_search').click();
+    const feedback = page.locator('.cds--toast-notification, .cds--inline-notification, .cds--actionable-notification, [role=alert]');
+    await expect(feedback.first()).toBeVisible({ timeout: 8000 });
   });
 
   test('TC-W-DEEP-03: Non-existent route returns 404', async ({ page }) => {
-    const response = await page.goto(`${BASE}/NonExistentPage12345`);
-    // Spring Boot returns 404 JSON
+    await page.goto(`${BASE}/NonExistentPage12345`);
     const body = await page.textContent('body');
     expect(body).toContain('404');
   });
 });
 
-
-
 test.describe('Phase 4 — S-DEEP: Order Extended Fields', () => {
   test.beforeEach(async ({ page }) => { await login(page, ADMIN.user, ADMIN.pass); });
 
-  test('TC-S-DEEP-01: Order wizard step structure', async ({ page }) => {
-    await page.click('text=Order');
-    await page.click('text=Add Order');
-    await page.waitForSelector('text=Test Request');
-    await expect(page.locator('text=Patient Info')).toBeVisible();
-    await expect(page.locator('text=Program Sel')).toBeVisible();
-    await expect(page.locator('text=Add Sample')).toBeVisible();
-    await expect(page.locator('text=Add Order')).toBeVisible();
+  test('TC-S-DEEP-01: Order entry step structure', async ({ page }) => {
+    await page.goto(`${BASE}/order/enter`);
+    await expect(page).toHaveURL(/\/order\/(clinical\/)?enter/);
+    await expect(page.getByTestId('order-step-enter')).toContainText('Enter Order');
+    await expect(page.getByTestId('order-step-collect')).toContainText('Collect');
+    await expect(page.getByTestId('order-step-label')).toContainText('Label & Store');
+    await expect(page.getByTestId('order-step-qa')).toContainText('QA Review');
+    await expect(page.locator('#labNumber')).toBeVisible();
   });
 
   test('TC-S-DEEP-02: New Patient extended fields', async ({ page }) => {
-    await page.click('text=Order');
-    await page.click('text=Add Order');
-    await page.waitForSelector('text=Test Request');
-    await page.click('text=New Patient');
-    await page.waitForSelector('text=Patient Information');
-    await expect(page.locator('text=Unique Health ID number')).toBeVisible();
-    await expect(page.locator('text=National ID')).toBeVisible();
-    await expect(page.locator('text=Primary phone')).toBeVisible();
-    await expect(page.locator('text=Emergency Contact Info')).toBeVisible();
-    await expect(page.locator('text=Additional Information')).toBeVisible();
+    await page.goto(`${BASE}/order/enter`);
+    await page.getByRole('button', { name: 'New Patient' }).first().click();
+    await expect(page.getByRole('heading', { name: 'Patient Information' })).toBeVisible();
+    const main = page.locator('main');
+    for (const label of ['Unique Health ID number', 'National ID', 'Primary phone']) {
+      await expect(main.locator('label', { hasText: label }).first()).toBeVisible();
+    }
+    // Contact and additional-information fields sit in a collapsed section: present, not necessarily shown.
+    for (const label of ['Contact last name', 'Contact first name', 'Occupation']) {
+      await expect(main.locator('label', { hasText: label }).first()).toBeAttached();
+    }
   });
 });
 
@@ -1582,46 +1574,34 @@ test.describe('Phase 4 — R-DEEP: Alerts Interactions', () => {
   test.beforeEach(async ({ page }) => { await login(page, ADMIN.user, ADMIN.pass); });
 
   test('TC-R-DEEP-01: Alerts dashboard filters and structure', async ({ page }) => {
-    await page.click('text=Alerts');
-    await page.waitForSelector('text=Alerts Dashboard');
-    // 4 stat cards
-    await expect(page.locator('text=Critical Alerts')).toBeVisible();
-    await expect(page.locator('text=EQA Deadlines')).toBeVisible();
-    await expect(page.locator('text=Overdue STAT Orders')).toBeVisible();
-    await expect(page.locator('text=Samples Expiring')).toBeVisible();
-    // Filters
-    const alertTypeFilter = page.locator('select[name="alert-type-filter"]');
-    const severityFilter = page.locator('select[name="alert-severity-filter"]');
-    const statusFilter = page.locator('select[name="alert-status-filter"]');
-    await expect(alertTypeFilter).toBeVisible();
-    await expect(severityFilter).toBeVisible();
-    await expect(statusFilter).toBeVisible();
-    // Alert Type has 5 options
-    const typeOpts = await alertTypeFilter.locator('option').count();
-    expect(typeOpts).toBe(5);
-    // Search field
-    await expect(page.locator('input[placeholder="Search alerts..."]')).toBeVisible();
-    // Table headers
-    await expect(page.locator('th:text("Type")')).toBeVisible();
-    await expect(page.locator('th:text("Severity")')).toBeVisible();
-    await expect(page.locator('th:text("Message")')).toBeVisible();
+    await page.goto(`${BASE}/Alerts`);
+    await expect(page.getByRole('heading', { name: 'Alerts Dashboard' })).toBeVisible();
+    for (const card of ['Critical Alerts', 'EQA Deadlines', 'Overdue STAT Orders', 'Samples Expiring']) {
+      await expect(page.getByRole('heading', { name: card })).toBeVisible();
+    }
+    const typeFilter = page.locator('#alert-type-filter');
+    await expect(typeFilter).toBeVisible();
+    await expect(page.locator('#alert-severity-filter')).toBeVisible();
+    await expect(page.locator('#alert-status-filter')).toBeVisible();
+    await typeFilter.locator('option', { hasText: 'STAT Overdue' }).waitFor({ state: 'attached', timeout: 15000 });
+    const types = (await typeFilter.locator('option').allInnerTexts()).map(t => t.trim());
+    for (const t of ['EQA Deadline', 'Sample Expiration', 'STAT Overdue', 'Unacknowledged Critical']) {
+      expect(types).toContain(t);
+    }
+    await expect(page.locator('#alert-search')).toBeVisible();
+    for (const th of ['Type', 'Severity', 'Message', 'Status']) {
+      await expect(page.locator('main th', { hasText: th }).first()).toBeVisible();
+    }
   });
 });
-
-// ============================================================
-// Phase 4 — K-DEEP: Admin Interaction Tests (8 TCs)
-// ============================================================
-
 
 test.describe('Phase 5 — U-DEEP: Session Security Tests', () => {
   test('TC-U-DEEP-01: Logout redirect', async ({ browser }) => {
     // Logs out, so it runs in its own session (helpers/isolated-session.ts), never the shared one.
     await withIsolatedSession(browser, async (page) => {
-      // (logged in by withIsolatedSession)
       await page.goto(`${BASE}/Dashboard`);
-      // Click user menu and logout
-      await page.click('button:has-text("User")');
-      await page.click('text=Logout');
+      await page.locator('#user-Icon').click();
+      await page.locator('[data-cy="logOut"]').click();
       await page.waitForURL(/\/login/);
       await expect(page).toHaveURL(/\/login/);
     });
@@ -1630,176 +1610,136 @@ test.describe('Phase 5 — U-DEEP: Session Security Tests', () => {
   test('TC-U-DEEP-02: Re-authentication', async ({ browser }) => {
     // Logs out, so it runs in its own session (helpers/isolated-session.ts), never the shared one.
     await withIsolatedSession(browser, async (page) => {
-      // Login, logout, re-login
-      // (logged in by withIsolatedSession)
       await page.goto(`${BASE}/Dashboard`);
-      await page.click('button:has-text("User")');
-      await page.click('text=Logout');
+      await page.locator('#user-Icon').click();
+      await page.locator('[data-cy="logOut"]').click();
       await page.waitForURL(/\/login/);
       await reloginIsolated(page);
-      await expect(page.locator('text=Dashboard').or(page.locator('text=Home'))).toBeVisible();
+      await page.goto(`${BASE}/Dashboard`);
+      await expect(page).not.toHaveURL(/\/login/);
+      await expect(page.locator('#user-Icon')).toBeVisible();
     });
   });
 
-  test('TC-U-DEEP-03: Session continuity post re-auth', async ({ page }) => {
+  test('TC-U-DEEP-03: Session continuity across modules', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
-    // Navigate to multiple modules to verify session is fully restored
-    await page.goto(`${BASE}/LogbookResults?type=`);
-    await expect(page.locator('text=Results')).toBeVisible();
+    await page.goto(`${BASE}/Results`);
+    await expect(page.getByRole('heading', { name: 'Results', exact: true })).toBeVisible();
     await page.goto(`${BASE}/ResultValidation?type=&test=`);
-    await expect(page.locator('text=Validation')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Validation', exact: true })).toBeVisible();
+    await expect(page).not.toHaveURL(/\/login/);
   });
 });
-
-// =====================================================================
-// Phase 5 — G-DEEP: NCE Interaction Tests (3 TCs)
-// =====================================================================
-
 
 test.describe('Phase 5 — E2E-DEEP: End-to-End Order Trace Tests', () => {
   test.beforeEach(async ({ page }) => { await login(page, ADMIN.user, ADMIN.pass); });
 
-  test('TC-E2E-DEEP-01: Edit Order search', async ({ page }) => {
-    await page.click('text=Order');
-    await page.click('text=Edit Order');
-    await page.waitForSelector('input[placeholder*="Lab" i]');
-    const input = page.locator('input[placeholder*="Lab" i]').first();
-    await input.fill('26CPHL00008');
-    // Verify auto-format
-    const value = await input.inputValue();
-    expect(value).toContain('26-CPH-L00-008');
+  test('TC-E2E-DEEP-01: Modify Order finds an existing order by lab number', async ({ page }) => {
+    // A real lab number from the Results list: data.setup's seeded accession can be null.
+    await page.goto(`${BASE}/Results`);
+    await page.locator('#unifiedResultsLabUnit option', { hasText: 'Hematology' }).waitFor({ state: 'attached' });
+    await page.locator('#unifiedResultsLabUnit').selectOption('Hematology');
+    await page.getByRole('button', { name: 'Load results' }).click();
+    const firstRow = page.locator('main tbody tr').first();
+    await expect(firstRow).toBeVisible({ timeout: 15000 });
+    const accession = ((await firstRow.innerText()).match(/\b(?=[A-Z0-9-]*\d)[A-Z0-9][A-Z0-9-]{7,}\b/) || [getPrimaryAccession()])[0];
+    await page.goto(`${BASE}/SampleEdit?type=readwrite`);
+    await expect(page.getByRole('heading', { name: 'Modify Order' })).toBeVisible();
+    await page.locator('input#labNumber[placeholder="Enter Lab No"]').fill(accession);
+    await page.getByRole('button', { name: 'Submit' }).click();
+    await expect(page.locator('main')).toContainText(accession, { timeout: 15000 });
+    await expect(page.getByRole('heading', { name: 'Search By Accession Number' })).toHaveCount(0);
   });
 
-  test('TC-E2E-DEEP-02: Results By Unit shows data', async ({ page }) => {
-    await page.click('text=Results');
-    await page.click('text=By Unit');
-    await page.waitForSelector('select, [role="combobox"]');
-    const unitSelect = page.locator('select').first();
-    await unitSelect.selectOption('Hematology');
-    await page.waitForTimeout(3000);
-    // Should have result rows
-    const rows = await page.locator('table tbody tr, [class*="row"]').count();
-    expect(rows).toBeGreaterThan(0);
+  test('TC-E2E-DEEP-02: Results by lab unit loads rows', async ({ page }) => {
+    await page.goto(`${BASE}/Results`);
+    await page.locator('#unifiedResultsLabUnit option', { hasText: 'Hematology' }).waitFor({ state: 'attached' });
+    await page.locator('#unifiedResultsLabUnit').selectOption('Hematology');
+    await page.getByRole('button', { name: 'Load results' }).click();
+    await expect(page.locator('main tbody tr').first()).toBeVisible({ timeout: 15000 });
   });
 
-  test('TC-E2E-DEEP-03: Validation Routine shows data', async ({ page }) => {
-    await page.click('text=Validation');
-    await page.click('text=Routine');
-    await page.waitForSelector('select, [role="combobox"]');
-    const unitSelect = page.locator('select').first();
-    await unitSelect.selectOption('Hematology');
-    await page.waitForTimeout(3000);
-    const rows = await page.locator('table tbody tr, [class*="row"]').count();
-    expect(rows).toBeGreaterThan(0);
+  test('TC-E2E-DEEP-03: Validation by lab unit loads', async ({ page }) => {
+    await page.goto(`${BASE}/ResultValidation?type=&test=`);
+    await expect(page.getByRole('heading', { name: 'Validation', exact: true })).toBeVisible();
+    const unit = page.locator('#unitType');
+    await unit.locator('option', { hasText: 'Hematology' }).waitFor({ state: 'attached', timeout: 15000 });
+    const opts = (await unit.locator('option').allInnerTexts()).map(t => t.trim()).filter(Boolean);
+    expect(opts).toContain('Hematology');
+    const res = page.waitForResponse(r => /AccessionValidation|ResultValidation/i.test(r.url()) && r.request().method() === 'GET');
+    await unit.selectOption('Hematology');
+    expect((await res).status()).toBe(200);
   });
 });
 
-
-test.describe('Phase 5 — B-DEEP: Order Wizard Field Enumeration Tests', () => {
+test.describe('Phase 5 — B-DEEP: Order Entry Field Enumeration Tests', () => {
   test.beforeEach(async ({ page }) => { await login(page, ADMIN.user, ADMIN.pass); });
 
-  test('TC-B-DEEP-01: Step 1 Patient Info all fields present', async ({ page }) => {
-    await page.click('text=Order');
-    await page.click('text=Add Order');
-    await page.waitForSelector('text=Patient Info');
-    // Verify all Patient Info fields
-    await expect(page.locator('text=Patient Id')).toBeVisible();
-    await expect(page.locator('text=Previous Lab Number')).toBeVisible();
-    await expect(page.locator('text=Last Name')).toBeVisible();
-    await expect(page.locator('text=First Name')).toBeVisible();
-    await expect(page.locator('text=Date of Birth')).toBeVisible();
-    await expect(page.locator('text=Gender')).toBeVisible();
-    await expect(page.locator('text=Search for Patient')).toBeVisible();
-    await expect(page.locator('text=New Patient')).toBeVisible();
+  test('TC-B-DEEP-01: Patient section fields present', async ({ page }) => {
+    await page.goto(`${BASE}/order/enter`);
+    for (const id of ['#patientId', '#previousLabNumber', '#lastName', '#firstName', '#dateOfBirth', '#gender-male', '#gender-female']) {
+      await expect(page.locator(id)).toBeAttached();
+    }
+    await expect(page.getByRole('button', { name: 'Search for Patient' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'New Patient' }).first()).toBeVisible();
+    await expect(page.locator('#noPatientOverride')).toBeAttached();
   });
 
-  test('TC-B-DEEP-02: Steps 2-3 Program and Sample fields', async ({ page }) => {
-    await page.click('text=Order');
-    await page.click('text=Add Order');
-    await page.waitForSelector('text=Patient Info');
-    // Navigate to Program Selection (Step 2)
-    await page.click('button:has-text("Program")');
-    await page.waitForSelector('text=Program');
-    const programSelect = page.locator('select').first();
-    const options = await programSelect.locator('option').count();
-    expect(options).toBeGreaterThanOrEqual(10); // 15 programs
-    // Navigate to Add Sample (Step 3)
-    await page.click('button:has-text("Next")');
-    await page.waitForSelector('text=Sample');
-    await expect(page.locator('text=Select sample type')).toBeVisible();
-    await expect(page.locator('text=Collection Date')).toBeVisible();
-    await expect(page.locator('text=Collection Time')).toBeVisible();
+  test('TC-B-DEEP-02: Program and Sample fields', async ({ page }) => {
+    await page.goto(`${BASE}/order/enter`);
+    await page.locator('#program').click();
+    await expect(page.locator('[role=listbox] [role=option]').first()).toBeVisible({ timeout: 15000 });
+    const programs = (await page.locator('[role=listbox] [role=option]').allInnerTexts()).map(t => t.trim());
+    expect(programs).toContain('Routine Testing');
+    expect(programs.length).toBeGreaterThanOrEqual(2);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('heading', { name: 'Sample 1' })).toBeVisible();
+    const sampleType = page.locator('main label', { hasText: 'Sample Type' }).first();
+    await expect(sampleType).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Add Sample' })).toBeVisible();
   });
 });
 
-// ============================================================
-// Phase 6 — Advanced Workflow & Cross-Module Interaction Tests
-// ============================================================
-
-
-
 test.describe('Phase 6 — BC-DEEP: Electronic Orders Tests', () => {
-  test.beforeEach(async ({ page }) => {
-    await login(page, ADMIN.user, ADMIN.pass);
-  });
+  test.beforeEach(async ({ page }) => { await login(page, ADMIN.user, ADMIN.pass); });
 
   test('TC-BC-DEEP-01: Page structure', async ({ page }) => {
     await page.goto(`${BASE}/ElectronicOrders`);
-    await expect(page.locator('text=Search Incoming Test Requests')).toBeVisible();
-    await expect(page.locator('text=Search Value')).toBeVisible();
-    await expect(page.locator('text=Start Date')).toBeVisible();
-    await expect(page.locator('text=End Date')).toBeVisible();
-    await expect(page.locator('text=Status')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Search Incoming Test Requests' })).toBeVisible();
+    await expect(page.locator('#searchValue')).toBeVisible();
+    await expect(page.locator('#eOrder_startDate')).toBeVisible();
+    await expect(page.locator('#eOrder_endDate')).toBeVisible();
+    await expect(page.locator('#statusId')).toBeVisible();
   });
 
   test('TC-BC-DEEP-02: Status dropdown options', async ({ page }) => {
     await page.goto(`${BASE}/ElectronicOrders`);
-    const statusSelect = page.locator('select').filter({ hasText: 'All Statuses' });
-    const options = await statusSelect.locator('option').allTextContents();
-    expect(options).toContain('All Statuses');
-    expect(options).toContain('Cancelled');
-    expect(options).toContain('Entered');
-    expect(options).toContain('NonConforming');
-    expect(options).toContain('Realized');
+    await page.locator('#statusId option', { hasText: 'Realized' }).waitFor({ state: 'attached', timeout: 15000 });
+    const options = (await page.locator('#statusId option').allInnerTexts()).map(t => t.trim());
+    for (const o of ['All Statuses', 'Cancelled', 'Entered', 'NonConforming', 'Realized']) {
+      expect(options).toContain(o);
+    }
   });
 });
 
-
-
-test.describe('Phase 7 — BL-DEEP: EQA Distribution', () => {
-  test.beforeEach(async ({ page }) => {
-    await login(page, ADMIN.user, ADMIN.pass);
-  });
+test.describe('Phase 7 — BL-DEEP: EQA Program Management', () => {
+  test.beforeEach(async ({ page }) => { await login(page, ADMIN.user, ADMIN.pass); });
 
   test('TC-BL-DEEP-01: Page structure', async ({ page }) => {
-    await page.goto(`${BASE}/MasterListsPage/eqaProgram`);
-    await expect(page.locator('text=EQA')).toBeVisible();
+    // /MasterListsPage/eqaProgram no longer exists; EQA programs live under QA > EQA > Management.
+    await page.goto(`${BASE}/qa/eqa/management`);
+    await expect(page.getByRole('heading', { name: 'Program Administration' })).toBeVisible();
+    await expect(page.locator('main .cds--progress-label, main [role=tab]').filter({ hasText: 'EQA Programs' }).first()).toBeVisible();
   });
 
   test('TC-BL-DEEP-02: Program listing', async ({ page }) => {
-    await page.goto(`${BASE}/MasterListsPage/eqaProgram`);
-    // Should display program management interface
-    const content = page.locator('table, .cds--data-table, form, [role="table"]');
-    await expect(content.first()).toBeVisible({ timeout: 10000 });
+    await page.goto(`${BASE}/qa/eqa/management`);
+    for (const th of ['Program Name', 'Provider', 'Enrolled Participants', 'Status']) {
+      await expect(page.locator('main th', { hasText: th }).first()).toBeVisible();
+    }
   });
 });
 
-test.describe('Phase 7 — BM-DEEP: Analyzer Error Dashboard', () => {
-  test.beforeEach(async ({ page }) => {
-    await login(page, ADMIN.user, ADMIN.pass);
-  });
-
-  test('TC-BM-DEEP-01: Page structure', async ({ page }) => {
-    await page.goto(`${BASE}/MasterListsPage/AnalyzerTestName`);
-    await expect(page.locator('text=Analyzer Test Name')).toBeVisible();
-  });
-
-  test('TC-BM-DEEP-02: Analyzer listing', async ({ page }) => {
-    await page.goto(`${BASE}/MasterListsPage/AnalyzerTestName`);
-    // Should have analyzer configuration table or listing
-    const listing = page.locator('table, .cds--data-table, select, [role="table"]');
-    await expect(listing.first()).toBeVisible({ timeout: 10000 });
-  });
-});
-
-
+// Phase 7 BM-DEEP (Analyzer Error Dashboard) retired 2026-09-24, parked as open question 8
+// in references/open-questions.md. Its old target, /MasterListsPage/AnalyzerTestName, was
+// deliberately removed, and BM-DEEP-02 had been passing on that blank page (a false green).

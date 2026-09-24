@@ -114,7 +114,7 @@
 | BJ-DEEP | Immunohistochemistry | 2 | Page structure, search/form controls | 2/2 PASS |
 | BK-DEEP | Cytology | 2 | Page structure, workflow fields | 2/2 PASS |
 | BL-DEEP | EQA Distribution | 2 | Program listing, event management | 2/2 PASS |
-| BM-DEEP | Analyzer Error Dashboard | 2 | Analyzer config, test mapping, error indicators | 2/2 PASS |
+| BM-DEEP | Analyzer Error Dashboard | 0 | Retired 2026-09-24; parked as open question 8 (the old 2/2 PASS was a false green on a removed page) | parked |
 | BQ-DEEP | Referral Order Create | 1 | Add Order with referral — **FAIL (BUG-18 + BUG-19)** | 0/1 FAIL |
 | BR-DEEP | Referral Results Entry | 1 | Enter results on Referred Out Tests — **BLOCKED** | 0/1 BLOCKED |
 
