@@ -23,10 +23,9 @@
  *
  * SCOPE
  * The lab number cluster (OGC-1201 findings AH, AI, AJ), the duplicate checklist (J), and
- * the patient blockers (AL, AS). AR — the sticky edit-mode flag that carries the previous
- * order's lab number and patient onto a new form — is NOT covered: it needs a saved order
- * to click Edit on and a navigation sequence after it. Its absence is a coverage gap, not
- * a judgement that it is fixed.
+ * the patient blockers (AL, AS). AR — the sticky edit-mode flag that carried the previous
+ * order's lab number and patient onto a new form — is covered in order-entry-state.spec.ts:
+ * TC-OE-02 (lab number) and TC-OE-10 (patient), both passing since PR #4282 (2026-09-24).
  */
 import { test, expect } from '@playwright/test';
 
@@ -240,10 +239,8 @@ test.describe('Order entry — release blockers', () => {
  * DATA rather than about a control on a page, and because probing them corrected the
  * findings as written on OGC-1201. Both corrections are recorded on the cases themselves.
  *
- * AR, the sticky isEditMode flag that carries the previous order's lab number and patient
- * onto a new form, is still not covered. It needs a saved order to click Edit on and a
- * navigation sequence after it. Not here yet, and its absence is a gap rather than a
- * verdict.
+ * AR, the sticky isEditMode flag, is covered in order-entry-state.spec.ts (TC-OE-02 for the
+ * lab number, TC-OE-10 for the patient); fixed by PR #4282.
  */
 test.describe('Order entry — the patient blockers', () => {
 

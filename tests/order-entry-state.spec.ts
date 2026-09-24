@@ -149,9 +149,10 @@ test.describe('Order entry — state reset and lab number lifecycle (TC-OE)', ()
 
   // ── THE CORE DEFECT ──────────────────────────────────────────────────────
   test('TC-OE-02: the entry step must bind the form to a freshly reserved lab number', async ({ page }) => {
-    // Expected to fail until the defect is fixed. When this turns RED,
-    // the behaviour was corrected: delete this line.
-    test.fail();
+    // FIXED on develop (OGC-1201 AR, PR #4282: useNewOrderReset keys the reset on the URL, not on
+    // sticky isEditMode), confirmed against testing 3.2.2.0 (95d6c64) on 2026-09-24. The test.fail()
+    // marker that used to sit here has been removed and the assertion is unchanged. Evidence: the run
+    // reported "Expected to fail, but passed" with previous=DEV01260000000000574 shown=DEV01260000000000582. From here this case guards the fix.
     // Design rule 2. Reaching the entry step for a new order generates and
     // reserves a number. Today the form inherits the number of the order that
     // was open a moment ago — one already consumed by a saved record — so a
@@ -160,10 +161,34 @@ test.describe('Order entry — state reset and lab number lifecycle (TC-OE)', ()
     await navToEntryInApp(page);
     const shown = await page.locator('#labNumber').inputValue();
     console.log(`TC-OE-02: previous=${previous} shown=${shown}`);
+    // Guard the oracle: an empty field is also "not previous", and would pass while generation is broken.
+    expect(shown, 'the entry step must show a generated lab number, not an empty field').toMatch(/[A-Z]{2,}\d{6,}/);
     expect(
       shown,
       `the entry form must not still be bound to ${previous}; a new order needs its own reserved number`,
     ).not.toBe(previous);
+  });
+
+  // ── AR, THE PATIENT HALF ─────────────────────────────────────────────────
+  test('TC-OE-10: in-app Enter Order after Continue must not carry the previous order\'s patient', async ({ page }) => {
+    // OGC-1201 AR. The sticky isEditMode flag carried BOTH the lab number (TC-OE-02) and the
+    // patient onto a new order. TC-OE-04 checks the patient only after the user clicks New Patient;
+    // this checks the state the form arrives in, before any click. Fixed by PR #4282; written
+    // 2026-09-24 as a regression guard, passing on testing 3.2.2.0.
+    const previous = await continueFirstOrder(page);
+    await navToEntryInApp(page);
+    await page.waitForTimeout(3_000);
+    const state = await page.evaluate(() => {
+      const v = (sel: string) => ((document.querySelector(sel) as HTMLInputElement | null)?.value ?? null);
+      return { labNumber: v('#labNumber'), lastName: v('#lastName'), firstName: v('#firstName'),
+        nationalId: v('#nationalId'), patientId: v('#patientId'),
+        selectedPatientText: (document.body.innerText.match(/Selected patient[^\n]*\n[^\n]*/i) || [''])[0] };
+    });
+    console.log(`TC-OE-10: previous=${previous} state=${JSON.stringify(state)}`);
+    expect(state.labNumber, 'the entry form must render').not.toBeNull();
+    expect(state.labNumber, `still bound to ${previous}`).not.toBe(previous);
+    expect(`${state.lastName ?? ''}${state.firstName ?? ''}${state.nationalId ?? ''}${state.patientId ?? ''}`,
+      `a new order must arrive with no patient; it held ${JSON.stringify(state)}`).toBe('');
   });
 
   // ── CANARY for the generator. Passes today; keep it that way. ────────────
@@ -191,9 +216,10 @@ test.describe('Order entry — state reset and lab number lifecycle (TC-OE)', ()
 
   // ── PATIENT IDENTITY CARRY-OVER ──────────────────────────────────────────
   test('TC-OE-04: New Patient must not arrive holding the previous patient', async ({ page }) => {
-    // Expected to fail until the defect is fixed. When this turns RED,
-    // the behaviour was corrected: delete this line.
-    test.fail();
+    // FIXED on develop (OGC-1201 AR, PR #4282: useNewOrderReset keys the reset on the URL, not on
+    // sticky isEditMode), confirmed against testing 3.2.2.0 (95d6c64) on 2026-09-24. The test.fail()
+    // marker that used to sit here has been removed and the assertion is unchanged. Evidence: the run
+    // reported "Expected to fail, but passed" with New Patient fields {"lastName":"","firstName":"","nationalId":""}. From here this case guards the fix.
     // The client's report, and the data-integrity half of it. With the previous
     // patient's key retained and patientUpdateStatus left at NO_ACTION rather
     // than ADD, anything typed here edits that patient instead of creating one.
@@ -218,9 +244,10 @@ test.describe('Order entry — state reset and lab number lifecycle (TC-OE)', ()
 
   // ── AUTOSAVE ─────────────────────────────────────────────────────────────
   test('TC-OE-05: nothing must be posted while the form sits untouched', async ({ page }) => {
-    // Expected to fail until the defect is fixed. When this turns RED,
-    // the behaviour was corrected: delete this line.
-    test.fail();
+    // FIXED on develop (OGC-1201 AR, PR #4282: useNewOrderReset keys the reset on the URL, not on
+    // sticky isEditMode), confirmed against testing 3.2.2.0 (95d6c64) on 2026-09-24. The test.fail()
+    // marker that used to sit here has been removed and the assertion is unchanged. Evidence: the run
+    // reported "Expected to fail, but passed" with zero unprompted POSTs in 45 s. From here this case guards the fix.
     // Design rule 4: there is no autosave; saving is explicit. Today an
     // unprompted POST to SamplePatientEntry fires roughly 28s after the form
     // goes dirty, carrying the PREVIOUS order's labNo and patient key.
@@ -233,18 +260,22 @@ test.describe('Order entry — state reset and lab number lifecycle (TC-OE)', ()
 
     const posts: Array<{ labNo: string | null; patientPK: string | null }> = [];
     page.on('request', (r) => {
-      if (r.method() !== 'POST' || !/SamplePatientEntry/.test(r.url())) return;
-      const d = String(r.postData() ?? '');
-      posts.push({
-        labNo: (d.match(/"labNo":"([^"]*)"/) || [])[1] ?? null,
-        patientPK: (d.match(/"patientPK":"([^"]*)"/) || [])[1] ?? null,
-      });
+      if (r.method() === 'POST' && /SamplePatientEntry/.test(r.url())) {
+        const d = String(r.postData() ?? '');
+        posts.push({
+          labNo: (d.match(/"labNo":"([^"]*)"/) || [])[1] ?? null,
+          patientPK: (d.match(/"patientPK":"([^"]*)"/) || [])[1] ?? null,
+        });
+      }
     });
 
     await continueFirstOrder(page);
     await navToEntryInApp(page);
     const np = page.locator('button').filter({ hasText: /^\s*New Patient\s*$/ }).first();
     if (await np.isVisible({ timeout: 8_000 }).catch(() => false)) await np.click();
+
+    // Guard the oracle: "no POSTs" is only meaningful if the entry form really is on screen.
+    await expect(page.locator('#labNumber'), 'the entry form must be on screen while we wait').toBeAttached({ timeout: 15_000 });
 
     // Touch nothing else. Any POST from here is the application's own doing.
     await page.waitForTimeout(45_000);
