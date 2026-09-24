@@ -418,16 +418,21 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
     expect(panels.memberships.length, 'membership removed').toBe(0);
   });
 
-  test('TCF-02b: inline "Create new panel" is a no-op (FIXME OGC-1122)', async ({ page, request }) => {
+  test('TCF-02b: inline "Create new panel" creates the panel and adds this test', async ({ page, request }) => {
+    // Rewritten 2026-09-24. This used to assert the OGC-1122 no-op as a plain expect (memberships
+    // 0), so it went red when the inline create was fixed instead of flipping. Casey accepted the
+    // inline path on 2026-09-23 (panel 30 on test 382). OGC-1122 was later reopened only for the
+    // duplicate-name side effect (see TC-SA-11/12); this case guards the working path.
+    // The name is unique per run and at most 20 characters (PANEL_NAME_MAX_LENGTH in OGC-1232),
+    // so a second run the same day cannot collide with a duplicate-name refusal.
+    const panelName = `QAP${Date.now().toString(36)}`;
     const id = await createTest(page, `${STAMP} PanelNew`, `${STAMP}_PNW`);
     await gotoSection(page, id, 'panels');
-    await page.getByLabel('Create new panel', { exact: false }).fill(`${STAMP} NewPanel`);
+    await page.getByLabel('Create new panel', { exact: false }).fill(panelName);
     await page.getByRole('button', { name: /create new panel/i }).click();
     await sectionSave(page);
     const panels = await getJson(request, `${TC}/tests/${id}/panels`);
-    // FIXME(OGC-1122): create-new-panel currently does nothing — memberships stays empty.
-    // When fixed, this becomes .toBe(1) and the assertion flips — update the test.
-    expect(panels.memberships.length, 'create-new-panel no-op (bug present)').toBe(0);
+    expect(panels.memberships.map((m: any) => m.panelName), 'the new panel holds this test').toEqual([panelName]);
   });
 
   // ---------- F. Methods / Labels / Alerts persist (API read-back) ----------

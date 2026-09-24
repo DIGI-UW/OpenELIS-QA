@@ -264,27 +264,34 @@ test.describe('Panel Editor - New panel with an existing name', () => {
     expect(readBack.json?.name, 'the new panel reads back by id').toBe(fresh);
   });
 
-  test('TC-SA-12: contract - POST /panels resolves an existing name to the existing panel (OGC-1122)', async ({ page }) => {
-    // Intended backend behaviour per the OGC-1122 fix: create-if-not-exists. A new name answers
-    // 201; an existing name answers 200 with the existing panel. The form could use that
-    // distinction and does not. Asserted as a contract so TC-SA-11's precondition is proven outside test.fail.
+  test('TC-SA-12: FLIP-WHEN-FIXED - POST /panels refuses an existing name with 409 (OGC-1122)', async ({ page }) => {
+    // OGC-1122 was REJECTED 2026-09-24 for exactly this: its fix made POST /panels
+    // create-if-not-exists, answering 200 with the EXISTING panel, which the New Panel form then
+    // overwrites (TC-SA-11). Suggested contract on the ticket: 409 {error:"duplicate", panelId}.
+    // Canary over the same endpoint: TC-SA-10 (a new name mints a new panel), which passes before
+    // and after the fix. This case used to pin the 200 as a plain contract, which would have gone
+    // red on the fix instead of flipping.
+    test.fail(true, 'OGC-1122 (rejected): a duplicate name answers 200 with the existing panel; flips at 409');
     await open(page, '/MasterListsPage/TestCatalogList?entity=panels');
     const r = await apiWrite<any>(page, 'POST', '/rest/test-catalog/panels', { name: NAME, active: false });
-    expect(r.status, 'duplicate-name create answers 200').toBe(200);
-    expect(String(r.json?.id), 'and returns the seeded panel id').toBe(panelId);
     const p = await apiGet<any>(page, `/rest/test-catalog/panels/${panelId}`);
-    expect(p.json?.active, 'the POST alone does not deactivate it; the form\'s follow-up PUT does').toBe(true);
+    expect(p.json?.active, 'a create call must never change the existing panel').toBe(true);
+    expect(r.status, `a duplicate name must be refused, got ${r.status}: ${r.text.slice(0, 120)}`).toBe(409);
+    expect(String(r.json?.panelId ?? ''), 'the refusal names the existing panel').toBe(panelId);
   });
 
   test('TC-SA-11: FLIP-WHEN-FIXED - "Add Panel" with an existing name must not alter the existing panel', async ({ page }) => {
-    // Delta-SA2. Today: POST /panels is create-if-not-exists (the OGC-1122 fix) and returns the
+    // Delta-SA2, tracked on OGC-1122 (rejected 2026-09-24). Today: POST /panels is
+    // create-if-not-exists (the OGC-1122 fix) and returns the
     // EXISTING panel with 200; the New Panel form then PUTs {active:false, description} onto it.
     // A live panel is deactivated (drops out of order entry) and its description overwritten,
     // and the editor opens on it with no warning.
-    test.fail(true, 'Delta-SA2: new-panel Save takes over a same-named panel; flips when the form refuses a duplicate');
-    const r = await saveNewPanel(page, NAME, `typed in New panel form ${RUN}`);
+    // No "the create call resolved to the seeded panel" precondition any more: after the fix the
+    // create is refused, so that precondition would keep this tripwire failing forever.
+    test.fail(true, 'OGC-1122 / Delta-SA2: new-panel Save takes over a same-named panel; flips when the form refuses a duplicate');
+    await saveNewPanel(page, NAME, `typed in New panel form ${RUN}`).catch(() => null);
     const p = await apiGet<any>(page, `/rest/test-catalog/panels/${panelId}`);
-    expect(r.returnedId, 'precondition: the create call resolved to the seeded panel').toBe(panelId);
+    expect(p.status, 'precondition: the seeded panel still reads back').toBe(200);
     expect({ active: p.json?.active, description: p.json?.description },
       'an admin creating a NEW panel must never deactivate or rewrite an existing one')
       .toEqual({ active: true, description: DESC });

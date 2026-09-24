@@ -28,6 +28,7 @@
  * TC-OE-02 (lab number) and TC-OE-10 (patient), both passing since PR #4282 (2026-09-24).
  */
 import { test, expect } from '@playwright/test';
+import { setSelectByOption, checkByLabel } from './docs/order-helpers';
 
 const ENTER = '/order/clinical/enter';
 const QA = '/order/clinical/qa';
@@ -363,6 +364,59 @@ test.describe('Order entry — the patient blockers', () => {
     expect(exposed,
       `the label says "${field!.labelText}" but #nationalId carries required=${field!.required} ` +
       `and aria-required=${field!.ariaRequired}; the requirement is visual only`)
+      .toBe(true);
+  });
+
+  test('BLK-AL-3 — a missing required National ID is named to the user, before or after save', async ({ page }) => {
+    // [FLIP-WHEN-FIXED] OGC-1240 part 2, written 2026-09-24.
+    //
+    // New Patient with names, birth date and sex but no National ID, while
+    // PATIENT_NATIONAL_ID_REQUIRED is true. Today the form's save gate accepts
+    // `lastName || nationalId`, the POST answers 400 "patientProperties.nationalId: Cannot be blank",
+    // and NOTHING is shown: no notification, no inline error, the page does not move. Measured
+    // twice on testing 3.2.2.0. The fix may name it before the POST (a save requirement) or after it
+    // (surfacing the field error); either satisfies this case, because the spec is "the user is told".
+    //
+    // Canaries over the same path: BLK-AL-2 (New Patient renders #nationalId) and TC-OE-04 in
+    // order-entry-state.spec.ts (New Patient opens empty). Read this case's recorded failure from
+    // the JSON report before trusting its expected failure.
+    test.fail();
+    test.setTimeout(120_000);
+    await open(page, ENTER);
+    const props = await configProps(page);
+    test.skip(String(props['PATIENT_NATIONAL_ID_REQUIRED'] ?? '').toLowerCase() === 'false',
+      'PATIENT_NATIONAL_ID_REQUIRED is "false" on this instance, so National ID is optional');
+
+    const posts: Array<{ status: number; body: string }> = [];
+    page.on('response', async (r) => {
+      if (r.request().method() === 'POST' && /SamplePatientEntry/.test(r.url())) {
+        let body = ''; try { body = (await r.text()).slice(0, 200); } catch { body = ''; }
+        posts.push({ status: r.status(), body });
+      }
+    });
+
+    await page.locator('button').filter({ hasText: /^\s*New Patient\s*$/ }).first().click();
+    await expect(page.locator('#nationalId'), 'New Patient must render a National ID field').toBeAttached({ timeout: 15_000 });
+    await page.getByPlaceholder(/last name/i).first().fill('Probeson');
+    await page.getByPlaceholder(/first name/i).first().fill('Nina');
+    await page.getByPlaceholder(/dd\/mm\/yyyy/i).first().fill('15/05/1990');
+    await checkByLabel(page, /^female$/i);
+    await setSelectByOption(page, /^\s*Whole Blood\s*$/i);
+    await page.waitForTimeout(1_000);
+    await page.getByRole('button', { name: /save & next|save and next/i }).first().click();
+    await page.waitForTimeout(6_000);
+
+    const seen = await page.evaluate(() => {
+      const nid = document.querySelector('#nationalId') as HTMLInputElement | null;
+      const notes = [...document.querySelectorAll('.cds--inline-notification, .cds--toast-notification, .cds--actionable-notification, .cds--form-requirement')]
+        .map((e) => (e as HTMLElement).innerText.replace(/\s+/g, ' ').trim()).filter(Boolean);
+      return { notes, nidInvalid: nid?.getAttribute('aria-invalid') ?? null, nidValue: nid?.value ?? null };
+    });
+    console.log('BLK-AL-3 ' + JSON.stringify({ seen, posts }));
+    const told = seen.nidInvalid === 'true' || seen.notes.some((t) => /national/i.test(t));
+    expect(told,
+      'a new patient without the required National ID must be named to the user; instead: ' +
+      `notes=${JSON.stringify(seen.notes)} aria-invalid=${seen.nidInvalid} posts=${JSON.stringify(posts)}`)
       .toBe(true);
   });
 
