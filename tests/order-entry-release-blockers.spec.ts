@@ -314,19 +314,17 @@ test.describe('Order entry — the patient blockers', () => {
       .not.toEqual([]);
   });
 
-  test('BLK-AL-2 — a patient identifier the config calls required is marked required on the form', async ({ page }) => {
-    // [FLIP-WHEN-FIXED] OGC-1201 finding AL, second half.
+  test('BLK-AL-2 — National ID, when the config requires it, is marked required in the DOM', async ({ page }) => {
+    // [FLIP-WHEN-FIXED] Required fields are marked for sighted users only.
     //
-    // PATIENT_NATIONAL_ID_REQUIRED IS served, and on develop it is "true". The save gate in
-    // all three lanes is a hardcoded `lastName || nationalId`, so the setting has no effect
-    // on whether an order can be saved without one -- and the Patient Id control on the form
-    // carries required=false with no aria-required, exactly as the lab number field does.
-    //
-    // This case is deliberately narrower than "an order cannot be saved without a patient",
-    // which needs a full order fill and a save. It asserts the cheapest thing that cannot be
-    // true while the defect is open: a field the configuration calls required must SAY it is
-    // required. If the product later decides the flag should not apply here, the honest fix
-    // is to stop serving it as true, and this case will then skip itself.
+    // CORRECTED 2026-09-24. The first version of this case checked `#patientId`. On develop
+    // that control is the patient SEARCH box ("Enter subject number, national ID, or ST
+    // number"), which should never be required, so the case was failing against the wrong
+    // oracle. The field the configuration governs is National ID on the New Patient form
+    // (`#nationalId`, CreatePatientForm.tsx), which renders a "*" when
+    // PATIENT_NATIONAL_ID_REQUIRED is not "false" and sets neither `required` nor
+    // `aria-required`. Same defect as BLK-LAB-4, on a second control. On develop there are
+    // 74 visual-only required markers in 30 files and no `aria-required` anywhere.
     test.fail();
     await open(page, ENTER);
 
@@ -334,24 +332,37 @@ test.describe('Order entry — the patient blockers', () => {
     const flag = String(props['PATIENT_NATIONAL_ID_REQUIRED'] ?? '').toLowerCase();
     console.log(`BLK-AL-2 PATIENT_NATIONAL_ID_REQUIRED = ${JSON.stringify(flag)}`);
 
-    // Not a defect if the instance does not ask for it. Skip rather than pass, so this can
-    // never be mistaken for evidence on an instance where the flag is off.
-    test.skip(flag !== 'true',
-      'PATIENT_NATIONAL_ID_REQUIRED is not true on this instance, so there is nothing to enforce');
+    // Not a defect if the instance does not ask for it. Skip rather than pass.
+    test.skip(flag === 'false',
+      'PATIENT_NATIONAL_ID_REQUIRED is "false" on this instance, so National ID is optional');
+
+    const np = page.locator('button').filter({ hasText: /^\s*New Patient\s*$/ }).first();
+    await expect(np, 'the entry form must offer New Patient').toBeVisible({ timeout: 15_000 });
+    await np.click();
+    await expect(page.locator('#nationalId'), 'New Patient must render a National ID field').toBeAttached({ timeout: 15_000 });
 
     const field = await page.evaluate(() => {
-      const el = document.querySelector('#patientId') as HTMLInputElement | null;
+      const el = document.querySelector('#nationalId') as HTMLInputElement | null;
       if (!el) return null;
-      return { required: el.required, ariaRequired: el.getAttribute('aria-required') };
+      const label = el.id ? document.querySelector(`label[for="${el.id}"]`) as HTMLElement | null : null;
+      return {
+        labelText: (label?.innerText || '').trim(),
+        required: el.required,
+        ariaRequired: el.getAttribute('aria-required'),
+      };
     });
-    console.log('BLK-AL-2 #patientId ' + JSON.stringify(field));
-    expect(field, 'the order form has no #patientId control at all').not.toBeNull();
+    console.log('BLK-AL-2 #nationalId ' + JSON.stringify(field));
+    expect(field, 'no #nationalId control').not.toBeNull();
+
+    // Guard the oracle: the case only means something if the label really claims required.
+    expect(field!.labelText,
+      'the National ID label no longer shows "*", so this case is testing nothing')
+      .toMatch(/\*/);
 
     const exposed = field!.required || field!.ariaRequired === 'true';
     expect(exposed,
-      'PATIENT_NATIONAL_ID_REQUIRED is true, but the Patient Id control carries ' +
-      `required=${field!.required} and aria-required=${field!.ariaRequired}. ` +
-      'The setting is served, read by nobody, and enforced nowhere.')
+      `the label says "${field!.labelText}" but #nationalId carries required=${field!.required} ` +
+      `and aria-required=${field!.ariaRequired}; the requirement is visual only`)
       .toBe(true);
   });
 
