@@ -2442,7 +2442,14 @@ set organization.org_id = 26 on the type-11 org
 after:   departments-for-site?refferingSiteId=26  ->  [{"id":"27","value":"QA Ward A"}]
 ```
 
-**And this is a finding: the admin form does not set the parent.** All three
+> **CORRECTED 2026-09-24 (testing 3.2.2.0).** The finding below no longer holds. Driving the
+> admin form (Add, name, Parent Organization autocomplete, type "dept", Save) created org 19 with
+> parent 9000100, and `departments-for-site?refferingSiteId=9000100` returned it. The React form
+> sends the parent as an `organization` object that `PropertyUtils.copyProperties` carries over;
+> the name-based path is the one gated by `FormFields.OrganizationParent` (false by default), and
+> it no longer matters. TC-OE-06 seeds a department this way when none exists. Kept below for history.
+
+**And this is a finding (09-09, since corrected): the admin form does not set the parent.** All three
 organizations created through it came out with a null parent, whether the name
 was typed into `#parentOrgName` in the form or passed as
 `"parentOrgName":"QA Referring Clinic"` in the captured payload. Both returned

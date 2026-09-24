@@ -296,17 +296,36 @@ test.describe('Order entry — state reset and lab number lifecycle (TC-OE)', ()
       };
       const sites = await j('/api/OpenELIS-Global/rest/displayList/SAMPLE_PATIENT_REFERRING_CLINIC');
       const list = (sites.body as Array<{ id: string }>) || [];
-      if (!list.length) return { sites, depts: null, siteId: null };
-      const siteId = String(list[0].id);
-      return { sites, siteId, depts: await j(`/api/OpenELIS-Global/rest/departments-for-site?refferingSiteId=${siteId}`) };
+      if (!list.length) return { sites, depts: null, siteId: null, checked: 0 };
+      // Look for a site that HAS departments rather than taking list[0]: the first clinic on
+      // testing (9000100) has none, which made this canary fail on data, not on the service
+      // (2026-09-24). The harness data setup seeds a clinic with a type-11 department (12.27).
+      let last: { status: number; body: unknown } | null = null; let lastId = '';
+      for (const site of list.slice(0, 60)) {
+        const d = await j(`/api/OpenELIS-Global/rest/departments-for-site?refferingSiteId=${site.id}`);
+        last = d; lastId = String(site.id);
+        if (Array.isArray(d.body) && d.body.length > 0) return { sites, siteId: lastId, depts: d, checked: list.indexOf(site) + 1 };
+      }
+      // None found: seed one through the same POST the Organization admin form sends (captured
+      // 2026-09-24): a type-11 "dept" whose parent is carried as an `organization` object.
+      const csrf = localStorage.getItem('CSRF') || '';
+      const stamp = Date.now().toString(36).slice(-5).toUpperCase();
+      const created = await fetch('/api/OpenELIS-Global/rest/Organization?ID=0&startingRecNo=1', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+        body: JSON.stringify({ organizationName: `QA Ward ${stamp}`, shortName: `QW${stamp}`, isActive: 'Y',
+          selectedTypes: ['11'], organization: { id: String(list[0].id) }, formName: 'organizationForm',
+          formMethod: 'POST', mlsSentinelLabFlag: 'N', parentOrgName: '' }),
+      });
+      const seeded = await j(`/api/OpenELIS-Global/rest/departments-for-site?refferingSiteId=${list[0].id}`);
+      return { sites, siteId: String(list[0].id), depts: seeded, checked: Math.min(list.length, 60), seededStatus: created.status };
     });
-    console.log(`TC-OE-06: site=${res.siteId} depts=${JSON.stringify(res.depts?.body)}`);
+    console.log(`TC-OE-06: site=${res.siteId} (checked ${res.checked} sites, seeded=${(res as any).seededStatus ?? 'no'}) depts=${JSON.stringify(res.depts?.body)}`);
     expect(res.sites.status, 'the referring-clinic list must answer').toBe(200);
     expect(res.siteId, 'at least one referring clinic (org type 5) must be configured').toBeTruthy();
     expect(res.depts?.status, 'departments-for-site must answer for that site').toBe(200);
     expect(
       Array.isArray(res.depts?.body) && (res.depts!.body as unknown[]).length > 0,
-      'the seeded site must have at least one department; see harness 12.27 for seeding',
+      'no referring site has a department, and seeding one through the Organization form payload failed (harness 12.27)',
     ).toBe(true);
   });
 
@@ -329,9 +348,10 @@ test.describe('Order entry — state reset and lab number lifecycle (TC-OE)', ()
   });
 
   test('TC-OE-07: selecting a site must offer its Ward / Department / Unit', async ({ page }) => {
-    // Expected to fail until the defect is fixed. When this turns RED,
-    // the behaviour was corrected: delete this line.
-    test.fail();
+    // FIXED: confirmed against testing 3.2.2.0 on 2026-09-24. The test.fail() marker was removed
+    // and the assertion is unchanged. Evidence: "Expected to fail, but passed" in two runs with
+    // "dept controls=1", trusted only once its canaries were green (TC-OE-09 selects a site;
+    // TC-OE-06, after seeding department 19 under site 9000100, answers departments-for-site).
     // Design rule 5. The control, its list handling, its label key
     // (order.department.label) and the departments-for-site call all still
     // exist in the shipped bundle, and referringSiteDepartmentId still travels
@@ -358,10 +378,12 @@ test.describe('Order entry — state reset and lab number lifecycle (TC-OE)', ()
       return i < 0 ? false : /\b(ward|department|unit)\b/i.test(t.slice(i, i + 700));
     });
     console.log(`TC-OE-07: dept controls=${await dept.count()} wordInRequester=${wordPresent}`);
+    // Now a regression guard, so the loose "control OR the word appears" form is gone: the control
+    // itself must render (both flip runs saw dept controls=1).
     expect(
-      (await dept.count()) > 0 || wordPresent,
-      'the Requester block must offer a Ward / Department / Unit control once a site is selected',
-    ).toBe(true);
+      await dept.count(),
+      `the Requester block must offer a Ward / Department / Unit control once a site is selected (word in block: ${wordPresent})`,
+    ).toBeGreaterThan(0);
   });
 
   test('TC-OE-08: the entry form must offer an order date defaulting to today', async ({ page }) => {
