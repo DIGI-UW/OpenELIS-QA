@@ -74,48 +74,38 @@ test.describe('Test Catalog', () => {
     await login(page, ADMIN.user, ADMIN.pass);
   });
 
-  test('TC-CAT-01: Test Catalog Add page loads and wizard renders', async ({ page }) => {
-    await page.goto(`${BASE}/MasterListsPage/TestAdd`);
-    await expect(page.getByText(/Test Section|Add.*Test|Create.*Test/i)).toBeVisible({ timeout: 5000 });
+  // RE-POINTED 2026-09-24. TC-CAT-01..03 drove the legacy TestAdd / TestModifyEntry screens, which
+  // the OGC-949 spec (FR-001) says "MUST be removed" and the QA depth plan lists as retire-now
+  // (OGC-940). They were failing on strict-mode locators and changed legacy markup, and TC-CAT-02
+  // asserted the legacy BUG-1 500 as a plain expect. They now check the Test Catalog Editor that
+  // replaced those screens, using its stable ids. Deep editor coverage lives in
+  // test-catalog-silent-actions, test-catalog-section-depth and test-catalog-sections-roundtrip.
+  test('TC-CAT-01: Test Catalog list loads with its search and New Test action', async ({ page }) => {
+    await page.goto(`${BASE}/MasterListsPage/TestCatalogList`);
+    await expect(page.locator('#test-search'), 'the catalog list renders its search box').toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('new-test-button'), 'and offers New Test').toBeVisible();
   });
 
-  test(
-    'TC-CAT-02 [BUG-1 KNOWN]: TestAdd API returns 500 on submit',
-    async ({ page }) => {
-      await page.goto(`${BASE}/MasterListsPage/TestAdd`);
+  test('TC-CAT-02: New Test opens the editor on a blank create form', async ({ page }) => {
+    await page.goto(`${BASE}/MasterListsPage/TestCatalogList`);
+    await page.getByTestId('new-test-button').click({ timeout: 30_000 });
+    await expect(page.locator('#basic-info-name'), 'the create form asks for a name').toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('#basic-info-code'), 'and a code').toBeVisible();
+    await expect(page.locator('#basic-info-name'), 'a new test starts blank').toHaveValue('');
+  });
 
-      let testAddStatus = 0;
-      page.on('response', (res) => {
-        if (res.url().includes('TestAdd') && res.request().method() === 'POST') {
-          testAddStatus = res.status();
-        }
-      });
-
-      // Step 1: Fill test name
-      const testNameInput = page.getByRole('textbox', { name: /test.*name/i }).first();
-      await testNameInput.fill('QA_PLAYWRIGHT_TEST');
-
-      // Navigate through wizard steps and submit
-      // (Steps vary — navigate through all 6 wizard steps)
-      for (let i = 0; i < 6; i++) {
-        const nextBtn = page.getByRole('button', { name: /Next|Accept/i });
-        if (await nextBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
-          await nextBtn.click();
-          await page.waitForTimeout(500);
-        }
-      }
-
-      // BUG-1: testAddStatus will be 500
-      if (testAddStatus !== 0) {
-        console.log(`BUG-1: POST /rest/TestAdd returned ${testAddStatus}`);
-        expect(testAddStatus).toBe(500); // documents current broken state
-      }
-    }
-  );
-
-  test('TC-CAT-03: Modify Tests page loads with Biochemistry filter', async ({ page }) => {
-    await page.goto(`${BASE}/MasterListsPage/TestModifyEntry`);
-    await expect(page.getByText(/Biochemistry|Test Section/i)).toBeVisible({ timeout: 5000 });
+  test('TC-CAT-03: Opening an existing test shows its saved name', async ({ page }) => {
+    await page.goto(`${BASE}/MasterListsPage/TestCatalogList`);
+    const saved = await page.evaluate(async () => {
+      const list = await (await fetch('/api/OpenELIS-Global/rest/test-list', { credentials: 'include' })).json();
+      const id = String(list?.[0]?.id ?? '');
+      const bi = id ? await (await fetch(`/api/OpenELIS-Global/rest/test-catalog/tests/${id}/basic-info`, { credentials: 'include' })).json() : null;
+      return { id, name: bi?.name ?? null };
+    });
+    expect(saved.id, 'precondition: the instance has at least one active test').not.toBe('');
+    expect(saved.name, 'precondition: basic-info reads back').toBeTruthy();
+    await page.goto(`${BASE}/MasterListsPage/TestCatalogEditor/${saved.id}/basic-info`);
+    await expect(page.locator('#basic-info-name'), `the editor shows test ${saved.id}'s saved name`).toHaveValue(saved.name!, { timeout: 30_000 });
   });
 });
 
