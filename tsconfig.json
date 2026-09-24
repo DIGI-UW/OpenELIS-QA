@@ -13,6 +13,7 @@
     ]
   },
   "include": [
+    "helpers/isolated-session.ts",
     "helpers/catalogUi.ts",
     "test-catalog-section-depth.spec.ts",
     "test-catalog-silent-actions.spec.ts",

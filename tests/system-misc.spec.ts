@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, getFutureDate, navigateViaMenu, tryNavigateToURL, selectSampleType, discoverFhirBase, orderWizardForward } from '../helpers/test-helpers';
+import { withIsolatedSession, reloginIsolated } from '../helpers/isolated-session';
 
 /**
  * System & Miscellaneous Tests
@@ -569,45 +570,48 @@ test.describe('Export and Download (TC-EXP)', () => {
 
 
 test.describe('Session Management (TC-SESS)', () => {
-  test('TC-SESS-02: Logout clears session — back button blocked', async ({ page }) => {
-    await login(page, ADMIN.user, ADMIN.pass);
-    await page.goto(`${BASE}/AccessionResults`);
-    await page.waitForTimeout(1000);
+  test('TC-SESS-02: Logout clears session — back button blocked', async ({ browser }) => {
+    // Logs out, so it runs in its own session (helpers/isolated-session.ts), never the shared one.
+    await withIsolatedSession(browser, async (page) => {
+      // (logged in by withIsolatedSession)
+      await page.goto(`${BASE}/AccessionResults`);
+      await page.waitForTimeout(1000);
 
-    // Look for logout
-    const logoutLink = page.getByRole('link', { name: /logout|log out|sign out/i }).first();
-    const logoutBtn = page.getByRole('button', { name: /logout|log out|sign out/i }).first();
+      // Look for logout
+      const logoutLink = page.getByRole('link', { name: /logout|log out|sign out/i }).first();
+      const logoutBtn = page.getByRole('button', { name: /logout|log out|sign out/i }).first();
 
-    if (await logoutLink.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await logoutLink.click();
-    } else if (await logoutBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await logoutBtn.click();
-    } else {
-      // Try hamburger → logout
-      const hamburger = page.locator('[class*="hamburger"], [class*="menu-toggle"], button[aria-label*="menu" i]').first();
-      if (await hamburger.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await hamburger.click();
-        await page.waitForTimeout(500);
-        const logoutInMenu = page.getByText(/logout|log out|sign out/i).first();
-        if (await logoutInMenu.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await logoutInMenu.click();
+      if (await logoutLink.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await logoutLink.click();
+      } else if (await logoutBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await logoutBtn.click();
+      } else {
+        // Try hamburger → logout
+        const hamburger = page.locator('[class*="hamburger"], [class*="menu-toggle"], button[aria-label*="menu" i]').first();
+        if (await hamburger.isVisible({ timeout: 2000 }).catch(() => false)) {
+          await hamburger.click();
+          await page.waitForTimeout(500);
+          const logoutInMenu = page.getByText(/logout|log out|sign out/i).first();
+          if (await logoutInMenu.isVisible({ timeout: 2000 }).catch(() => false)) {
+            await logoutInMenu.click();
+          }
         }
       }
-    }
 
-    await page.waitForTimeout(2000);
-    const onLogin = page.url().includes('Login') || page.url() === `${BASE}/` || page.url() === `${BASE}`;
-    console.log(onLogin
-      ? 'TC-SESS-02: PASS — redirected to login after logout'
-      : `TC-SESS-02: NOTE — after logout, landed on ${page.url()}`);
+      await page.waitForTimeout(2000);
+      const onLogin = page.url().includes('Login') || page.url() === `${BASE}/` || page.url() === `${BASE}`;
+      console.log(onLogin
+        ? 'TC-SESS-02: PASS — redirected to login after logout'
+        : `TC-SESS-02: NOTE — after logout, landed on ${page.url()}`);
 
-    // Test back button
-    await page.goBack();
-    await page.waitForTimeout(1500);
-    const backOnLogin = page.url().includes('Login') || !page.url().includes('Accession');
-    // Security assertion — a protected page reachable via Back after logout is
-    // a real finding, not a note.
-    expect(backOnLogin, `protected page still reachable via the back button after logout (${page.url()})`).toBeTruthy();
+      // Test back button
+      await page.goBack();
+      await page.waitForTimeout(1500);
+      const backOnLogin = page.url().includes('Login') || !page.url().includes('Accession');
+      // Security assertion — a protected page reachable via Back after logout is
+      // a real finding, not a note.
+      expect(backOnLogin, `protected page still reachable via the back button after logout (${page.url()})`).toBeTruthy();
+    });
   });
 
   test('TC-SESS-03: Stale URL redirects to login', async ({ browser }) => {
@@ -1610,25 +1614,31 @@ test.describe('Phase 4 — R-DEEP: Alerts Interactions', () => {
 
 
 test.describe('Phase 5 — U-DEEP: Session Security Tests', () => {
-  test('TC-U-DEEP-01: Logout redirect', async ({ page }) => {
-    await login(page, ADMIN.user, ADMIN.pass);
-    await page.goto(`${BASE}/Dashboard`);
-    // Click user menu and logout
-    await page.click('button:has-text("User")');
-    await page.click('text=Logout');
-    await page.waitForURL(/\/login/);
-    await expect(page).toHaveURL(/\/login/);
+  test('TC-U-DEEP-01: Logout redirect', async ({ browser }) => {
+    // Logs out, so it runs in its own session (helpers/isolated-session.ts), never the shared one.
+    await withIsolatedSession(browser, async (page) => {
+      // (logged in by withIsolatedSession)
+      await page.goto(`${BASE}/Dashboard`);
+      // Click user menu and logout
+      await page.click('button:has-text("User")');
+      await page.click('text=Logout');
+      await page.waitForURL(/\/login/);
+      await expect(page).toHaveURL(/\/login/);
+    });
   });
 
-  test('TC-U-DEEP-02: Re-authentication', async ({ page }) => {
-    // Login, logout, re-login
-    await login(page, ADMIN.user, ADMIN.pass);
-    await page.goto(`${BASE}/Dashboard`);
-    await page.click('button:has-text("User")');
-    await page.click('text=Logout');
-    await page.waitForURL(/\/login/);
-    await login(page, ADMIN.user, ADMIN.pass);
-    await expect(page.locator('text=Dashboard').or(page.locator('text=Home'))).toBeVisible();
+  test('TC-U-DEEP-02: Re-authentication', async ({ browser }) => {
+    // Logs out, so it runs in its own session (helpers/isolated-session.ts), never the shared one.
+    await withIsolatedSession(browser, async (page) => {
+      // Login, logout, re-login
+      // (logged in by withIsolatedSession)
+      await page.goto(`${BASE}/Dashboard`);
+      await page.click('button:has-text("User")');
+      await page.click('text=Logout');
+      await page.waitForURL(/\/login/);
+      await reloginIsolated(page);
+      await expect(page.locator('text=Dashboard').or(page.locator('text=Home'))).toBeVisible();
+    });
   });
 
   test('TC-U-DEEP-03: Session continuity post re-auth', async ({ page }) => {

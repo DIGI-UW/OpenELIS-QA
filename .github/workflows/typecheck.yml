@@ -59,6 +59,11 @@ jobs:
       - name: No new tests whose assertions cannot fail
         run: npm run lint:falsifiable
 
+      # A logout on the shared storageState ends the session for every later test in the run
+      # (helpers/isolated-session.ts). Logouts must run in withIsolatedSession().
+      - name: No logout on the shared session
+        run: npm run check:no-shared-logout
+
       # BLOCKING: every spec file must be runnable by at least one config. An
       # audit on 2026-09-04 found 46 spec files (866 tests — the bulk of the
       # module coverage) that no config could run; they had been dead a long

@@ -5,6 +5,7 @@ import {
   TIMEOUT,
   login,
 } from '../helpers/test-helpers';
+import { withIsolatedSession, reloginIsolated } from '../helpers/isolated-session';
 
 /**
  * Session & Security Test Suite — Suite U (TC-SESS) + CG-DEEP (Rate Limiting)
@@ -155,26 +156,29 @@ test.describe('Suite U — Session Lifecycle (TC-SESS)', () => {
     }
   });
 
-  test('TC-SESS-04: Logout endpoint redirects to login page', async ({ page }) => {
-    /**
-     * US-SESS-2: After logout, the user must be redirected to the login page
-     * (or homepage). Staying on the dashboard post-logout is a security issue.
-     */
-    await login(page, ADMIN.user, ADMIN.pass);
-    await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+  test('TC-SESS-04: Logout endpoint redirects to login page', async ({ browser }) => {
+    // Logs out, so it runs in its own session (helpers/isolated-session.ts), never the shared one.
+    await withIsolatedSession(browser, async (page) => {
+      /**
+       * US-SESS-2: After logout, the user must be redirected to the login page
+       * (or homepage). Staying on the dashboard post-logout is a security issue.
+       */
+      // (logged in by withIsolatedSession)
+      await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    // Navigate to logout
-    await page.goto(`${BASE}/logout`);
-    await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+      // Navigate to logout
+      await page.goto(`${BASE}/logout`);
+      await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    const url = page.url();
-    const bodyText = await page.locator('body').innerText();
+      const url = page.url();
+      const bodyText = await page.locator('body').innerText();
 
-    const isOnLoginPage = url.includes('LoginPage') || url.includes('login') ||
-                          await page.locator('input[type="password"]').isVisible({ timeout: 2000 }).catch(() => false);
-    console.log(`TC-SESS-04: Post-logout URL=${url}, onLogin=${isOnLoginPage}`);
-    expect(bodyText).not.toContain('Internal Server Error');
-    console.log('TC-SESS-04: PASS — logout handled without server error');
+      const isOnLoginPage = url.includes('LoginPage') || url.includes('login') ||
+                            await page.locator('input[type="password"]').isVisible({ timeout: 2000 }).catch(() => false);
+      console.log(`TC-SESS-04: Post-logout URL=${url}, onLogin=${isOnLoginPage}`);
+      expect(bodyText).not.toContain('Internal Server Error');
+      console.log('TC-SESS-04: PASS — logout handled without server error');
+    });
   });
 
   test('TC-SESS-05: Protected API rejects unauthenticated requests', async ({ page }) => {
@@ -232,29 +236,32 @@ test.describe('Suite U — Session Lifecycle (TC-SESS)', () => {
     expect(csrf!.length, 'CSRF token must be non-empty').toBeGreaterThan(0);
   });
 
-  test('TC-SESS-08: Re-authentication after manual logout restores full access', async ({ page }) => {
-    /**
-     * US-SESS-2: After logout and re-login, the user must be able to access
-     * the dashboard and APIs again — session must be fully restored.
-     */
-    await login(page, ADMIN.user, ADMIN.pass);
-    await page.goto(`${BASE}/logout`);
-    await page.waitForTimeout(1500);
+  test('TC-SESS-08: Re-authentication after manual logout restores full access', async ({ browser }) => {
+    // Logs out, so it runs in its own session (helpers/isolated-session.ts), never the shared one.
+    await withIsolatedSession(browser, async (page) => {
+      /**
+       * US-SESS-2: After logout and re-login, the user must be able to access
+       * the dashboard and APIs again — session must be fully restored.
+       */
+      // (logged in by withIsolatedSession)
+      await page.goto(`${BASE}/logout`);
+      await page.waitForTimeout(1500);
 
-    // Re-login
-    await login(page, ADMIN.user, ADMIN.pass);
-    await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+      // Re-login
+      await reloginIsolated(page);
+      await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    const result = await page.evaluate(async () => {
-      const csrf = localStorage.getItem('CSRF') || '';
-      const res = await fetch('/api/OpenELIS-Global/rest/home-dashboard/metrics', {
-        headers: { 'X-CSRF-Token': csrf },
+      const result = await page.evaluate(async () => {
+        const csrf = localStorage.getItem('CSRF') || '';
+        const res = await fetch('/api/OpenELIS-Global/rest/home-dashboard/metrics', {
+          headers: { 'X-CSRF-Token': csrf },
+        });
+        return { status: res.status };
       });
-      return { status: res.status };
-    });
 
-    console.log(`TC-SESS-08: Post re-login metrics → HTTP ${result.status}`);
-    expect(result.status, 'Re-authenticated session must access protected API').toBe(200);
+      console.log(`TC-SESS-08: Post re-login metrics → HTTP ${result.status}`);
+      expect(result.status, 'Re-authenticated session must access protected API').toBe(200);
+    });
   });
 });
 

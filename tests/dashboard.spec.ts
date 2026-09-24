@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange } from '../helpers/test-helpers';
+import { withIsolatedSession, reloginIsolated } from '../helpers/isolated-session';
 
 /**
  * Dashboard KPIs Test Suite
@@ -267,48 +268,51 @@ test.describe('Dashboard Extended Tests (TC-DASH-EXT)', () => {
     expect(maxDiff).toBeLessThanOrEqual(threshold);
   });
 
-  test('TC-DASH-EXT-06: Logout from dashboard redirects to login page', async ({ page }) => {
-    /**
-     * US-DASH-4: After logout, users must be directed to the login page
-     * and must not be able to access dashboard without re-authenticating.
-     */
-    await page.goto(`${BASE}`);
-    await page.waitForTimeout(1500);
+  test('TC-DASH-EXT-06: Logout from dashboard redirects to login page', async ({ browser }) => {
+    // Logs out, so it runs in its own session (helpers/isolated-session.ts), never the shared one.
+    await withIsolatedSession(browser, async (page) => {
+      /**
+       * US-DASH-4: After logout, users must be directed to the login page
+       * and must not be able to access dashboard without re-authenticating.
+       */
+      await page.goto(`${BASE}`);
+      await page.waitForTimeout(1500);
 
-    // Find and click a logout link/button
-    const logoutLocator = page.locator(
-      'a[href*="logout"], a[href*="Logout"], button:has-text("Logout"), button:has-text("Sign Out"), [data-testid*="logout"]'
-    ).first();
+      // Find and click a logout link/button
+      const logoutLocator = page.locator(
+        'a[href*="logout"], a[href*="Logout"], button:has-text("Logout"), button:has-text("Sign Out"), [data-testid*="logout"]'
+      ).first();
 
-    const logoutVisible = await logoutLocator.isVisible({ timeout: 3000 }).catch(() => false);
-    if (!logoutVisible) {
-      // Try navigating to logout URL directly
-      await page.goto(`${BASE}/logout`);
-    } else {
-      await logoutLocator.click();
-    }
+      const logoutVisible = await logoutLocator.isVisible({ timeout: 3000 }).catch(() => false);
+      if (!logoutVisible) {
+        // Try navigating to logout URL directly
+        await page.goto(`${BASE}/logout`);
+      } else {
+        await logoutLocator.click();
+      }
 
-    await page.waitForTimeout(2000);
-    const afterUrl = page.url();
-    const onLoginPage =
-      afterUrl.includes('LoginPage') ||
-      afterUrl.includes('login') ||
-      (await page.locator('input[type="password"]').count()) > 0;
+      await page.waitForTimeout(2000);
+      const afterUrl = page.url();
+      const onLoginPage =
+        afterUrl.includes('LoginPage') ||
+        afterUrl.includes('login') ||
+        (await page.locator('input[type="password"]').count()) > 0;
 
-    console.log(`TC-DASH-EXT-06: After logout → ${afterUrl}, onLoginPage=${onLoginPage}`);
-    expect(onLoginPage, 'Logout must redirect to login page').toBe(true);
+      console.log(`TC-DASH-EXT-06: After logout → ${afterUrl}, onLoginPage=${onLoginPage}`);
+      expect(onLoginPage, 'Logout must redirect to login page').toBe(true);
 
-    // Attempt to access dashboard without login — should redirect to login
-    await page.goto(`${BASE}`);
-    await page.waitForTimeout(1500);
-    const redirectedUrl = page.url();
-    const blockedFromDashboard =
-      redirectedUrl.includes('LoginPage') ||
-      redirectedUrl.includes('login') ||
-      (await page.locator('input[type="password"]').count()) > 0;
+      // Attempt to access dashboard without login — should redirect to login
+      await page.goto(`${BASE}`);
+      await page.waitForTimeout(1500);
+      const redirectedUrl = page.url();
+      const blockedFromDashboard =
+        redirectedUrl.includes('LoginPage') ||
+        redirectedUrl.includes('login') ||
+        (await page.locator('input[type="password"]').count()) > 0;
 
-    console.log(`TC-DASH-EXT-06: Post-logout dashboard access → ${redirectedUrl}, blocked=${blockedFromDashboard}`);
-    expect(blockedFromDashboard, 'Unauthenticated dashboard access must redirect to login').toBe(true);
+      console.log(`TC-DASH-EXT-06: Post-logout dashboard access → ${redirectedUrl}, blocked=${blockedFromDashboard}`);
+      expect(blockedFromDashboard, 'Unauthenticated dashboard access must redirect to login').toBe(true);
+    });
   });
 });
 
