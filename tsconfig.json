@@ -13,6 +13,8 @@
     ]
   },
   "include": [
+    "helpers/catalogUi.ts",
+    "test-catalog-section-depth.spec.ts",
     "test-catalog-silent-actions.spec.ts",
     "analyzer-guided-setup.spec.ts",
     "auth.setup.ts",

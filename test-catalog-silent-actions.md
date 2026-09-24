@@ -53,7 +53,7 @@ FLIP-WHEN-FIXED, Delta-SA5. Fails today: SampleTypeCreate answers 200 on a bean-
 | Candidate | Why not encoded yet |
 |---|---|
 | Methods "Copy from Test" ignores its response entirely | Append-with-skip behaviour matches the backend test; the spec delta (no preview, no Replace/Append) is a product decision. Needs Casey's ruling. |
-| "Edit related tests" group Ranges save drops `sampleTypeId` | No specimen-scoped ranges exist on testing to demonstrate the loss; needs a seeded scoped range. |
-| Group Storage save copies the first test's settings to all | Needs a seeded divergent group. |
+| "Edit related tests" group Ranges save drops `sampleTypeId` | Encoded: TC-SD-02 (SD-G1) in `test-catalog-section-depth.md`. |
+| Group Storage save copies the first test's settings to all | Encoded: TC-SD-04 (SD-G2) in `test-catalog-section-depth.md`. |
 | Terminology Save drops a row whose code was cleared, deleting the mapping | Arguably intended (clearing means remove). NEEDS-GUIDANCE. |
 | Reagents partial link failure leaves the table stale | Needs a forced mid-batch failure. |
