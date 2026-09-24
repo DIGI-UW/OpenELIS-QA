@@ -30,7 +30,8 @@
     "catalogue:selftest": "node scripts/catalogue-selftest.mjs",
     "check:catalogue-index": "node scripts/check-catalogue-index.mjs",
     "coverage-gaps:json": "node scripts/check-coverage-gaps.mjs --json",
-    "check:ci-coverage": "node scripts/check-ci-coverage.mjs"
+    "check:ci-coverage": "node scripts/check-ci-coverage.mjs",
+    "check:no-shared-logout": "node scripts/check-no-shared-logout.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
