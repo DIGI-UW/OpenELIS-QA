@@ -87,6 +87,10 @@
     {
       "file": "tests/docs/HARNESS-FINDINGS.md",
       "reason": "Seeding findings for pathology/IHC/cytology. Narrative notes, not a case list."
+    },
+    {
+      "file": "qa-report-testing-20260923-section-depth.md",
+      "reason": "QA run report. Its tripwire table restates TC-SD ids with their recorded failures; the cases are declared in test-catalog-section-depth.md."
     }
   ],
   "knownAmbiguous": [
