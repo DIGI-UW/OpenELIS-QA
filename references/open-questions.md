@@ -29,6 +29,7 @@ _(append new rows above this line)_
 | 2 | Referral status transitions on `/SampleShipment/reference-lab-results` (target: release, testing v3.2.1.x) | **Casey:** in-transit while shipped (activated `ReferralStatus`, not yet received) → **Received** once the shipment/box is marked received → **Resulted** once a result has been **validated and released**. Tester expectation: after a box is received the referral shows Received; it only shows Resulted after the referred test's result is validated+released. | TODO — author a referral chain asserting the Sent/in-transit → Received → Resulted transitions on the reference-lab view |
 
 ---
+| 8 | Analyzer Error Dashboard: still a product surface? | **Casey, 2026-09-24: superseded.** Leave it retired; no bug for the unlinked `/analyzers/errors` route. | BM-DEEP and TC-ANZ-03 retired (#179, #180) |
 | 7 | Panel description uniqueness (Delta-SA6) | **Casey, 2026-09-23: descriptions do not need to be unique.** The 500 on a duplicate description is a defect. | Included in the single Test Catalog silent-actions bug |
 | 5 | Panel Editor: duplicate name on Add Panel (Delta-SA2) | **Casey, 2026-09-24: reject OGC-1122** with SA2 as the reason; reopened In Progress with a suggested 409 contract. OGC-1234 item 2 moved there. | TC-SA-11 cites OGC-1122; TC-SA-12 rewritten as a 409 tripwire |
 | 6 | Terminology: code cleared in place deletes the mapping | **Casey, 2026-09-24: fine as-is** (it will not be heavily used). Intended; not a bug. | None (no tripwire) |
