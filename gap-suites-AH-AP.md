@@ -835,7 +835,7 @@
 
 ---
 
-### TC-ANZ-03 — Error Dashboard loads
+### TC-ANZ-03 — Error Dashboard loads (RETIRED 2026-09-24: superseded, open question 8)
 
 **Navigation:** Hamburger menu → Analyzers → Error Dashboard (candidate URLs: `/ErrorDashboard`, `/AnalyzerErrors`, `/analyzers/errors`)
 
@@ -1246,7 +1246,7 @@
 | AL | TC-STOR-04 | Cold storage displays temperature data | P4 | Temperature readings visible |
 | AM | TC-ANZ-01 | Analyzer List loads | P4 | Load with status 200 |
 | AM | TC-ANZ-02 | Analyzer list shows instruments | P4 | Analyzers displayed |
-| AM | TC-ANZ-03 | Error Dashboard loads | P4 | Load with status 200 |
+| AM | TC-ANZ-03 | Error Dashboard loads (retired 2026-09-24: superseded, open question 8) | P4 | n/a |
 | AM | TC-ANZ-04 | Analyzer Types loads | P4 | Load with status 200 |
 | AN | TC-EQA-01 | EQA Distributions loads | P4 | Load with status 200 |
 | AN | TC-EQA-02 | EQA distribution list/form visible | P4 | Distributions or entry form |

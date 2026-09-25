@@ -297,46 +297,32 @@ test.describe('Audit Log and System Configuration (TC-SYS)', () => {
   const SYS_CONFIG_URLS = ['/SystemConfiguration', '/MasterListsPage/SystemConfig', '/AdminModule'];
 
   test('TC-SYS-01: Audit log screen accessible', async ({ page }) => {
-    let found = false;
-    for (const u of AUDIT_URLS) {
-      const res = await page.goto(`${BASE}${u}`).catch(() => null);
-      if (res && res.ok() && !page.url().includes('LoginPage')) {
-        const text = await page.textContent('body') ?? '';
-        if (/log|audit|action|event/i.test(text)) {
-          console.log(`TC-SYS-01: PASS — audit log at ${page.url()}`);
-          found = true;
-          break;
-        }
-      }
-    }
-    expect(found, `no audit log screen at any of: ${AUDIT_URLS.join(', ')}`).toBeTruthy();
+    // Re-pointed 2026-09-24: the audit log is QA > QMS > Audit Trail (menu: /AuditTrailReport?type=system,
+    // which redirects to /qa/qms/audit-trail?type=system). The old /AuditLog-style guesses no longer exist.
+    await page.goto(`${BASE}/AuditTrailReport?type=system`);
+    await expect(page).toHaveURL(/audit-trail\?type=system|AuditTrailReport/);
+    await expect(page.getByRole('heading', { name: 'System Audit Trail' })).toBeVisible();
+    await expect(page.locator('#startDate')).toBeVisible();
+    await expect(page.locator('#endDate')).toBeVisible();
+    await expect(page.locator('main').getByRole('button', { name: 'Search', exact: true })).toBeVisible();
   });
-
   test('TC-SYS-02: Audit log shows recent admin actions', async ({ page }) => {
-    let auditUrl = '';
-    for (const u of AUDIT_URLS) {
-      const res = await page.goto(`${BASE}${u}`).catch(() => null);
-      if (res && res.ok() && !page.url().includes('LoginPage')) {
-        auditUrl = page.url();
-        break;
-      }
-    }
-    test.skip(!auditUrl, 'audit log not accessible on this build');
-
-    // Apply today's date filter if available
-    const today = new Date();
-    const dateStr = `${String(today.getDate()).padStart(2,'0')}/${String(today.getMonth()+1).padStart(2,'0')}/${today.getFullYear()}`;
-    const dateField = page.locator('input[type="date"], input[id*="date" i]').first();
-    if (await dateField.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await dateField.fill(dateStr).catch(() => {});
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(1500);
-    }
-
-    const hasAdminEntry = await page.getByText(/admin/i).isVisible({ timeout: 3000 }).catch(() => false);
-    expect(hasAdminEntry, 'audit log showed no admin entries — either the log is empty or the date filter excluded everything').toBeTruthy();
+    await page.goto(`${BASE}/AuditTrailReport?type=system`);
+    await expect(page.getByRole('heading', { name: 'System Audit Trail' })).toBeVisible();
+    const res = page.waitForResponse(r => /audit/i.test(r.url()) && r.request().method() === 'GET' && !r.url().endsWith('.js'));
+    await page.locator('main').getByRole('button', { name: 'Search', exact: true }).click();
+    expect((await res).status()).toBe(200);
+    // The harness setup edits data as admin on every run, so the default window must hold recent events.
+    // The user column shows the account's display name (e.g. "Open ELIS"), not the login, so assert shape and recency.
+    const first = page.locator('main tbody tr').first();
+    await expect(first).toBeVisible({ timeout: 15000 });
+    const cells = (await first.locator('td').allInnerTexts()).map(t => t.trim());
+    const m = cells.join(' ').match(/(\d{2})\/(\d{2})\/(\d{4})/);
+    expect(m, `no date in first audit row: ${cells.join(' | ')}`).not.toBeNull();
+    const when = new Date(Number(m![3]), Number(m![1]) - 1, Number(m![2]));
+    expect(Math.abs(Date.now() - when.getTime())).toBeLessThan(2 * 24 * 3600 * 1000);
+    expect(cells.join(' ')).toMatch(/Insert|Update|Delete/);
   });
-
   test('TC-SYS-03: System configuration screen accessible', async ({ page }) => {
     for (const u of SYS_CONFIG_URLS) {
       const res = await page.goto(`${BASE}${u}`).catch(() => null);
@@ -1023,84 +1009,36 @@ test.describe('Suite AL — Storage Management', () => {
 
   test('TC-STOR-01: Storage Management screen loads', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
-
-    try {
-      await navigateViaMenu(page, ['Storage', 'Management']);
-    } catch (e) {
-      const found = await tryNavigateToURL(page, ['/StorageManagement', '/LabStorage', '/storage/management']);
-      if (!found) {
-        test.skip();
-        return;
-      }
+    await page.goto(`${BASE}/Storage`);
+    await expect(page.getByRole('heading', { name: 'Storage Management' })).toBeVisible();
+    for (const tab of ['Dashboard', 'Sample Items', 'Inventory Lots']) {
+      await expect(page.getByRole('tab', { name: tab })).toBeVisible();
     }
-
-    await page.waitForTimeout(1000);
-
-    expect(page.url()).not.toContain('login');
   });
-
   test('TC-STOR-02: Storage locations list visible', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
-
-    try {
-      await navigateViaMenu(page, ['Storage', 'Management']);
-    } catch (e) {
-      await tryNavigateToURL(page, ['/StorageManagement', '/LabStorage', '/storage/management']);
+    await page.goto(`${BASE}/Storage`);
+    await expect(page.locator('#storage-resource-search')).toBeVisible();
+    for (const th of ['Name', 'Code', 'Status']) {
+      await expect(page.locator('main th', { hasText: th }).first()).toBeVisible();
     }
-
-    await page.waitForTimeout(1000);
-
-    const table = await page.locator('table, [role="table"], [class*="list"], [class*="tree"]').first().isVisible({ timeout: 3000 }).catch(() => false);
-    expect(table).toBeTruthy();
+    await expect(page.locator('main tbody tr').first()).toBeVisible({ timeout: 15000 });
   });
-
   test('TC-STOR-03: Cold Storage Monitoring screen loads', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
-
-    try {
-      await navigateViaMenu(page, ['Storage', 'Cold Storage Monitoring']);
-    } catch (e) {
-      const found = await tryNavigateToURL(page, ['/ColdStorageMonitoring', '/FreezerMonitoring', '/storage/monitoring']);
-      if (!found) {
-        test.skip();
-        return;
-      }
+    await page.goto(`${BASE}/FreezerMonitoring?tab=0`);
+    await expect(page.getByRole('heading', { name: 'Cold Storage Dashboard' })).toBeVisible();
+    for (const tab of ['Dashboard', 'Corrective Actions', 'Historical Trends', 'Reports', 'Settings']) {
+      await expect(page.getByRole('tab', { name: tab }).first()).toBeVisible();
     }
-
-    await page.waitForTimeout(1000);
-
-    expect(page.url()).not.toContain('login');
   });
-
   test('TC-STOR-04: Cold storage shows temperature data', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
-
-    // The `try { navigateViaMenu } catch { byUrl }` shape these storage cases use
-    // never reaches the fallback: navigateViaMenu clicks whatever it finds and
-    // returns quietly when it finds nothing, so on an authenticated context —
-    // where login() is a no-op and the page is still about:blank — this test
-    // asserted about temperature readings on a blank page. Try the menu, then
-    // check whether a screen actually rendered, and navigate by URL if not.
-    await navigateViaMenu(page, ['Storage', 'Cold Storage Monitoring']).catch(() => {});
-    const onAScreen = await page
-      .locator('table, [role="table"], [class*="list"]')
-      .first()
-      .isVisible({ timeout: 2_000 })
-      .catch(() => false);
-    if (!onAScreen) {
-      await tryNavigateToURL(page, ['/ColdStorageMonitoring', '/FreezerMonitoring', '/storage/monitoring']);
+    await page.goto(`${BASE}/FreezerMonitoring?tab=0`);
+    await expect(page.getByRole('heading', { name: 'Storage Units' })).toBeVisible();
+    for (const th of ['Unit ID', 'Current Temp', 'Target Temp', 'Last Reading']) {
+      await expect(page.locator('main th', { hasText: th }).first()).toBeVisible();
     }
-
-    await page.waitForTimeout(1000);
-
-    // Look for temperature readings
-    // `page.locator('text/.../')` is not Playwright selector syntax — it threw
-    // "Unknown engine \"text/-?\\d+°?C/\"" and took the test down before the screen
-    // was looked at. getByText() is the regex-capable API.
-    const tempText = await page.getByText(/-?\d+°?C/).count();
-    const table = await page.locator('table, [role="table"], [class*="list"]').first().isVisible({ timeout: 3000 }).catch(() => false);
-
-    expect(table || tempText > 0).toBeTruthy();
   });
 });
 
@@ -1110,71 +1048,27 @@ test.describe('Suite AM — Analyzers', () => {
 
   test('TC-ANZ-01: Analyzer List screen loads', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
-
-    try {
-      await navigateViaMenu(page, ['Analyzers', 'List']);
-    } catch (e) {
-      const found = await tryNavigateToURL(page, ['/AnalyzerList', '/Instruments', '/analyzers/list']);
-      if (!found) {
-        test.skip();
-        return;
-      }
-    }
-
-    await page.waitForTimeout(1000);
-
-    expect(page.url()).not.toContain('login');
+    await page.goto(`${BASE}/analyzers`);
+    await expect(page.getByRole('heading', { name: 'Analyzers', exact: true }).first()).toBeVisible();
+    await expect(page.getByTestId('add-analyzer-button')).toBeVisible();
   });
-
   test('TC-ANZ-02: Analyzer list shows instruments', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
-
-    try {
-      await navigateViaMenu(page, ['Analyzers', 'List']);
-    } catch (e) {
-      await tryNavigateToURL(page, ['/AnalyzerList', '/Instruments', '/analyzers/list']);
+    await page.goto(`${BASE}/analyzers`);
+    await expect(page.getByTestId('analyzer-search-input')).toBeVisible();
+    for (const th of ['Name', 'Connection', 'Lab Units', 'Analyzer type', 'Status']) {
+      await expect(page.locator('main th', { hasText: th }).first()).toBeVisible();
     }
-
-    await page.waitForTimeout(1000);
-
-    const table = await page.locator('table, [role="table"]').first().isVisible({ timeout: 3000 }).catch(() => false);
-    expect(table).toBeTruthy();
+    await expect(page.locator('main')).toContainText(/TOTAL ANALYZERS\s*\d+/i);
   });
-
-  test('TC-ANZ-03: Error Dashboard loads', async ({ page }) => {
-    await login(page, ADMIN.user, ADMIN.pass);
-
-    try {
-      await navigateViaMenu(page, ['Analyzers', 'Error Dashboard']);
-    } catch (e) {
-      const found = await tryNavigateToURL(page, ['/ErrorDashboard', '/AnalyzerErrors', '/analyzers/errors']);
-      if (!found) {
-        test.skip();
-        return;
-      }
-    }
-
-    await page.waitForTimeout(1000);
-
-    expect(page.url()).not.toContain('login');
-  });
-
+  // TC-ANZ-03 (Error Dashboard) retired 2026-09-24: Casey ruled the Analyzer Error Dashboard
+  // superseded (open question 8). /analyzers/errors has no menu entry and lands blank.
   test('TC-ANZ-04: Analyzer Types screen loads', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
-
-    try {
-      await navigateViaMenu(page, ['Analyzers', 'Analyzer Types']);
-    } catch (e) {
-      const found = await tryNavigateToURL(page, ['/AnalyzerTypes', '/InstrumentTypes', '/analyzers/types']);
-      if (!found) {
-        test.skip();
-        return;
-      }
-    }
-
-    await page.waitForTimeout(1000);
-
-    expect(page.url()).not.toContain('login');
+    await page.goto(`${BASE}/analyzers/types`);
+    await expect(page.getByRole('heading', { name: 'Analyzer Types' })).toBeVisible();
+    await expect(page.locator('#analyzer-type-search')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Create Profile' })).toBeVisible();
   });
 });
 
@@ -1184,55 +1078,23 @@ test.describe('Suite AN — EQA Distributions', () => {
 
   test('TC-EQA-01: EQA Distributions screen loads', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
-
-    try {
-      await navigateViaMenu(page, ['EQA', 'Distributions']);
-    } catch (e) {
-      const found = await tryNavigateToURL(page, ['/EQADistributions', '/QADistributions', '/eqa/distributions']);
-      if (!found) {
-        test.skip();
-        return;
-      }
-    }
-
-    await page.waitForTimeout(1000);
-
-    expect(page.url()).not.toContain('login');
+    await page.goto(`${BASE}/qa/eqa/distribution`);
+    await expect(page.getByRole('heading', { name: 'EQA Distribution', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Create New Shipment' })).toBeVisible();
   });
-
   test('TC-EQA-02: EQA distribution list or form visible', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
-
-    try {
-      await navigateViaMenu(page, ['EQA', 'Distributions']);
-    } catch (e) {
-      await tryNavigateToURL(page, ['/EQADistributions', '/QADistributions', '/eqa/distributions']);
+    await page.goto(`${BASE}/qa/eqa/distribution`);
+    for (const th of ['Shipment ID', 'Program', 'Status', 'Deadline']) {
+      await expect(page.locator('main th', { hasText: th }).first()).toBeVisible();
     }
-
-    await page.waitForTimeout(1000);
-
-    const table = await page.locator('table, [role="table"]').first().isVisible({ timeout: 3000 }).catch(() => false);
-    const form = await page.locator('form, [role="form"]').first().isVisible({ timeout: 3000 }).catch(() => false);
-
-    expect(table || form).toBeTruthy();
+    await expect(page.locator('#eqa-shipment-filter')).toBeVisible();
   });
-
   test('TC-EQA-03: EQA Program Management loads', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
-
-    try {
-      await navigateViaMenu(page, ['EQA', 'Program Management']);
-    } catch (e) {
-      const found = await tryNavigateToURL(page, ['/EQAProgramManagement', '/QAProgramManagement', '/eqa/programs']);
-      if (!found) {
-        test.skip();
-        return;
-      }
-    }
-
-    await page.waitForTimeout(1000);
-
-    expect(page.url()).not.toContain('login');
+    await page.goto(`${BASE}/qa/eqa/management`);
+    await expect(page.getByRole('heading', { name: 'Program Administration' })).toBeVisible();
+    await expect(page.locator('main th', { hasText: 'Program Name' }).first()).toBeVisible();
   });
 });
 
@@ -1242,46 +1104,17 @@ test.describe('Suite AO — Aliquot', () => {
 
   test('TC-ALQ-01: Aliquot screen loads', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
-
-    try {
-      await navigateViaMenu(page, ['Aliquot']);
-    } catch (e) {
-      const found = await tryNavigateToURL(page, ['/Aliquot', '/SpecimenAliquot', '/aliquot']);
-      if (!found) {
-        test.skip();
-        return;
-      }
-    }
-
-    await page.waitForTimeout(1000);
-
-    expect(page.url()).not.toContain('login');
+    await page.goto(`${BASE}/Aliquot`);
+    await expect(page.getByRole('heading', { name: 'Aliquot', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Search Sample' })).toBeVisible();
   });
-
   test('TC-ALQ-02: Aliquot entry form visible with fields', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
-
-    try {
-      await navigateViaMenu(page, ['Aliquot']);
-    } catch (e) {
-      await tryNavigateToURL(page, ['/Aliquot', '/SpecimenAliquot', '/aliquot']);
-    }
-
-    await page.waitForTimeout(1000);
-
-    const buttonLocator = page.locator('button:has-text("Create"), button:has-text("New"), button:has-text("Add")').first();
-    const buttonVisible = await buttonLocator.isVisible({ timeout: 3000 }).catch(() => false);
-    if (buttonVisible) {
-      await buttonLocator.click();
-      await page.waitForTimeout(1000);
-    }
-
-    const form = await page.locator('form, [role="form"]').first().isVisible({ timeout: 3000 }).catch(() => false);
-    const inputs = await page.locator('input, textarea, select').all();
-
-    expect(form && inputs.length > 0).toBeTruthy();
+    await page.goto(`${BASE}/Aliquot`);
+    await expect(page.locator('#accessionNumber')).toBeVisible();
+    await expect(page.locator('label', { hasText: 'Enter Accession Number' })).toBeVisible();
+    await expect(page.locator('#searchSample')).toBeVisible();
   });
-
   test('TC-ALQ-03: Aliquot creation workflow executes', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
 
@@ -1323,73 +1156,33 @@ test.describe('Suite AO — Aliquot', () => {
 test.describe('Suite AP — Billing & NoteBook', () => {
 
   test('TC-BILL-01: Billing module loads', async ({ page }) => {
+    // Billing is an external system linked from the Billing menu entry; OpenELIS owns only its
+    // admin configuration (Admin > Billing Menu Management). Re-pointed there 2026-09-24.
     await login(page, ADMIN.user, ADMIN.pass);
-
-    try {
-      await navigateViaMenu(page, ['Billing']);
-    } catch (e) {
-      const found = await tryNavigateToURL(page, ['/Billing', '/BillingDashboard', '/billing']);
-      if (!found) {
-        test.skip();
-        return;
-      }
-    }
-
-    await page.waitForTimeout(1000);
-
-    expect(page.url()).not.toContain('login');
+    await page.goto(`${BASE}/MasterListsPage/billingMenuManagement`);
+    await expect(page.getByRole('heading', { name: 'Billing Menu Management' })).toBeVisible();
   });
-
   test('TC-BILL-02: Billing shows invoice list or form', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
-
-    try {
-      await navigateViaMenu(page, ['Billing']);
-    } catch (e) {
-      await tryNavigateToURL(page, ['/Billing', '/BillingDashboard', '/billing']);
-    }
-
-    await page.waitForTimeout(1000);
-
-    const table = await page.locator('table, [role="table"]').first().isVisible({ timeout: 3000 }).catch(() => false);
-    const form = await page.locator('form, [role="form"]').first().isVisible({ timeout: 3000 }).catch(() => false);
-
-    expect(table || form).toBeTruthy();
+    await page.goto(`${BASE}/MasterListsPage/billingMenuManagement`);
+    await expect(page.locator('#billing_address')).toBeVisible();
+    await expect(page.locator('#billing_active')).toBeAttached();
+    await expect(page.getByRole('button', { name: 'Submit' })).toBeVisible();
   });
-
   test('TC-NOTE-01: NoteBook module loads', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
-
-    try {
-      await navigateViaMenu(page, ['NoteBook']);
-    } catch (e) {
-      const found = await tryNavigateToURL(page, ['/NoteBook', '/Notes', '/notebook']);
-      if (!found) {
-        test.skip();
-        return;
-      }
+    await page.goto(`${BASE}/NotebookDashboard`);
+    await expect(page.getByRole('heading', { name: 'Notebook', exact: true })).toBeVisible();
+    for (const card of ['Total Entries', 'Drafts', 'Pending Review']) {
+      await expect(page.getByRole('heading', { name: card })).toBeVisible();
     }
-
-    await page.waitForTimeout(1000);
-
-    expect(page.url()).not.toContain('login');
   });
-
   test('TC-NOTE-02: NoteBook entry or list visible', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
-
-    try {
-      await navigateViaMenu(page, ['NoteBook']);
-    } catch (e) {
-      await tryNavigateToURL(page, ['/NoteBook', '/Notes', '/notebook']);
-    }
-
-    await page.waitForTimeout(1000);
-
-    const table = await page.locator('table, [role="table"]').first().isVisible({ timeout: 3000 }).catch(() => false);
-    const textarea = await page.locator('textarea, [role="textbox"]').first().isVisible({ timeout: 3000 }).catch(() => false);
-
-    expect(table || textarea).toBeTruthy();
+    await page.goto(`${BASE}/NotebookDashboard`);
+    await expect(page.getByRole('heading', { name: 'All Entries' })).toBeVisible();
+    await expect(page.locator('main th', { hasText: 'Entry Title' }).first()).toBeVisible();
+    await expect(page.locator('#startDate')).toBeVisible();
   });
 });
 
