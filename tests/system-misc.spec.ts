@@ -807,26 +807,21 @@ test.describe('Error Handling and Edge Cases (TC-ERR)', () => {
       : 'TC-ERR-04: NOTE — no immediate validation for non-numeric (may validate on save)');
   });
 
-  test('TC-ERR-05: 404 page is clean (no stack trace)', async ({ page }) => {
-    const res = await page.goto(`${BASE}/ThisPageDoesNotExist_QA`);
-    await page.waitForTimeout(1500);
-
-    const bodyText = await page.textContent('body') ?? '';
-    const status = res?.status() ?? 0;
-    const hasStack = /exception|stacktrace|at org\.openelis|error at line/i.test(bodyText);
-    const hasNav = await page.locator('nav, [class*="menu"], [class*="header"]').count() > 0;
-
-    console.log(`TC-ERR-05: Status ${status}, stack trace visible: ${hasStack}, nav present: ${hasNav}`);
-    console.log(hasStack
-      ? 'TC-ERR-05: FAIL — stack trace visible on 404 page'
-      : 'TC-ERR-05: PASS — no technical details exposed');
-    expect(hasStack).toBe(false);
+  test('TC-ERR-05: Unknown route shows a Not Found page inside the app', async ({ page }) => {
+    // [FLIP-WHEN-FIXED] OGC-1242, written 2026-09-25.
+    //
+    // Today any unmatched path hits App.jsx's catch-all (<Route path="*"> -> RedirectOldUI), which
+    // sends the browser to /api/OpenELIS-Global/<path>; the user lands on raw Spring 404 JSON with
+    // untranslated keys and a Java class name. Measured in two full runs and a probe on testing
+    // 3.2.2.0 and 3.2.3.0. Canary over the same checks: TC-W-DEEP-03 (a known route passes them).
+    // Read this case's recorded failure from the JSON report before trusting its expected failure.
+    test.fail();
+    await login(page, ADMIN.user, ADMIN.pass);
+    await page.goto(`${BASE}/ThisPageDoesNotExist_QA`);
+    await page.waitForLoadState('networkidle').catch(() => {});
+    await expectInAppLayout(page);
+    await expect(page.locator('main')).toContainText(/not found|404/i);
   });
-
-  // TC-ERR-06 (double submit on Add Order) retired 2026-09-25. It drove the legacy /SamplePatientEntry
-  // wizard (being retired, OGC-1239). Double-submit safety for the new order entry is covered by the
-  // order-entry suite: TC-NET-06 (a slow save disables the button and sends one request) and TC-OEW-09
-  // (the double storage-skipped PUT), per claude/qa-report-order-entry-2026-09-25.md.
 });
 
 // ---------------------------------------------------------------------------
@@ -1252,6 +1247,18 @@ test.describe('Phase 4 — Q-DEEP: EQA Interactions', () => {
   });
 });
 
+/**
+ * The user stays inside the OpenELIS app: the URL is not rewritten to the server's /api path, the
+ * side navigation is there, and no raw Spring problemDetail text or Java class name is on screen.
+ * Shared by the OGC-1242 tripwire (TC-ERR-05) and its canary (TC-W-DEEP-03).
+ */
+async function expectInAppLayout(page: Page): Promise<void> {
+  expect(page.url()).not.toContain('/api/OpenELIS-Global/');
+  await expect(page.getByRole('navigation', { name: 'Side navigation' })).toBeVisible({ timeout: 15000 });
+  const body = (await page.textContent('body')) ?? '';
+  expect(body).not.toMatch(/problemDetail|org\.springframework|NoHandlerFoundException/);
+}
+
 test.describe('Phase 4 — W-DEEP: Error Handling', () => {
   test.beforeEach(async ({ page }) => { await login(page, ADMIN.user, ADMIN.pass); });
 
@@ -1275,10 +1282,12 @@ test.describe('Phase 4 — W-DEEP: Error Handling', () => {
     await expect(feedback.first()).toBeVisible({ timeout: 8000 });
   });
 
-  test('TC-W-DEEP-03: Non-existent route returns 404', async ({ page }) => {
-    await page.goto(`${BASE}/NonExistentPage12345`);
-    const body = await page.textContent('body');
-    expect(body).toContain('404');
+  test('TC-W-DEEP-03: Known route renders inside the app layout (canary for TC-ERR-05)', async ({ page }) => {
+    // Was "non-existent route returns 404", which passed only because OGC-1242's raw JSON contains
+    // "404". Now the canary for the TC-ERR-05 tripwire: the same layout checks must pass on a real page,
+    // so a broken locator can never masquerade as the OGC-1242 defect.
+    await page.goto(`${BASE}/Dashboard`);
+    await expectInAppLayout(page);
   });
 });
 
