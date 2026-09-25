@@ -1,7 +1,7 @@
 {
-  "recorded": "2026-09-24",
-  "total": 1248,
-  "hollowTotal": 184,
+  "recorded": "2026-09-25",
+  "total": 1247,
+  "hollowTotal": 183,
   "files": {
     "tests/accessibility.spec.ts": 1,
     "tests/admin-config.spec.ts": 1,
@@ -191,7 +191,7 @@
     "tests/sample-shipment.spec.ts": 1,
     "tests/session-security.spec.ts": 0,
     "tests/storage-crud.spec.ts": 2,
-    "tests/system-misc.spec.ts": 18,
+    "tests/system-misc.spec.ts": 17,
     "tests/unified-results.spec.ts": 0,
     "tests/validation-review.spec.ts": 0,
     "tests/validation.spec.ts": 3,

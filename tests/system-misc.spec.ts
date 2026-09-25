@@ -1071,24 +1071,8 @@ test.describe('Suite AM — Analyzers', () => {
     }
     await expect(page.locator('main')).toContainText(/TOTAL ANALYZERS\s*\d+/i);
   });
-  test('TC-ANZ-03: Error Dashboard loads', async ({ page }) => {
-    await login(page, ADMIN.user, ADMIN.pass);
-
-    try {
-      await navigateViaMenu(page, ['Analyzers', 'Error Dashboard']);
-    } catch (e) {
-      const found = await tryNavigateToURL(page, ['/ErrorDashboard', '/AnalyzerErrors', '/analyzers/errors']);
-      if (!found) {
-        test.skip();
-        return;
-      }
-    }
-
-    await page.waitForTimeout(1000);
-
-    expect(page.url()).not.toContain('login');
-  });
-
+  // TC-ANZ-03 (Error Dashboard) retired 2026-09-24: Casey ruled the Analyzer Error Dashboard
+  // superseded (open question 8). /analyzers/errors has no menu entry and lands blank.
   test('TC-ANZ-04: Analyzer Types screen loads', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
     await page.goto(`${BASE}/analyzers/types`);
