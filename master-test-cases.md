@@ -2774,7 +2774,7 @@ Mark each as **PASS**, **FAIL**, **SKIP** (with reason), or **GAP** (feature not
 
 ---
 
-### TC-ERR-06 — Double Submit Prevention
+### TC-ERR-06 — Double Submit Prevention (RETIRED 2026-09-25: legacy Add Order; covered by order-entry TC-NET-06 / TC-OEW-09)
 
 **Navigation:** Add Order → submit → quickly click submit again
 
