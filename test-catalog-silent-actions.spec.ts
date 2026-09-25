@@ -156,35 +156,34 @@ test.describe('Sample & Results - Copy configuration from test', () => {
     await page.context().close();
   });
 
-  async function copyViaUi(page: Page) {
-    await open(page, `/MasterListsPage/TestCatalogEditor/${tgtId}/sample-results`);
-    await page.locator('#copy-from-test').waitFor({ state: 'visible', timeout: 60_000 });
-    await watchToasts(page);
-    await pickFromCombo(page, 'copy-from-test', srcLabel);
-    const resp = nextResponse(page, 'POST', /\/sample-results\/copy-from\//);
-    await page.getByRole('button', { name: /^copy from test$/i }).click();
-    const r = await resp;
-    await page.waitForTimeout(1500);
-    return { status: r.status(), path: new URL(r.url()).pathname, toasts: await toasts(page) };
-  }
-
-  test('TC-SA-01: canary - Copy issues POST copy-from/{source} and the seed is a real difference', async ({ page }) => {
+  test('TC-SA-01: canary - Copy stages nothing until confirmed: Cancel writes nothing', async ({ page }) => {
+    // Rewritten 2026-09-25 for the shipped OGC-1234 contract: Copy opens a confirmation first and
+    // nothing is written until Save. The old canary expected an immediate POST copy-from/{source}.
     expect(srcOpts.length, 'seeded source must carry options').toBeGreaterThan(0);
     expect(srcOpts, 'seeded source and target must differ, or the copy case below proves nothing').not.toEqual(tgtOptsBefore);
-    const r = await copyViaUi(page);
-    expect(r.path, 'Copy must POST to copy-from/<the selected source>').toContain(`/tests/${tgtId}/sample-results/copy-from/${srcId}`);
-    expect(r.status, 'the copy endpoint answered').toBe(200);
-    expect(r.toasts.some((t) => /copied/i.test(t.text)),
-      'the UI claims "Configuration copied." (TC-SA-02 checks whether that claim is true)').toBe(true);
+    const writes: string[] = [];
+    page.on('request', (r) => {
+      if (r.method() !== 'GET' && r.url().includes(`/tests/${tgtId}/`)) writes.push(`${r.method()} ${r.url()}`);
+    });
+    await open(page, `/MasterListsPage/TestCatalogEditor/${tgtId}/sample-results`);
+    await page.locator('#copy-from-test').waitFor({ state: 'visible', timeout: 60_000 });
+    await pickFromCombo(page, 'copy-from-test', srcLabel);
+    await page.getByRole('button', { name: /^copy from test$/i }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog, 'Copy opens a confirmation before replacing anything').toBeVisible({ timeout: 10_000 });
+    await dialog.getByRole('button', { name: /cancel/i }).first().click();
+    await page.waitForTimeout(1500);
+    expect(writes, 'cancelling the confirmation must write nothing').toEqual([]);
+    expect(await primaryOptionNames(page, tgtId), 'the target is unchanged after Cancel').toEqual(tgtOptsBefore);
   });
 
-  test('TC-SA-02: FLIP-WHEN-FIXED - Copy asks to confirm a destructive replace, then Save persists the source config', async ({ page }) => {
+  test('TC-SA-02: FIXED (OGC-1234) - Copy asks to confirm a destructive replace, then Save persists the source config', async ({ page }) => {
     // Delta-SA1. Contract (Casey, 2026-09-23): Copy REPLACES the target's configuration. Because
     // that is destructive, clicking Copy opens a confirmation modal warning that the change is
     // irreversible once saved. Confirming stages the source config in the editor; Save commits it.
     // Today: no modal, copyComponentsFromTest skips any configured component (every test has
     // PRIMARY), the target is unchanged, and the UI toasts "Configuration copied."
-    test.fail(true, 'Delta-SA1: no confirm modal and no replace; flips when the confirm-then-Save replace ships');
+    // FIXED 2026-09-25 (OGC-1234, OpenELIS-Global-2 #4415): flipped on testing 3.2.3.0.
     await open(page, `/MasterListsPage/TestCatalogEditor/${tgtId}/sample-results`);
     await page.locator('#copy-from-test').waitFor({ state: 'visible', timeout: 60_000 });
     await pickFromCombo(page, 'copy-from-test', srcLabel);
@@ -347,11 +346,11 @@ test.describe('Methods - inline create refused (409)', () => {
     expect((links.json as any[]) ?? [], 'nothing linked').toHaveLength(0);
   });
 
-  test('TC-SA-21: FLIP-WHEN-FIXED - a refused create (409 duplicate code) must not toast success', async ({ page }) => {
+  test('TC-SA-21: FIXED (OGC-1234) - a refused create (409 duplicate code) must not toast success', async ({ page }) => {
     // Delta-SA3. Today: 409 "Method code already exists" -> the helper passes a truthy
     // {error,status} -> `if (res)` closes the form, clears it, and shows a green toast whose
     // text is the button label. Nothing is linked. Same pattern: Link Method, Copy methods.
-    test.fail(true, 'Delta-SA3: MethodsSection treats any response as success; flips when it checks status');
+    // FIXED 2026-09-25 (OGC-1234, OpenELIS-Global-2 #4415): flipped on testing 3.2.3.0.
     const r = await inlineCreate(page, secondTest, CODE);
     expect(r.status, 'precondition: the server refused the duplicate').toBe(409);
     expect(r.links, 'precondition: nothing was linked').toHaveLength(0);
@@ -407,10 +406,10 @@ test.describe('Sample Type Editor - create', () => {
     expect(rows.find((x) => x.name === name), 'an HTML-bearing name must not be stored').toBeUndefined();
   });
 
-  test('TC-SA-32: FLIP-WHEN-FIXED - a refused create (HTML in the name) must not report "saved successfully"', async ({ page }) => {
+  test('TC-SA-32: FIXED (OGC-1234) - a refused create (HTML in the name) must not report "saved successfully"', async ({ page }) => {
     // Delta-SA5. Today: bean validation (@SafeHtml NONE) refuses the name, the controller answers
     // HTTP 200 echoing the form, the UI finds no new row and still toasts success.
-    test.fail(true, 'Delta-SA5: SampleTypeCreate answers 200 on a validation refusal; flips when it returns 4xx or the UI checks');
+    // FIXED 2026-09-25 (OGC-1234, OpenELIS-Global-2 #4415): flipped on testing 3.2.3.0.
     const name = `QA<i>${RUN}</i>`;
     const r = await createSampleType(page, name, 'QA safe-html probe');
     expect(r.row, 'precondition: nothing was created').toBeFalsy();
