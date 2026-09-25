@@ -1740,6 +1740,6 @@ test.describe('Phase 7 — BL-DEEP: EQA Program Management', () => {
   });
 });
 
-// Phase 7 BM-DEEP (Analyzer Error Dashboard) retired 2026-09-24, parked as open question 8
-// in references/open-questions.md. Its old target, /MasterListsPage/AnalyzerTestName, was
+// Phase 7 BM-DEEP (Analyzer Error Dashboard) retired 2026-09-24: Casey ruled the dashboard
+// superseded (open question 8, resolved). Its old target, /MasterListsPage/AnalyzerTestName, was
 // deliberately removed, and BM-DEEP-02 had been passing on that blank page (a false green).
