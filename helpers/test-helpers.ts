@@ -549,6 +549,67 @@ export async function hasSession(page: Page): Promise<boolean> {
   }
 }
 
+/**
+ * True when the context's cookie still maps to a live server session.
+ * An authenticated GET of /rest/menu answers 200 JSON; a dead session answers a
+ * redirect to the login page (or HTML), and a server that is down throws.
+ */
+export async function sessionAlive(page: Page): Promise<boolean> {
+  try {
+    const r = await page.context().request.get(`${BASE}/api/OpenELIS-Global/rest/menu`, {
+      maxRedirects: 0,
+      timeout: 15_000,
+    });
+    return r.status() === 200 && /json/i.test(r.headers()['content-type'] ?? '');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Log back in after the shared session died (almost always a server restart),
+ * then refresh the shared storage state so every context created after this one
+ * starts with the new cookie instead of the dead one. Only the admin state is
+ * rewritten; role sessions keep their own files. Throws, with the reason, when
+ * the server is still unreachable, so the failure reads as an outage rather than
+ * a product bug.
+ */
+export async function recoverSession(page: Page, user: string, pass: string): Promise<void> {
+  console.warn('[session] shared session is dead (server restart?) -- logging in again');
+  await page.context().clearCookies();
+  await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
+  const userSel = 'input[name="loginName"], #loginName';
+  const formIsThere = await page
+    .locator(userSel)
+    .first()
+    .waitFor({ state: 'visible', timeout: 30_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!formIsThere) {
+    throw new Error(`[session] re-login impossible: no login form at ${page.url()} (server still down?)`);
+  }
+  await page.fill(userSel, user);
+  await page.fill('input[name="password"], #password, input[type="password"]', pass);
+  await Promise.all([
+    page.waitForLoadState('networkidle').catch(() => {}),
+    page
+      .getByRole('button', { name: /sign in|log ?in|submit/i })
+      .first()
+      .click()
+      .catch(() => page.keyboard.press('Enter')),
+  ]);
+  if (!(await sessionAlive(page))) {
+    throw new Error(`[session] re-login did not produce a live session (landed on ${page.url()})`);
+  }
+  const statePath = process.env.AUTH_STATE_FILE ?? path.join(process.cwd(), '.auth', 'user.json');
+  if (user === ADMIN.user && fs.existsSync(statePath)) {
+    const tmp = `${statePath}.tmp-${process.pid}`;
+    await page.context().storageState({ path: tmp });
+    fs.renameSync(tmp, statePath);
+    console.warn(`[session] re-logged in; refreshed ${statePath}`);
+  }
+}
+
 export async function login(page: Page, user: string, pass: string): Promise<void> {
   // Fast path — see hasSession(). Skips the credential submission when the
   // config already supplied an authenticated storageState, which is every suite
@@ -562,6 +623,13 @@ export async function login(page: Page, user: string, pass: string): Promise<voi
   // localStorage depends on it. Skipping the form is the win; skipping the
   // navigation is a regression.
   if (await hasSession(page)) {
+    // A cookie is not a session. When testing restarts mid-run every server-side
+    // session dies, and without this check each later test sailed through the fast
+    // path onto the login page (2026-09-24: two restarts took out 10+ tests per run).
+    if (!(await sessionAlive(page))) {
+      await recoverSession(page, user, pass);
+      return;
+    }
     if (!page.url().startsWith(BASE)) {
       await page.goto(BASE, { waitUntil: 'domcontentloaded' });
     }
