@@ -35,37 +35,23 @@ test.describe('RBAC URL access checks (admin)', () => {
     });
   }
 
-  test(
-    'TC-RBAC-USER [BUG-3 KNOWN]: User account creation returns 500',
-    async ({ page }) => {
-      // Navigate to User Management
-      await page.goto(`${BASE}/MasterListsPage`);
-      // This test documents BUG-3: POST /rest/UnifiedSystemUser → 500
-      // When BUG-3 is fixed, this test should succeed in creating a user.
-      let responseStatus = 0;
-      page.on('response', (response) => {
-        if (response.url().includes('UnifiedSystemUser')) {
-          responseStatus = response.status();
-        }
-      });
-
-      // Navigate to Add User (path may vary)
-      await page.goto(`${BASE}/UserEdit`);
-      // Fill form
-      await page.locator('input[name*="firstName"], input[id*="firstName"]').fill('QA');
-      await page.locator('input[name*="lastName"], input[id*="lastName"]').fill('TestUser');
-      await page.locator('input[name*="loginName"], input[id*="loginName"]').fill('qa_testuser_playwright');
-      await page.locator('input[name*="password"], input[type="password"]').first().fill('QAtest1!');
-      await page.locator('button[type="submit"]').click();
-
-      // BUG-3: responseStatus will be 500
-      // When fixed, change this assertion to: expect(responseStatus).toBe(200);
-      if (responseStatus !== 0) {
-        console.log(`BUG-3: POST /rest/UnifiedSystemUser returned ${responseStatus}`);
-        expect(responseStatus).toBe(500); // documents current broken state
-      }
+  test('TC-RBAC-USER: Add User form renders with its required fields', async ({ page }) => {
+    // Re-pointed 2026-09-25 from the legacy /UserEdit form and its BUG-3 500 expectation. User admin is
+    // Admin > User Management; Add opens /MasterListsPage/userEdit. The harness deliberately does not
+    // type a password to create an account, so this checks the form and its Save gate only.
+    await login(page, ADMIN.user, ADMIN.pass);
+    await page.goto(`${BASE}/MasterListsPage/userManagement`);
+    await expect(page.getByRole('heading', { name: 'User Management' })).toBeVisible();
+    await expect(page.locator('#user-name-search-bar')).toBeVisible();
+    await page.locator('main').getByRole('button', { name: 'Add', exact: true }).click();
+    await expect(page).toHaveURL(/\/MasterListsPage\/userEdit/);
+    await expect(page.getByRole('heading', { name: 'Add User' })).toBeVisible();
+    for (const id of ['#login-name', '#login-password', '#login-repeat-password', '#first-name', '#last-name']) {
+      await expect(page.locator(id)).toBeVisible();
     }
-  );
+    await expect(page.getByRole('heading', { name: 'Roles' })).toBeVisible();
+    await expect(page.locator('main').getByRole('button', { name: 'Save', exact: true })).toBeDisabled();
+  });
 });
 
 
@@ -143,23 +129,22 @@ test.describe('LOINC and Dictionary CRUD (TC-LOINC)', () => {
     expect(url).toBeTruthy();
   });
 
-  test('TC-LOINC-02: Search for HGB LOINC code (718-7)', async ({ page }) => {
-    const url = await goToLoincScreen(page);
-    // A genuine absence: this build does not expose the LOINC screen. Skip is
-    // visible in the report; an early `return` here used to read as a pass.
-    test.skip(!url, 'LOINC screen not accessible on this build');
-
-    const searchField = page.locator('input[type="search"], input[type="text"]').first();
-    if (await searchField.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await searchField.fill('718-7');
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(1500);
-    }
-
-    const has7187 = await page.getByText(/718-7|hemoglobin/i).isVisible({ timeout: 5000 }).catch(() => false);
-    expect(has7187, 'LOINC search for 718-7 returned neither the code nor "hemoglobin"').toBeTruthy();
+  test('TC-LOINC-02: Test Catalog search finds a test by its LOINC code', async ({ page }) => {
+    // Re-pointed 2026-09-25. LOINC lives on each test in the Test Catalog (there is no standalone LOINC
+    // screen), and the old premise, HGB mapped to 718-7, does not hold on every instance: on testing
+    // 3.2.3.0 Hemoglobin shows "No LOINC". So take a code from whichever listed test carries one and
+    // search the catalog by it.
+    await page.goto(`${BASE}/MasterListsPage/TestCatalogList`);
+    const search = page.locator('#test-search');
+    await expect(search).toBeVisible();
+    const rows = page.locator('main tbody tr');
+    await expect(rows.first()).toBeVisible({ timeout: 15000 });
+    const texts = await rows.allInnerTexts();
+    const code = texts.map(t => t.match(/\b\d{3,6}-\d\b/)?.[0]).find(Boolean);
+    test.skip(!code, 'no listed test carries a LOINC code on this instance');
+    await search.fill(code!);
+    await expect(rows.first()).toContainText(code!, { timeout: 10000 });
   });
-
   test('TC-LOINC-03: LOINC mapping visible on HGB test record', async ({ page }) => {
     await page.goto(`${BASE}/MasterListsPage/TestModifyEntry`);
     await page.waitForTimeout(2000);
@@ -838,40 +823,10 @@ test.describe('Error Handling and Edge Cases (TC-ERR)', () => {
     expect(hasStack).toBe(false);
   });
 
-  test('TC-ERR-06: Double submit prevention on Add Order', async ({ page }) => {
-    await page.goto(`${BASE}/SamplePatientEntry`);
-    await page.waitForTimeout(2000);
-
-    // Navigate through the wizard quickly to get to submit
-    const nextBtn = orderWizardForward(page);
-    for (let i = 0; i < 4 && await nextBtn.isVisible({ timeout: 1000 }).catch(() => false); i++) {
-      await nextBtn.click();
-      await page.waitForTimeout(500);
-    }
-
-    // Look for a submit button
-    const submitBtn = page.getByRole('button', { name: /submit|save|accept/i }).first();
-    if (!(await submitBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
-      console.log('TC-ERR-06: SKIP — could not reach submit step');
-      return;
-    }
-
-    // Track POST requests
-    let postCount = 0;
-    page.on('response', (r) => {
-      if (r.request().method() === 'POST') postCount++;
-    });
-
-    // Double click quickly
-    await submitBtn.click();
-    await submitBtn.click();
-    await page.waitForTimeout(3000);
-
-    console.log(`TC-ERR-06: ${postCount} POST request(s) after double click`);
-    console.log(postCount <= 1
-      ? 'TC-ERR-06: PASS — double submit prevented (only 1 POST)'
-      : `TC-ERR-06: NOTE — ${postCount} POSTs observed (verify no duplicate orders created)`);
-  });
+  // TC-ERR-06 (double submit on Add Order) retired 2026-09-25. It drove the legacy /SamplePatientEntry
+  // wizard (being retired, OGC-1239). Double-submit safety for the new order entry is covered by the
+  // order-entry suite: TC-NET-06 (a slow save disables the button and sends one request) and TC-OEW-09
+  // (the double storage-skipped PUT), per claude/qa-report-order-entry-2026-09-25.md.
 });
 
 // ---------------------------------------------------------------------------
