@@ -12,11 +12,11 @@ Contract for every case: seed through REST, act through the UI, read back throug
 
 ## Cases
 
-### TC-SA-01: Sample & Results Copy issues the copy request and claims success
-Canary. Seeds a source and target test, each with a PRIMARY single-select component and disjoint options. Drives the Copy combobox and button. Asserts the POST goes to `copy-from/<source>`, answers 200, and the "Configuration copied." toast appears. **Criterion:** FUNCTION.
+### TC-SA-01: Copy stages nothing until confirmed: Cancel writes nothing
+Canary. Seeds a source and target test, each with a PRIMARY single-select component and disjoint options. Opens the editor, picks the source, clicks Copy, expects the confirmation dialog, clicks Cancel. Asserts no non-GET request to the target test and the target configuration unchanged. Rewritten 2026-09-25 for the OGC-1234 contract (#4415): the old `copy-from` POST on click no longer exists. **Criterion:** FUNCTION.
 
 ### TC-SA-02: Copy asks to confirm a destructive replace, then Save persists the source config
-FLIP-WHEN-FIXED, Delta-SA1. Contract per Casey (2026-09-23): Copy replaces the target configuration; clicking it opens a confirmation modal warning the change is irreversible once saved; confirming stages the source config in the editor and Save commits it. The case asserts the modal, the warning, and the read-back after Save. Fails today: no modal appears, and the backend never overwrites a configured component. **Criterion:** PERSIST.
+FIXED (OGC-1234, OpenELIS-Global-2 #4415), flipped on testing 3.2.3.0 2026-09-25. Was Delta-SA1. Contract per Casey (2026-09-23): Copy replaces the target configuration; clicking it opens a confirmation modal warning the change is irreversible once saved; confirming stages the source config in the editor and Save commits it. The case asserts the modal, the warning, and the read-back after Save. Failed before the fix: no modal appeared, and the backend never overwrites a configured component. **Criterion:** PERSIST.
 
 ### TC-SA-10: A new panel name creates a new panel
 Canary. New Panel form with an unused name mints a new id that reads back by id. **Criterion:** ROUND-TRIP.
@@ -34,7 +34,7 @@ Canary. **Criterion:** PERSIST.
 Contract. Proves TC-SA-21's precondition outside `test.fail`. **Criterion:** FUNCTION.
 
 ### TC-SA-21: A refused method create (409) must not show a success toast
-FLIP-WHEN-FIXED, Delta-SA3. Fails today: `if (res)` in MethodsSection treats the helper's `{error,status}` object as success, closes the form and shows a green toast. **Criterion:** FUNCTION (user-visible outcome).
+FIXED (OGC-1234, #4415), flipped on testing 3.2.3.0 2026-09-25. Was Delta-SA3. Failed before the fix: `if (res)` in MethodsSection treats the helper's `{error,status}` object as success, closes the form and shows a green toast. **Criterion:** FUNCTION (user-visible outcome).
 
 ### TC-SA-30: A plain sample type name creates the sample type
 Canary. **Criterion:** ROUND-TRIP (GET /sample-types).
@@ -46,7 +46,7 @@ FLIP-WHEN-FIXED, Delta-SA4. Fails today: the create payload omits `description`,
 Contract. Proves TC-SA-32's precondition outside `test.fail`. **Criterion:** FUNCTION.
 
 ### TC-SA-32: A refused sample type create must not report "saved successfully"
-FLIP-WHEN-FIXED, Delta-SA5. Fails today: SampleTypeCreate answers 200 on a bean-validation refusal and the UI toasts "Sample type saved successfully." **Criterion:** FUNCTION (user-visible outcome).
+FIXED (OGC-1234, #4415), flipped on testing 3.2.3.0 2026-09-25. Was Delta-SA5. Failed before the fix: SampleTypeCreate answers 200 on a bean-validation refusal and the UI toasts "Sample type saved successfully." **Criterion:** FUNCTION (user-visible outcome).
 
 ## Not yet encoded (candidates, from code reading; not UI-confirmed)
 
