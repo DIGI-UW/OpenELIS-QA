@@ -393,7 +393,7 @@ Observed working 2026-09-27 (7 entered, capped to 5). **Criterion:** FUNCTION.
 Search the accession after TC-ALQW-02. **Expected:** the aliquot is listed with its test and the parent shows its remaining quantity. **Criterion:** ROUND-TRIP.
 
 ### TC-ALQW-07: Results and Workplan list the test under the aliquot's ID after the move
-**Criterion:** CROSS-LINK.
+**Today:** Results shows the parent accession and the sample type only, for both the /Aliquot tool (DEV...0370) and Sample Management (DEV...0372-1.1) (R76). **Criterion:** CROSS-LINK.
 
 ## Cold Storage navigation (TC-CSN)
 
