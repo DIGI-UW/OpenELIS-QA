@@ -3,42 +3,6 @@
   "build": "index-u12wW6QI.js",
   "generated": "2026-09-27",
   "workflows": {
-    "Accessibility (WCAG)": {
-      "coverage": "none",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 0,
-      "status": {
-        "fresh": 0,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Alerts & notifications": {
-      "coverage": "none",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 0,
-      "status": {
-        "fresh": 0,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Programs & order questionnaires": {
-      "coverage": "none",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 0,
-      "status": {
-        "fresh": 0,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
     "Study management": {
       "coverage": "none",
       "deep": 0,
@@ -64,18 +28,6 @@
       }
     },
     "Immunohistochemistry": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 1,
-      "status": {
-        "fresh": 1,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Localization (i18n)": {
       "coverage": "smoke",
       "deep": 0,
       "shallow": 0,
@@ -135,6 +87,18 @@
         "unknown": 4
       }
     },
+    "Programs & order questionnaires": {
+      "coverage": "shallow",
+      "deep": 0,
+      "shallow": 1,
+      "smoke": 0,
+      "status": {
+        "fresh": 0,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 1
+      }
+    },
     "Test Catalog — result types": {
       "coverage": "shallow",
       "deep": 0,
@@ -157,6 +121,30 @@
         "partial": 1,
         "drift": 0,
         "unknown": 0
+      }
+    },
+    "Accessibility (WCAG)": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 0,
+      "smoke": 0,
+      "status": {
+        "fresh": 0,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 1
+      }
+    },
+    "Alerts & notifications": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 0,
+      "smoke": 0,
+      "status": {
+        "fresh": 0,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 1
       }
     },
     "Analyzers & QC": {
@@ -289,6 +277,18 @@
         "partial": 0,
         "drift": 0,
         "unknown": 3
+      }
+    },
+    "Localization (i18n)": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 0,
+      "smoke": 1,
+      "status": {
+        "fresh": 1,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 1
       }
     },
     "Non-conformance / CAPA": {
@@ -485,14 +485,14 @@
     },
     "Unmapped": {
       "coverage": "deep",
-      "deep": 21,
+      "deep": 18,
       "shallow": 14,
       "smoke": 16,
       "status": {
         "fresh": 0,
         "partial": 0,
         "drift": 1,
-        "unknown": 50
+        "unknown": 47
       }
     },
     "Workplan": {

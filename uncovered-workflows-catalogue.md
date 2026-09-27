@@ -48,7 +48,7 @@ Open Acknowledge on a critical alert. **Expected:** the confirm button is disabl
 **Expected:** "Referral Rejected" is a filter option and filtering by it lists those rows. **Today:** not offered (R50). **Criterion:** FUNCTION.
 
 ### TC-ALRT-06: A STAT order past its turnaround shows under Overdue STAT Orders
-Seed a STAT order with collection time older than the STAT threshold and no result. **Expected:** the Overdue STAT tile increments and a STAT Overdue row appears. **Criterion:** FUNCTION.
+Seed a STAT order with collection time older than the STAT threshold and no result. **Expected:** the Overdue STAT tile increments and a STAT Overdue row appears. **Criterion:** FUNCTION. **Today:** tile stays 0 with DEV...0008 (STAT, 36 h, unresulted) and DEV...0277 (STAT, received 2 days ago) (R58, re-check pending).
 
 ### TC-ALRT-07: A sample past its expiry shows under Samples Expiring
 Seed a sample whose expiry is within the warning window. **Expected:** the tile and a Sample Expiration row appear. **Criterion:** FUNCTION.
@@ -62,22 +62,22 @@ Type part of a message into Search alerts. **Expected:** only matching rows rema
 ## Programs & order questionnaires (TC-PRGW)
 
 ### TC-PRGW-01: A program created in admin is offered on Add Order
-Create QA_ program with a questionnaire in Admin > Programs. **Expected:** it appears in the Program dropdown on Add Clinical Order. **Criterion:** ROUND-TRIP.
+Create QA_ program with a questionnaire in Admin > Programs. **Expected:** it appears in the Program dropdown on Add Clinical Order. Observed working 2026-09-27 (program 12, QA Prog Zero927, offered immediately). Automated: `tests/programs-admin.spec.ts`. **Criterion:** ROUND-TRIP.
 
 ### TC-PRGW-02: Questionnaire answers entered on the order are stored and shown on Order Programs
 Answer every question type on an order. **Expected:** Order Programs lists the order under the program; opening it shows the same answers. **Criterion:** ROUND-TRIP.
 
 ### TC-PRGW-03: Each order appears once on Order Programs
-**Expected:** Total Entries equals the number of distinct accessions. **Today:** DEV...090 listed twice (R49). **Criterion:** RENDER.
+**Expected:** Total Entries equals the number of distinct accessions. **Today:** DEV...090 listed twice (R49). Automated (test.fail): `tests/programs-admin.spec.ts`. **Criterion:** RENDER.
 
 ### TC-PRGW-04: The Questionnaire column is readable
-**Expected:** a link or label that opens the answers. **Today:** raw UUID (R49). **Criterion:** RENDER.
+**Expected:** a link or label that opens the answers. **Today:** raw UUID (R49). Automated (test.fail): `tests/programs-admin.spec.ts`. **Criterion:** RENDER.
 
 ### TC-PRGW-05: A deactivated program is no longer offered for new orders but existing orders keep it
-Deactivate QA_ program. **Expected:** gone from Add Order; old orders still show it on Order Programs. Reactivate restores it. **Criterion:** PERSIST.
+Deactivate QA_ program. **Expected:** gone from Add Order; old orders still show it on Order Programs. Reactivate restores it. Deactivation observed working 2026-09-27 (confirm dialog, then gone from Add Order); the keep-on-existing-orders half still needs a program with orders. Automated: `tests/programs-admin.spec.ts`. **Criterion:** PERSIST.
 
 ### TC-PRGW-06: Search by accession number on Order Programs finds the order
-**Expected:** exactly that order's row(s). **Criterion:** FUNCTION.
+**Expected:** exactly that order's row(s). Observed working 2026-09-27. **Criterion:** FUNCTION.
 
 ### TC-PRGW-07: An environmental program questionnaire round-trips into an env order
 Create an env program with a questionnaire, place an env order with answers. **Expected:** answers visible on the order and on Order Programs. **Criterion:** ROUND-TRIP.
@@ -148,7 +148,7 @@ Enter two markers with results. **Expected:** reopening shows both with their re
 Seed an experiment type (Dictionary: NoteBook Experiment Type, with Local Abbreviation). **Expected:** Total Entries and Drafts increment; the entry is listed under QA Notebook Project 1. **Criterion:** ROUND-TRIP.
 
 ### TC-ELNW-02: Save with a required metadata field empty says what is missing
-**Expected:** inline error naming the field. **Today:** Save silently does nothing (coverage-thin). **Criterion:** FUNCTION.
+**Expected:** inline error naming the field. **Today:** on the project form, clearing the required Objective shows "Successfully saved" but keeps the old value (R59). The project pencil on the dashboard opens /NoteBookEntryForm/<id>. **Criterion:** FUNCTION.
 
 ### TC-ELNW-03: A draft submitted for review moves to Pending Review, then Finalized
 **Expected:** the tiles follow the entry; a finalized entry is read-only. **Criterion:** FUNCTION.
