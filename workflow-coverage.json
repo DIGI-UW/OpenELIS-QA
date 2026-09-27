@@ -103,12 +103,12 @@
       "coverage": "deep",
       "deep": 1,
       "shallow": 0,
-      "smoke": 0,
+      "smoke": 1,
       "status": {
         "fresh": 0,
         "partial": 0,
         "drift": 0,
-        "unknown": 1
+        "unknown": 2
       }
     },
     "Alerts & notifications": {
@@ -294,8 +294,8 @@
     "Localization (i18n)": {
       "coverage": "deep",
       "deep": 1,
-      "shallow": 0,
-      "smoke": 2,
+      "shallow": 1,
+      "smoke": 1,
       "status": {
         "fresh": 1,
         "partial": 0,
@@ -331,12 +331,12 @@
       "coverage": "deep",
       "deep": 14,
       "shallow": 2,
-      "smoke": 2,
+      "smoke": 3,
       "status": {
         "fresh": 6,
         "partial": 2,
         "drift": 0,
-        "unknown": 10
+        "unknown": 11
       }
     },
     "Order entry — Environmental": {

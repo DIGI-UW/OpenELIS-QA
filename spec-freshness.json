@@ -3670,6 +3670,26 @@
       "lastBuild": null,
       "drift": [],
       "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/a11y-control-names.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "tests/order-entry-unsaved-guard.spec.ts",
+      "area": "order",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
       "depth": "smoke"
     }
   ]

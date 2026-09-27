@@ -109,4 +109,24 @@ test.describe('Sample Shipment integrity', () => {
     test.fail();
     expect(expected, `${box!.boxId} holds ${box!.actualSampleCount}`).toBe(box!.actualSampleCount);
   });
+
+  test('TC-SHIPI-11: the Cancel Referral dialog names the destination and the test', async ({ page }) => {
+    // FLIP-WHEN-FIXED (R73). Observed 2026-09-28: "Destination:" and "Referral Test:" empty.
+    // Opens the dialog and cancels it; nothing is changed.
+    await open(page, '/SampleShipment/unassigned');
+    const items = await getJson<(Unassigned & { referralTestsAsString?: string })[]>(page, 'unassigned-sample/items');
+    const pick = items.find(i => i.referralTestsAsString);
+    test.skip(!pick, 'no unassigned referral');
+    const row = page.getByRole('row').filter({ hasText: pick!.accessionNumber }).first();
+    await expect(row).toBeVisible({ timeout: 20_000 });
+    await row.getByRole('button', { name: 'Cancel Referral' }).click();
+    const dialog = page.locator('.cds--modal.is-visible');
+    await expect(dialog).toContainText(pick!.accessionNumber);
+    const text = await dialog.innerText();
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    test.fail();
+    expect(text, 'dialog names the test').toContain(pick!.referralTestsAsString!);
+    expect(text, 'dialog names the destination').toContain(pick!.referralTests[0].organizationName);
+  });
 });
+

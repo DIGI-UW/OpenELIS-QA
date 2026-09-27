@@ -232,6 +232,7 @@ Acknowledge Alert, Add Dictionary, Add Label Preset. **Criterion:** FUNCTION.
 
 ### TC-AXE-03: Every form control has an accessible name
 The Carbon toggle on Sample Type Editor has one via its label; check dropdowns in Add Dictionary and the merge panels. **Criterion:** RENDER.
+**Automated** (2026-09-28): `tests/a11y-control-names.spec.ts` checks every visible control on every menu page. Known misses (R74) are allow-listed by count.
 
 ## Environmental compliance dashboard (TC-ENVC)
 
@@ -363,6 +364,9 @@ Capacity 1, scan two samples. Observed working 2026-09-27 (1 / 1, second not add
 ### TC-SHIPI-10: Box Label Prefix rejects characters that break IDs (space, slash)
 **Today:** "Q A/1" saves with no message. **Criterion:** FUNCTION.
 
+### TC-SHIPI-11: Cancel Referral and Mark as Lost dialogs name the referral's destination and test
+**Today:** both fields empty (R73). Reason is required (button disabled until typed): working. **Criterion:** RENDER.
+
 ## Aliquot workflow (TC-ALQW)
 
 `tests/aliquot.spec.ts` (TC-ALQ-01..13) checks that the page loads and searches. Nothing split a sample and read the aliquot back.
@@ -481,3 +485,14 @@ Visits every active /rest/menu route (about 140) and scans the main area, includ
 
 ### TC-UIX-02: No Admin page shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading
 Same scan over every /MasterListsPage link in the Admin navigation. Automated: `tests/ui-text-sweep.spec.ts`. **Criterion:** RENDER.
+
+## Enter Order unsaved-changes guard (TC-OEG)
+
+### TC-OEG-00: The three Enter Order pages load
+Canary. Automated: `tests/order-entry-unsaved-guard.spec.ts`. **Criterion:** RENDER.
+
+### TC-OEG-01: An untouched Enter Order page shows no "Unsaved changes" and does not block leaving
+One case per domain (Clinical, Environmental, Vector). **Today:** banner on load and a "Leave site?" prompt on exit on all three (R75). Automated (test.fail). **Criterion:** FUNCTION.
+
+### TC-OEG-02: After typing into the form, leaving does ask
+The guard must still work once there is something to lose. **Criterion:** FUNCTION.
