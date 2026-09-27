@@ -13,7 +13,7 @@ Found on 2026-09-27 with the browser at UTC+10 (Port Moresby). CI runs in UTC an
 Open any report page by URL, read `#startDate._flatpickr.config.maxDate`. **Expected:** today in the browser zone. **Today:** Fri 9 Jan 2026 at UTC+10, correct in UTC (R26). Automated: TC-DP-01 (now zone-pinned). **Criterion:** FUNCTION.
 
 ### TC-TZ-02: Order Programs shows the received date the order was saved with
-Seed an order received after 14:00 local at UTC+10, open /genericProgram. **Expected:** the row's Received Date equals SampleEdit `receivedDateForDisplay`. **Today:** shown as the next day (R48). **Criterion:** ROUND-TRIP.
+Seed an order received after 14:00 local at UTC+10, open /genericProgram. **Expected:** the row's Received Date equals SampleEdit `receivedDateForDisplay`. **Today:** shown as the next day (R48). Automated (test.fail, zone-pinned): `tests/order-entry-defaults.spec.ts`. **Criterion:** ROUND-TRIP.
 
 ### TC-TZ-03: IHC and Cytology dashboards date a case on the local day it was requested
 Create a pathology case early in the local morning at UTC+10, refer to IHC. **Expected:** Request Date is the local date, in the site date format. **Today:** IHC shows the UTC date in ISO format (2026-09-26 for a 27/09 order). **Criterion:** RENDER.
@@ -22,7 +22,7 @@ Create a pathology case early in the local morning at UTC+10, refer to IHC. **Ex
 Trigger an alert (reject a referral). **Expected:** Created is within minutes of now. **Today:** 1/22/1970 (R19). Automated (test.fail): `tests/alerts-correctness.spec.ts`. **Criterion:** RENDER.
 
 ### TC-TZ-05: Add Order Reception Time defaults to the browser's local time
-Open Add Order at UTC+10. **Expected:** the hour/minute default to the local clock. **Today:** UTC (08:50 at 18:52 local, R52). **Criterion:** FUNCTION.
+Open Add Order at UTC+10. **Expected:** the hour/minute default to the local clock. **Today:** UTC (08:50 at 18:52 local, R52). Automated (test.fail, zone-pinned): `tests/order-entry-defaults.spec.ts`. **Criterion:** FUNCTION.
 
 ### TC-TZ-06: Validation shows the local time a result was entered
 Enter a result at UTC+10, open its Validation review panel. **Expected:** "Entered on" is the local time. **Today:** UTC shown as local (09:12 for 19:12, R55). Automated (test.fail, zone-pinned): `tests/validation-review-panel.spec.ts`. **Criterion:** RENDER.
@@ -241,8 +241,11 @@ Canary for TC-TBL-02. Observed working 2026-09-27. Automated: `tests/validation-
 
 ## Order entry defaults (TC-OED)
 
+### TC-OED-00: An order placed at UTC+10 stores the received date and time entered
+Canary for TC-OED-01, TC-TZ-02, TC-TZ-05. Automated: `tests/order-entry-defaults.spec.ts`. **Criterion:** ROUND-TRIP.
+
 ### TC-OED-01: An empty "Date of next visit" stays empty
-Place an order through Add Order leaving Date of next visit blank. **Expected:** no next visit date stored; the audit trail shows none. **Today:** today's date is stored (R57). **Criterion:** PERSIST.
+Place an order through Add Order leaving Date of next visit blank. **Expected:** no next visit date stored; the audit trail shows none. **Today:** today's date is stored (R57). Automated (test.fail, zone-pinned): `tests/order-entry-defaults.spec.ts`. **Criterion:** PERSIST.
 
 ### TC-OED-02: The audit trail records the order as entered, with local times
 Observed working 2026-09-27 (DEV...0256: patient, order, sample, test, provider, organization rows at 18:40/18:52 local). **Criterion:** ROUND-TRIP.
