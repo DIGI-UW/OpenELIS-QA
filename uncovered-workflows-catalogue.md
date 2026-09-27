@@ -196,7 +196,7 @@ Switch locale to Francais. **Expected:** every label, button and message is Fren
 Walk the menu (`/rest/menu`) and look for dotted lower-case keys. **Criterion:** RENDER.
 
 ### TC-I18NK-04: Add Order payment status options are translated labels
-**Today:** raw keys normalCash / normalInsurance / reducedCash / reducedInsurance (R53). **Criterion:** RENDER.
+**Today:** raw keys normalCash / normalInsurance / reducedCash / reducedInsurance (R53). Automated (test.fail): `tests/order-entry-defaults.spec.ts`. **Criterion:** RENDER.
 
 ## Accessibility (TC-AXE)
 

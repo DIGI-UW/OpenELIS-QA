@@ -20,6 +20,7 @@ test.describe.configure({ mode: 'serial' });
 let labNo = '';
 let defaultReception = '';   // HH:mm the wizard pre-filled
 let localAtStep = '';        // HH:mm in the browser zone when that step loaded
+let orderStepText = '';      // the Order step's text, for the label checks
 
 async function next(page: Page) { await page.getByRole('button', { name: /^Next$/ }).click(); }
 
@@ -54,6 +55,7 @@ test.describe('Add Order defaults (UTC+10)', () => {
     localAtStep = await page.evaluate(() => new Date().toTimeString().slice(0, 5));
     defaultReception = `${await page.locator('#order_receivedTime_hour').inputValue()}:${await page.locator('#order_receivedTime_minute').inputValue()}`;
     await expect(page.locator('#order_nextVisitDate'), 'Date of next visit starts empty').toHaveValue('');
+    orderStepText = await page.locator('main').innerText();
 
     await page.locator('main').getByText(/^Generate$/).click();
     await expect(page.locator('#labNo')).not.toHaveValue('', { timeout: 10_000 });
@@ -110,5 +112,13 @@ test.describe('Add Order defaults (UTC+10)', () => {
     const shown = ((await row.innerText()).match(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/) ?? []);
     const today = await page.evaluate(() => { const d = new Date(); return [d.getMonth() + 1, d.getDate(), d.getFullYear()]; });
     expect([Number(shown[1]), Number(shown[2]), Number(shown[3])], `Order Programs date ${shown[0]}`).toEqual(today);
+  });
+
+  test('TC-I18NK-04: payment status options are labels, not message keys', async () => {
+    // FLIP-WHEN-FIXED (R53d). Observed 2026-09-27: normalCash / normalInsurance / reducedCash /
+    // reducedInsurance shown as the option text.
+    test.fail();
+    expect(orderStepText, 'the Order step rendered').toMatch(/payment status/i);
+    expect(orderStepText, 'no raw payment keys').not.toMatch(/\b(normalCash|normalInsurance|reducedCash|reducedInsurance)\b/);
   });
 });
