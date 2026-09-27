@@ -429,7 +429,7 @@ Upload a 2-row CSV, Validate, Import; both samples exist with their sample type 
 Observed working 2026-09-28 ("exceeds remaining quantity (3)"; 2 mL into 2 x 1 mL, 201). Automated: `tests/generic-sample-roundtrip.spec.ts`. **Criterion:** ROUND-TRIP.
 
 ### TC-SMG-02: Sample Management Add Tests attaches a test to a generic sample item
-Observed working 2026-09-28 (HIV INFANT VIRAL LOAD on DEV...0372-1.1). Still to check: a test not mapped to the item's sample type is refused. **Criterion:** ROUND-TRIP.
+Observed working 2026-09-28 (HIV INFANT VIRAL LOAD on DEV...0372-1.1; the test list offers only tests mapped to the item's sample type). **Criterion:** ROUND-TRIP.
 
 ### TC-SMG-03: Print Barcode for a selected aliquot prints that aliquot's own ID
 **Today:** prints the parent order's labels (LabelMakerServlet?labNo=<order>), so aliquots share a barcode (R76). **Criterion:** FUNCTION.
