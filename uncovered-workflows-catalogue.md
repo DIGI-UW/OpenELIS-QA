@@ -572,4 +572,4 @@ Observed working 2026-09-28: 409 notAwaitingValidation, with "This result change
 Patient Management edit, one screen changing phone and the other changing address. **Criterion:** FUNCTION.
 
 ### TC-RCON-05: Two admins editing the same test in the Test Catalog editor: the second save is refused
-**Criterion:** FUNCTION.
+**Today:** the second save (description only) answers 200 and puts the name back (R81b). **Criterion:** FUNCTION.
