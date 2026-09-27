@@ -138,6 +138,21 @@ test.describe('OGC-1192: environmental order routing and patientless samples', (
     await expect(page.getByText(/No Patient Information Available/i), 'no clinical "no patient" banner for an env order').toHaveCount(0);
   });
 
+  test('TC-ENVC-01: the Environmental Compliance Dashboard counts the env order', async ({ page }) => {
+    // FLIP-WHEN-FIXED (R34 = OGC-1192). Observed 2026-09-27: Total Orders 0 and Sites
+    // Monitored 0 for the last month with env orders present.
+    test.fail();
+    await page.goto(`${BASE}/EnvironmentalDashboard`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText(/Total Orders/i).first(), 'the compliance tiles render').toBeVisible({ timeout: 20_000 });
+    await page.evaluate(() => {
+      const el = document.getElementById('dp-start') as any;
+      el?._flatpickr?.setDate(new Date(Date.now() - 7 * 86400000), true);
+    });
+    await page.waitForLoadState('networkidle');
+    const tile = (await page.locator('main').innerText()).match(/Total Orders\s*\n?\s*(\d+)/);
+    expect(Number(tile?.[1] ?? 0), 'Total Orders for the last week includes the new env order').toBeGreaterThan(0);
+  });
+
   // §2 patientless sample -----------------------------------------------------
   test('OGC1192-5: SampleEdit serves the patientless sample', async ({ page }) => {
     // Permanent truth since 3.2.3.0 (was a 500 on 3.2.2.0).

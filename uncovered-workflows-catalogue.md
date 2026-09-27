@@ -229,7 +229,7 @@ The Carbon toggle on Sample Type Editor has one via its label; check dropdowns i
 /EnvironmentalDashboard ("Compliance Dashboard" in the menu). Not in any catalogue before 2026-09-27.
 
 ### TC-ENVC-01: Environmental orders in the date range are counted
-Seed two env orders at a QA- sampling site. **Expected:** Total Orders and Sites Monitored include them. **Today:** 0 / 0 with env orders present (R34 = OGC-1192). **Criterion:** ROUND-TRIP.
+Seed two env orders at a QA- sampling site. **Expected:** Total Orders and Sites Monitored include them. **Today:** 0 / 0 with env orders present (R34 = OGC-1192). Automated (test.fail): `tests/ogc1192-env-order-visibility.spec.ts`. **Criterion:** ROUND-TRIP.
 
 ### TC-ENVC-02: A result outside the compliance standard appears under Exceedance Summary
 Enter a QA_Water pH result above the QA Water Quality Standard threshold. **Expected:** one exceedance row with lab number, site, parameter, result, threshold; Compliance Rate drops. **Criterion:** ROUND-TRIP.
