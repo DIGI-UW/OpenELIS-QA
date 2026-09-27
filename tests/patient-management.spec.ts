@@ -351,6 +351,26 @@ test.describe('Suite AC — Merge Patient', () => {
    * timeout. The panel's "Patient Id" field matches the subject number by
    * substring, so a fresh long digit string finds exactly this pair.
    */
+  /**
+   * Select a merge-panel result. 3.2.3.0 lays each result out as a row whose label
+   * covers a patient-photo avatar; a pointer click on the label's centre can open the
+   * photo overlay instead of selecting (seen 2026-09-27: page greyed out, radio still
+   * unchecked, second panel still offering the "selected" patient). Click the input
+   * itself in the page and prove it took.
+   */
+  async function pickMergeRadio(page, panel: 1 | 2, patientId: string): Promise<void> {
+    const radio = page.locator(`input[name="patient${panel}-radio-group"][id="patient${panel}-${patientId}"]`);
+    await expect(radio, `panel ${panel} offers patient ${patientId}`).toBeAttached({ timeout: 15_000 });
+    // Click the LABEL, in the page. Clicking the input itself flips its checked flag without
+    // the app registering the selection (panel 2 kept offering the same patient, 2026-09-27);
+    // a pointer click on the label can land on the photo avatar and open an overlay.
+    await page.locator(`label[for="patient${panel}-${patientId}"]`).evaluate((el: HTMLLabelElement) => el.click());
+    // Once the app registers the selection it replaces the result list with the selected
+    // patient (the radio goes away). A checked flag alone is not proof: searching panel 2
+    // before that re-render still offered the "selected" patient (2026-09-27).
+    await expect(radio, `panel ${panel} registers patient ${patientId} (result list replaced)`).toHaveCount(0, { timeout: 10_000 });
+  }
+
   async function searchMergePanel(page, panel: 1 | 2, subjectNumber: string): Promise<string[]> {
     const field = `#patient${panel}-patientId`;
     await page.locator(field).fill(subjectNumber);
@@ -363,7 +383,9 @@ test.describe('Suite AC — Merge Patient', () => {
     // clickFormSearch exists to close, walked into again. Scope by the field.
     const searched = await clickFormSearch(page, field);
     expect(searched, `merge panel ${panel} must have a Search button`).toBe(true);
-    const radios = page.locator(`input[id^="patient${panel}-select-"]`);
+    // 3.2.3.0 renamed the result radios from #patientN-select-<id> to #patientN-<id>
+    // (name="patientN-radio-group"). Select by the group name, which is stable.
+    const radios = page.locator(`input[name="patient${panel}-radio-group"]`);
     await expect(
       radios.first(),
       `merge panel ${panel} returned no results for subject number "${subjectNumber}"`
@@ -371,7 +393,7 @@ test.describe('Suite AC — Merge Patient', () => {
     const ids: string[] = [];
     for (const r of await radios.all()) {
       const id = (await r.getAttribute('id')) ?? '';
-      ids.push(id.replace(`patient${panel}-select-`, ''));
+      ids.push(id.replace(`patient${panel}-`, ''));
     }
     return ids;
   }
@@ -427,8 +449,9 @@ test.describe('Suite AC — Merge Patient', () => {
 
     // And the shared national ID must be on screen, because it is the only
     // thing here that tells a user these two records are the same person.
+    // 3.2.3.0 renders a results table in each panel; read the first panel's.
     await expect(
-      page.locator('table'),
+      page.locator('table').filter({ has: page.locator('input[name="patient1-radio-group"]') }),
       'merge results must show the national ID the two records share'
     ).toContainText(pair.nationalId);
     console.log(`TC-MP-02: ${pair.ids.join(' + ')} share national ID ${pair.nationalId}`);
@@ -443,7 +466,7 @@ test.describe('Suite AC — Merge Patient', () => {
     await expect(nextStep, 'Next Step must start disabled').toBeDisabled();
 
     await searchMergePanel(page, 1, pair.subjectNumber);
-    await checkCarbonRadio(page, page.locator(`#patient1-select-${pair.ids[0]}`));
+    await pickMergeRadio(page, 1, pair.ids[0]);
 
     // One panel filled is still not enough — the same guard TC-BE-DEEP-02
     // asserts from the other direction.
@@ -457,7 +480,7 @@ test.describe('Suite AC — Merge Patient', () => {
     expect(ids2, 'the second panel must not offer the patient already selected in the first')
       .not.toContain(pair.ids[0]);
     expect(ids2, 'the second panel must still offer the other half of the pair').toContain(pair.ids[1]);
-    await checkCarbonRadio(page, page.locator(`#patient2-select-${pair.ids[1]}`));
+    await pickMergeRadio(page, 2, pair.ids[1]);
 
     await expect(
       nextStep,
@@ -488,9 +511,9 @@ test.describe('Suite AC — Merge Patient', () => {
 
     // Step 1 — pick the two records.
     await searchMergePanel(page, 1, pair.subjectNumber);
-    await checkCarbonRadio(page, page.locator(`#patient1-select-${pair.ids[0]}`));
+    await pickMergeRadio(page, 1, pair.ids[0]);
     await searchMergePanel(page, 2, pair.subjectNumber);
-    await checkCarbonRadio(page, page.locator(`#patient2-select-${pair.ids[1]}`));
+    await pickMergeRadio(page, 2, pair.ids[1]);
 
     const nextStep = page.getByRole('button', { name: /^\s*Next Step\s*$/ });
     await expect(nextStep).toBeEnabled({ timeout: 15_000 });
@@ -742,9 +765,9 @@ test.describe('Suite AC — Merge Patient', () => {
     await page.goto(`${BASE}/PatientMerge`, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#patient1-lastName')).toBeVisible({ timeout: 15_000 });
     await searchMergePanel(page, 1, pair.subjectNumber);
-    await checkCarbonRadio(page, page.locator(`#patient1-select-${pair.ids[0]}`));
+    await pickMergeRadio(page, 1, pair.ids[0]);
     await searchMergePanel(page, 2, pair.subjectNumber);
-    await checkCarbonRadio(page, page.locator(`#patient2-select-${pair.ids[1]}`));
+    await pickMergeRadio(page, 2, pair.ids[1]);
     const nextStep = page.getByRole('button', { name: /^\s*Next Step\s*$/ });
     await expect(nextStep).toBeEnabled({ timeout: 15_000 });
     await nextStep.click();

@@ -533,6 +533,9 @@ export interface OrderOptions {
    * test" apart from "cancel the whole sample" needs at least two.
    */
   testIds?: string[];
+  /** Sample quantity and unit-of-measure id for the sample item (Aliquot needs a quantity). */
+  quantity?: string;
+  uomId?: string;
 }
 
 export async function createOrderViaAPI(
@@ -558,6 +561,8 @@ export async function createOrderViaAPI(
         providerFirstName: string;
         providerLastName: string;
         nextVisitDate: string;
+        quantity: string;
+        uomId: string;
       }) => {
         const csrf = localStorage.getItem('CSRF') || '';
         const j = async (p: string) => {
@@ -620,7 +625,7 @@ export async function createOrderViaAPI(
           useReferral: false,
           sampleXML:
             '<?xml version="1.0" encoding="utf-8"?><samples><sample ' +
-            `sampleID='${args.sampleTypeId}' date='' time='' collector='' quantity='' uom='' ` +
+            `sampleID='${args.sampleTypeId}' date='' time='' collector='' quantity='${args.quantity}' uom='${args.uomId}' ` +
             `tests='${args.testId}' testSectionMap='' testSampleTypeMap='' panels='' rejected='false' ` +
             "rejectReasonId='' initialConditionIds='' storageLocationId='' storageLocationType='' " +
             "storagePositionCoordinate='' gpsLatitude='' gpsLongitude='' gpsAccuracy='' " +
@@ -715,6 +720,8 @@ export async function createOrderViaAPI(
         providerFirstName: options.providerFirstName ?? '',
         providerLastName: options.providerLastName ?? '',
         nextVisitDate: options.nextVisitDate ?? '',
+        quantity: options.quantity ?? '',
+        uomId: options.uomId ?? '',
       }
     );
 
@@ -884,7 +891,7 @@ export async function seedModifiableOrder(
  * Returns the accession, or throws with the setup errors — a null return would
  * become "the screen showed no rows", which is the wrong diagnosis.
  */
-export async function seedOrder(page: Page, tag = 'RE'): Promise<{ accession: string; patientId: string; nationalId: string }> {
+export async function seedOrder(page: Page, tag = 'RE', options: OrderOptions = {}): Promise<{ accession: string; patientId: string; nationalId: string }> {
   const stamp = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
   const nationalId = `QA${tag}${stamp}`;
 
@@ -904,7 +911,7 @@ export async function seedOrder(page: Page, tag = 'RE'): Promise<{ accession: st
   state.patient.systemId = created.id;
   state.patient.nationalId = nationalId;
 
-  const accession = await createOrderViaAPI(page, state, `seedOrder(${tag})`, 'primaryOrder');
+  const accession = await createOrderViaAPI(page, state, `seedOrder(${tag})`, 'primaryOrder', options);
   if (!accession) {
     throw new Error(`seedOrder(${tag}): order not created — ${state.setupErrors.join(' | ')}`);
   }

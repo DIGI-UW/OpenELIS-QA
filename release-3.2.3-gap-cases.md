@@ -22,7 +22,7 @@ FLIP-WHEN-FIXED (OGC-483 AC: 422 configLimitExceeded). Today the 21st saves. **C
 Permanent truth, from the UI's own Delete call. **Criterion:** FUNCTION.
 
 ### TC-DXS-05: The export Review step shows the job as ready once the server says READY
-FLIP-WHEN-FIXED (OGC-481). Today the step polls once and stays on "Queued". **Criterion:** FUNCTION.
+Permanent truth (OGC-481), flipped 2026-09-27 after three unexpected passes in headless runs; the earlier hand repro was in a throttled background tab. Skips when the job is READY before the page's first poll. **Criterion:** FUNCTION.
 
 ### TC-DXS-06: After Generate CSV the Review step shows a Queued status label
 Canary for TC-DXS-05. **Criterion:** RENDER.
@@ -64,6 +64,12 @@ Canary for TC-ASD-06. **Criterion:** PERSIST.
 
 ### TC-ASD-06: Dictionary Add with Is Active empty tells the user what is missing
 FLIP-WHEN-FIXED (R36). Today the dialog closes silently on a 400. **Criterion:** FUNCTION.
+
+### TC-ASD-07: Dictionary Add with Local Abbreviation empty tells the user what is missing
+FLIP-WHEN-FIXED (R36, widened 2026-09-27). Today the server answers 400 `localAbbreviation: must not be blank`, the dialog closes and nothing is shown; the field is not marked required. **Criterion:** FUNCTION.
+
+### TC-ASD-08: Dictionary Add with a Local Abbreviation already in use says so
+FLIP-WHEN-FIXED (R54). Today a raw 500 and a generic "Error while Editing/Adding". **Criterion:** FUNCTION.
 
 ### TC-RWC-01: The Results All chip is present and covers the rows on screen
 Canary for TC-RWC-02. **Criterion:** RENDER.

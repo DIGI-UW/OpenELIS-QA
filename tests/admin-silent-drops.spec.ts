@@ -109,7 +109,9 @@ test.describe('Label Presets (R37)', () => {
 // ---------------------------------------------------------------------------
 const CATEGORY = 'NoteBook Experiment Type';
 
-async function openAddDictionary(page: Page, entry: string, isActive: 'Y' | null) {
+// Local Abbreviation must be unique (a repeat is a 500, R54), so default to one per run.
+const ABBREV = `Q${STAMP}`;
+async function openAddDictionary(page: Page, entry: string, isActive: 'Y' | null, abbrev: string | null = ABBREV) {
   await page.goto(`${BASE}/MasterListsPage/DictionaryMenu`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'Add', exact: true }).first().click();
   const dialog = page.getByRole('dialog', { name: /Add Dictionary/i });
@@ -117,6 +119,8 @@ async function openAddDictionary(page: Page, entry: string, isActive: 'Y' | null
   await dialog.getByRole('combobox', { name: /Dictionary Category/i }).click();
   await page.getByRole('option', { name: CATEGORY, exact: true }).click();
   await dialog.getByRole('textbox', { name: /Dictionary Entry/i }).fill(entry);
+  // Local Abbreviation is required server-side (NotBlank) although the dialog does not mark it.
+  if (abbrev) await dialog.getByRole('textbox', { name: /Local Abbreviation/i }).fill(abbrev);
   if (isActive) {
     await dialog.getByRole('combobox', { name: /Is Active/i }).click();
     await page.getByRole('option', { name: isActive, exact: true }).click();
@@ -152,5 +156,39 @@ test.describe('Dictionary Menu Add (R36)', () => {
     const message = await page.locator('[role="alert"], .cds--inline-notification, .cds--toast-notification, .cds--form-requirement')
       .filter({ hasText: /active|required|blank/i }).count();
     expect(dialogOpen || message > 0, 'the user is told Is Active is required (dialog kept open or a message shown)').toBe(true);
+  });
+
+  test('TC-ASD-07: Add with Local Abbreviation empty tells the user what is missing', async ({ page }) => {
+    // FLIP-WHEN-FIXED. Observed 2026-09-27: with category, entry and Is Active = Y set but
+    // Local Abbreviation empty, the server answered 400 "localAbbreviation: must not be blank",
+    // the dialog closed and no message appeared. The field is not marked required.
+    test.fail();
+    const entry = `QA Auto Dict ${STAMP}c`;
+    const dialog = await openAddDictionary(page, entry, 'Y', null);
+    await dialog.getByRole('button', { name: 'Add', exact: true }).click();
+    await page.waitForTimeout(2500);
+    const dialogOpen = await dialog.isVisible();
+    const message = await page.locator('[role="alert"], .cds--inline-notification, .cds--toast-notification, .cds--form-requirement')
+      .filter({ hasText: /abbreviation|required|blank/i }).count();
+    expect(dialogOpen || message > 0, 'the user is told Local Abbreviation is required (dialog kept open or a message shown)').toBe(true);
+  });
+
+  test('TC-ASD-08: Add with a Local Abbreviation already in use says so', async ({ page }) => {
+    // FLIP-WHEN-FIXED (R54). Observed 2026-09-27: reusing an abbreviation answered a raw
+    // 500 and the dialog closed with only "Error while Editing/Adding".
+    test.fail();
+    const abbrev = `D${STAMP}`;
+    // First use of the abbreviation (self-contained: does not rely on TC-ASD-05 running first).
+    const first = await openAddDictionary(page, `QA Auto Dict ${STAMP}e`, 'Y', abbrev);
+    const firstPost = page.waitForResponse(r => /\/rest\/Dictionary$/.test(new URL(r.url()).pathname) && r.request().method() === 'POST');
+    await first.getByRole('button', { name: 'Add', exact: true }).click();
+    expect((await firstPost).status(), 'the first use of the abbreviation saves').toBe(200);
+    const dialog = await openAddDictionary(page, `QA Auto Dict ${STAMP}d`, 'Y', abbrev);
+    const post = page.waitForResponse(r => /\/rest\/Dictionary$/.test(new URL(r.url()).pathname) && r.request().method() === 'POST');
+    await dialog.getByRole('button', { name: 'Add', exact: true }).click();
+    const status = (await post).status();
+    await page.waitForTimeout(1500);
+    const named = await page.getByText(/abbreviation.*(use|exist|duplicate|unique)|(already|duplicate).*abbreviation/i).count();
+    expect(status < 500 && named > 0, `a duplicate abbreviation is refused with a message naming it (got ${status})`).toBe(true);
   });
 });

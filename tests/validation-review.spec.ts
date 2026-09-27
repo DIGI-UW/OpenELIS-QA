@@ -344,6 +344,12 @@ test.describe('Validation queue and review panel', () => {
     const seeded = await seedAwaitingRow(page);
     expect(seeded, 'seeding failed').toBeTruthy();
 
+    // A fixed '9.9' is only a valid correction for a numeric test. On a dictionary test the
+    // server stores it anyway and the order's Patient Status Report then fails with a 500
+    // (release-qa-3.2.3 R72), so skip rather than leave an unprintable order behind.
+    const rt = String(seeded!.row.resultType ?? '').toUpperCase();
+    const numeric = rt === 'N' || (rt === '' && /^\s*-?\d+(\.\d+)?\s*$/.test(String(seeded!.row.result ?? '')));
+    test.skip(!numeric, `seeded row is not numeric (resultType "${rt}", result "${seeded!.row.result}")`);
     const corrected = { ...seeded!.row, result: '9.9', note: 'QA: corrected during validation review' };
     const mod = await apiCall<{ error?: string }>(
       page, `${REST}/AccessionValidation/analysis/${seeded!.row.analysisId}/modify`,

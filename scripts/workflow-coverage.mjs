@@ -48,6 +48,9 @@ const RULES = [
   [/add-patient|patient/, 'Patient management'],
   [/provider|organization|\borg\b/, 'Provider & Organization admin'],
   [/analyzer|instrument|westgard|\bqc\b/, 'Analyzers & QC'],
+  [/aliquot/, 'Aliquot'],
+  [/generic-sample/, 'Order entry — Generic sample'],
+  [/cold-storage/, 'Storage & Inventory'],
   [/storage|freezer|inventory/, 'Storage & Inventory'],
   [/eqa/, 'EQA'],
   [/nce|capa|conform/, 'Non-conformance / CAPA'],
@@ -59,13 +62,22 @@ const RULES = [
   [/ihc|immunohis/, 'Immunohistochemistry'],
   [/esig|signature/, 'Electronic signatures'],
   [/study/, 'Study management'],
-  [/locale|bahasa/, 'Localization (i18n)'],
+  [/locale|bahasa|\bi18n\b|translation|ui-text-sweep/, 'Localization (i18n)'],
+  [/accessib|\ba11y\b|wcag/, 'Accessibility (WCAG)'],
+  [/alerts?-notification|\balerts?\b|notification/, 'Alerts & notifications'],
   [/audit/, 'Audit trail'],
   [/notebook/, 'Electronic lab notebook'],
   [/dictionary|user-dict/, 'Dictionary & config admin'],
   [/config-pages|site-band|home|hero/, 'Dashboard / site config'],
   [/device-fields/, 'Analyzers & QC'],
   [/min-stock/, 'Storage & Inventory'],
+  // Previously Unmapped (2026-09-27): only reached when nothing above matched.
+  [/modify-order/, 'Modify order'],
+  [/order-creation|order-search|order-readback|order-workflow/, 'Order entry — Clinical'],
+  [/unified-results|result-type-coverage|coded-result|microbiology/, 'Results entry'],
+  [/persona-|rbac|unit-scope/, 'Security & permissions'],
+  [/^dashboard|admin-config/, 'Dashboard / site config'],
+  [/probe-|capture-|census|survey|preflight/, 'Exploration / tooling'],
   [/discover|timing|dom-probe|ranges-discover|drift|dump|find-|cleanup|patch-|explore|handoff|ht-final|seed-cases|seed-orders/, 'Exploration / tooling'],
 ];
 
@@ -100,7 +112,7 @@ const rows = Object.entries(wf).sort((a, b) => {
 });
 
 const coverage = { target: manifest.target, build: manifest.currentBuild, generated: new Date().toISOString().slice(0, 10), workflows: {} };
-rows.forEach(([name, w]) => { coverage.workflows[name] = { coverage: tierOf(w), deep: w.deep.length, shallow: w.shallow.length, smoke: w.smoke.length, status: w.status }; });
+rows.forEach(([name, w]) => { coverage.workflows[name] = { coverage: tierOf(w), deep: w.deep.length, shallow: w.shallow.length, smoke: w.smoke.length, status: w.status, ...(name === 'Unmapped' ? { files: [...w.deep, ...w.shallow, ...w.smoke].sort() } : {}) }; });
 fs.writeFileSync(path.join(ROOT, 'workflow-coverage.json'), JSON.stringify(coverage, null, 2) + '\n');
 
 // ── Render ──

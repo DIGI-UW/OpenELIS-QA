@@ -50,6 +50,11 @@
       "file": "release-3.2.3-gap-cases.md",
       "area": "Release 3.2.3 gap cases (export library, report output, admin silent drops, results chips, merge identifiers)",
       "note": "Written 2026-09-27 from the 3.2.3.0 release walk-through."
+    },
+    {
+      "file": "uncovered-workflows-catalogue.md",
+      "area": "Workflows rated none/smoke: timezone, alerts, programs, study, cytology, IHC, notebook, org admin, e-signatures, i18n, accessibility",
+      "note": "Written 2026-09-27 from the 3.2.3.0 walk-through; catalogued, mostly not yet automated."
     }
   ],
   "notCatalogues": [

@@ -54,9 +54,15 @@ function definition(vars: string[]) {
 }
 
 async function listAll(page: Page): Promise<SavedReport[]> {
-  const r = await call<{ reports?: SavedReport[] }>(page, SAVED);
-  expect(r.status, 'saved-configs list answers').toBe(200);
-  return r.body.reports ?? [];
+  // The list is paged 20 at a time ({reports, hasMore, page}); walk every page.
+  const all: SavedReport[] = [];
+  for (let p = 0; p < 20; p++) {
+    const r = await call<{ reports?: SavedReport[]; hasMore?: boolean }>(page, `${SAVED}?page=${p}`);
+    expect(r.status, 'saved-configs list answers').toBe(200);
+    all.push(...(r.body.reports ?? []));
+    if (!r.body.hasMore) break;
+  }
+  return all;
 }
 
 async function create(page: Page, name: string, vars = ['orderToCollectionMinutes', 'accessionNumber']): Promise<Res<SavedReport>> {
@@ -66,7 +72,8 @@ async function create(page: Page, name: string, vars = ['orderToCollectionMinute
 async function cleanup(page: Page) {
   // Everything this file creates carries TAG. Deletes need the optimistic-lock version.
   for (let pass = 0; pass < 3; pass++) {
-    const mine = (await listAll(page)).filter(r => r.name.includes(TAG));
+    // Match every run's prefix, not just this run's TAG, so an interrupted run's leftovers go too.
+    const mine = (await listAll(page)).filter(r => r.name.startsWith('QA_AUTO_DXS_'));
     if (!mine.length) return;
     for (const r of mine) {
       await call(page, `${SAVED}/${encodeURIComponent(r.id)}?expectedVersion=${encodeURIComponent(r.version)}`, 'DELETE');
@@ -159,18 +166,27 @@ test.describe('Custom Data Export: saved reports (OGC-483) and queue (OGC-481)',
   });
 
   test('TC-DXS-05: the Review step shows the job as ready once the server says READY', async ({ page }) => {
-    // FLIP-WHEN-FIXED (OGC-481). Observed 2026-09-27: after Generate CSV the Review step
-    // polled the job once (QUEUED) and never again; 50 s later the job was READY in
-    // My Report Queue while Review still said "Queued" with no download.
-    test.fail();
+    // FLIPPED 2026-09-27 (OGC-481). This was a tripwire; it passed unexpectedly in three
+    // headless runs, the last with the page's first poll seeing QUEUED. The hand repro of
+    // "stuck on Queued" was in a background Chrome tab, where timers are throttled, so it
+    // no longer counts as evidence. Now a permanent truth: after QUEUED the Review step keeps
+    // polling and offers the CSV. A fast job (READY at the first poll) proves nothing: skip.
+    const seen: string[] = [];
+    page.on('response', async r => {
+      const u = new URL(r.url());
+      // Our own poll carries ?qa=1; count only the app's polls.
+      if (/\/reports\/data-export\/jobs\/[^/?]+$/.test(u.pathname) && !u.searchParams.has('qa') && r.request().method() === 'GET') {
+        try { seen.push(String((await r.json()).state)); } catch { /* ignore */ }
+      }
+    });
     const job = await generateFromBuilder(page);
-    // Wait until the server says READY (poll the API ourselves), then give the page a
-    // generous window to catch up.
-    await expect.poll(async () => (await call<{ state?: string }>(page, `${API}/reports/data-export/jobs/${job.id}`)).body.state,
+    await expect.poll(async () => (await call<{ state?: string }>(page, `${API}/reports/data-export/jobs/${job.id}?qa=1`)).body.state,
       { timeout: 60_000, message: 'the export job completes on the server' }).toBe('READY');
-    // The page copy itself says "Download it here when ready", so match the status label,
-    // not any occurrence of the word: the job's own status cell must stop saying Queued.
-    await expect(page.getByText(/^Queued$/), 'Review step no longer shows the job as Queued').toHaveCount(0, { timeout: 20_000 });
+    await page.waitForTimeout(20_000);
+    test.skip(seen[0] === 'READY', 'job finished before the page first polled; OGC-481 cannot be observed this run');
+    await expect(page.getByRole('main').getByRole('button', { name: /download/i })
+      .or(page.getByRole('main').getByRole('link', { name: /download/i })),
+      'Review step offers the ready CSV for download').toBeVisible({ timeout: 5_000 });
   });
 
   test('TC-DXS-06: after Generate CSV the Review step shows the job status as Queued', async ({ page }) => {

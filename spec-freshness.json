@@ -3240,7 +3240,7 @@
       "lastBuild": null,
       "drift": [],
       "notes": "Discovered — not yet assessed against the current build.",
-      "depth": "shallow"
+      "depth": "deep"
     },
     {
       "file": "tests/ogc803-804-referral-accept-reject.spec.ts",
@@ -3466,6 +3466,266 @@
       "file": "tests/results-worklist-chip-counts.spec.ts",
       "area": "catalog-results",
       "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/cytology-workflow.spec.ts",
+      "area": "cytology",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/validation-review-panel.spec.ts",
+      "area": "validation",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/programs-admin.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/alerts-correctness.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/order-entry-defaults.spec.ts",
+      "area": "order",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/pathology-workflow.spec.ts",
+      "area": "pathology",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/org-admin.spec.ts",
+      "area": "org",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/study-pages.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/stat-overdue-alert.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/table-labels.spec.ts",
+      "area": "label",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/notebook-project.spec.ts",
+      "area": "notebook",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/modify-order-priority.spec.ts",
+      "area": "order",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/order-workflow-steps.spec.ts",
+      "area": "order",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/shipment-integrity.spec.ts",
+      "area": "shipment",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/aliquot-workflow.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/cold-storage-nav.spec.ts",
+      "area": "storage",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/generic-sample-roundtrip.spec.ts",
+      "area": "sample",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/provider-admin.spec.ts",
+      "area": "provider",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/home-dashboard-counts.spec.ts",
+      "area": "home",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/ui-text-sweep.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/a11y-control-names.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "tests/order-entry-unsaved-guard.spec.ts",
+      "area": "order",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "tests/volume-usage.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/results-stale-save.spec.ts",
+      "area": "catalog-results",
+      "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/modify-order-lost-update.spec.ts",
+      "area": "order",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/patient-concurrent-edit.spec.ts",
+      "area": "patient",
+      "kind": "misc",
       "status": "unknown",
       "lastBuild": null,
       "drift": [],

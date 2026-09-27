@@ -3,78 +3,6 @@
   "build": "index-u12wW6QI.js",
   "generated": "2026-09-27",
   "workflows": {
-    "Accessibility (WCAG)": {
-      "coverage": "none",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 0,
-      "status": {
-        "fresh": 0,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Alerts & notifications": {
-      "coverage": "none",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 0,
-      "status": {
-        "fresh": 0,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Programs & order questionnaires": {
-      "coverage": "none",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 0,
-      "status": {
-        "fresh": 0,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Study management": {
-      "coverage": "none",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 0,
-      "status": {
-        "fresh": 0,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Cytology": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 1,
-      "status": {
-        "fresh": 1,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Electronic lab notebook": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 1,
-      "status": {
-        "fresh": 1,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
     "Immunohistochemistry": {
       "coverage": "smoke",
       "deep": 0,
@@ -87,38 +15,14 @@
         "unknown": 0
       }
     },
-    "Localization (i18n)": {
-      "coverage": "smoke",
+    "Electronic lab notebook": {
+      "coverage": "shallow",
       "deep": 0,
-      "shallow": 0,
+      "shallow": 1,
       "smoke": 1,
       "status": {
         "fresh": 1,
         "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Provider & Organization admin": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 5,
-      "status": {
-        "fresh": 5,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Dashboard / site config": {
-      "coverage": "shallow",
-      "deep": 0,
-      "shallow": 1,
-      "smoke": 4,
-      "status": {
-        "fresh": 2,
-        "partial": 2,
         "drift": 0,
         "unknown": 1
       }
@@ -135,16 +39,40 @@
         "unknown": 1
       }
     },
-    "Exploration / tooling": {
+    "Programs & order questionnaires": {
       "coverage": "shallow",
       "deep": 0,
       "shallow": 1,
-      "smoke": 16,
+      "smoke": 0,
       "status": {
-        "fresh": 12,
-        "partial": 1,
+        "fresh": 0,
+        "partial": 0,
         "drift": 0,
-        "unknown": 4
+        "unknown": 1
+      }
+    },
+    "Provider & Organization admin": {
+      "coverage": "shallow",
+      "deep": 0,
+      "shallow": 2,
+      "smoke": 5,
+      "status": {
+        "fresh": 5,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 2
+      }
+    },
+    "Study management": {
+      "coverage": "shallow",
+      "deep": 0,
+      "shallow": 1,
+      "smoke": 0,
+      "status": {
+        "fresh": 0,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 1
       }
     },
     "Test Catalog — result types": {
@@ -169,6 +97,42 @@
         "partial": 1,
         "drift": 0,
         "unknown": 0
+      }
+    },
+    "Accessibility (WCAG)": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 0,
+      "smoke": 1,
+      "status": {
+        "fresh": 0,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 2
+      }
+    },
+    "Alerts & notifications": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 2,
+      "smoke": 0,
+      "status": {
+        "fresh": 0,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 3
+      }
+    },
+    "Aliquot": {
+      "coverage": "deep",
+      "deep": 3,
+      "shallow": 0,
+      "smoke": 0,
+      "status": {
+        "fresh": 1,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 2
       }
     },
     "Analyzers & QC": {
@@ -243,6 +207,30 @@
         "unknown": 2
       }
     },
+    "Cytology": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 0,
+      "smoke": 1,
+      "status": {
+        "fresh": 1,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 1
+      }
+    },
+    "Dashboard / site config": {
+      "coverage": "deep",
+      "deep": 2,
+      "shallow": 2,
+      "smoke": 4,
+      "status": {
+        "fresh": 2,
+        "partial": 2,
+        "drift": 0,
+        "unknown": 4
+      }
+    },
     "Dictionary & config admin": {
       "coverage": "deep",
       "deep": 2,
@@ -267,6 +255,18 @@
         "unknown": 4
       }
     },
+    "Exploration / tooling": {
+      "coverage": "deep",
+      "deep": 2,
+      "shallow": 3,
+      "smoke": 22,
+      "status": {
+        "fresh": 12,
+        "partial": 1,
+        "drift": 0,
+        "unknown": 14
+      }
+    },
     "FHIR interoperability": {
       "coverage": "deep",
       "deep": 2,
@@ -282,10 +282,34 @@
     "Labels & Barcode": {
       "coverage": "deep",
       "deep": 3,
-      "shallow": 1,
+      "shallow": 2,
       "smoke": 2,
       "status": {
         "fresh": 3,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 4
+      }
+    },
+    "Localization (i18n)": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 1,
+      "smoke": 1,
+      "status": {
+        "fresh": 1,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 2
+      }
+    },
+    "Modify order": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 2,
+      "smoke": 0,
+      "status": {
+        "fresh": 0,
         "partial": 0,
         "drift": 0,
         "unknown": 3
@@ -305,24 +329,36 @@
     },
     "Order entry — Clinical": {
       "coverage": "deep",
-      "deep": 10,
-      "shallow": 0,
-      "smoke": 2,
+      "deep": 14,
+      "shallow": 2,
+      "smoke": 3,
       "status": {
         "fresh": 6,
         "partial": 2,
         "drift": 0,
-        "unknown": 4
+        "unknown": 11
       }
     },
     "Order entry — Environmental": {
       "coverage": "deep",
-      "deep": 3,
-      "shallow": 1,
+      "deep": 4,
+      "shallow": 0,
       "smoke": 8,
       "status": {
         "fresh": 9,
         "partial": 1,
+        "drift": 0,
+        "unknown": 2
+      }
+    },
+    "Order entry — Generic sample": {
+      "coverage": "deep",
+      "deep": 2,
+      "shallow": 0,
+      "smoke": 0,
+      "status": {
+        "fresh": 0,
+        "partial": 0,
         "drift": 0,
         "unknown": 2
       }
@@ -342,37 +378,37 @@
     "Pathology": {
       "coverage": "deep",
       "deep": 2,
-      "shallow": 0,
+      "shallow": 1,
       "smoke": 1,
       "status": {
         "fresh": 2,
         "partial": 0,
         "drift": 0,
-        "unknown": 1
+        "unknown": 2
       }
     },
     "Patient management": {
       "coverage": "deep",
       "deep": 5,
-      "shallow": 0,
+      "shallow": 1,
       "smoke": 3,
       "status": {
         "fresh": 4,
         "partial": 0,
         "drift": 0,
-        "unknown": 4
+        "unknown": 5
       }
     },
     "Referrals, shipment & sample acceptance": {
       "coverage": "deep",
       "deep": 5,
-      "shallow": 1,
+      "shallow": 2,
       "smoke": 1,
       "status": {
         "fresh": 3,
         "partial": 0,
         "drift": 0,
-        "unknown": 4
+        "unknown": 5
       }
     },
     "Reflex tests": {
@@ -414,49 +450,49 @@
     "Result validation & release": {
       "coverage": "deep",
       "deep": 3,
-      "shallow": 1,
+      "shallow": 2,
       "smoke": 1,
       "status": {
         "fresh": 1,
         "partial": 2,
         "drift": 0,
-        "unknown": 2
+        "unknown": 3
       }
     },
     "Results entry": {
       "coverage": "deep",
       "deep": 3,
-      "shallow": 3,
-      "smoke": 2,
+      "shallow": 5,
+      "smoke": 4,
       "status": {
         "fresh": 4,
         "partial": 1,
         "drift": 0,
-        "unknown": 3
+        "unknown": 7
       }
     },
     "Security & permissions": {
       "coverage": "deep",
-      "deep": 2,
-      "shallow": 0,
+      "deep": 5,
+      "shallow": 5,
       "smoke": 0,
       "status": {
         "fresh": 0,
         "partial": 1,
-        "drift": 0,
-        "unknown": 1
+        "drift": 1,
+        "unknown": 8
       }
     },
     "Storage & Inventory": {
       "coverage": "deep",
-      "deep": 4,
-      "shallow": 0,
+      "deep": 3,
+      "shallow": 1,
       "smoke": 19,
       "status": {
-        "fresh": 20,
+        "fresh": 19,
         "partial": 1,
         "drift": 0,
-        "unknown": 2
+        "unknown": 3
       }
     },
     "Test Catalog — activation gate": {
@@ -474,26 +510,46 @@
     "Test Catalog — editor": {
       "coverage": "deep",
       "deep": 18,
-      "shallow": 7,
+      "shallow": 8,
       "smoke": 6,
       "status": {
         "fresh": 5,
         "partial": 2,
         "drift": 0,
-        "unknown": 24
+        "unknown": 25
       }
     },
     "Unmapped": {
       "coverage": "deep",
-      "deep": 21,
-      "shallow": 14,
-      "smoke": 16,
+      "deep": 5,
+      "shallow": 5,
+      "smoke": 8,
       "status": {
         "fresh": 0,
         "partial": 0,
-        "drift": 1,
-        "unknown": 50
-      }
+        "drift": 0,
+        "unknown": 18
+      },
+      "files": [
+        "agnostic-picker-guard.docs.spec.ts",
+        "deep-endpoint-testing.spec.ts",
+        "gap-suites-AA-AD.spec.ts",
+        "gap-suites-AE-AG.spec.ts",
+        "gap-suites-AH-AP.spec.ts",
+        "gap-suites-AQ-AX.spec.ts",
+        "ogc1159-save-failure-visibility.spec.ts",
+        "openelis-e2e.spec.ts",
+        "panel-sample-type-leak.spec.ts",
+        "qa-contracts.spec.ts",
+        "qa-surfaces.spec.ts",
+        "reval2.spec.ts",
+        "revalidate-ogc1120-unauth.spec.ts",
+        "revalidate-ogc1120.spec.ts",
+        "revalidate.docs.spec.ts",
+        "system-misc.spec.ts",
+        "tce-defects.docs.spec.ts",
+        "volume-usage.spec.ts"
+      ]
     },
     "Workplan": {
       "coverage": "deep",
