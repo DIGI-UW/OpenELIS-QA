@@ -563,4 +563,4 @@ Three aliquot entry points exist (Order > Aliquot, Generic Sample > Sample Manag
 Observed working 2026-09-28: 409 error.results.staleSave, with a dialog asking the user to refresh. Automated: `tests/results-stale-save.spec.ts`. **Criterion:** FUNCTION.
 
 ### TC-RCON-02: Two validators releasing the same analysis: the second is told it was already released
-**Criterion:** FUNCTION.
+Observed working 2026-09-28: 409 notAwaitingValidation, with "This result changed since the page loaded. Reload and review it again." Automated: `tests/results-stale-save.spec.ts`. **Criterion:** FUNCTION.
