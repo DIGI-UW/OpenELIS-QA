@@ -31,7 +31,7 @@ const LEGACY_KNOWN = ['key:sidenav.label.environmental.compliance', 'key:label.s
 
 type Hit = string;
 
-test('TC-UIX-01: no page in the menu shows [object Object], NaN, undefined, raw i18n keys or a server error', async ({ page }) => {
+test('TC-UIX-01: no page in the menu shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading', async ({ page }) => {
   test.setTimeout(30 * 60_000);
   await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
   const routes: string[] = await page.evaluate(async () => {
@@ -49,7 +49,12 @@ test('TC-UIX-01: no page in the menu shows [object Object], NaN, undefined, raw 
   expect(routes.length, 'menu routes found').toBeGreaterThan(20);
 
   const found: Record<string, Hit[]> = {};
+  let failing: string[] = [];
+  page.on('response', (r) => {
+    if (r.status() >= 500) failing.push(`http${r.status()}:${new URL(r.url()).pathname.replace(/\/\d+(?=\/|$)/g, '/{id}')}`);
+  });
   for (const route of routes) {
+    failing = [];
     try {
       await page.goto(`${BASE}${route}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
       await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
@@ -68,6 +73,7 @@ test('TC-UIX-01: no page in the menu shows [object Object], NaN, undefined, raw 
         if (/Oops, Server error|Internal Server Error|Something went wrong/i.test(txt)) h.push('serverError');
         return h;
       });
+      hits.push(...new Set(failing));
       if (hits.length) found[route] = hits;
     } catch (e) {
       found[route] = ['loadFailed:' + String((e as Error).message).slice(0, 80)];
