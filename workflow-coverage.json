@@ -1,7 +1,7 @@
 {
   "target": "testing.openelis-global.org",
   "build": "index-u12wW6QI.js",
-  "generated": "2026-07-27",
+  "generated": "2026-09-27",
   "workflows": {
     "Accessibility (WCAG)": {
       "coverage": "none",
@@ -16,6 +16,18 @@
       }
     },
     "Alerts & notifications": {
+      "coverage": "none",
+      "deep": 0,
+      "shallow": 0,
+      "smoke": 0,
+      "status": {
+        "fresh": 0,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 0
+      }
+    },
+    "Programs & order questionnaires": {
       "coverage": "none",
       "deep": 0,
       "shallow": 0,
@@ -51,18 +63,6 @@
         "unknown": 0
       }
     },
-    "Dictionary & config admin": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 1,
-      "status": {
-        "fresh": 1,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
     "Electronic lab notebook": {
       "coverage": "smoke",
       "deep": 0,
@@ -71,18 +71,6 @@
       "status": {
         "fresh": 1,
         "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
-    "Electronic signatures": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 3,
-      "status": {
-        "fresh": 2,
-        "partial": 1,
         "drift": 0,
         "unknown": 0
       }
@@ -111,18 +99,6 @@
         "unknown": 0
       }
     },
-    "Non-conformance / CAPA": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 5,
-      "status": {
-        "fresh": 5,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
     "Provider & Organization admin": {
       "coverage": "smoke",
       "deep": 0,
@@ -135,18 +111,6 @@
         "unknown": 0
       }
     },
-    "Analyzers & QC": {
-      "coverage": "shallow",
-      "deep": 0,
-      "shallow": 6,
-      "smoke": 7,
-      "status": {
-        "fresh": 12,
-        "partial": 1,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
     "Dashboard / site config": {
       "coverage": "shallow",
       "deep": 0,
@@ -155,6 +119,18 @@
       "status": {
         "fresh": 2,
         "partial": 2,
+        "drift": 0,
+        "unknown": 1
+      }
+    },
+    "Electronic signatures": {
+      "coverage": "shallow",
+      "deep": 0,
+      "shallow": 1,
+      "smoke": 3,
+      "status": {
+        "fresh": 2,
+        "partial": 1,
         "drift": 0,
         "unknown": 1
       }
@@ -195,6 +171,18 @@
         "unknown": 0
       }
     },
+    "Analyzers & QC": {
+      "coverage": "deep",
+      "deep": 4,
+      "shallow": 2,
+      "smoke": 14,
+      "status": {
+        "fresh": 12,
+        "partial": 1,
+        "drift": 0,
+        "unknown": 7
+      }
+    },
     "Audit trail": {
       "coverage": "deep",
       "deep": 1,
@@ -202,18 +190,18 @@
       "smoke": 1,
       "status": {
         "fresh": 1,
-        "partial": 0,
+        "partial": 1,
         "drift": 0,
-        "unknown": 1
+        "unknown": 0
       }
     },
     "Batch entry": {
       "coverage": "deep",
-      "deep": 1,
+      "deep": 2,
       "shallow": 0,
       "smoke": 0,
       "status": {
-        "fresh": 0,
+        "fresh": 1,
         "partial": 0,
         "drift": 0,
         "unknown": 1
@@ -221,83 +209,119 @@
     },
     "Calculated values": {
       "coverage": "deep",
-      "deep": 1,
+      "deep": 3,
       "shallow": 0,
       "smoke": 2,
       "status": {
         "fresh": 1,
-        "partial": 1,
+        "partial": 2,
         "drift": 0,
-        "unknown": 1
+        "unknown": 2
       }
     },
     "Compliance reporting": {
       "coverage": "deep",
       "deep": 2,
-      "shallow": 3,
-      "smoke": 3,
+      "shallow": 0,
+      "smoke": 6,
       "status": {
-        "fresh": 5,
+        "fresh": 7,
         "partial": 1,
         "drift": 0,
-        "unknown": 2
+        "unknown": 0
       }
     },
-    "EQA": {
+    "Custom data export": {
       "coverage": "deep",
-      "deep": 1,
-      "shallow": 0,
-      "smoke": 1,
-      "status": {
-        "fresh": 1,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 1
-      }
-    },
-    "FHIR interoperability": {
-      "coverage": "deep",
-      "deep": 1,
+      "deep": 2,
       "shallow": 0,
       "smoke": 0,
       "status": {
         "fresh": 0,
         "partial": 0,
         "drift": 0,
-        "unknown": 1
+        "unknown": 2
       }
     },
-    "Labels & Barcode": {
+    "Dictionary & config admin": {
       "coverage": "deep",
-      "deep": 1,
-      "shallow": 1,
-      "smoke": 2,
+      "deep": 2,
+      "shallow": 0,
+      "smoke": 1,
       "status": {
-        "fresh": 2,
+        "fresh": 1,
         "partial": 0,
         "drift": 0,
         "unknown": 2
       }
     },
-    "Order entry — Clinical": {
+    "EQA": {
       "coverage": "deep",
-      "deep": 6,
-      "shallow": 0,
+      "deep": 3,
+      "shallow": 2,
+      "smoke": 1,
+      "status": {
+        "fresh": 1,
+        "partial": 1,
+        "drift": 0,
+        "unknown": 4
+      }
+    },
+    "FHIR interoperability": {
+      "coverage": "deep",
+      "deep": 2,
+      "shallow": 2,
+      "smoke": 0,
+      "status": {
+        "fresh": 0,
+        "partial": 1,
+        "drift": 0,
+        "unknown": 3
+      }
+    },
+    "Labels & Barcode": {
+      "coverage": "deep",
+      "deep": 3,
+      "shallow": 1,
       "smoke": 2,
       "status": {
-        "fresh": 5,
+        "fresh": 3,
         "partial": 0,
         "drift": 0,
         "unknown": 3
       }
     },
+    "Non-conformance / CAPA": {
+      "coverage": "deep",
+      "deep": 3,
+      "shallow": 2,
+      "smoke": 5,
+      "status": {
+        "fresh": 5,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 5
+      }
+    },
+    "Order entry — Clinical": {
+      "coverage": "deep",
+      "deep": 10,
+      "shallow": 0,
+      "smoke": 2,
+      "status": {
+        "fresh": 6,
+        "partial": 2,
+        "drift": 0,
+        "unknown": 4
+      }
+    },
     "Order entry — Environmental": {
       "coverage": "deep",
       "deep": 3,
-      "shallow": 0,
-      "smoke": 7,
+      "shallow": 1,
+      "smoke": 8,
       "status": {
-        "fresh": 7,
+        "fresh": 9,
         "partial": 1,
         "drift": 0,
         "unknown": 2
@@ -307,9 +331,9 @@
       "coverage": "deep",
       "deep": 2,
       "shallow": 0,
-      "smoke": 9,
+      "smoke": 10,
       "status": {
-        "fresh": 7,
+        "fresh": 8,
         "partial": 3,
         "drift": 0,
         "unknown": 1
@@ -317,11 +341,11 @@
     },
     "Pathology": {
       "coverage": "deep",
-      "deep": 1,
+      "deep": 2,
       "shallow": 0,
       "smoke": 1,
       "status": {
-        "fresh": 1,
+        "fresh": 2,
         "partial": 0,
         "drift": 0,
         "unknown": 1
@@ -329,50 +353,50 @@
     },
     "Patient management": {
       "coverage": "deep",
-      "deep": 1,
+      "deep": 5,
       "shallow": 0,
       "smoke": 3,
       "status": {
-        "fresh": 3,
+        "fresh": 4,
         "partial": 0,
         "drift": 0,
-        "unknown": 1
+        "unknown": 4
       }
     },
     "Referrals, shipment & sample acceptance": {
       "coverage": "deep",
-      "deep": 2,
-      "shallow": 0,
+      "deep": 5,
+      "shallow": 1,
       "smoke": 1,
       "status": {
-        "fresh": 1,
+        "fresh": 3,
         "partial": 0,
         "drift": 0,
-        "unknown": 2
+        "unknown": 4
       }
     },
     "Reflex tests": {
       "coverage": "deep",
-      "deep": 1,
+      "deep": 4,
       "shallow": 0,
-      "smoke": 2,
+      "smoke": 3,
       "status": {
         "fresh": 1,
-        "partial": 1,
+        "partial": 2,
         "drift": 0,
-        "unknown": 1
+        "unknown": 4
       }
     },
     "Reporting": {
       "coverage": "deep",
       "deep": 1,
-      "shallow": 0,
+      "shallow": 2,
       "smoke": 3,
       "status": {
-        "fresh": 3,
+        "fresh": 4,
         "partial": 0,
         "drift": 0,
-        "unknown": 1
+        "unknown": 2
       }
     },
     "Result flags (critical/abnormal)": {
@@ -389,48 +413,48 @@
     },
     "Result validation & release": {
       "coverage": "deep",
-      "deep": 2,
-      "shallow": 0,
+      "deep": 3,
+      "shallow": 1,
       "smoke": 1,
       "status": {
         "fresh": 1,
-        "partial": 0,
+        "partial": 2,
         "drift": 0,
         "unknown": 2
       }
     },
     "Results entry": {
       "coverage": "deep",
-      "deep": 2,
-      "shallow": 1,
+      "deep": 3,
+      "shallow": 3,
       "smoke": 2,
       "status": {
         "fresh": 4,
         "partial": 1,
         "drift": 0,
-        "unknown": 0
+        "unknown": 3
       }
     },
     "Security & permissions": {
       "coverage": "deep",
-      "deep": 1,
+      "deep": 2,
       "shallow": 0,
       "smoke": 0,
       "status": {
         "fresh": 0,
-        "partial": 0,
+        "partial": 1,
         "drift": 0,
         "unknown": 1
       }
     },
     "Storage & Inventory": {
       "coverage": "deep",
-      "deep": 2,
-      "shallow": 7,
-      "smoke": 12,
+      "deep": 4,
+      "shallow": 0,
+      "smoke": 19,
       "status": {
-        "fresh": 19,
-        "partial": 0,
+        "fresh": 20,
+        "partial": 1,
         "drift": 0,
         "unknown": 2
       }
@@ -449,26 +473,38 @@
     },
     "Test Catalog — editor": {
       "coverage": "deep",
-      "deep": 4,
-      "shallow": 1,
-      "smoke": 2,
+      "deep": 18,
+      "shallow": 7,
+      "smoke": 6,
       "status": {
         "fresh": 5,
         "partial": 2,
         "drift": 0,
-        "unknown": 0
+        "unknown": 24
+      }
+    },
+    "Unmapped": {
+      "coverage": "deep",
+      "deep": 21,
+      "shallow": 14,
+      "smoke": 16,
+      "status": {
+        "fresh": 0,
+        "partial": 0,
+        "drift": 1,
+        "unknown": 50
       }
     },
     "Workplan": {
       "coverage": "deep",
-      "deep": 1,
+      "deep": 4,
       "shallow": 0,
       "smoke": 0,
       "status": {
-        "fresh": 0,
+        "fresh": 1,
         "partial": 0,
         "drift": 0,
-        "unknown": 1
+        "unknown": 3
       }
     }
   }

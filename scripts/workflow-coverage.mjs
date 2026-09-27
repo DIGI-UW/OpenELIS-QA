@@ -34,6 +34,10 @@ const RULES = [
   [/critical-indicator/, 'Result flags (critical/abnormal)'],
   [/result-validation|validation/, 'Result validation & release'],
   [/compliance/, 'Compliance reporting'],   // before /nce/ — compliance specs carry area=nce but are their own workflow
+  [/data-export|saved-report|report-queue/, 'Custom data export'],   // before /report/: the export library and job queue are their own workflow
+  [/results-worklist/, 'Results entry'],
+  [/admin-silent/, 'Dictionary & config admin'],
+  [/\bprogram/, 'Programs & order questionnaires'],
   [/report|laporan/, 'Reporting'],
   [/mn-sampletypes/, 'Test Catalog — sample-type m:n'],
   [/result-types/, 'Test Catalog — result types'],
