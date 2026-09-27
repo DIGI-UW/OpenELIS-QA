@@ -578,4 +578,4 @@ Patient Management: toggle Edit, one screen changes the phone and the other the 
 **Today:** both forms show the same number; the second save fails with a duplicate-key 500 and cannot recover without a reload (R82). **Criterion:** FUNCTION.
 
 ### TC-RCON-07: The same referred sample cannot end up in two boxes
-Two screens add one unassigned sample to two different boxes. Not yet checkable while R82 blocks the second box. **Criterion:** FUNCTION.
+Two screens add one unassigned sample to two different boxes. Scanning a sample that is already boxed is refused (message "not found", which could say "already in BOX-..."); the simultaneous case is not yet checkable while R82 blocks the second box. **Criterion:** FUNCTION.
