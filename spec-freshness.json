@@ -2,7 +2,7 @@
   "_comment": "Source-of-truth freshness manifest for the OpenELIS Playwright suite. `status` per spec is auto-refreshed from a Playwright JSON run by scripts/refresh-freshness.mjs; `drift`/`notes` are curated by hand. status: fresh (green, verified passing on lastBuild) | partial (green core, a known non-blocking drift/flake) | drift (fails on real UI/route drift — needs a spec update) | unknown (not run against lastBuild yet).",
   "target": "testing.openelis-global.org",
   "currentBuild": "index-u12wW6QI.js",
-  "lastUpdated": "2026-07-31",
+  "lastUpdated": "2026-09-27",
   "driftCauses": {
     "OGC-1132": "Unified /order/enter drops the sample's tests (Hibernate type-mismatch) — order via legacy /SamplePatientEntry (placeLegacySerumOrder).",
     "OGC-1142-editor": "Test Catalog editor rework changed the UI new-test create form + add-component + ranges dialog — configure via REST (createTestViaRest / setComponentViaRest / setNormalCriticalRangeViaRest).",
@@ -1306,7 +1306,7 @@
       "notes": "Discovered — not yet assessed against the current build.",
       "lastResult": "pass",
       "lastRun": "2026-07-26",
-      "depth": "shallow"
+      "depth": "smoke"
     },
     {
       "file": "tests/docs/probe-analyzer-api2.docs.spec.ts",
@@ -1318,7 +1318,7 @@
       "notes": "Discovered — not yet assessed against the current build.",
       "lastResult": "pass",
       "lastRun": "2026-07-26",
-      "depth": "shallow"
+      "depth": "smoke"
     },
     {
       "file": "tests/docs/probe-analyzer-api3.docs.spec.ts",
@@ -1330,7 +1330,7 @@
       "notes": "Discovered — not yet assessed against the current build.",
       "lastResult": "pass",
       "lastRun": "2026-07-26",
-      "depth": "shallow"
+      "depth": "smoke"
     },
     {
       "file": "tests/docs/probe-analyzer-api4.docs.spec.ts",
@@ -1342,7 +1342,7 @@
       "notes": "Discovered — not yet assessed against the current build.",
       "lastResult": "pass",
       "lastRun": "2026-07-26",
-      "depth": "shallow"
+      "depth": "smoke"
     },
     {
       "file": "tests/docs/probe-analyzer-api5.docs.spec.ts",
@@ -1354,7 +1354,7 @@
       "notes": "Discovered — not yet assessed against the current build.",
       "lastResult": "pass",
       "lastRun": "2026-07-26",
-      "depth": "shallow"
+      "depth": "smoke"
     },
     {
       "file": "tests/docs/probe-analyzer-api6.docs.spec.ts",
@@ -1366,7 +1366,7 @@
       "notes": "Discovered — not yet assessed against the current build.",
       "lastResult": "pass",
       "lastRun": "2026-07-26",
-      "depth": "shallow"
+      "depth": "smoke"
     },
     {
       "file": "tests/docs/probe-calc.docs.spec.ts",
@@ -1390,7 +1390,7 @@
       "notes": "Discovered — not yet assessed against the current build.",
       "lastResult": "pass",
       "lastRun": "2026-07-26",
-      "depth": "shallow"
+      "depth": "smoke"
     },
     {
       "file": "tests/docs/probe-compliance2.docs.spec.ts",
@@ -1402,7 +1402,7 @@
       "notes": "Discovered — not yet assessed against the current build.",
       "lastResult": "pass",
       "lastRun": "2026-07-26",
-      "depth": "shallow"
+      "depth": "smoke"
     },
     {
       "file": "tests/docs/probe-compliance3.docs.spec.ts",
@@ -1414,7 +1414,7 @@
       "notes": "Discovered — not yet assessed against the current build.",
       "lastResult": "pass",
       "lastRun": "2026-07-26",
-      "depth": "shallow"
+      "depth": "smoke"
     },
     {
       "file": "tests/docs/probe-device-fields.docs.spec.ts",
@@ -1438,7 +1438,7 @@
       "notes": "Discovered — not yet assessed against the current build.",
       "lastResult": "pass",
       "lastRun": "2026-07-26",
-      "depth": "shallow"
+      "depth": "smoke"
     },
     {
       "file": "tests/docs/probe-inventory-api.docs.spec.ts",
@@ -1450,7 +1450,7 @@
       "notes": "Discovered — not yet assessed against the current build.",
       "lastResult": "pass",
       "lastRun": "2026-07-26",
-      "depth": "shallow"
+      "depth": "smoke"
     },
     {
       "file": "tests/docs/probe-inventory-api2.docs.spec.ts",
@@ -1462,7 +1462,7 @@
       "notes": "Discovered — not yet assessed against the current build.",
       "lastResult": "pass",
       "lastRun": "2026-07-26",
-      "depth": "shallow"
+      "depth": "smoke"
     },
     {
       "file": "tests/docs/probe-inventory-api3.docs.spec.ts",
@@ -1474,7 +1474,7 @@
       "notes": "Discovered — not yet assessed against the current build.",
       "lastResult": "pass",
       "lastRun": "2026-07-26",
-      "depth": "shallow"
+      "depth": "smoke"
     },
     {
       "file": "tests/docs/probe-inventory-api4.docs.spec.ts",
@@ -1486,7 +1486,7 @@
       "notes": "Discovered — not yet assessed against the current build.",
       "lastResult": "pass",
       "lastRun": "2026-07-26",
-      "depth": "shallow"
+      "depth": "smoke"
     },
     {
       "file": "tests/docs/probe-inventory-api5.docs.spec.ts",
@@ -1510,7 +1510,7 @@
       "notes": "Discovered — not yet assessed against the current build.",
       "lastResult": "pass",
       "lastRun": "2026-07-26",
-      "depth": "shallow"
+      "depth": "smoke"
     },
     {
       "file": "tests/docs/probe-inventory-api7.docs.spec.ts",
@@ -1570,7 +1570,7 @@
       "notes": "Discovered — not yet assessed against the current build.",
       "lastResult": "pass",
       "lastRun": "2026-07-26",
-      "depth": "shallow"
+      "depth": "smoke"
     },
     {
       "file": "tests/docs/provider-capture.docs.spec.ts",
@@ -2077,7 +2077,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
     },
     {
       "file": "gap-suites-AE-AG.spec.ts",
@@ -2086,7 +2087,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
     },
     {
       "file": "gap-suites-AH-AP.spec.ts",
@@ -2095,7 +2097,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
     },
     {
       "file": "gap-suites-AQ-AX.spec.ts",
@@ -2104,7 +2107,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
     },
     {
       "file": "openelis-e2e.spec.ts",
@@ -2113,7 +2117,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
     },
     {
       "file": "qc-control-lot.spec.ts",
@@ -2122,7 +2127,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "qc-dashboard.spec.ts",
@@ -2131,7 +2137,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "qc-rule-config.spec.ts",
@@ -2140,7 +2147,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/accessibility.spec.ts",
@@ -2149,7 +2157,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/admin-config.spec.ts",
@@ -2158,7 +2167,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/alerts-notifications.spec.ts",
@@ -2167,7 +2177,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/aliquot.spec.ts",
@@ -2176,7 +2187,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/api-crud-survey.spec.ts",
@@ -2185,7 +2197,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/batch-order-entry.spec.ts",
@@ -2194,7 +2207,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/calculated-values-ui.spec.ts",
@@ -2203,7 +2217,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/calculated-values.spec.ts",
@@ -2212,7 +2227,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/dashboard.spec.ts",
@@ -2221,7 +2237,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/data-export.spec.ts",
@@ -2230,7 +2247,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/deep-endpoint-testing.spec.ts",
@@ -2239,7 +2257,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/electronic-orders.spec.ts",
@@ -2248,7 +2267,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/electronic-signature.spec.ts",
@@ -2257,7 +2277,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
     },
     {
       "file": "tests/eqa-workflow.spec.ts",
@@ -2266,7 +2287,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/fhir-integration.spec.ts",
@@ -2275,7 +2297,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
     },
     {
       "file": "tests/generic-sample.spec.ts",
@@ -2284,7 +2307,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/i18n.spec.ts",
@@ -2293,7 +2317,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/inventory.spec.ts",
@@ -2302,7 +2327,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/loinc-dictionary.spec.ts",
@@ -2311,7 +2337,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/non-conforming.spec.ts",
@@ -2320,7 +2347,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/order-creation-e2e.spec.ts",
@@ -2329,7 +2357,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/order-creation.spec.ts",
@@ -2338,7 +2367,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/order-entry.spec.ts",
@@ -2347,7 +2377,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/order-search.spec.ts",
@@ -2356,7 +2387,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/pathology.spec.ts",
@@ -2365,7 +2397,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/patient-history.spec.ts",
@@ -2374,7 +2407,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/patient-management.spec.ts",
@@ -2383,7 +2417,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/patient-merge.spec.ts",
@@ -2392,7 +2427,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/performance.spec.ts",
@@ -2401,7 +2437,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/personas/persona-pa-receptionist.spec.ts",
@@ -2417,7 +2454,8 @@
           "build": "index-u12wW6QI.js",
           "run": "2026-07-31"
         }
-      }
+      },
+      "depth": "deep"
     },
     {
       "file": "tests/personas/persona-pb-bench-tech.spec.ts",
@@ -2433,7 +2471,8 @@
           "build": "index-u12wW6QI.js",
           "run": "2026-07-31"
         }
-      }
+      },
+      "depth": "shallow"
     },
     {
       "file": "tests/personas/persona-pc-validating-biologist.spec.ts",
@@ -2449,7 +2488,8 @@
           "build": "index-u12wW6QI.js",
           "run": "2026-07-31"
         }
-      }
+      },
+      "depth": "shallow"
     },
     {
       "file": "tests/personas/persona-pd-lab-manager.spec.ts",
@@ -2458,7 +2498,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
     },
     {
       "file": "tests/personas/persona-pe-qa-officer.spec.ts",
@@ -2467,7 +2508,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
     },
     {
       "file": "tests/personas/persona-pf-lab-administrator.spec.ts",
@@ -2476,7 +2518,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/print-barcode.spec.ts",
@@ -2485,7 +2528,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/rbac/rbac-matrix.spec.ts",
@@ -2505,7 +2549,8 @@
         }
       },
       "lastResult": "fail",
-      "lastRun": "2026-07-31"
+      "lastRun": "2026-07-31",
+      "depth": "shallow"
     },
     {
       "file": "tests/referral-workflow.spec.ts",
@@ -2514,7 +2559,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/reflex-testing-ui.spec.ts",
@@ -2523,7 +2569,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/reflex-testing.spec.ts",
@@ -2532,7 +2579,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/reports.spec.ts",
@@ -2541,7 +2589,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
     },
     {
       "file": "tests/results-by-range.spec.ts",
@@ -2550,7 +2599,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/results-by-status.spec.ts",
@@ -2559,7 +2609,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/results-by-unit.spec.ts",
@@ -2568,7 +2619,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/results-entry.spec.ts",
@@ -2577,7 +2629,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
     },
     {
       "file": "tests/sample-shipment.spec.ts",
@@ -2586,7 +2639,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/session-security.spec.ts",
@@ -2595,7 +2649,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/storage-crud.spec.ts",
@@ -2604,7 +2659,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/system-misc.spec.ts",
@@ -2613,7 +2669,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/validation.spec.ts",
@@ -2622,7 +2679,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
     },
     {
       "file": "tests/workplan-deep.spec.ts",
@@ -2631,7 +2689,8 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
     },
     {
       "file": "tests/workplan.spec.ts",
@@ -2640,7 +2699,778 @@
       "status": "unknown",
       "lastBuild": null,
       "drift": [],
-      "notes": "Discovered — not yet assessed against the current build."
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "analyzer-guided-setup.spec.ts",
+      "area": "analyzer",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "capture-longcode.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "capture-testcatalog-save.spec.ts",
+      "area": "catalog",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "capture-topsave.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "fhir-specimen-terminology-pr3987.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "patient-photo-pr3987.spec.ts",
+      "area": "patient",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "preflight.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "probe-lookup.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "probe-orderentry.spec.ts",
+      "area": "order",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "probe-sampletype-combo.spec.ts",
+      "area": "sample",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "probe-typepicker.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "qc-alerts-charts.spec.ts",
+      "area": "qc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "results-page-deep-delta.spec.ts",
+      "area": "catalog-results",
+      "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "results-r1-spec-delta.spec.ts",
+      "area": "catalog-results",
+      "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "revalidate-ogc1120-unauth.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "revalidate-ogc1120.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "test-catalog-admin-list-screens-write.spec.ts",
+      "area": "catalog-results",
+      "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "test-catalog-admin-list-screens.spec.ts",
+      "area": "catalog-results",
+      "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "test-catalog-lab-unit-management-ui.spec.ts",
+      "area": "catalog-results",
+      "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "test-catalog-lab-unit-management-write.spec.ts",
+      "area": "catalog-results",
+      "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "test-catalog-lab-unit-management.spec.ts",
+      "area": "catalog-results",
+      "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "test-catalog-lab-unit-visibility.spec.ts",
+      "area": "catalog-results",
+      "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "test-catalog-orderability-semantics.spec.ts",
+      "area": "catalog-results",
+      "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "test-catalog-panel-contract.spec.ts",
+      "area": "catalog-results",
+      "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "test-catalog-pr3987-regression.spec.ts",
+      "area": "catalog-results",
+      "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "test-catalog-sample-type-management.spec.ts",
+      "area": "catalog-results",
+      "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "test-catalog-section-depth.spec.ts",
+      "area": "catalog-results",
+      "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "test-catalog-silent-actions.spec.ts",
+      "area": "catalog-results",
+      "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/admin-route-census.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/app-route-census.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/docs/agnostic-picker-guard.docs.spec.ts",
+      "area": "misc",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/docs/catalog-feature-chains.docs.spec.ts",
+      "area": "catalog",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/docs/coded-result-chain.docs.spec.ts",
+      "area": "result",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/docs/manual-labels.docs.spec.ts",
+      "area": "label",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/docs/manual-reflex-fire.docs.spec.ts",
+      "area": "reflex",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "tests/docs/manual-reflex.docs.spec.ts",
+      "area": "reflex",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/docs/microbiology.docs.spec.ts",
+      "area": "misc",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "tests/docs/qa-qc.docs.spec.ts",
+      "area": "qc",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "tests/docs/revalidate.docs.spec.ts",
+      "area": "misc",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "tests/docs/seed-domain-catalog-native.docs.spec.ts",
+      "area": "catalog",
+      "kind": "seed",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "tests/docs/seed-domain-catalog.docs.spec.ts",
+      "area": "catalog",
+      "kind": "seed",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "tests/docs/tce-defects.docs.spec.ts",
+      "area": "misc",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/docs/test-catalog-components.docs.spec.ts",
+      "area": "catalog",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "tests/docs/vector-env-dictionaries.docs.spec.ts",
+      "area": "vector",
+      "kind": "docs-capture",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "tests/edit-order-cancel-test.spec.ts",
+      "area": "nce",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/envseed.spec.ts",
+      "area": "env",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "tests/eqa-prereq.spec.ts",
+      "area": "eqa",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/eqaflip.spec.ts",
+      "area": "eqa",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/modify-order-field-binding.spec.ts",
+      "area": "order",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/multicomponent-result-routing.spec.ts",
+      "area": "result",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/ogc1134-test-catalog-search-debounce.spec.ts",
+      "area": "nce",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/ogc1159-save-failure-visibility.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/ogc1188-result-entry-referral-invisible.spec.ts",
+      "area": "result",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/ogc1192-env-order-visibility.spec.ts",
+      "area": "env",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/ogc803-804-referral-accept-reject.spec.ts",
+      "area": "referral",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/order-entry-release-blockers.spec.ts",
+      "area": "order",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/order-entry-state.spec.ts",
+      "area": "order",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/order-readback-resample.spec.ts",
+      "area": "sample",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/panel-sample-type-leak.spec.ts",
+      "area": "sample",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/qa/eqa-cycle-lifecycle.spec.ts",
+      "area": "eqa",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/qa/qa-contracts.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/qa/qa-surfaces.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/qc-hold-release.spec.ts",
+      "area": "qc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/rbac/order-catalogue-scope.spec.ts",
+      "area": "rbac",
+      "kind": "permission",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/rbac/unit-scope.spec.ts",
+      "area": "rbac",
+      "kind": "permission",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/reference-lab-aging-banner.spec.ts",
+      "area": "nce",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/reference-lab-results-fhir-contract.spec.ts",
+      "area": "nce",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/reference-lab-results-scaffold.spec.ts",
+      "area": "nce",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/result-type-coverage.spec.ts",
+      "area": "result",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "tests/reval2.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "smoke"
+    },
+    {
+      "file": "tests/unified-results.spec.ts",
+      "area": "result",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/validation-review.spec.ts",
+      "area": "validation",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/workplan-by-unit-crash.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/admin-silent-drops.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/data-export-saved-reports.spec.ts",
+      "area": "report",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/reports-output-correctness.spec.ts",
+      "area": "report",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/results-worklist-chip-counts.spec.ts",
+      "area": "catalog-results",
+      "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
     }
   ]
 }

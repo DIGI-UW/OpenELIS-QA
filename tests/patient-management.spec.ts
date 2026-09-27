@@ -729,6 +729,49 @@ test.describe('Suite AC — Merge Patient', () => {
 
     console.log(`TC-MP-06: order entry accepted merged record ${pair.ids[1]} and disclosed the merge to ${pair.nationalId}`);
   });
+
+  // ---------------------------------------------------------------------------
+  // TC-MP-07a/b (2026-09-27, testing 3.2.3.0). The confirmation step has an
+  // "Identifiers to Preserve (both patients)" block. On a hand walk-through with
+  // two patients that each had a National ID (QAMERGE01/02) it read "No
+  // identifiers recorded", and Select Primary's "Identifiers" block was empty.
+  // A person confirming an irreversible merge could not see the IDs that tell the
+  // records apart. Neither case executes the merge: both stop at Step 3.
+  // ---------------------------------------------------------------------------
+  async function openConfirmStep(page, pair: { subjectNumber: string; ids: [string, string] }) {
+    await page.goto(`${BASE}/PatientMerge`, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('#patient1-lastName')).toBeVisible({ timeout: 15_000 });
+    await searchMergePanel(page, 1, pair.subjectNumber);
+    await checkCarbonRadio(page, page.locator(`#patient1-select-${pair.ids[0]}`));
+    await searchMergePanel(page, 2, pair.subjectNumber);
+    await checkCarbonRadio(page, page.locator(`#patient2-select-${pair.ids[1]}`));
+    const nextStep = page.getByRole('button', { name: /^\s*Next Step\s*$/ });
+    await expect(nextStep).toBeEnabled({ timeout: 15_000 });
+    await nextStep.click();
+    await checkCarbonRadio(page, page.locator('#patient-1'));
+    await expect(nextStep).toBeEnabled({ timeout: 10_000 });
+    await nextStep.click();
+    await expect(page.locator('body')).toContainText(/cannot be undone/i, { timeout: 15_000 });
+  }
+
+  test('TC-MP-07a: the merge confirmation step has an identifiers block', async ({ page }) => {
+    // Canary for TC-MP-07b: proves the block and its heading exist, so 07b cannot
+    // "fail as expected" because the wizard changed shape.
+    const pair = await seedDuplicatePair(page, 'IDS');
+    await openConfirmStep(page, pair);
+    await expect(page.locator('body')).toContainText(/Identifiers to Preserve/i);
+  });
+
+  test('TC-MP-07b: the merge confirmation step lists the patients\' identifiers', async ({ page }) => {
+    // FLIP-WHEN-FIXED. Both seeded records carry a National ID and a subject number.
+    test.fail();
+    const pair = await seedDuplicatePair(page, 'IDS');
+    await openConfirmStep(page, pair);
+    const body = page.locator('body');
+    await expect(body, 'the identifiers block must not claim there are none').not.toContainText(/No identifiers recorded/i);
+    await expect(body, 'the National ID being preserved must be shown').toContainText(pair.nationalId);
+  });
+
 });
 
 test.describe('Phase 4 — H-DEEP: Patient Interaction Tests', () => {
