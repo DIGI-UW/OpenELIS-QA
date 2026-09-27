@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-const BASE = process.env.BASE || 'https://34.212.225.107';
+const BASE = process.env.BASE || process.env.BASE_URL || 'https://testing.openelis-global.org';
 export default defineConfig({
   timeout: 1_800_000,
   workers: 1,

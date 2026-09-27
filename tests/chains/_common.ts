@@ -1072,7 +1072,14 @@ export async function enterResultsForLabNumber(
     const fallback = (type === 'D' || type === 'M')
       ? String(item.defaultResultValue || (dict && dict[0] && dict[0].id) || '1')
       : (opts.defaultNumeric || '5.5');
-    const value = (opts.valueByTestId && opts.valueByTestId[testId]) || fallback;
+    // A caller's override is a number or free text. On a dictionary test it would be
+    // stored as-is (the server does not check it against the options, R33 on
+    // 2026-09-27), so only accept an override there when it is one of the option ids.
+    const override = opts.valueByTestId && opts.valueByTestId[testId];
+    const isDictionary = type === 'D' || type === 'M';
+    const overrideFits = !!override
+      && (!isDictionary || !!(dict && dict.some(d => String(d.id) === String(override))));
+    const value = overrideFits ? String(override) : fallback;
 
     item.reportable = item.reportable === 'N' ? false : true;
     item.resultValue = value;
