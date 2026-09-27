@@ -505,3 +505,8 @@ One case per domain (Clinical, Environmental, Vector). **Today:** banner on load
 
 ### TC-OEG-02: After typing into the form, leaving does ask
 The guard must still work once there is something to lose. **Criterion:** FUNCTION.
+
+## Report connection leaks (TC-LEAK)
+
+### TC-LEAK-01: Running each report once leaves no database connection "idle in transaction"
+Needs read access to `pg_stat_activity` (SSH), so it is manual. Run every report in the Reports menu once over a one-day range, excluding the Statistics Report with "All" time frames. Then check that no connection sits "idle in transaction" with a report query. **Today:** Export Routine CSV (R46, OGC-1360) and Rejection Report (R77) each leak one connection per run. Do not automate either as a routine test while the leak stands: about 20 runs take the instance down. The harness already skips Export Routine CSV unless QA_ALLOW_LEAKY_EXPORTS=1, and no spec generates the Rejection Report. **Criterion:** FUNCTION.
