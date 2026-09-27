@@ -27,6 +27,8 @@ FLIP-WHEN-FIXED (OGC-481). Today the step polls once and stays on "Queued". **Cr
 ### TC-DXS-06: After Generate CSV the Review step shows a Queued status label
 Canary for TC-DXS-05. **Criterion:** RENDER.
 
+> **Guarded (OGC-1360):** TC-RPTOUT-01..03 run only with `QA_ALLOW_LEAKY_EXPORTS=1`. Each Export Routine CSV run leaks one DB connection; about 20 runs hang the instance until the webapp restarts. Remove the guard once OGC-1360 is fixed.
+
 ### TC-RPTOUT-01: Export Routine CSV for Biochemistry returns only Biochemistry rows
 Canary for TC-RPTOUT-02/03. **Criterion:** FUNCTION.
 

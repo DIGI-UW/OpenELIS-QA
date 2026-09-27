@@ -86,8 +86,17 @@ function column(csv: string, name: string): string[] {
 const today = new Date();
 const monthAgo = new Date(today.getTime() - 26 * 86400000);   // Export Routine CSV and activity reports cap the range
 
+// OGC-1360: every Export Routine CSV run leaks one DB connection and the pool is
+// maxTotal=20 with an infinite wait, so ~20 exports hang the whole instance until a
+// webapp restart (testing was down 06:08Z-08:00Z on 2026-09-27). The CSV export
+// cases below therefore only run when a person opts in and can restart the server.
+// FLIP-WHEN-FIXED: once OGC-1360 is fixed, delete this guard so they run every time.
+const LEAKY_EXPORTS_OK = process.env.QA_ALLOW_LEAKY_EXPORTS === '1';
+const LEAKY_REASON = 'OGC-1360: Export Routine CSV leaks a DB connection per run; set QA_ALLOW_LEAKY_EXPORTS=1 to run';
+
 test.describe('Routine Reports: output matches the request', () => {
   test('TC-RPTOUT-01: Export Routine CSV for Biochemistry returns a CSV of Biochemistry rows', async ({ page }) => {
+    test.skip(!LEAKY_EXPORTS_OK, LEAKY_REASON);
     // Canary for TC-RPTOUT-02/03: proves the page, the option selection and the CSV
     // parsing work on a unit that is not broken.
     await openReport(page, 'routine', 'CISampleRoutineExport');
@@ -98,6 +107,7 @@ test.describe('Routine Reports: output matches the request', () => {
   });
 
   test('TC-RPTOUT-02: Export Routine CSV for Hematology does not error', async ({ page }) => {
+    test.skip(!LEAKY_EXPORTS_OK, LEAKY_REASON);
     // FLIP-WHEN-FIXED (R44). Observed 2026-09-27: 500 for every date range tried; Molecular
     // Biology the same. The UI opens a tab showing raw {"status":500,...} JSON.
     test.fail();
@@ -107,6 +117,7 @@ test.describe('Routine Reports: output matches the request', () => {
   });
 
   test('TC-RPTOUT-03: Export Routine CSV for Cytology returns only Cytology rows', async ({ page }) => {
+    test.skip(!LEAKY_EXPORTS_OK, LEAKY_REASON);
     // FLIP-WHEN-FIXED (R44). Observed 2026-09-27 for 01-27 Sep: 168 rows, none Cytology
     // (149 Biochemistry, 8 Molecular Biology, 6 Serology-Immunology, 3 Hematology, 2 Pathology).
     test.fail();

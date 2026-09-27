@@ -34,7 +34,9 @@ async function createSampleTypeViaUi(page: Page, name: string, description: stri
   await expect(page.locator('#st-name')).toBeVisible({ timeout: 20_000 });
   await page.locator('#st-name').fill(name);
   const active = page.locator('#st-active');
-  if ((await active.getAttribute('aria-checked')) !== 'true') await active.click();
+  // Carbon renders the toggle's label over the switch button, so click the label
+  // (it is <label for="st-active">, which activates the button like a user click).
+  if ((await active.getAttribute('aria-checked')) !== 'true') await page.locator('label[for="st-active"]').click();
   await expect(active, 'Active toggle is on').toHaveAttribute('aria-checked', 'true');
   await page.locator('#st-description').fill(description);
   await page.getByRole('button', { name: /Create Sample Type/i }).click();
