@@ -541,7 +541,7 @@ Results Entry row panel, "Storage & sample disposal".
 **Criterion:** PERSIST.
 
 ### TC-VOL-03: Mark used up disposes the sample and it disappears from Storage and from aliquot sources
-**Criterion:** CROSS-LINK.
+**Today:** an exhausted aliquot (remaining 0) keeps status SampleEntered and shows "Active" in Storage > Sample Items (R78). **Criterion:** CROSS-LINK.
 
 ## Results Entry row panel helpers (TC-RPH)
 
