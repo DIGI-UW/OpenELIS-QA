@@ -546,7 +546,7 @@ Results Entry row panel, "Storage & sample disposal".
 Needs a test with reagents linked in the Test Catalog. **Criterion:** CROSS-LINK.
 
 ### TC-RPH-03: Interpretation entered by rule or free text prints on the patient report
-**Criterion:** CROSS-LINK.
+Observed working 2026-09-28 for free text (printed as a dated note under the result). Rule-based interpretation not yet tried. **Criterion:** CROSS-LINK.
 
 ### TC-RPH-04: The panel's "Aliquots · create" makes the same aliquots as Sample Management
 Three aliquot entry points exist (Order > Aliquot, Generic Sample > Sample Management, Results row panel); they should agree on quantity checks and IDs. Observed 2026-09-28: the panel calls the Sample Management endpoint and refuses 10 mL of 4 ("exceeds remaining volume (4.0)"); the old Order > Aliquot page is the odd one out (R66). **Criterion:** FUNCTION.
