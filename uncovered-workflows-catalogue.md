@@ -536,3 +536,17 @@ Results Entry row panel, "Storage & sample disposal".
 
 ### TC-VOL-03: Mark used up disposes the sample and it disappears from Storage and from aliquot sources
 **Criterion:** CROSS-LINK.
+
+## Results Entry row panel helpers (TC-RPH)
+
+### TC-RPH-01: The Dilution helper rounds its result to the test's precision and the result saves
+**Today:** writes "1.00" into a 0-decimal test and Save refuses it (R79). **Criterion:** FUNCTION.
+
+### TC-RPH-02: Reagent lots recorded on a result decrement inventory (FEFO) and write a consumption transaction
+Needs a test with reagents linked in the Test Catalog. **Criterion:** CROSS-LINK.
+
+### TC-RPH-03: Interpretation entered by rule or free text prints on the patient report
+**Criterion:** CROSS-LINK.
+
+### TC-RPH-04: The panel's "Aliquots · create" makes the same aliquots as Sample Management
+Three aliquot entry points exist (Order > Aliquot, Generic Sample > Sample Management, Results row panel); they should agree on quantity checks and IDs. Observed 2026-09-28: the panel calls the Sample Management endpoint and refuses 10 mL of 4 ("exceeds remaining volume (4.0)"); the old Order > Aliquot page is the odd one out (R66). **Criterion:** FUNCTION.
