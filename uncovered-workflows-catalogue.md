@@ -425,6 +425,12 @@ Upload a 2-row CSV, Validate, Import; both samples exist with their sample type 
 ### TC-GSR-06: Import rejects a file with none of the expected columns
 **Today:** "foo,bar" validates as Valid and imports a sample with no sample item (R69). Automated (test.fail; validate only). **Criterion:** FUNCTION.
 
+### TC-SMG-01: Sample Management refuses an over-quantity aliquot, then splits the sample into equal aliquots
+Observed working 2026-09-28 ("exceeds remaining quantity (3)"; 2 mL into 2 x 1 mL, 201). Automated: `tests/generic-sample-roundtrip.spec.ts`. **Criterion:** ROUND-TRIP.
+
+### TC-SMG-02: Sample Management Add Tests attaches a test to a generic sample item
+**Criterion:** ROUND-TRIP.
+
 ### TC-GSR-05: Sample Unit Of Measure offers sample units only
 **Today:** the list mixes result units (mg/dl, ppm, pg, Ct) with sample units (mL, tubes, slides). **Criterion:** RENDER.
 

@@ -63,4 +63,32 @@ test.describe('Generic Sample round trip', () => {
     test.fail();
     expect(body.valid, `validate: ${JSON.stringify(body).slice(0, 200)}`).toBe(false);
   });
+
+  test('TC-SMG-01: Sample Management refuses an aliquot larger than what is left, then splits the sample', async ({ page }) => {
+    test.skip(!accession, 'TC-GSR-00 did not create a sample');
+    await page.goto(`${BASE}/SampleManagement`, { waitUntil: 'domcontentloaded' });
+    await page.locator('#sample-search-input').fill(accession);
+    await page.locator('main').getByRole('button', { name: 'Search', exact: true }).click();
+    const row = page.getByRole('row').filter({ hasText: `${accession}-1` }).first();
+    await expect(row).toBeVisible({ timeout: 20_000 });
+    await row.locator('label').first().click();
+    await page.locator('main').getByRole('button', { name: 'Create Aliquot', exact: true }).first().click();
+    const modal = page.locator('.cds--modal.is-visible');
+    await modal.locator('#quantity-to-transfer').fill('5');
+    await modal.locator('#quantity-to-transfer').press('Tab');
+    await modal.getByRole('button', { name: /^Create( \d+)? Aliquots?$/ }).click();
+    await expect(page.getByText(/exceeds remaining quantity/i).first(), 'over-quantity refused').toBeVisible({ timeout: 10_000 });
+    await modal.locator('#quantity-to-transfer').fill('2');
+    await modal.locator('#number-of-aliquots').fill('2');
+    await modal.locator('#number-of-aliquots').press('Tab');
+    const created = page.waitForResponse(r => r.url().includes('/rest/sample-management/aliquot') && r.request().method() === 'POST');
+    await modal.getByRole('button', { name: /^Create 2 Aliquots$/ }).click();
+    expect((await created).status(), 'aliquot create').toBe(201);
+    const items = await page.evaluate(async (a) => {
+      const j = await (await fetch(`/api/OpenELIS-Global/rest/SampleItem?accessionNumber=${a}`)).json();
+      return (j.sampleItems || []).map((x: any) => String(x.externalId));
+    }, accession);
+    expect(items).toEqual(expect.arrayContaining([`${accession}-1.1`, `${accession}-1.2`]));
+  });
 });
+
