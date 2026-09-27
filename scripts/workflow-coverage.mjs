@@ -62,7 +62,7 @@ const RULES = [
   [/ihc|immunohis/, 'Immunohistochemistry'],
   [/esig|signature/, 'Electronic signatures'],
   [/study/, 'Study management'],
-  [/locale|bahasa|\bi18n\b|translation/, 'Localization (i18n)'],
+  [/locale|bahasa|\bi18n\b|translation|ui-text-sweep/, 'Localization (i18n)'],
   [/accessib|\ba11y\b|wcag/, 'Accessibility (WCAG)'],
   [/alerts?-notification|\balerts?\b|notification/, 'Alerts & notifications'],
   [/audit/, 'Audit trail'],

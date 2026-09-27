@@ -473,3 +473,8 @@ Observed working 2026-09-27 (DEV...0266, 0317; count 25 -> 23). **Criterion:** C
 
 ### TC-PSR-03: The validation modify endpoint rejects a value that is not one of the test's dictionary options
 **Today:** accepted and stored (R72). Automating it as a tripwire would corrupt an order on every run while the defect stands; run by hand against a throwaway order. **Criterion:** FUNCTION.
+
+## UI text sweep (TC-UIX)
+
+### TC-UIX-01: No page in the menu shows [object Object], NaN, undefined, raw i18n keys or a server error
+Visits every active /rest/menu route (about 140) and scans the main area, including screen-reader-only text. Already-filed hits are listed in the spec's KNOWN map, so it fails only on something new. Automated: `tests/ui-text-sweep.spec.ts` (read-only). **Criterion:** RENDER.

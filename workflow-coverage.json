@@ -295,12 +295,12 @@
       "coverage": "deep",
       "deep": 1,
       "shallow": 0,
-      "smoke": 1,
+      "smoke": 2,
       "status": {
         "fresh": 1,
         "partial": 0,
         "drift": 0,
-        "unknown": 1
+        "unknown": 2
       }
     },
     "Modify order": {
