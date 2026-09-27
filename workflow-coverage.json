@@ -270,13 +270,13 @@
     "Labels & Barcode": {
       "coverage": "deep",
       "deep": 3,
-      "shallow": 1,
+      "shallow": 2,
       "smoke": 2,
       "status": {
         "fresh": 3,
         "partial": 0,
         "drift": 0,
-        "unknown": 3
+        "unknown": 4
       }
     },
     "Localization (i18n)": {

@@ -132,7 +132,7 @@ Observed working 2026-09-27 (Nature of Specimen, Source of Smear, Reason for Sme
 **Today:** system accounts ("External,Service", "Daemon,System") are offered (R53). **Criterion:** RENDER.
 
 ### TC-CYTW-09: Status is shown as a translated label, not an enum
-**Today:** PREPARING_SLIDES (R53). **Criterion:** RENDER.
+**Today:** PREPARING_SLIDES (R53). Automated (test.fail): `tests/table-labels.spec.ts`. **Criterion:** RENDER.
 
 ## Immunohistochemistry (TC-IHCW)
 
@@ -140,7 +140,7 @@ Observed working 2026-09-27 (Nature of Specimen, Source of Smear, Reason for Sme
 Observed working 2026-09-27 (DEV...090). Automated: `tests/pathology-workflow.spec.ts` (a pathology case referred with no requested stains still creates the IHC case). **Criterion:** ROUND-TRIP.
 
 ### TC-IHCW-02: The Stage column shows a translated stage, not an enum
-**Expected:** "In Progress". **Today:** IN_PROGRESS. **Criterion:** RENDER.
+**Expected:** "In Progress". **Today:** IN_PROGRESS. Automated (test.fail): `tests/table-labels.spec.ts`. **Criterion:** RENDER.
 
 ### TC-IHCW-03: An IHC case reaches Ready for Pathologist and Completed, with a report
 **Expected:** tiles and filters follow the case; report contains the stain results. **Criterion:** FUNCTION.
@@ -242,8 +242,11 @@ Enter a QA_Water pH result above the QA Water Quality Standard threshold. **Expe
 
 ## Cross-cutting: tables (TC-TBL)
 
+### TC-TBL-00: The Inventory table offers several page sizes
+Canary for TC-TBL-01. Automated: `tests/table-labels.spec.ts`. **Criterion:** RENDER.
+
 ### TC-TBL-01: Every paged table offers the standard page sizes
-Results, Validation, Cytology, IHC, Order dashboards. **Expected:** 10/20/50/100 (as Inventory and Alerts do). **Today:** one option equal to the current row count (R55). **Criterion:** FUNCTION.
+Results, Validation, Cytology, IHC, Order dashboards. **Expected:** 10/20/50/100 (as Inventory and Alerts do). **Today:** one option equal to the current row count (R55). Automated (test.fail): `tests/table-labels.spec.ts`. **Criterion:** FUNCTION.
 
 ### TC-TBL-02: Validation review panel names the user who entered the result
 **Expected:** "Entered by" matches the History row's user. **Today:** "Not recorded" (R4, retested 2026-09-27). Automated (test.fail): `tests/validation-review-panel.spec.ts`. **Criterion:** ROUND-TRIP.

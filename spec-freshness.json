@@ -3561,6 +3561,16 @@
       "drift": [],
       "notes": "Discovered — not yet assessed against the current build.",
       "depth": "shallow"
+    },
+    {
+      "file": "tests/table-labels.spec.ts",
+      "area": "label",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
     }
   ]
 }
