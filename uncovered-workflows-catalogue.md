@@ -291,3 +291,6 @@ Works ("STAT" is both label and enum). Automated: `tests/modify-order-priority.s
 
 ### TC-MOP-01: Modify Order changes the priority to one whose label differs from its code (Routine)
 **Today:** posts the label ("Routine") instead of the enum; 400 and "Oops, Server error please contact administrator" (R62). Automated (test.fail): `tests/modify-order-priority.spec.ts`. **Criterion:** PERSIST.
+
+### TC-MOP-03: Modify Order adds a test to an existing sample
+Assign a test in "Available Tests", Submit. **Expected:** the order lists both tests. Observed working 2026-09-27 (DEV...0276: QA Grp 10067 added beside Glucose). **Criterion:** ROUND-TRIP.
