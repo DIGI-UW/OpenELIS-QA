@@ -573,3 +573,9 @@ Patient Management: toggle Edit, one screen changes the phone and the other the 
 
 ### TC-RCON-05: Two admins editing the same test in the Test Catalog editor: the second save is refused
 **Today:** the second save (description only) answers 200 and puts the name back (R81b). **Criterion:** FUNCTION.
+
+### TC-RCON-06: Two users creating shipping boxes at the same time both succeed with different box numbers
+**Today:** both forms show the same number; the second save fails with a duplicate-key 500 and cannot recover without a reload (R82). **Criterion:** FUNCTION.
+
+### TC-RCON-07: The same referred sample cannot end up in two boxes
+Two screens add one unassigned sample to two different boxes. Not yet checkable while R82 blocks the second box. **Criterion:** FUNCTION.
