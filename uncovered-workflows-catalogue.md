@@ -87,8 +87,11 @@ Create an env program with a questionnaire, place an env order with answers. **E
 
 ## Study management (TC-STDY)
 
+### TC-STDY-00: Every Study page renders its content
+Canary for TC-STDY-01/05. Automated: `tests/study-pages.spec.ts`. **Criterion:** RENDER.
+
 ### TC-STDY-01: Every Study menu entry opens a page without a raw message key
-**Expected:** no "sidenav.label..." or other raw keys; each page has a heading. **Today:** the legacy study UI shows "sidenav.label.environmental.compliance" (coverage-thin). **Criterion:** RENDER.
+**Expected:** no "sidenav.label..." or other raw keys; each page has a heading. **Today:** the legacy study UI shows "sidenav.label.environmental.compliance" (coverage-thin). Automated (test.fail): `tests/study-pages.spec.ts`. **Criterion:** RENDER.
 
 ### TC-STDY-02: A study electronic order can be entered and found again
 Enter a QA- study e-order via /StudyElectronicOrders. **Expected:** saved and retrievable by its number. **Criterion:** ROUND-TRIP.
@@ -98,6 +101,9 @@ Enter a QA- study e-order via /StudyElectronicOrders. **Expected:** saved and re
 
 ### TC-STDY-04: Study audit trail report lists the edit just made
 Edit a study sample field. **Expected:** the audit trail report shows old and new values, user and time. **Criterion:** ROUND-TRIP.
+
+### TC-STDY-05: View study electronic orders is in the user's language
+**Today:** French search prompt "Rechercher par code Patient ou par Site de prise en charge" in the English locale (R53h). Automated (test.fail): `tests/study-pages.spec.ts`. **Criterion:** RENDER.
 
 ## Cytology (TC-CYTW)
 
