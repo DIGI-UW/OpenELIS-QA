@@ -9,7 +9,7 @@
  * KNOWN lists what was already seen and filed, so the sweep fails only on something new.
  * Remove an entry when its defect is fixed.
  */
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
 const BASE = process.env.BASE_URL || process.env.BASE || 'https://testing.openelis-global.org';
 
@@ -29,25 +29,15 @@ const KNOWN: Record<string, string[]> = {
 const LEGACY = /ByProject|StudyElectronicOrders|ResultValidationRetroC/;
 const LEGACY_KNOWN = ['key:sidenav.label.environmental.compliance', 'key:label.select.last.first.name'];
 
+// Pages whose job is to list configuration property names (they look like i18n keys).
+const CONFIG_PAGES = ['/MasterListsPage/SiteInformationMenu', '/MasterListsPage/commonproperties'];
+const isKnown = (r: string, h: string) => (KNOWN[r] || []).includes(h)
+  || (LEGACY.test(r) && LEGACY_KNOWN.includes(h))
+  || (CONFIG_PAGES.includes(r) && h.startsWith('key:'));
+
 type Hit = string;
 
-test('TC-UIX-01: no page in the menu shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading', async ({ page }) => {
-  test.setTimeout(30 * 60_000);
-  await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
-  const routes: string[] = await page.evaluate(async () => {
-    const m = await (await fetch('/api/OpenELIS-Global/rest/menu')).json();
-    const out = new Set<string>();
-    const walk = (n: any) => (Array.isArray(n) ? n : [n]).forEach((x: any) => {
-      const mm = x.menu || {};
-      if (mm.isActive && typeof mm.actionURL === 'string' && mm.actionURL.startsWith('/')
-        && !/ReportPrint|logout|\.pdf|^\/docs\//i.test(mm.actionURL)) out.add(mm.actionURL);
-      (x.childMenus || []).forEach(walk);
-    });
-    walk(m);
-    return [...out];
-  });
-  expect(routes.length, 'menu routes found').toBeGreaterThan(20);
-
+async function sweep(page: Page, routes: string[]): Promise<Record<string, Hit[]>> {
   const found: Record<string, Hit[]> = {};
   let failing: string[] = [];
   page.on('response', (r) => {
@@ -80,9 +70,45 @@ test('TC-UIX-01: no page in the menu shows [object Object], NaN, undefined, raw 
     }
   }
 
+  return found;
+}
+
+test('TC-UIX-01: no page in the menu shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading', async ({ page }) => {
+  test.setTimeout(30 * 60_000);
+  await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
+  const routes: string[] = await page.evaluate(async () => {
+    const m = await (await fetch('/api/OpenELIS-Global/rest/menu')).json();
+    const out = new Set<string>();
+    const walk = (n: any) => (Array.isArray(n) ? n : [n]).forEach((x: any) => {
+      const mm = x.menu || {};
+      if (mm.isActive && typeof mm.actionURL === 'string' && mm.actionURL.startsWith('/')
+        && !/ReportPrint|logout|\.pdf|^\/docs\//i.test(mm.actionURL)) out.add(mm.actionURL);
+      (x.childMenus || []).forEach(walk);
+    });
+    walk(m);
+    return [...out];
+  });
+  expect(routes.length, 'menu routes found').toBeGreaterThan(20);
+
+  const found = await sweep(page, routes);
   test.info().attachments.push({ name: 'ui-text-sweep.json', contentType: 'application/json', body: Buffer.from(JSON.stringify(found, null, 2)) });
   const fresh = Object.entries(found)
-    .map(([r, hs]) => [r, hs.filter(h => !(KNOWN[r] || []).includes(h) && !(LEGACY.test(r) && LEGACY_KNOWN.includes(h)))] as const)
+    .map(([r, hs]) => [r, hs.filter(h => !isKnown(r, h))] as const)
+    .filter(([, hs]) => hs.length);
+  expect(fresh, `new UI text defects on ${fresh.length} page(s): ${JSON.stringify(fresh)}`).toEqual([]);
+});
+
+test('TC-UIX-02: no Admin page shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading', async ({ page }) => {
+  test.setTimeout(30 * 60_000);
+  await page.goto(`${BASE}/MasterListsPage`, { waitUntil: 'domcontentloaded' });
+  await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
+  const routes: string[] = await page.evaluate(() => [...new Set([...document.querySelectorAll('nav a[href^="/MasterListsPage"]')]
+    .map((a) => a.getAttribute('href') || ''))].filter(Boolean));
+  expect(routes.length, 'admin routes found').toBeGreaterThan(10);
+  const found = await sweep(page, routes);
+  test.info().attachments.push({ name: 'ui-text-sweep-admin.json', contentType: 'application/json', body: Buffer.from(JSON.stringify(found, null, 2)) });
+  const fresh = Object.entries(found)
+    .map(([r, hs]) => [r, hs.filter(h => !isKnown(r, h))] as const)
     .filter(([, hs]) => hs.length);
   expect(fresh, `new UI text defects on ${fresh.length} page(s): ${JSON.stringify(fresh)}`).toEqual([]);
 });

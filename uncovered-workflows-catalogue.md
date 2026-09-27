@@ -478,3 +478,6 @@ Observed working 2026-09-27 (DEV...0266, 0317; count 25 -> 23). **Criterion:** C
 
 ### TC-UIX-01: No page in the menu shows [object Object], NaN, undefined, raw i18n keys or a server error
 Visits every active /rest/menu route (about 140) and scans the main area, including screen-reader-only text. Already-filed hits are listed in the spec's KNOWN map, so it fails only on something new. Automated: `tests/ui-text-sweep.spec.ts` (read-only). **Criterion:** RENDER.
+
+### TC-UIX-02: No Admin page shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading
+Same scan over every /MasterListsPage link in the Admin navigation. Automated: `tests/ui-text-sweep.spec.ts`. **Criterion:** RENDER.
