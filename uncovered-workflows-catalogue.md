@@ -434,3 +434,25 @@ Canary. Automated: `tests/provider-admin.spec.ts`. **Criterion:** PERSIST.
 
 ### TC-PRVW-04: Modify changes a provider and Deactivate hides it from Add Order's requester search
 **Criterion:** CROSS-LINK.
+
+## Home dashboard counts (TC-HDB)
+
+The tiles were checked for rendering only. None was cross-checked against the orders it claims to count.
+
+### TC-HDB-00: The Partially Completed Today tile shows a count and opens its list
+Canary. Automated: `tests/home-dashboard-counts.spec.ts`. **Criterion:** RENDER.
+
+### TC-HDB-01: Seeding an order with no tests finished does not raise the Partially Completed count
+**Today:** the count rises by one per new order (R71). Automated (test.fail). **Criterion:** FUNCTION.
+
+### TC-HDB-05: The Partially Completed list matches the tile's number
+**Today:** tile 182, list 171 rows, newest orders missing (R71). **Criterion:** CROSS-LINK.
+
+### TC-HDB-02: Ready For Validation equals the Validation page's count
+Home said 13; 13 analyses were in Technical Acceptance (agrees on 2026-09-27). **Criterion:** CROSS-LINK.
+
+### TC-HDB-03: Orders Completed Today counts orders whose every test was finalized today
+Agrees on 2026-09-27 (26 = orders with all tests released today). **Criterion:** CROSS-LINK.
+
+### TC-HDB-04: Each tile states its unit (orders vs tests) and its time window
+**Today:** "Awaiting Result Entry" counts tests across all days beside tiles that count today's orders (R71). **Criterion:** RENDER.

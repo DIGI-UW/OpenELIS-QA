@@ -222,13 +222,13 @@
     "Dashboard / site config": {
       "coverage": "deep",
       "deep": 2,
-      "shallow": 1,
+      "shallow": 2,
       "smoke": 4,
       "status": {
         "fresh": 2,
         "partial": 2,
         "drift": 0,
-        "unknown": 3
+        "unknown": 4
       }
     },
     "Dictionary & config admin": {
