@@ -356,3 +356,39 @@ manifest-data says canRecall: true. **Today:** no Recall action on the box page 
 
 ### TC-SHIPI-08: Receive form controls are labelled
 Each row's reception status select and notes input have an accessible name. **Today:** empty labels (R65d). **Criterion:** A11Y.
+
+## Aliquot workflow (TC-ALQW)
+
+`tests/aliquot.spec.ts` (TC-ALQ-01..13) checks that the page loads and searches. Nothing split a sample and read the aliquot back.
+
+### TC-ALQW-00: A sample with a quantity is listed with it on the Aliquot page
+Canary. Seeds an order with 4 mL Serum (`seedOrder(page, tag, { quantity, uomId })`). Automated: `tests/aliquot-workflow.spec.ts`. **Criterion:** RENDER.
+
+### TC-ALQW-01: "Show Aliquoting" on its own opens the aliquoting section
+**Today:** label toggles, row stays closed (R66a). Automated (test.fail). **Criterion:** FUNCTION.
+
+### TC-ALQW-02: An aliquot carrying the sample's test saves and reads back
+Add Aliquot, full quantity, move the test to it, Save. **Expected:** `<accession>-1.1` appears in /rest/SampleItem. Automated. **Criterion:** ROUND-TRIP.
+
+### TC-ALQW-03: Saving an aliquot with no test either saves it or says why not
+**Today:** with the test left on the parent, Save does nothing and says nothing (R66c); for a sample with no tests at all the request carries sampleItems: [], 200, page resets, nothing said (R66b). Automated (test.fail). **Criterion:** FUNCTION.
+
+### TC-ALQW-04: Saving with quantity left unallocated explains itself
+**Today:** Save does nothing, no message (R66c). **Criterion:** FUNCTION.
+
+### TC-ALQW-05: Aliquot quantity cannot exceed the parent's remaining quantity
+Observed working 2026-09-27 (7 entered, capped to 5). **Criterion:** FUNCTION.
+
+### TC-ALQW-06: An aliquoted sample shows its existing aliquots when searched again
+Search the accession after TC-ALQW-02. **Expected:** the aliquot is listed with its test and the parent shows its remaining quantity. **Criterion:** ROUND-TRIP.
+
+### TC-ALQW-07: Results and Workplan list the test under the aliquot's ID after the move
+**Criterion:** CROSS-LINK.
+
+## Cold Storage navigation (TC-CSN)
+
+### TC-CSN-00: /FreezerMonitoring opens with its five tabs, Dashboard selected
+Canary. Automated: `tests/cold-storage-nav.spec.ts`. **Criterion:** RENDER.
+
+### TC-CSN-01: The sidebar's Cold Storage entries (?tab=1..4) open the matching tab
+**Today:** every entry shows the Dashboard (R67). Automated (test.fail). **Criterion:** FUNCTION.

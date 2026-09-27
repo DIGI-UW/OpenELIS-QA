@@ -450,13 +450,13 @@
     "Storage & Inventory": {
       "coverage": "deep",
       "deep": 4,
-      "shallow": 0,
+      "shallow": 1,
       "smoke": 19,
       "status": {
         "fresh": 20,
         "partial": 1,
         "drift": 0,
-        "unknown": 2
+        "unknown": 3
       }
     },
     "Test Catalog — activation gate": {
@@ -485,14 +485,14 @@
     },
     "Unmapped": {
       "coverage": "deep",
-      "deep": 18,
+      "deep": 19,
       "shallow": 16,
       "smoke": 16,
       "status": {
         "fresh": 0,
         "partial": 0,
         "drift": 1,
-        "unknown": 49
+        "unknown": 50
       }
     },
     "Workplan": {

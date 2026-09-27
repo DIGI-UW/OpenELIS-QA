@@ -3611,6 +3611,26 @@
       "drift": [],
       "notes": "Discovered — not yet assessed against the current build.",
       "depth": "shallow"
+    },
+    {
+      "file": "tests/aliquot-workflow.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/cold-storage-nav.spec.ts",
+      "area": "storage",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
     }
   ]
 }
