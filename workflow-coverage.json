@@ -54,13 +54,13 @@
     "Provider & Organization admin": {
       "coverage": "shallow",
       "deep": 0,
-      "shallow": 1,
+      "shallow": 2,
       "smoke": 5,
       "status": {
         "fresh": 5,
         "partial": 0,
         "drift": 0,
-        "unknown": 1
+        "unknown": 2
       }
     },
     "Study management": {

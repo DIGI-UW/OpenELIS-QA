@@ -417,3 +417,20 @@ Upload a 2-row CSV, Validate, Import; both samples exist with their sample type 
 
 ### TC-GSR-05: Sample Unit Of Measure offers sample units only
 **Today:** the list mixes result units (mg/dl, ppm, pg, Ct) with sample units (mL, tubes, slides). **Criterion:** RENDER.
+
+## Provider Management (TC-PRVW)
+
+### TC-PRVW-00: A provider with a valid email is added
+Canary. Automated: `tests/provider-admin.spec.ts`. **Criterion:** PERSIST.
+
+### TC-PRVW-01: A malformed email is flagged on the field, not answered with a server error
+**Today:** 500, generic toast, modal closes (R70). Automated (test.fail). **Criterion:** FUNCTION.
+
+### TC-PRVW-02: The phone field enforces its hinted format
+**Today:** "abcdefg" saves (R70). **Criterion:** FUNCTION.
+
+### TC-PRVW-03: Adding a provider whose name matches an existing one warns first
+**Today:** accepted silently (R70, same as R60 for organizations). **Criterion:** FUNCTION.
+
+### TC-PRVW-04: Modify changes a provider and Deactivate hides it from Add Order's requester search
+**Criterion:** CROSS-LINK.
