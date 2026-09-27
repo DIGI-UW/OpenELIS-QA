@@ -562,5 +562,8 @@ Three aliquot entry points exist (Order > Aliquot, Generic Sample > Sample Manag
 ### TC-RCON-01: A second screen saving the same result is told it is stale
 Observed working 2026-09-28: 409 error.results.staleSave, with a dialog asking the user to refresh. Automated: `tests/results-stale-save.spec.ts`. **Criterion:** FUNCTION.
 
+### TC-RCON-03: A stale Modify Order submit does not undo another user's change
+**Today:** the second screen's submit answers 200 and silently puts priority back from STAT to ROUTINE (R81). Automated (test.fail): `tests/modify-order-lost-update.spec.ts`. **Criterion:** FUNCTION.
+
 ### TC-RCON-02: Two validators releasing the same analysis: the second is told it was already released
 Observed working 2026-09-28: 409 notAwaitingValidation, with "This result changed since the page loaded. Reload and review it again." Automated: `tests/results-stale-save.spec.ts`. **Criterion:** FUNCTION.
