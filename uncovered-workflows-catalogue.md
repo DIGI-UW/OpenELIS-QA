@@ -392,3 +392,28 @@ Canary. Automated: `tests/cold-storage-nav.spec.ts`. **Criterion:** RENDER.
 
 ### TC-CSN-01: The sidebar's Cold Storage entries (?tab=1..4) open the matching tab
 **Today:** every entry shows the Dashboard (R67). Automated (test.fail). **Criterion:** FUNCTION.
+
+## Generic Sample round trip (TC-GSR)
+
+`tests/generic-sample.spec.ts` (TC-GEN) checks the five pages render. Nothing saved a generic sample and opened it again.
+
+### TC-GSR-00: A generic sample order saves
+Generate Lab Number, Serum, 3 mL, From, Collector, Save. **Expected:** "Successfully saved"; the sample exists. Automated: `tests/generic-sample-roundtrip.spec.ts`. **Criterion:** PERSIST.
+
+### TC-GSR-01: Edit Order opens the generic sample just saved
+**Today:** "No sample found"; the lookup answers 500 (R68). Automated (test.fail). **Criterion:** ROUND-TRIP.
+
+### TC-GSR-02: An edit on Edit Order saves and reads back
+Change quantity and collector, Save, search again. **Blocked by** TC-GSR-01. **Criterion:** ROUND-TRIP.
+
+### TC-GSR-03: A generic sample saved with a notebook carries the notebook's fields
+Pick "QA Notebook Project 1" in Notebook Selection, fill its fields, save; the fields read back. **Criterion:** ROUND-TRIP.
+
+### TC-GSR-04: Generic Sample Import validates and imports a CSV
+Upload a 2-row CSV, Validate, Import; both samples exist with their sample type and quantity. The page gives no template or column list, so the expected headers are not known yet. **Criterion:** ROUND-TRIP.
+
+### TC-GSR-06: Import rejects a file with none of the expected columns
+**Today:** "foo,bar" validates as Valid and imports a sample with no sample item (R69). Automated (test.fail; validate only). **Criterion:** FUNCTION.
+
+### TC-GSR-05: Sample Unit Of Measure offers sample units only
+**Today:** the list mixes result units (mg/dl, ppm, pg, Ct) with sample units (mL, tubes, slides). **Criterion:** RENDER.
