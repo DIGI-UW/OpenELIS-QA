@@ -51,6 +51,15 @@ test.describe('Pathology workflow (TC-PATHW)', () => {
     return page.locator('tr', { hasText: labNo });
   }
 
+  /** The IHC dashboard, searched for this order. */
+  async function findIhcRow(page: Page) {
+    await page.goto(`${BASE}/ImmunohistochemistryDashboard`, { waitUntil: 'domcontentloaded' });
+    const search = page.getByPlaceholder(/LabNo|Family Name/i).first();
+    await search.fill(labNo);
+    await search.press('Enter');
+    return page.locator('tr', { hasText: labNo });
+  }
+
   async function openCase(page: Page) {
     const row = await findCaseRow(page);
     await expect(row, `case for ${labNo} is listed`).toBeVisible({ timeout: 20_000 });
@@ -67,6 +76,36 @@ test.describe('Pathology workflow (TC-PATHW)', () => {
     await openCase(page);
     const text = await page.locator('main').innerText();
     for (const a of ANSWERS) expect(text, `case view shows "${a}"`).toContain(a);
+  });
+
+  test('TC-IHCW-01: referring the pathology case to IHC creates the IHC case', async ({ page }) => {
+    await openCase(page);
+    await page.locator('label[for="referToImmunoHistoChemistry"]').click();
+    await expect(page.locator('#referToImmunoHistoChemistry')).toBeChecked();
+    const post = page.waitForResponse(r => /\/rest\/pathology\/caseView\/\d+$/.test(new URL(r.url()).pathname) && r.request().method() === 'POST');
+    await page.getByRole('button', { name: /^Save$/ }).last().click();
+    expect((await post).status(), 'pathology case save answers 200').toBe(200);
+    await expect(await findIhcRow(page), `IHC case for ${labNo} is listed`).toBeVisible({ timeout: 20_000 });
+  });
+
+  test('TC-IHCW-06: an empty IHC case cannot be saved as Completed', async ({ page }) => {
+    // FLIP-WHEN-FIXED (R51). By hand on 2026-09-27 IHC case 8 completed with no pathologist
+    // and no report.
+    test.fail();
+    const row = await findIhcRow(page);
+    await expect(row).toBeVisible({ timeout: 20_000 });
+    await row.click();
+    await page.waitForURL(/\/ImmunohistochemistryCaseView\/\d+/, { timeout: 15_000 });
+    await expect(page.locator('main').getByText(labNo).first()).toBeVisible({ timeout: 20_000 });
+    const caseUrl = page.url();
+    await page.locator('#status').selectOption({ label: 'Completed' });
+    await page.getByRole('button', { name: /^Save$/ }).last().click();   // the case-level Save
+    await page.waitForTimeout(2500);
+    await page.goto(caseUrl, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('main').getByText(labNo).first()).toBeVisible({ timeout: 20_000 });
+    await page.waitForLoadState('networkidle');
+    const status = await page.locator('#status').evaluate((s: HTMLSelectElement) => s.options[s.selectedIndex]?.text ?? '');
+    expect(status, 'an empty IHC case is not stored as Completed').not.toBe('Completed');
   });
 
   test('TC-PATHW-03: an empty case cannot be saved as Completed', async ({ page }) => {

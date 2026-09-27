@@ -137,7 +137,7 @@ Observed working 2026-09-27 (Nature of Specimen, Source of Smear, Reason for Sme
 ## Immunohistochemistry (TC-IHCW)
 
 ### TC-IHCW-01: Referring a completed pathology case to IHC creates the IHC case
-Observed working 2026-09-27 (DEV...090). **Criterion:** ROUND-TRIP.
+Observed working 2026-09-27 (DEV...090). Automated: `tests/pathology-workflow.spec.ts` (a pathology case referred with no requested stains still creates the IHC case). **Criterion:** ROUND-TRIP.
 
 ### TC-IHCW-02: The Stage column shows a translated stage, not an enum
 **Expected:** "In Progress". **Today:** IN_PROGRESS. **Criterion:** RENDER.
@@ -150,6 +150,9 @@ Enter two markers with results. **Expected:** reopening shows both with their re
 
 ### TC-IHCW-05: The dashboard pages at a usable size
 **Today:** Items per page 1. **Criterion:** RENDER.
+
+### TC-IHCW-06: An empty IHC case cannot be saved as Completed
+**Today:** saved (R51). Automated (test.fail): `tests/pathology-workflow.spec.ts`. **Criterion:** PERSIST.
 
 ## Electronic lab notebook (TC-ELNW)
 
