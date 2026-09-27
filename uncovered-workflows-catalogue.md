@@ -420,7 +420,13 @@ Change quantity and collector, Save, search again. **Blocked by** TC-GSR-01. **C
 Pick "QA Notebook Project 1" in Notebook Selection, fill its fields, save; the fields read back. **Criterion:** ROUND-TRIP.
 
 ### TC-GSR-04: Generic Sample Import validates and imports a CSV
-Upload a 2-row CSV, Validate, Import; both samples exist with their sample type and quantity. The page gives no template or column list, so the expected headers are not known yet. **Criterion:** ROUND-TRIP.
+Upload a CSV with headers `labNo,sampleType,quantity,sampleUnitOfMeasure,from,collector,collectionDate`, Validate, Import; the samples exist with their sample type and quantity. Observed working 2026-09-28 for one Serum row (DEV...0476). **Criterion:** ROUND-TRIP.
+
+### TC-GSR-07: Import reads dates in the site's date order
+**Today:** 03/04/2026 stored as 4 March on a dd/MM site (R80a). **Criterion:** PERSIST.
+
+### TC-GSR-08: Import validation rejects an unknown sample type, a negative quantity, an unknown unit and a future collection date
+**Today:** all four validate as Valid (R80b). **Criterion:** FUNCTION.
 
 ### TC-GSR-06: Import rejects a file with none of the expected columns
 **Today:** "foo,bar" validates as Valid and imports a sample with no sample item (R69). Automated (test.fail; validate only). **Criterion:** FUNCTION.

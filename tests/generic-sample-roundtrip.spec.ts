@@ -107,5 +107,20 @@ test.describe('Generic Sample round trip', () => {
     test.fail();
     expect(url, 'the request names the aliquot').toContain(`${accession}-1.2`);
   });
+
+  test('TC-GSR-08: Import validation rejects an unknown sample type, a negative quantity, an unknown unit and a future date', async ({ page }) => {
+    // FLIP-WHEN-FIXED (R80b). Observed 2026-09-28: each of these rows validates as Valid. Validate only.
+    await page.goto(`${BASE}/GenericSample/Import`, { waitUntil: 'domcontentloaded' });
+    await page.waitForLoadState('networkidle');
+    const header = 'labNo,sampleType,quantity,sampleUnitOfMeasure,from,collector,collectionDate';
+    const rows = [',Banana,2,mL,QA_IMP,QA,27/09/2026', ',Serum,-5,mL,QA_IMP,QA,27/09/2026', ',Serum,2,parsecs,QA_IMP,QA,27/09/2026', ',Serum,2,mL,QA_IMP,QA,27/09/2099'];
+    await page.locator('main input[type=file]').setInputFiles({ name: 'qa_gen_rows.csv', mimeType: 'text/csv', buffer: Buffer.from([header, ...rows].join('\n') + '\n') });
+    const res = page.waitForResponse(r => r.url().includes('/rest/GenericSampleOrder/validate'));
+    await page.getByRole('button', { name: 'Validate', exact: true }).click();
+    const body = await (await res).json();
+    expect(typeof body.invalidRows, 'validate reports row counts').toBe('number');
+    test.fail();
+    expect(body.invalidRows, `validate: ${JSON.stringify(body).slice(0, 300)}`).toBe(rows.length);
+  });
 });
 
