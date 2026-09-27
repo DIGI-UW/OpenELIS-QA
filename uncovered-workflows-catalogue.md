@@ -456,3 +456,14 @@ Agrees on 2026-09-27 (26 = orders with all tests released today). **Criterion:**
 
 ### TC-HDB-04: Each tile states its unit (orders vs tests) and its time window
 **Today:** "Awaiting Result Entry" counts tests across all days beside tiles that count today's orders (R71). **Criterion:** RENDER.
+
+## Patient Status Report printing (TC-PSR)
+
+### TC-PSR-01: Printing an order's Patient Status Report removes it from UnPrinted Results
+Observed working 2026-09-27 (DEV...0266, 0317; count 25 -> 23). **Criterion:** CROSS-LINK.
+
+### TC-PSR-02: One malformed stored result does not fail the whole report
+**Today:** a dictionary-type result holding "9.9" makes Report By Lab Number return a raw 500 (R72). Needs a dedicated seed that does not rely on the modify endpoint's missing validation. **Criterion:** FUNCTION.
+
+### TC-PSR-03: The validation modify endpoint rejects a value that is not one of the test's dictionary options
+**Today:** accepted and stored (R72). Automating it as a tripwire would corrupt an order on every run while the defect stands; run by hand against a throwaway order. **Criterion:** FUNCTION.
