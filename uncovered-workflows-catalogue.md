@@ -249,3 +249,16 @@ Place an order through Add Order leaving Date of next visit blank. **Expected:**
 
 ### TC-OED-02: The audit trail records the order as entered, with local times
 Observed working 2026-09-27 (DEV...0256: patient, order, sample, test, provider, organization rows at 18:40/18:52 local). **Criterion:** ROUND-TRIP.
+
+## Pathology case workflow (TC-PATHW)
+
+Rated deep by the classifier, but no spec drove an order into a case. Shares `helpers/order-wizard.ts` with the Cytology spec.
+
+### TC-PATHW-01: A Histopathology order creates a case on the Pathology dashboard
+Automated: `tests/pathology-workflow.spec.ts`. **Criterion:** ROUND-TRIP.
+
+### TC-PATHW-02: Histopathology questionnaire answers appear on the case view
+Automated: `tests/pathology-workflow.spec.ts`. **Criterion:** ROUND-TRIP.
+
+### TC-PATHW-03: An empty pathology case cannot be saved as Completed
+**Today:** saved (R51; same for Cytology and IHC). Automated (test.fail): `tests/pathology-workflow.spec.ts`. **Criterion:** PERSIST.

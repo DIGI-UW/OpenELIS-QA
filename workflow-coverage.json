@@ -342,13 +342,13 @@
     "Pathology": {
       "coverage": "deep",
       "deep": 2,
-      "shallow": 0,
+      "shallow": 1,
       "smoke": 1,
       "status": {
         "fresh": 2,
         "partial": 0,
         "drift": 0,
-        "unknown": 1
+        "unknown": 2
       }
     },
     "Patient management": {

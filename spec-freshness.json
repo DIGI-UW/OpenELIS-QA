@@ -3521,6 +3521,16 @@
       "drift": [],
       "notes": "Discovered — not yet assessed against the current build.",
       "depth": "deep"
+    },
+    {
+      "file": "tests/pathology-workflow.spec.ts",
+      "area": "pathology",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
     }
   ]
 }
