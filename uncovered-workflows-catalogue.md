@@ -357,6 +357,12 @@ manifest-data says canRecall: true. **Today:** no Recall action on the box page 
 ### TC-SHIPI-08: Receive form controls are labelled
 Each row's reception status select and notes input have an accessible name. **Today:** empty labels (R65d). **Criterion:** A11Y.
 
+### TC-SHIPI-09: Box capacity is enforced when adding samples
+Capacity 1, scan two samples. Observed working 2026-09-27 (1 / 1, second not added). **Criterion:** FUNCTION.
+
+### TC-SHIPI-10: Box Label Prefix rejects characters that break IDs (space, slash)
+**Today:** "Q A/1" saves with no message. **Criterion:** FUNCTION.
+
 ## Aliquot workflow (TC-ALQW)
 
 `tests/aliquot.spec.ts` (TC-ALQ-01..13) checks that the page loads and searches. Nothing split a sample and read the aliquot back.
