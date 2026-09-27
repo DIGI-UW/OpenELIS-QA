@@ -161,11 +161,14 @@ Seed an experiment type (Dictionary: NoteBook Experiment Type, with Local Abbrev
 
 ## Provider & Organization admin (TC-ORGW)
 
+### TC-ORGW-00: A new organization saves and is listed
+Canary for TC-ORGW-02. Automated: `tests/org-admin.spec.ts`. **Criterion:** ROUND-TRIP.
+
 ### TC-ORGW-01: A new organization saves and is offered as a referring site on Add Order
 **Criterion:** ROUND-TRIP.
 
 ### TC-ORGW-02: A duplicate organization name is refused
-**Today:** accepted (coverage-thin). **Criterion:** PERSIST.
+Organization Management > Add, name of an existing organization. **Today:** accepted (R60: organization 15 "QA Auto Clinic", toast "Organization Information Updated Succesfully."). Automated (test.fail): `tests/org-admin.spec.ts`. **Criterion:** PERSIST.
 
 ### TC-ORGW-03: A new provider saves and is offered as requester on Add Order
 **Criterion:** ROUND-TRIP.
