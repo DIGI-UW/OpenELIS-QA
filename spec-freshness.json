@@ -3240,7 +3240,7 @@
       "lastBuild": null,
       "drift": [],
       "notes": "Discovered — not yet assessed against the current build.",
-      "depth": "shallow"
+      "depth": "deep"
     },
     {
       "file": "tests/ogc803-804-referral-accept-reject.spec.ts",
@@ -3466,6 +3466,26 @@
       "file": "tests/results-worklist-chip-counts.spec.ts",
       "area": "catalog-results",
       "kind": "contract",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/cytology-workflow.spec.ts",
+      "area": "cytology",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/validation-review-panel.spec.ts",
+      "area": "validation",
+      "kind": "misc",
       "status": "unknown",
       "lastBuild": null,
       "drift": [],

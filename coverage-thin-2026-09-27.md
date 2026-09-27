@@ -50,3 +50,11 @@ These make the map look better than the suite is. Each needs fixing before its w
 ## 4. How to keep this current
 
 After adding specs: `node scripts/refresh-freshness.mjs && node scripts/classify-depth.mjs --write && node scripts/workflow-coverage.mjs`, then update section 2 by hand from the latest walk-through. The classifier cannot tell which paths matter; the walk-through can.
+
+## 5. Update, later on 2026-09-27
+
+- **New catalogue** `uncovered-workflows-catalogue.md` (56 cases, indexed) for every workflow rated none/smoke: timezone (new cross-cutting section), alerts, programs, study, cytology, IHC, notebook, org admin, e-signatures, i18n, accessibility. Grounded in a Chrome walk of each module.
+- **Cytology is no longer smoke-only:** `tests/cytology-workflow.spec.ts` seeds an orderable Cytology test when missing, orders it through the Add Order wizard with the Cytology program, and checks case creation (TC-CYTW-01), questionnaire carry-over (TC-CYTW-07) and the R51 tripwire (TC-CYTW-06, empty case completed).
+- **Timezone is the biggest blind spot.** CI runs in UTC; at UTC+10 the walk found R26 (picker maxDate 9 Jan), R48 (Order Programs date +1 day), R52 (Reception Time defaults to UTC) and UTC dates on IHC. The R26 specs are now pinned to Pacific/Port_Moresby. Recommend a second CI project with `timezoneId` set east of UTC.
+- **Harness drift fixed:** merge-panel radios renamed in 3.2.3.0 (`#patientN-<id>`), row labels cover a photo avatar (label clicks opened an overlay), two results tables per page, saved-report list paging, report option lists loading after the pickers, dictionary Local Abbreviation required and unique. TC-DXS-05 now asserts a Download control (a negative check passed by race).
+- **Still open:** ELN entry creation path not found from the dashboard; Study legacy pages; R43 activity-report tripwire; ogc1192 spec rewrite for 3.2.3.0 (payload works again with seeded ids: sample type QA_Surface Water, test QA_Water pH, site QA-VS-01).

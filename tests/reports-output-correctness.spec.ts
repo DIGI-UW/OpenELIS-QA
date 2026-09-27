@@ -37,6 +37,11 @@ async function openReport(page: Page, type: string, report: string): Promise<voi
 
 /** Set dates and (optionally) the option whose text matches, press Generate, fetch the result. */
 async function genReport(page: Page, opts: { from: Date; to: Date; option?: RegExp }): Promise<Generated> {
+  if (opts.option) {
+    // The option list loads after the date pickers; wait for the wanted option to exist.
+    await page.waitForFunction(src => [...document.querySelectorAll('main select option')]
+      .some(o => new RegExp(src).test((o as HTMLOptionElement).text)), opts.option.source, { timeout: 20_000 });
+  }
   const picked = await page.evaluate(({ from, to, option }) => {
     const setFp = (id: string, v: string) => {
       const el = document.getElementById(id) as (HTMLInputElement & { _flatpickr?: any }) | null;
@@ -139,9 +144,17 @@ test.describe('Routine Reports: output matches the request', () => {
 });
 
 test.describe('Date pickers on a full page load (R26)', () => {
+  // R26 is timezone-dependent: in a UTC browser the maxDate is today, but at UTC+10
+  // (where it was found, Port Moresby) a full load gives Fri 9 Jan. Pin the zone so the
+  // tripwire measures the bug instead of the CI runner's clock.
+  test.use({ timezoneId: 'Pacific/Port_Moresby' });
+
   test('TC-DP-02: a no-future-date picker has a maxDate after a full load', async ({ page }) => {
     // Canary for TC-DP-01: the picker and its maxDate option exist.
     await openReport(page, 'indicator', 'activityReportByTest');
+    // The 9 January maxDate arrives with late config; reading it the moment the picker
+    // mounts raced that load (flaky on 2026-09-27). Let the page settle first.
+    await page.waitForLoadState('networkidle');
     const max = await page.evaluate(() => {
       const el = document.getElementById('startDate') as any;
       return el?._flatpickr?.config?.maxDate ? String(el._flatpickr.config.maxDate) : null;
@@ -155,11 +168,15 @@ test.describe('Date pickers on a full page load (R26)', () => {
     // Typed dates after 9 Jan are silently clamped.
     test.fail();
     await openReport(page, 'indicator', 'activityReportByTest');
+    // The 9 January maxDate arrives with late config; reading it the moment the picker
+    // mounts raced that load (flaky on 2026-09-27). Let the page settle first.
+    await page.waitForLoadState('networkidle');
     const max = await page.evaluate(() => {
       const el = document.getElementById('startDate') as any;
       const d = el._flatpickr.config.maxDate as Date;
-      return d.toDateString();
+      // Compare in the page's own zone (Port Moresby), not the test runner's.
+      return { max: d.toDateString(), today: new Date().toDateString() };
     });
-    expect(max).toBe(new Date().toDateString());
+    expect(max.max, 'maxDate is today in the browser zone').toBe(max.today);
   });
 });

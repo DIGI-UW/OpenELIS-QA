@@ -51,18 +51,6 @@
         "unknown": 0
       }
     },
-    "Cytology": {
-      "coverage": "smoke",
-      "deep": 0,
-      "shallow": 0,
-      "smoke": 1,
-      "status": {
-        "fresh": 1,
-        "partial": 0,
-        "drift": 0,
-        "unknown": 0
-      }
-    },
     "Electronic lab notebook": {
       "coverage": "smoke",
       "deep": 0,
@@ -243,6 +231,18 @@
         "unknown": 2
       }
     },
+    "Cytology": {
+      "coverage": "deep",
+      "deep": 1,
+      "shallow": 0,
+      "smoke": 1,
+      "status": {
+        "fresh": 1,
+        "partial": 0,
+        "drift": 0,
+        "unknown": 1
+      }
+    },
     "Dictionary & config admin": {
       "coverage": "deep",
       "deep": 2,
@@ -317,8 +317,8 @@
     },
     "Order entry — Environmental": {
       "coverage": "deep",
-      "deep": 3,
-      "shallow": 1,
+      "deep": 4,
+      "shallow": 0,
       "smoke": 8,
       "status": {
         "fresh": 9,
@@ -414,13 +414,13 @@
     "Result validation & release": {
       "coverage": "deep",
       "deep": 3,
-      "shallow": 1,
+      "shallow": 2,
       "smoke": 1,
       "status": {
         "fresh": 1,
         "partial": 2,
         "drift": 0,
-        "unknown": 2
+        "unknown": 3
       }
     },
     "Results entry": {
