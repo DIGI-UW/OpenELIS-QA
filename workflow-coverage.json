@@ -366,13 +366,13 @@
     "Referrals, shipment & sample acceptance": {
       "coverage": "deep",
       "deep": 5,
-      "shallow": 1,
+      "shallow": 2,
       "smoke": 1,
       "status": {
         "fresh": 3,
         "partial": 0,
         "drift": 0,
-        "unknown": 4
+        "unknown": 5
       }
     },
     "Reflex tests": {

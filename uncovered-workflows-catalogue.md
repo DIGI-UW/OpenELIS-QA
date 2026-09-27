@@ -316,3 +316,34 @@ Pass each item, Accept sample, Submit. Observed working 2026-09-27 (status Accep
 
 ### TC-OWF-05: QA Review shows the received date of a received order
 **Today:** "Received —" (R63d). **Criterion:** RENDER.
+
+## Sample Shipment integrity (TC-SHIPI)
+
+Create Box -> Mark Ready -> Send -> Receive, and the Unassigned Samples list. Existing `sample-shipment.spec.ts` and Chain R check that the pages render and boxes round-trip; nothing checked that a box only carries samples bound for its destination, or that reception is limited to inbound boxes.
+
+### TC-SHIPI-00: Unassigned Samples lists referred samples with Add to Box
+Canary for TC-SHIPI-01..04. Automated: `tests/shipment-integrity.spec.ts`. **Criterion:** RENDER.
+
+### TC-SHIPI-01: A referral the reference lab REJECTED is not offered for shipping
+**Today:** REJECTED referrals listed with Add to Box, no status column (R64b). Automated (test.fail). **Criterion:** FUNCTION.
+
+### TC-SHIPI-02: Create Box refuses (or warns on) a sample referred to a different facility
+**Today:** added silently; the box saves, sends and the manifest lists the sample under the wrong lab (R64a). Automated (test.fail; never saves). **Criterion:** FUNCTION.
+
+### TC-SHIPI-03: Receive Box refuses an outbound box sent by this lab
+**Today:** reception form shown; Confirm Reception marks it RECEIVED and the dashboard counts it DELIVERED (R65a). Automated (test.fail). **Criterion:** FUNCTION.
+
+### TC-SHIPI-04: The Receive view expects exactly the samples in the box
+**Today:** "1 accepted / 2 expected" and a phantom "No matching order" specimen for a 1-sample box (R65b). Automated (test.fail). **Criterion:** RENDER.
+
+### TC-SHIPI-05: Sending a box marks each referral in it as sent
+Send a box; each referral's sent date becomes the box send time and its status moves on. **Today:** works for a normal referral (BOX-2026-0004), not for a REJECTED one (R64c). **Criterion:** PERSIST.
+
+### TC-SHIPI-06: Looking up a box on Receive does not write
+Scan a box id and leave. **Today:** the scan POSTs reconcile-shipment (R65c). **Criterion:** FUNCTION.
+
+### TC-SHIPI-07: A Ready to Send box can be recalled to Draft
+manifest-data says canRecall: true. **Today:** no Recall action on the box page (R65f). **Criterion:** FUNCTION.
+
+### TC-SHIPI-08: Receive form controls are labelled
+Each row's reception status select and notes input have an accessible name. **Today:** empty labels (R65d). **Criterion:** A11Y.
