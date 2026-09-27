@@ -191,13 +191,22 @@ Organization Management > Add, name of an existing organization. **Today:** acce
 ### TC-ORGW-05: Add Order Site Name search matches a multi-word name as it is typed
 Type "QA Aut" for "QA Auto Clinic". **Expected:** the clinic is suggested. Observed working by hand 2026-09-27 (one input event per character lists the sites; they are preloaded in referringSiteList). Two Playwright runs typing key by key saw "No suggestions available"; treated as a harness timing issue, the spec uses fill(). **Criterion:** FUNCTION.
 
-## Electronic signatures (TC-ESIG)
+## Electronic signatures (TC-ESIGW; the page-level TC-ESIG-01..13 live in tests/electronic-signature.spec.ts)
 
-### TC-ESIG-01: Validating a result writes an entry to the e-signature log
+### TC-ESIGW-01: Validating a result writes an entry to the e-signature log
 Validate a QA result. **Expected:** /qa/qms/e-signature-log lists user, time, record and meaning. **Criterion:** ROUND-TRIP.
 
-### TC-ESIG-02: The e-signature log filters by user and date
+### TC-ESIGW-02: The e-signature log filters by user and date
 **Criterion:** FUNCTION.
+
+### TC-ESIGW-03: With e-signatures enabled, Results Save requires certification/signature
+Turn on site setting electronicSignatureEnabled, enter a result, Save. **Expected:** the Electronic Signature Certification (first use) or Sign dialog opens; Cancel saves nothing. Observed working 2026-09-27 up to the dialog. Completing it needs the signer's password; automate only with the suite's own login credentials if approved. Restore the setting afterwards. **Criterion:** FUNCTION.
+
+### TC-ESIGW-04: With e-signatures enabled, Validate & release requires a signature
+Same as TC-ESIGW-03 on the Validation review panel. Observed working 2026-09-27 up to the dialog. **Criterion:** FUNCTION.
+
+### TC-ESIGW-05: No result-finalizing path skips the signature when e-signatures are enabled
+Check every path that finalizes a result: Results, Validation (single and "Release all clear"), Reference Lab Results "Enter result", referral auto-validation (R23), analyzer import, Pathology/Cytology/IHC sign-out. **Expected:** each asks for a signature and writes an E-Signature Log entry. **Today:** Results, Validation and Reference Lab Results checked (all prompt); the others unchecked. **Criterion:** FUNCTION.
 
 ## Localization (TC-I18NK)
 
