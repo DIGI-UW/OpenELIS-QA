@@ -546,8 +546,11 @@ Results Entry row panel, "Storage & sample disposal".
 ### TC-VOL-02: Recording part of the volume decrements it and leaves the sample active
 **Criterion:** PERSIST.
 
-### TC-VOL-03: Mark used up disposes the sample and it disappears from Storage and from aliquot sources
-**Today:** an exhausted aliquot (remaining 0) keeps status SampleEntered and shows "Active" in Storage > Sample Items (R78). **Criterion:** CROSS-LINK.
+### TC-VOL-03: Mark used up, then Start disposal and Confirm disposal, shows the item as Disposed in Storage
+Observed working 2026-09-28 (DEV...0370-1.1: exhausted, then disposed with reason, method and notes; Storage shows "Disposed"). Exhausted-but-not-disposed items stay "Active" by design. **Criterion:** CROSS-LINK.
+
+### TC-VOL-04: Mark used up asks for confirmation; Confirm disposal says which field is missing
+**Today:** Mark used up acts on one click; Confirm disposal with no method does nothing and says nothing (R78). **Criterion:** FUNCTION.
 
 ## Results Entry row panel helpers (TC-RPH)
 
