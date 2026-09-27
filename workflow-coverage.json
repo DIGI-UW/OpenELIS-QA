@@ -522,13 +522,13 @@
     "Unmapped": {
       "coverage": "deep",
       "deep": 5,
-      "shallow": 4,
+      "shallow": 5,
       "smoke": 8,
       "status": {
         "fresh": 0,
         "partial": 0,
         "drift": 0,
-        "unknown": 17
+        "unknown": 18
       },
       "files": [
         "agnostic-picker-guard.docs.spec.ts",
@@ -547,7 +547,8 @@
         "revalidate-ogc1120.spec.ts",
         "revalidate.docs.spec.ts",
         "system-misc.spec.ts",
-        "tce-defects.docs.spec.ts"
+        "tce-defects.docs.spec.ts",
+        "volume-usage.spec.ts"
       ]
     },
     "Workplan": {

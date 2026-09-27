@@ -523,3 +523,16 @@ Observed working 2026-09-28 (present with true, absent with false). **Criterion:
 
 ### TC-RREJ-03: Releasing a rejected test prints the rejection clearly on the patient report
 **Today:** Finalized with a blank result; the report shows Status "Validated" plus the reason as a note. Product call on wording. **Criterion:** CROSS-LINK.
+
+## Sample volume use and disposal (TC-VOL)
+
+Results Entry row panel, "Storage & sample disposal".
+
+### TC-VOL-01: Record amount used refuses more than the remaining volume
+**Today:** 5 mL recorded against 1 mL left is accepted, and the tube is marked used up (exhausted) (R78). **Criterion:** FUNCTION.
+
+### TC-VOL-02: Recording part of the volume decrements it and leaves the sample active
+**Criterion:** PERSIST.
+
+### TC-VOL-03: Mark used up disposes the sample and it disappears from Storage and from aliquot sources
+**Criterion:** CROSS-LINK.
