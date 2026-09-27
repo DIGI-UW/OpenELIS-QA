@@ -510,13 +510,13 @@
     "Test Catalog — editor": {
       "coverage": "deep",
       "deep": 18,
-      "shallow": 7,
+      "shallow": 8,
       "smoke": 6,
       "status": {
         "fresh": 5,
         "partial": 2,
         "drift": 0,
-        "unknown": 24
+        "unknown": 25
       }
     },
     "Unmapped": {

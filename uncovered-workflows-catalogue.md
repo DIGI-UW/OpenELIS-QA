@@ -556,3 +556,11 @@ Observed working 2026-09-28 for free text (printed as a dated note under the res
 
 ### TC-RPH-04: The panel's "Aliquots · create" makes the same aliquots as Sample Management
 Three aliquot entry points exist (Order > Aliquot, Generic Sample > Sample Management, Results row panel); they should agree on quantity checks and IDs. Observed 2026-09-28: the panel calls the Sample Management endpoint and refuses 10 mL of 4 ("exceeds remaining volume (4.0)"); the old Order > Aliquot page is the odd one out (R66). **Criterion:** FUNCTION.
+
+## Concurrent result editing (TC-RCON)
+
+### TC-RCON-01: A second screen saving the same result is told it is stale
+Observed working 2026-09-28: 409 error.results.staleSave, with a dialog asking the user to refresh. Automated: `tests/results-stale-save.spec.ts`. **Criterion:** FUNCTION.
+
+### TC-RCON-02: Two validators releasing the same analysis: the second is told it was already released
+**Criterion:** FUNCTION.
