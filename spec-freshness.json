@@ -3571,6 +3571,16 @@
       "drift": [],
       "notes": "Discovered — not yet assessed against the current build.",
       "depth": "shallow"
+    },
+    {
+      "file": "tests/notebook-project.spec.ts",
+      "area": "notebook",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
     }
   ]
 }

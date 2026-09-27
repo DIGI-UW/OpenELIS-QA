@@ -160,13 +160,16 @@ Enter two markers with results. **Expected:** reopening shows both with their re
 Seed an experiment type (Dictionary: NoteBook Experiment Type, with Local Abbreviation). **Expected:** Total Entries and Drafts increment; the entry is listed under QA Notebook Project 1. **Criterion:** ROUND-TRIP.
 
 ### TC-ELNW-02: Save with a required metadata field empty says what is missing
-**Expected:** inline error naming the field. **Today:** on the project form, clearing the required Objective shows "Successfully saved" but keeps the old value (R59). The project pencil on the dashboard opens /NoteBookEntryForm/<id>. **Criterion:** FUNCTION.
+**Expected:** inline error naming the field. **Today:** on the project form, clearing the required Objective shows "Successfully saved" but keeps the old value (R59). The project pencil on the dashboard opens /NoteBookEntryForm/<id>. Automated (test.fail): `tests/notebook-project.spec.ts`. **Criterion:** FUNCTION.
 
 ### TC-ELNW-03: A draft submitted for review moves to Pending Review, then Finalized
 **Expected:** the tiles follow the entry; a finalized entry is read-only. **Criterion:** FUNCTION.
 
 ### TC-ELNW-04: Filters by status, experiment type, tag and date narrow the list
 **Criterion:** FUNCTION.
+
+### TC-ELNW-05: An edited project Objective is kept
+Canary for TC-ELNW-02. Observed working 2026-09-27. Automated: `tests/notebook-project.spec.ts`. **Criterion:** ROUND-TRIP.
 
 ## Provider & Organization admin (TC-ORGW)
 
