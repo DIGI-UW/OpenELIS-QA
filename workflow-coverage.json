@@ -486,13 +486,13 @@
     "Unmapped": {
       "coverage": "deep",
       "deep": 18,
-      "shallow": 15,
+      "shallow": 16,
       "smoke": 16,
       "status": {
         "fresh": 0,
         "partial": 0,
         "drift": 1,
-        "unknown": 48
+        "unknown": 49
       }
     },
     "Workplan": {

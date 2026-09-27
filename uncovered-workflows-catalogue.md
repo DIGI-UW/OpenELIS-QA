@@ -294,3 +294,25 @@ Works ("STAT" is both label and enum). Automated: `tests/modify-order-priority.s
 
 ### TC-MOP-03: Modify Order adds a test to an existing sample
 Assign a test in "Available Tests", Submit. **Expected:** the order lists both tests. Observed working 2026-09-27 (DEV...0276: QA Grp 10067 added beside Glucose). **Criterion:** ROUND-TRIP.
+
+## Order workflow steps (TC-OWF)
+
+Collect -> Label & Store -> QA Review for an existing order (/order/clinical/collect, scan the lab number).
+
+### TC-OWF-00: An existing order loads by lab number on the Collect page
+Canary for TC-OWF-01/02. Automated: `tests/order-workflow-steps.spec.ts`. **Criterion:** RENDER.
+
+### TC-OWF-01: The workflow progress counter matches the steps shown Complete
+**Today:** lags one step (2/4 with three Complete; 3/4 with four Complete) (R63a). Automated (test.fail): `tests/order-workflow-steps.spec.ts`. **Criterion:** RENDER.
+
+### TC-OWF-02: A freshly loaded or saved order shows no "Unsaved changes" banner
+**Today:** banner shown on load and after Save/Submit (R63b). Automated (test.fail): `tests/order-workflow-steps.spec.ts`. **Criterion:** RENDER.
+
+### TC-OWF-03: Label & Store assigns a storage location that reads back
+Pick room, device, shelf; Save. Observed working 2026-09-27 (DEV...0285 -> QA Main Lab Room > QA Fridge 1 > Shelf A; one movement record). **Criterion:** ROUND-TRIP.
+
+### TC-OWF-04: QA Review acceptance checklist accepts the sample
+Pass each item, Accept sample, Submit. Observed working 2026-09-27 (status Accepted). **Criterion:** PERSIST.
+
+### TC-OWF-05: QA Review shows the received date of a received order
+**Today:** "Received —" (R63d). **Criterion:** RENDER.
