@@ -280,3 +280,14 @@ Automated: `tests/pathology-workflow.spec.ts`. **Criterion:** ROUND-TRIP.
 
 ### TC-PATHW-03: An empty pathology case cannot be saved as Completed
 **Today:** saved (R51; same for Cytology and IHC). Automated (test.fail): `tests/pathology-workflow.spec.ts`. **Criterion:** PERSIST.
+
+## Modify Order (TC-MOP)
+
+### TC-MOP-00: Modify Order saves an unchanged order
+Canary for TC-MOP-01. Automated: `tests/modify-order-priority.spec.ts`. **Criterion:** PERSIST.
+
+### TC-MOP-02: Modify Order changes the priority to STAT
+Works ("STAT" is both label and enum). Automated: `tests/modify-order-priority.spec.ts`. **Criterion:** PERSIST.
+
+### TC-MOP-01: Modify Order changes the priority to one whose label differs from its code (Routine)
+**Today:** posts the label ("Routine") instead of the enum; 400 and "Oops, Server error please contact administrator" (R62). Automated (test.fail): `tests/modify-order-priority.spec.ts`. **Criterion:** PERSIST.
