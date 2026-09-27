@@ -90,5 +90,22 @@ test.describe('Generic Sample round trip', () => {
     }, accession);
     expect(items).toEqual(expect.arrayContaining([`${accession}-1.1`, `${accession}-1.2`]));
   });
+
+  test('TC-SMG-03: Print Barcode for one selected aliquot asks for that aliquot\'s label', async ({ page }) => {
+    // FLIP-WHEN-FIXED (R76). Observed 2026-09-28: LabelMakerServlet?labNo=<order>, labels read the order number.
+    test.skip(!accession, 'TC-GSR-00 did not create a sample');
+    await page.goto(`${BASE}/SampleManagement`, { waitUntil: 'domcontentloaded' });
+    await page.locator('#sample-search-input').fill(accession);
+    await page.locator('main').getByRole('button', { name: 'Search', exact: true }).click();
+    const row = page.getByRole('row').filter({ hasText: `${accession}-1.2` }).first();
+    await expect(row, 'aliquot -1.2 exists (TC-SMG-01)').toBeVisible({ timeout: 20_000 });
+    await row.locator('label').first().click();
+    const req = page.context().waitForEvent('request', { predicate: (r) => r.url().includes('LabelMakerServlet'), timeout: 15_000 });
+    await page.locator('main').getByRole('button', { name: 'Print Barcode', exact: true }).first().click();
+    const url = decodeURIComponent((await req).url());
+    expect(url, 'a label request was made').toContain('LabelMakerServlet');
+    test.fail();
+    expect(url, 'the request names the aliquot').toContain(`${accession}-1.2`);
+  });
 });
 
