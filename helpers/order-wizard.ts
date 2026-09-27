@@ -26,6 +26,10 @@ export interface WizardOrder {
   /** Test label prefix on the Sample step. */
   testName: string;
   requesterLastName?: string;
+  /** Priority option label on the Order step, e.g. 'STAT'. Default: leave as is (ROUTINE). */
+  priority?: string;
+  /** Set request and received dates this many days in the past (received at 06:00). */
+  receivedDaysAgo?: number;
 }
 
 export async function orderThroughWizard(page: Page, o: WizardOrder): Promise<string> {
@@ -74,6 +78,18 @@ export async function orderThroughWizard(page: Page, o: WizardOrder): Promise<st
   await page.locator('main').getByText(/^Generate$/).click();
   await expect(page.locator('#labNo')).not.toHaveValue('', { timeout: 10_000 });
   const labNo = await page.locator('#labNo').inputValue();
+  if (o.priority) await page.locator('#priorityId').selectOption({ label: o.priority });
+  if (o.receivedDaysAgo) {
+    await page.evaluate((days) => {
+      for (const id of ['order_requestDate', 'order_receivedDate']) {
+        const el = document.getElementById(id) as any;
+        el?._flatpickr?.set('maxDate', null);
+        el?._flatpickr?.setDate(new Date(Date.now() - days * 86400000), true);
+      }
+    }, o.receivedDaysAgo);
+    await page.locator('#order_receivedTime_hour').selectOption('06');
+    await page.locator('#order_receivedTime_minute').selectOption('00');
+  }
   await expect(async () => {
     await page.locator('#siteName').fill('');
     await page.locator('#siteName').fill(o.siteName.split(' ')[0]);

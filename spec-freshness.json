@@ -3551,6 +3551,16 @@
       "drift": [],
       "notes": "Discovered — not yet assessed against the current build.",
       "depth": "shallow"
+    },
+    {
+      "file": "tests/stat-overdue-alert.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
     }
   ]
 }

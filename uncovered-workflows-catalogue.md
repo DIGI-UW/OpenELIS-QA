@@ -51,7 +51,7 @@ Open Acknowledge on a critical alert. **Expected:** the confirm button is disabl
 **Expected:** "Referral Rejected" is a filter option and filtering by it lists those rows. **Today:** not offered (R50). Automated (test.fail): `tests/alerts-correctness.spec.ts`. **Criterion:** FUNCTION.
 
 ### TC-ALRT-06: A STAT order past its turnaround shows under Overdue STAT Orders
-Seed a STAT order with collection time older than the STAT threshold and no result. **Expected:** the Overdue STAT tile increments and a STAT Overdue row appears. **Criterion:** FUNCTION. **Today:** tile stays 0 with DEV...0008 (STAT, 36 h, unresulted) and DEV...0277 (STAT, received 2 days ago) (R58, re-check pending).
+Seed a STAT order with collection time older than the STAT threshold and no result. **Expected:** the Overdue STAT tile increments and a STAT Overdue row appears. Automated (test.fail): `tests/stat-overdue-alert.spec.ts`. **Criterion:** FUNCTION. **Today:** tile stays 0 with DEV...0008 (STAT, 36 h, unresulted) and DEV...0277 (STAT, received 2 days ago) (R58, re-check pending).
 
 ### TC-ALRT-07: A sample past its expiry shows under Samples Expiring
 Seed a sample whose expiry is within the warning window. **Expected:** the tile and a Sample Expiration row appear. **Criterion:** FUNCTION.

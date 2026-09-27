@@ -138,13 +138,13 @@
     "Alerts & notifications": {
       "coverage": "deep",
       "deep": 1,
-      "shallow": 1,
+      "shallow": 2,
       "smoke": 0,
       "status": {
         "fresh": 0,
         "partial": 0,
         "drift": 0,
-        "unknown": 2
+        "unknown": 3
       }
     },
     "Analyzers & QC": {
