@@ -19,7 +19,7 @@ Seed an order received after 14:00 local at UTC+10, open /genericProgram. **Expe
 Create a pathology case early in the local morning at UTC+10, refer to IHC. **Expected:** Request Date is the local date, in the site date format. **Today:** IHC shows the UTC date in ISO format (2026-09-26 for a 27/09 order). **Criterion:** RENDER.
 
 ### TC-TZ-04: Alert Created timestamps are real times
-Trigger an alert (reject a referral). **Expected:** Created is within minutes of now. **Today:** 1/22/1970 (R19). **Criterion:** RENDER.
+Trigger an alert (reject a referral). **Expected:** Created is within minutes of now. **Today:** 1/22/1970 (R19). Automated (test.fail): `tests/alerts-correctness.spec.ts`. **Criterion:** RENDER.
 
 ### TC-TZ-05: Add Order Reception Time defaults to the browser's local time
 Open Add Order at UTC+10. **Expected:** the hour/minute default to the local clock. **Today:** UTC (08:50 at 18:52 local, R52). **Criterion:** FUNCTION.
@@ -32,6 +32,9 @@ Enter a result at UTC+10, open its Validation review panel. **Expected:** "Enter
 
 ## Alerts & notifications (TC-ALRT)
 
+### TC-ALRT-00: The alerts table lists rows with a type and a status
+Canary for TC-TZ-04 and TC-ALRT-04/05. Automated: `tests/alerts-correctness.spec.ts`. **Criterion:** RENDER.
+
 ### TC-ALRT-01: Critical alert tile counts only open critical alerts
 Seed one open and one acknowledged critical alert. **Expected:** Critical Alerts tile = 1; after acknowledging the open one, 0. Observed working 2026-09-27. **Criterion:** FUNCTION.
 
@@ -42,10 +45,10 @@ Open Acknowledge on a critical alert. **Expected:** the confirm button is disabl
 **Expected:** status Acknowledged after Acknowledge; a separate Resolve action moves it to Resolved. **Today:** Acknowledge sets Resolved (R50). **Criterion:** PERSIST.
 
 ### TC-ALRT-04: An acknowledged alert can still be resolved from the UI
-**Expected:** the Actions cell of an Acknowledged row offers Resolve. **Today:** empty (R50). **Criterion:** FUNCTION.
+**Expected:** the Actions cell of an Acknowledged row offers Resolve. **Today:** empty (R50). Automated (test.fail): `tests/alerts-correctness.spec.ts`. **Criterion:** FUNCTION.
 
 ### TC-ALRT-05: The Alert Type filter offers every type present in the table
-**Expected:** "Referral Rejected" is a filter option and filtering by it lists those rows. **Today:** not offered (R50). **Criterion:** FUNCTION.
+**Expected:** "Referral Rejected" is a filter option and filtering by it lists those rows. **Today:** not offered (R50). Automated (test.fail): `tests/alerts-correctness.spec.ts`. **Criterion:** FUNCTION.
 
 ### TC-ALRT-06: A STAT order past its turnaround shows under Overdue STAT Orders
 Seed a STAT order with collection time older than the STAT threshold and no result. **Expected:** the Overdue STAT tile increments and a STAT Overdue row appears. **Criterion:** FUNCTION. **Today:** tile stays 0 with DEV...0008 (STAT, 36 h, unresulted) and DEV...0277 (STAT, received 2 days ago) (R58, re-check pending).
