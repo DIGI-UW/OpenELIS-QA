@@ -67,7 +67,7 @@ test.describe.serial('Chain T — Workplan worklist', () => {
   test('Step 3 — WorkPlanByPriority returns a worklist (FUNCTION)', async ({ page }) => {
     if (!domainOk) { markStep('T', 3, 'GAP', 'Skipped — filters unavailable (Step 1)'); return; }
     await page.goto(BASE);
-    const r = await apiCall<Record<string, unknown>>(page, WORKPLAN_BY_PRIORITY('Routine'));
+    const r = await apiCall<Record<string, unknown>>(page, WORKPLAN_BY_PRIORITY('ROUTINE'));
     if (r.ok) {
       markStep('T', 3, 'PASS', 'Workplan-by-priority (Routine) returned a worklist form');
       expect(r.ok).toBeTruthy();

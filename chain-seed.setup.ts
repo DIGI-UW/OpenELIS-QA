@@ -115,6 +115,23 @@ setup('seed the floor the regression chains need', async ({ page }) => {
     } catch (e) {
       log.push(`calc rule seed FAILED: ${(e as Error).message}`);
     }
+    // ---- one reflex rule ----------------------------------------------------
+    // Chain C Step 2 fails outright when /rest/reflexrules is empty. A fresh or
+    // reset instance ships none (2026-09-26 reset: []). Seeded after the calc rule
+    // because both draw on the same pool of untainted numeric tests.
+    try {
+      log.push(...(await seedChainReflexRule(page)));
+    } catch (e) {
+      log.push(`reflex rule seed FAILED: ${(e as Error).message}`);
+    }
+    // ---- one active compliance standard -------------------------------------
+    // Chains AB (Step 1) and Y (Step 2) read /rest/compliance/standards/active and
+    // record a GAP when it is empty, which it is on every reset instance.
+    try {
+      log.push(...(await seedComplianceStandard(page)));
+    } catch (e) {
+      log.push(`compliance standard seed FAILED: ${(e as Error).message}`);
+    }
   } catch (e) {
     log.push(`chain seed aborted: ${(e as Error).message}`);
   }
@@ -217,5 +234,130 @@ async function seedChainCalcRule(page: import('@playwright/test').Page): Promise
     }
   }
   out.push(`calc rule seed: ${attempts} combination(s) all refused — every candidate is spoken for by a base linkage`);
+  return out;
+}
+
+/** CSRF-aware JSON POST from the page context. Never throws. */
+async function postJson(page: import('@playwright/test').Page, path: string, body: unknown) {
+  return page.evaluate(async ({ url, payload }) => {
+    const csrf = localStorage.getItem('CSRF') || '';
+    try {
+      const r = await fetch(url, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+        body: JSON.stringify(payload),
+      });
+      return { ok: r.ok, status: r.status, text: (await r.text().catch(() => '')).slice(0, 200) };
+    } catch (e) {
+      return { ok: false, status: 0, text: String(e) };
+    }
+  }, { url: `/api/OpenELIS-Global${path}`, payload: body });
+}
+
+/**
+ * Guarantee at least one ACTIVE reflex rule (Chain C Step 2). The payload is the one the
+ * admin Reflex Tests Management screen posts (captured 2026-09-27 on testing, 3.2.3.0):
+ * one numeric condition (component id from test-display-beans) and one "add test"
+ * action on the same sample type. Same taint rule as the calc seed: a test may hold one
+ * role across calc + reflex, so only untainted numeric tests are candidates, and the
+ * server is the oracle for which pair it accepts. Returns log lines; never throws.
+ */
+async function seedChainReflexRule(page: import('@playwright/test').Page): Promise<string[]> {
+  const out: string[] = [];
+  const P = '/api/OpenELIS-Global';
+  const getJson = async <T>(path: string): Promise<T | null> => {
+    const r = await page.request.get(`${P}${path}`);
+    return r.ok() ? ((await r.json().catch(() => null)) as T) : null;
+  };
+  interface Reflex { active?: boolean; conditions?: Array<{ testId?: string | number }>;
+    actions?: Array<{ reflexTestId?: string | number }>; }
+  const reflexes = (await getJson<Reflex[]>('/rest/reflexrules')) || [];
+  if (reflexes.some(r => r.active !== false)) {
+    out.push(`reflex rules: ${reflexes.length}, at least one active — not seeding`);
+    return out;
+  }
+  interface Calc { testId?: number; operations?: Array<{ type?: string; value?: string }> }
+  const calcs = (await getJson<Calc[]>('/rest/test-calculations')) || [];
+  const taint = new Set<string>();
+  for (const c of calcs) {
+    if (c.testId != null) taint.add(String(c.testId));
+    for (const o of c.operations || []) if (o.type === 'TEST_RESULT' && o.value != null) taint.add(String(o.value));
+  }
+  for (const r of reflexes) {
+    for (const c of r.conditions || []) if (c.testId != null) taint.add(String(c.testId));
+    for (const a of r.actions || []) if (a.reflexTestId != null) taint.add(String(a.reflexTestId));
+  }
+  interface IdValue { id?: string; value?: string }
+  interface Bean { id?: string; value?: string; resultType?: string; components?: Array<{ id?: string }> }
+  // Serum/Plasma first: on 2026-09-27 every Whole Blood pair was refused with HTTP 500,
+  // while a Serum pair (Amylase -> Glucose) was accepted from the admin screen.
+  const allTypes = (await getJson<IdValue[]>('/rest/displayList/SAMPLE_TYPE_ACTIVE')) || [];
+  const rank = (v?: string) => (/serum|plasma/i.test(String(v)) ? 0 : /urine|fluid/i.test(String(v)) ? 1 : 2);
+  const sampleTypes = [...allTypes].sort((a, b) => rank(a.value) - rank(b.value));
+  let tried = 0;
+  for (const st of sampleTypes) {
+    const beans = (await getJson<Bean[]>(`/rest/test-display-beans?sampleType=${st.id}`)) || [];
+    const fit = beans.filter(b => String(b.resultType) === 'N' && !taint.has(String(b.id))
+      && String(b.value || '').includes(`(${st.value})`) && b.components?.[0]?.id);
+    // At most two pairs per sample type, sixteen in all, so one tainted type cannot use
+    // up the whole budget.
+    for (let i = 0, perType = 0; i + 1 < fit.length && perType < 2 && tried < 16; i += 2, perType++) {
+      const cond = fit[i];
+      const act = fit[i + 1];
+      tried++;
+      const rule = {
+        id: null, ruleName: `QA_AUTO reflex ${cond.value} -> ${act.value}`, overall: 'ANY',
+        toggled: true, active: true, analyteId: null,
+        conditions: [{ id: null, sampleId: String(st.id), testName: '', testId: String(cond.id),
+          relation: 'GREATER_THAN', value: '1000000', value2: '0', testAnalyteId: null,
+          componentId: cond.components?.[0]?.id ?? null }],
+        actions: [{ id: null, sampleId: String(st.id), reflexTestName: '', reflexTestId: String(act.id),
+          internalNote: '', externalNote: '', addNotification: 'N', testReflexId: null }],
+      };
+      const r = await postJson(page, '/rest/reflexrule', rule);
+      const after = (await getJson<Reflex[]>('/rest/reflexrules')) || [];
+      if (r.ok && after.length > reflexes.length) {
+        out.push(`seeded reflex rule: ${cond.value} > 1000000 adds ${act.value} (${after.length} rule(s) now)`);
+        return out;
+      }
+      out.push(`reflex rule candidate ${cond.value} -> ${act.value} refused: HTTP ${r.status} ${r.text}`);
+    }
+  }
+  out.push('reflex rule seed: no candidate pair accepted — Chain C will report the gap');
+  return out;
+}
+
+/**
+ * Guarantee at least one ACTIVE compliance standard (Chains AB Step 1, Y Step 2). Payload
+ * mirrors what Admin > Test Management > Compliance Standards Administration saves.
+ * The effective date is sent as an ISO date, not a Date, so the UTC+N off-by-one the
+ * UI has (it saved 2026-01-01 as 2025-12-31 from UTC+10) cannot bite here.
+ */
+async function seedComplianceStandard(page: import('@playwright/test').Page): Promise<string[]> {
+  const out: string[] = [];
+  const P = '/api/OpenELIS-Global';
+  const getJson = async <T>(path: string): Promise<T | null> => {
+    const r = await page.request.get(`${P}${path}`);
+    return r.ok() ? ((await r.json().catch(() => null)) as T) : null;
+  };
+  const active = (await getJson<unknown[]>('/rest/compliance/standards/active')) || [];
+  if (Array.isArray(active) && active.length) {
+    out.push(`compliance standards: ${active.length} active — not seeding`);
+    return out;
+  }
+  interface IdValue { id?: string; value?: string }
+  const sampleTypes = (await getJson<IdValue[]>('/rest/displayList/SAMPLE_TYPE_ACTIVE')) || [];
+  const st = sampleTypes.find(s => /water|fluid/i.test(String(s.value))) || sampleTypes[0];
+  const body = {
+    name: 'QA_AUTO Compliance Standard', issuingBody: 'QA_AUTO Ministry', regulationNumber: 'QA-AUTO-1',
+    version: '2026', effectiveDate: '2026-01-01', expiryDate: null, countryRegion: 'QA_AUTO Region',
+    description: 'Seeded by chain-seed.setup.ts for Chains AB and Y.',
+    sampleTypes: st?.value ? [st.value] : [], status: 'ACTIVE',
+  };
+  const r = await postJson(page, '/rest/compliance/standards', body);
+  const after = (await getJson<unknown[]>('/rest/compliance/standards/active')) || [];
+  out.push(r.ok && after.length
+    ? `seeded compliance standard (${after.length} active now)`
+    : `compliance standard seed refused: HTTP ${r.status} ${r.text}`);
   return out;
 }
