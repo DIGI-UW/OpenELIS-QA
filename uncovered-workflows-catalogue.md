@@ -510,3 +510,16 @@ The guard must still work once there is something to lose. **Criterion:** FUNCTI
 
 ### TC-LEAK-01: Running each report once leaves no database connection "idle in transaction"
 Needs read access to `pg_stat_activity` (SSH), so it is manual. Run every report in the Reports menu once over a one-day range, excluding the Statistics Report with "All" time frames. Then check that no connection sits "idle in transaction" with a report query. **Today:** Export Routine CSV (R46, OGC-1360) and Rejection Report (R77) each leak one connection per run. Do not automate either as a routine test while the leak stands: about 20 runs take the instance down. The harness already skips Export Routine CSV unless QA_ALLOW_LEAKY_EXPORTS=1, and no spec generates the Rejection Report. **Criterion:** FUNCTION.
+
+## Result rejection (TC-RREJ)
+
+Needs the Result Configuration setting allowResultRejection turned on (restore it afterwards).
+
+### TC-RREJ-01: "Reject result" appears only when allowResultRejection is on
+Observed working 2026-09-28 (present with true, absent with false). **Criterion:** FUNCTION.
+
+### TC-RREJ-02: A rejected test with a reason goes to Validation as a rejection, not as an abnormal result
+**Today:** status Technical Rejected, but the Validation row carries "Abnormal" on the empty result. **Criterion:** RENDER.
+
+### TC-RREJ-03: Releasing a rejected test prints the rejection clearly on the patient report
+**Today:** Finalized with a blank result; the report shows Status "Validated" plus the reason as a note. Product call on wording. **Criterion:** CROSS-LINK.
