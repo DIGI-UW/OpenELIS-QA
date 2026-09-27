@@ -569,7 +569,7 @@ Observed working 2026-09-28: 409 error.results.staleSave, with a dialog asking t
 Observed working 2026-09-28: 409 notAwaitingValidation, with "This result changed since the page loaded. Reload and review it again." Automated: `tests/results-stale-save.spec.ts`. **Criterion:** FUNCTION.
 
 ### TC-RCON-04: Two screens editing the same patient: the second save is refused with a message, not a silent overwrite
-Patient Management: toggle Edit, one screen changes the phone and the other the email. **Today:** the overwrite is blocked, but the second save gets a raw 500 (Hibernate stale row) and the screen says nothing (R81c). **Criterion:** FUNCTION.
+Patient Management: toggle Edit, one screen changes the phone and the other the email. **Today:** the overwrite is blocked, but the second save gets a raw 500 (Hibernate stale row) and the screen says nothing (R81c). Automated (test.fail): `tests/patient-concurrent-edit.spec.ts`. **Criterion:** FUNCTION.
 
 ### TC-RCON-05: Two admins editing the same test in the Test Catalog editor: the second save is refused
 **Today:** the second save (description only) answers 200 and puts the name back (R81b). **Criterion:** FUNCTION.

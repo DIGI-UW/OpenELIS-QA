@@ -390,13 +390,13 @@
     "Patient management": {
       "coverage": "deep",
       "deep": 5,
-      "shallow": 0,
+      "shallow": 1,
       "smoke": 3,
       "status": {
         "fresh": 4,
         "partial": 0,
         "drift": 0,
-        "unknown": 4
+        "unknown": 5
       }
     },
     "Referrals, shipment & sample acceptance": {
