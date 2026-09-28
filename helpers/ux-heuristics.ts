@@ -78,12 +78,39 @@ export class HeuristicLog {
 
 const route = (page: Page) => new URL(page.url()).pathname + new URL(page.url()).search;
 
+// Same conventions as the openelis-screenshots skill (tests/docs/capture.ts in OpenELIS QA):
+// clear the "Still There?" idle modal first, and mask patient names and the seed patient's ID.
+const PII = ['[data-testid="patient-name"]', 'td:has-text("0123456")'];
+
 async function shot(page: Page, info: TestInfo | undefined, name: string): Promise<string | undefined> {
   if (!info) return undefined;
+  const idle = page.locator('.cds--modal.is-visible').filter({ hasText: /still there/i });
+  if (await idle.count().catch(() => 0)) {
+    await idle.getByRole('button', { name: /keep me|stay|continue|extend|i'?m here|^yes$/i }).first().click({ timeout: 2000 }).catch(() => undefined);
+  }
   const p = info.outputPath(`heur-${name.replace(/[^A-Za-z0-9]+/g, '-')}.png`);
-  await page.screenshot({ path: p }).catch(() => undefined);
+  await page.screenshot({ path: p, animations: 'disabled', mask: PII.map(sel => page.locator(sel)) }).catch(() => undefined);
   return p;
 }
+
+/** Screenshot the viewport with every element tagged data-heur=<id> outlined in red and the first one scrolled into view. */
+async function shotMarked(page: Page, info: TestInfo | undefined, id: string, pg: string): Promise<string | undefined> {
+  if (!info) return undefined;
+  const any = await page.evaluate((id) => {
+    const els = Array.from(document.querySelectorAll(`[data-heur~="${id}"]`)) as HTMLElement[];
+    if (!els.length) return false;
+    const st = document.createElement('style');
+    st.id = 'heur-mark';
+    st.textContent = `[data-heur~="${id}"]{outline:3px solid #da1e28 !important;outline-offset:2px !important}`;
+    document.head.appendChild(st);
+    els[0].scrollIntoView({ block: 'center' });
+    return true;
+  }, id).catch(() => false);
+  const p = await shot(page, info, `${id}-${pg}`);
+  if (any) await page.evaluate(() => document.getElementById('heur-mark')?.remove()).catch(() => undefined);
+  return p;
+}
+
 
 /** H2, H4, H5, H7, H8, H9 on a page that has just loaded and has not been touched. */
 export async function landing(page: Page, opts: { info?: TestInfo; siteDateFormat?: 'dd/MM/yyyy' | 'MM/dd/yyyy'; widths?: number[] } = {}): Promise<HeuristicResult[]> {
@@ -120,8 +147,11 @@ export async function landing(page: Page, opts: { info?: TestInfo; siteDateForma
   });
 
   // H5: "Unsaved changes" on an untouched page.
-  const unsaved = await page.getByText(/unsaved changes/i).locator('visible=true').count();
-  out.push({ id: 'H5', page: pg, verdict: unsaved ? 'fail' : 'pass', detail: unsaved ? 'shows "Unsaved changes" before anything was typed' : 'no unsaved badge' });
+  const unsavedLoc = page.getByText(/unsaved changes/i).locator('visible=true');
+  const unsaved = await unsavedLoc.count();
+  if (unsaved) await unsavedLoc.first().evaluate(e => e.setAttribute('data-heur', 'H5')).catch(() => undefined);
+  out.push({ id: 'H5', page: pg, verdict: unsaved ? 'fail' : 'pass', detail: unsaved ? 'shows "Unsaved changes" before anything was typed' : 'no unsaved badge',
+    screenshot: unsaved ? await shotMarked(page, opts.info, 'H5', pg) : undefined });
 
   // H4: disabled primary buttons with no stated reason.
   const disabled = await page.evaluate((src) => {
@@ -131,11 +161,14 @@ export async function landing(page: Page, opts: { info?: TestInfo; siteDateForma
       .map(b => {
         const why = b.getAttribute('title') || b.getAttribute('aria-describedby') || '';
         const near = (b.closest('form, section, [class*=footer], [class*=actions]') || b.parentElement)?.textContent || '';
-        return { label: (b.textContent || '').trim(), explained: !!why || /required|complete|select .* first|to enable|missing/i.test(near) };
+        const explained = !!why || /required|complete|select .* first|to enable|missing/i.test(near);
+        if (!explained) b.setAttribute('data-heur', 'H4');
+        return { label: (b.textContent || '').trim(), explained };
       });
   }, PRIMARY.source);
   const silent = disabled.filter(d => !d.explained);
-  out.push({ id: 'H4', page: pg, verdict: silent.length ? 'warn' : 'pass', detail: silent.length ? `disabled with no reason shown: ${silent.map(d => d.label).join(', ')}` : disabled.length ? 'disabled buttons explain themselves' : 'no disabled primary button' });
+  out.push({ id: 'H4', page: pg, verdict: silent.length ? 'warn' : 'pass', detail: silent.length ? `disabled with no reason shown: ${silent.map(d => d.label).join(', ')}` : disabled.length ? 'disabled buttons explain themselves' : 'no disabled primary button',
+    screenshot: silent.length ? await shotMarked(page, opts.info, 'H4', pg) : undefined });
 
   // H7: date formats visible on the page.
   const dates = await page.evaluate(() => {
@@ -150,8 +183,8 @@ export async function landing(page: Page, opts: { info?: TestInfo; siteDateForma
     for (const el of Array.from(document.querySelectorAll('main input'))) {
       const i = el as HTMLInputElement;
       if (i.offsetParent === null) continue;
-      if (i.type === 'date' || i.type === 'datetime-local') { found.add('browser-native (locale of the browser)'); continue; }
-      for (const v of [i.placeholder, i.value]) { const c = classify((v || '').trim()); if (c) found.add(c); }
+      if (i.type === 'date' || i.type === 'datetime-local') { found.add('browser-native (locale of the browser)'); i.setAttribute('data-heur', 'H7'); continue; }
+      for (const v of [i.placeholder, i.value]) { const c = classify((v || '').trim()); if (c) { found.add(c); i.setAttribute('data-heur', 'H7'); } }
     }
     return [...found];
   });
@@ -161,6 +194,7 @@ export async function landing(page: Page, opts: { info?: TestInfo; siteDateForma
     id: 'H7', page: pg,
     verdict: fmts.length > 1 ? 'fail' : wrong.length ? 'warn' : 'pass',
     detail: fmts.length > 1 ? `${fmts.length} date formats on one page: ${fmts.join(', ')}` : wrong.length ? `uses ${wrong.join(', ')}, site is ${opts.siteDateFormat}` : fmts.length ? `one format (${fmts[0]})` : 'no date fields',
+    screenshot: fmts.length > 1 || wrong.length ? await shotMarked(page, opts.info, 'H7', pg) : undefined,
   });
 
   // H9: raw keys, enum codes, [object Object].
@@ -171,9 +205,15 @@ export async function landing(page: Page, opts: { info?: TestInfo; siteDateForma
     for (const m of t.matchAll(/\b[a-z][a-zA-Z0-9]*(?:\.[a-zA-Z0-9]+){2,}\b/g)) if (!/\.(com|org|net|pdf|png|jpg|csv|json|html)\b|^v?\d/.test(m[0]) && !/@/.test(m[0])) hits.add(m[0]);
     for (const m of t.matchAll(/\b[A-Z]{2,}(?:_[A-Z0-9]{2,})+\b/g)) if (!/^QA_/.test(m[0])) hits.add(m[0]);
     for (const m of t.matchAll(/\[object Object\]|\bundefined\b|\bNaN\b/g)) hits.add(m[0]);
-    return [...hits].slice(0, 8);
+    const list = [...hits].slice(0, 8);
+    if (list.length) {
+      const leaf = Array.from(document.querySelectorAll('main *')).find(e => e.children.length === 0 && (e.textContent || '').includes(list[0]));
+      if (leaf) leaf.setAttribute('data-heur', 'H9');
+    }
+    return list;
   });
-  out.push({ id: 'H9', page: pg, verdict: raw.length ? 'warn' : 'pass', detail: raw.length ? `raw text: ${raw.join(', ')}` : 'clean' });
+  out.push({ id: 'H9', page: pg, verdict: raw.length ? 'warn' : 'pass', detail: raw.length ? `raw text: ${raw.join(', ')}` : 'clean',
+    screenshot: raw.length ? await shotMarked(page, opts.info, 'H9', pg) : undefined });
 
   // H11: dropdown values cut off. Native <select>: measure each option's text against the
   // control's inner width (a selected long option renders clipped). Carbon dropdown/combobox:
@@ -189,6 +229,7 @@ export async function landing(page: Page, opts: { info?: TestInfo; siteDateForma
       const inner = sel.clientWidth - parseFloat(st.paddingLeft) - parseFloat(st.paddingRight);
       const long = Array.from(sel.options).map(o => ({ t: o.text.trim(), w: c.measureText(o.text.trim()).width })).filter(o => o.t && o.w > inner + 2);
       if (long.length) {
+        sel.setAttribute('data-heur', 'H11');
         const label = (sel.id && document.querySelector(`label[for="${sel.id}"]`)?.textContent?.trim()) || sel.getAttribute('aria-label') || sel.id || 'select';
         hits.push(`${label}: ${long.length}/${sel.options.length} options wider than the box (e.g. "${long[0].t.slice(0, 50)}")`);
       }
@@ -197,31 +238,58 @@ export async function landing(page: Page, opts: { info?: TestInfo; siteDateForma
       const e = el as HTMLElement;
       if (e.offsetParent === null) continue;
       const v = (e as HTMLInputElement).value ?? e.textContent ?? '';
-      if (v.trim() && e.scrollWidth > e.clientWidth + 2) hits.push(`dropdown value cut off: "${v.trim().slice(0, 50)}"`);
+      if (v.trim() && e.scrollWidth > e.clientWidth + 2) { e.setAttribute('data-heur', 'H11'); hits.push(`dropdown value cut off: "${v.trim().slice(0, 50)}"`); }
     }
     return hits.slice(0, 8);
   });
   // Open each Carbon dropdown / combobox in main (max 12) and measure its menu items, then close it.
-  const triggers = page.locator('main button.cds--list-box__field, main [role=combobox].cds--list-box__field, main .cds--combo-box input[role=combobox]');
+  const triggers = page.locator('main button.cds--list-box__field, main [role=combobox].cds--list-box__field, main .cds--combo-box input, main .cds--list-box input[role=combobox]');
   const n = Math.min(await triggers.count(), 12);
+  const clipShots: (string | undefined)[] = [];
   for (let i = 0; i < n; i++) {
     const t = triggers.nth(i);
     if (!(await t.isVisible().catch(() => false)) || !(await t.isEnabled().catch(() => false))) continue;
+    // Bring the control near the top so the viewport never cuts the menu; only a parent can.
+    await t.evaluate(e => { e.scrollIntoView({ block: 'start' }); window.scrollBy(0, -120); }).catch(() => undefined);
     await t.click({ timeout: 3000 }).catch(() => undefined);
-    await page.waitForTimeout(400);
-    const cut = await page.evaluate(() => Array.from(document.querySelectorAll('.cds--list-box__menu-item__option, .cds--list-box__menu-item'))
-      .map(e => e as HTMLElement).filter(e => e.offsetParent !== null && e.scrollWidth > e.clientWidth + 2)
-      .map(e => (e.textContent || '').trim()).slice(0, 3));
+    await page.waitForTimeout(500);
+    const { cut, clippedMenu } = await page.evaluate(() => {
+      const items = Array.from(document.querySelectorAll('.cds--list-box__menu-item__option, .cds--list-box__menu-item')).map(e => e as HTMLElement).filter(e => e.offsetParent !== null);
+      // Text cut off sideways: only when the option really ellipsizes (ignore the hidden checkmark slot).
+      const cut = items.filter(e => e.classList.contains('cds--list-box__menu-item__option') && e.scrollWidth > e.clientWidth + 8).map(e => (e.textContent || '').trim()).slice(0, 3);
+      // Menu clipped by a parent: the open menu's own box is not fully visible because an ancestor
+      // with overflow hidden/auto (a card, a section) cuts it off. Casey 2026-09-28: the Program menu
+      // on Add Clinical Order shows two items and the rest are cut off by the section.
+      const menu = document.querySelector('.cds--list-box__menu[role=listbox], .cds--list-box--expanded .cds--list-box__menu') as HTMLElement | null;
+      let clippedMenu = '';
+      if (menu && menu.offsetParent !== null) {
+        const r = menu.getBoundingClientRect();
+        let top = r.top, bottom = r.bottom;
+        for (let a = menu.parentElement; a && a !== document.body; a = a.parentElement) {
+          const st = getComputedStyle(a);
+          if (/(hidden|auto|scroll|clip)/.test(st.overflowY + st.overflow)) { const ar = a.getBoundingClientRect(); top = Math.max(top, ar.top); bottom = Math.min(bottom, ar.bottom); }
+        }
+        const shown = Math.max(0, bottom - top), full = r.height;
+        if (full > 20 && shown < full - 6) {
+          const visibleItems = items.filter(e => { const ir = e.getBoundingClientRect(); return ir.top >= top - 1 && ir.bottom <= bottom + 1; }).length;
+          clippedMenu = `menu clipped: ${Math.round(shown)} of ${Math.round(full)}px visible, ${visibleItems} of ${items.length} options shown`;
+          menu.setAttribute('data-heur', 'H11');
+        }
+      }
+      return { cut, clippedMenu };
+    });
     const label = await t.evaluate(e => (e.getAttribute('aria-label') || e.closest('.cds--list-box__wrapper, .cds--dropdown__wrapper, .cds--combo-box')?.querySelector('label')?.textContent || e.id || 'dropdown').trim()).catch(() => 'dropdown');
     if (cut.length) clipped.push(`${label}: menu items cut off (e.g. "${cut[0].slice(0, 50)}")`);
+    if (clippedMenu) { clipped.push(`${label}: ${clippedMenu}`); if (opts.info) clipShots.push(await shot(page, opts.info, `H11-menu-${pg}-${i}`)); }
     await page.keyboard.press('Escape').catch(() => undefined);
   }
   out.push({ id: 'H11', page: pg, verdict: clipped.length ? 'warn' : 'pass', detail: clipped.length ? clipped.join('; ') : 'dropdown values fit',
-    screenshot: clipped.length ? await shot(page, opts.info, `H11-${pg}`) : undefined });
+    screenshot: clipped.length ? (clipShots.find(Boolean) ?? await shotMarked(page, opts.info, 'H11', pg)) : undefined });
 
   // H8: horizontal overflow at each width, then restore.
   const vp = page.viewportSize();
   const overflow: string[] = [];
+  let h8shot: string | undefined;
   for (const w of opts.widths ?? [1280, 1024]) {
     await page.setViewportSize({ width: w, height: vp?.height ?? 800 });
     await page.waitForTimeout(400);
@@ -230,10 +298,10 @@ export async function landing(page: Page, opts: { info?: TestInfo; siteDateForma
       const main = document.querySelector('main') as HTMLElement | null;
       return Math.max(d.scrollWidth - d.clientWidth, main ? main.scrollWidth - main.clientWidth : 0);
     });
-    if (over > 24) overflow.push(`${w}px (+${over}px)`); // <=24px is a scrollbar gutter, not content
+    if (over > 24) { overflow.push(`${w}px (+${over}px)`); if (!h8shot) h8shot = await shot(page, opts.info, `H8-${pg}-${w}`); } // <=24px is a scrollbar gutter, not content
   }
   if (vp) await page.setViewportSize(vp);
-  out.push({ id: 'H8', page: pg, verdict: overflow.length ? 'warn' : 'pass', detail: overflow.length ? `scrolls sideways at ${overflow.join(', ')}` : 'fits' });
+  out.push({ id: 'H8', page: pg, verdict: overflow.length ? 'warn' : 'pass', detail: overflow.length ? `scrolls sideways at ${overflow.join(', ')}` : 'fits', screenshot: h8shot });
   return out;
 }
 
