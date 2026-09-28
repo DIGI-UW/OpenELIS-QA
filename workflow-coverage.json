@@ -1,7 +1,7 @@
 {
   "target": "testing.openelis-global.org",
   "build": "index-u12wW6QI.js",
-  "generated": "2026-09-27",
+  "generated": "2026-09-28",
   "workflows": {
     "Immunohistochemistry": {
       "coverage": "smoke",
@@ -269,14 +269,14 @@
     },
     "FHIR interoperability": {
       "coverage": "deep",
-      "deep": 2,
+      "deep": 3,
       "shallow": 2,
       "smoke": 0,
       "status": {
         "fresh": 0,
         "partial": 1,
         "drift": 0,
-        "unknown": 3
+        "unknown": 4
       }
     },
     "Labels & Barcode": {
