@@ -389,14 +389,14 @@
     },
     "Patient management": {
       "coverage": "deep",
-      "deep": 5,
+      "deep": 6,
       "shallow": 1,
       "smoke": 3,
       "status": {
         "fresh": 4,
         "partial": 0,
         "drift": 0,
-        "unknown": 5
+        "unknown": 6
       }
     },
     "Referrals, shipment & sample acceptance": {
@@ -522,13 +522,13 @@
     "Unmapped": {
       "coverage": "deep",
       "deep": 5,
-      "shallow": 6,
+      "shallow": 8,
       "smoke": 8,
       "status": {
         "fresh": 0,
         "partial": 0,
         "drift": 0,
-        "unknown": 19
+        "unknown": 21
       },
       "files": [
         "agnostic-picker-guard.docs.spec.ts",
@@ -549,6 +549,8 @@
         "revalidate.docs.spec.ts",
         "system-misc.spec.ts",
         "tce-defects.docs.spec.ts",
+        "ux-heuristics-forms.spec.ts",
+        "ux-heuristics-sweep.spec.ts",
         "volume-usage.spec.ts"
       ]
     },
