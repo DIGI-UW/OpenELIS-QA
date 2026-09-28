@@ -134,19 +134,24 @@ GLU = {"coding": [{"system": "http://loinc.org", "code": "2345-7", "display": "G
 ALT = {"coding": [{"system": "http://loinc.org", "code": "1742-6", "display": "Alanine aminotransferase"}]}
 
 
-def ret_bundle(tag, task_id, sr_id, kind):
+def ret_bundle(tag, task_id, sr_id, kind, code=None):
+    code = code or GLU
     n = task_id[:8]
     done_sr = f"7a1c2e10-0000-4000-8000-{n}0001"[:36]
     res = [
-        {"resourceType": "ServiceRequest", "id": sr_id, "status": "active", "intent": "original-order", "code": GLU,
+        {"resourceType": "ServiceRequest", "id": sr_id, "status": "active", "intent": "original-order", "code": code,
          "subject": {"display": tag}},
-        {"resourceType": "Task", "id": task_id, "status": "accepted" if kind == "accepted-only" else "completed",
+        {"resourceType": "Task", "id": task_id,
+         "status": {"accepted-only": "accepted", "rejected": "rejected"}.get(kind, "completed"),
          "intent": "order", "basedOn": [{"reference": "ServiceRequest/" + sr_id}],
          "owner": {"reference": "Organization/" + ALPHA}, "description": f"QA reference-lab return {tag}"},
     ]
-    if kind == "accepted-only":
+    if kind == "rejected":
+        res[1]["statusReason"] = {"text": "QA: specimen received haemolysed, request rejected by the reference lab"}
+        res[1]["businessStatus"] = {"text": "Specimen unsuitable"}
+    if kind in ("accepted-only", "rejected"):
         return res
-    res.append({"resourceType": "ServiceRequest", "id": done_sr, "status": "completed", "intent": "order", "code": GLU,
+    res.append({"resourceType": "ServiceRequest", "id": done_sr, "status": "completed", "intent": "order", "code": code,
                 "basedOn": [{"reference": "ServiceRequest/" + sr_id}]})
 
     def obs(oid, code, **kw):
@@ -155,9 +160,9 @@ def ret_bundle(tag, task_id, sr_id, kind):
         o.update(kw)
         return o
     if kind == "normal":
-        res.append(obs(f"{done_sr[:-4]}0101", GLU, valueQuantity={"value": 5.4, "unit": "mmol/L"}))
+        res.append(obs(f"{done_sr[:-4]}0101", code, valueQuantity={"value": 5.4, "unit": "mmol/L"}))
     elif kind == "not-performed":
-        res.append(obs(f"{done_sr[:-4]}0201", GLU, status="cancelled",
+        res.append(obs(f"{done_sr[:-4]}0201", code, status="cancelled",
                        dataAbsentReason={"coding": [{"system": "http://terminology.hl7.org/CodeSystem/data-absent-reason", "code": "not-performed", "display": "Not Performed"}]},
                        note=[{"text": "QA: specimen haemolysed at reference lab, test not performed"}]))
     elif kind == "reflex":
@@ -170,3 +175,16 @@ def ret_bundle(tag, task_id, sr_id, kind):
 
 for tag, task_id, sr_id, kind in RETURNS:
     bundle(f"10-return-{tag.lower()}", ret_bundle(tag, task_id, sr_id, kind))
+
+
+# ---- 11: a two-test referral (Glucose + Creatinine, one Task each) where the reference lab performs
+# only the Glucose, and a request the reference lab rejects outright. Tags QA_AUTO RET-MULTI (seed with
+# testIds ['3', '4']) and QA_AUTO RET-REJ.
+CREA = {"coding": [{"system": "http://loinc.org", "code": "2160-0", "display": "Creatinine"}]}
+RETURNS2 = [
+    ("RET-MULTI-GLU", "eaf9c4dd-1186-42f7-80fe-ae353c13a2b6", "1e656863-071e-432b-b712-c5bc40826d04", "normal", GLU),
+    ("RET-MULTI-CREA", "819d80ef-7f41-4fcb-8c4a-809403ac3da4", "377ef237-faa7-46ca-b894-1740a97dfef6", "not-performed", CREA),
+    ("RET-REJ", "1604602e-b1f3-49cb-85bd-12377d961af7", "c0f2f162-1b36-4865-9759-cf573b89318c", "rejected", GLU),
+]
+for tag, task_id, sr_id, kind, code in RETURNS2:
+    bundle(f"11-return-{tag.lower()}", ret_bundle(tag, task_id, sr_id, kind, code))

@@ -184,6 +184,17 @@ Rules that follow from these:
 
 Full reasoning: `references/playwright-harness.md` Section 12.
 
+## UX heuristic pass (every run, every new spec)
+
+Casey, 2026-09-28: add the heuristic pass to all future tests. Besides "does it work", every run
+asks "would a person have trouble here?": the form clears after Save (H1), the page opens at the top
+(H2), feedback shows where the user is looking (H3), disabled buttons say why (H4), no false
+"unsaved changes" (H5), reload works (H6), one date format (H7), no sideways scroll (H8), no raw keys
+(H9), keyboard reach (H10), dropdown values not cut off (H11). Use `helpers/ux-heuristics.ts` in any spec that opens a page or saves a
+form, run `tests/ux-heuristics-sweep.spec.ts` on every release run, and hand Casey
+`npm run heuristics:report` for review. Rules, thresholds and the feedback log:
+`references/ux-heuristics.md`.
+
 ## Writing a test that counts as coverage
 
 A case is covered only when a test **names its ID**, **asserts something**, and **can run**.
@@ -303,6 +314,7 @@ report that the tracker was refreshed.
 | `references/test-targets.md` | Step 0 — target taxonomy (release/distro/branch/rapid), known instances, operational quirks |
 | `references/open-questions.md` | The standing NEEDS-GUIDANCE ledger — append workflow questions for Casey; promote answered ones to cases |
 | `references/qa-tracker.md` | Step 7 — create/update the `openelis-qa-tracker` Cowork artifact (attention board: live open bugs + open questions) |
+| `references/ux-heuristics.md` | **Every run and every new spec**: the UX heuristic pass (H1-H10), how to call it, how results are reported, and Casey's feedback log |
 | `references/validation-history.md` | Historical run log (append after each run) |
 | `master-test-cases.md` (repo root) | Detailed master catalog (all suites) |
 | `evals/evals.json` | Skill self-tests — run/extend after editing the skill to catch regressions in the skill itself |

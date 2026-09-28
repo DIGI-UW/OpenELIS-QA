@@ -3761,6 +3761,36 @@
       "drift": [],
       "notes": "Discovered — not yet assessed against the current build.",
       "depth": "shallow"
+    },
+    {
+      "file": "tests/patient-config-stale.spec.ts",
+      "area": "patient",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "deep"
+    },
+    {
+      "file": "tests/ux-heuristics-forms.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
+    },
+    {
+      "file": "tests/ux-heuristics-sweep.spec.ts",
+      "area": "misc",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
     }
   ]
 }

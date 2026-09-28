@@ -451,6 +451,38 @@ Reference Lab Results > Enter result opens Results for the referred analysis. **
 One referral covering two tests; the reference lab returns one result and marks the other not performed. Not run yet: `createDispatchedReferral` seeds one test per referral, and setReferralResult carries "TODO make this work for multiple service requests". Manual. **Criterion:** CROSS-LINK.
 
 
+## Patient configuration on open screens (TC-PCFG)
+
+From Casey's report (2026-09-28): a National ID was demanded while editing a patient although it was switched off in admin. `tests/patient-config-stale.spec.ts`; release-qa-3.2.3 R97.
+
+### TC-PCFG-01: A fresh screen follows "National ID required" = false
+Control: with the setting off, editing a patient with no National ID saves. Automated. **Criterion:** FUNCTION.
+
+### TC-PCFG-02: An open screen picks up an admin change to "National ID required"
+**Today:** a screen opened while the setting was on keeps requiring National ID after the admin turns it off; Save sends nothing until a reload (R97). Automated (FLIP-WHEN-FIXED). **Criterion:** FUNCTION.
+
+## UX heuristic pass (TC-HEUR)
+
+Added 2026-09-28 at Casey's request ("add the heuristic pass for all future tests"): would a person have trouble with this page? Checks H1 to H11 live in `helpers/ux-heuristics.ts`; the rules and Casey's feedback log are in `references/ux-heuristics.md`. The pass reports pass / warn / fail per page; `npm run heuristics:report` writes the review list.
+
+### TC-HEUR-00: Heuristic pass over every menu page
+H2 (opens at the top), H4 (disabled action says why), H5 (no false unsaved changes), H7 (one date format), H8 (no sideways scroll at 1280 / 1024), H9 (no raw keys), H11 (dropdown values not cut off). Automated: `tests/ux-heuristics-sweep.spec.ts`, report-only. **Criterion:** RENDER.
+
+### TC-HEUR-01: Add Environmental Order resets for the next order after Save
+H1 / H3 / H5. **Today:** every value and the lab number stay after Save; requestor name stops accepting typing (R98). Automated (test.fail): `tests/ux-heuristics-forms.spec.ts`. **Criterion:** FUNCTION.
+
+### TC-HEUR-02: Clinical Add Order and Vector Enter Order reset after Save
+Same H1 / H3 / H5 checks on the other two order entry forms. Not automated yet. **Criterion:** FUNCTION.
+
+### TC-HEUR-03: Label & Store opens at the top
+Reported by Casey: the page opens part way down the form (H2). Covered by the sweep; confirm with the heuristics report. **Criterion:** RENDER.
+
+### TC-HEUR-04: Program dropdown and Statistics Report year are not cut off
+Reported by Casey (H11). Covered by the sweep for native selects and closed Carbon dropdowns; open menus are not measured yet. **Criterion:** RENDER.
+
+### TC-HEUR-05: Keyboard reach and reload on the order entry forms
+H10 / H6 via `keyboardReach()` and `afterReload()`. Not automated yet. **Criterion:** FUNCTION.
+
 ## Aliquot workflow (TC-ALQW)
 
 `tests/aliquot.spec.ts` (TC-ALQ-01..13) checks that the page loads and searches. Nothing split a sample and read the aliquot back.

@@ -171,7 +171,7 @@ function daysAgo(n: number): Date {
  */
 const seedPlanInBrowser = async (args: {
   labs: { organizationName: string; shortName: string }[];
-  plan: { tag: string; labIndex: number; sentDaysAgo: number; priority: string; end: string }[];
+  plan: { tag: string; labIndex: number; sentDaysAgo: number; priority: string; end: string; testIds?: string[] }[];
   typeShortName: string;
   dates: { tag: string; sent: string; handoff: string; today: string }[];
   /** Create every step even if the instance already carries that tag. */
@@ -335,14 +335,14 @@ const seedPlanInBrowser = async (args: {
       providerSMSNotificationTestIds: [],
       patientUpdateStatus: 'NO_ACTION',
       useReferral: true,
-      referralItems: [
-        {
+      // One referral row per referred test (all to the same lab). Default: Glucose only.
+      referralItems: (step.testIds && step.testIds.length ? step.testIds : [TEST_ID]).map((tid) => ({
           referralId: '',
           referredInstituteId: lab.id,
           // MUST equal a test id present in sampleXML: createReferralRowsForItems
           // matches referredTestId against the order's analyses to attach the
           // Referral, and a mismatch silently produces a referral with no analysis.
-          referredTestId: TEST_ID,
+          referredTestId: tid,
           referralReasonId: '2',
           referredSendDate: d.sent,
           referrer: `QA_AUTO ${step.tag}`,
@@ -354,12 +354,11 @@ const seedPlanInBrowser = async (args: {
           cocContactEmail: 'qa_auto@example.invalid',
           subcontractNotes: `QA_AUTO seeded referral ${step.tag}`,
           modified: true,
-        },
-      ],
+      })),
       sampleXML:
         '<?xml version="1.0" encoding="utf-8"?><samples><sample ' +
         `sampleID='${SAMPLE_TYPE_ID}' date='' time='' collector='' quantity='' uom='' ` +
-        `tests='${TEST_ID}' testSectionMap='' testSampleTypeMap='' panels='' rejected='false' ` +
+        `tests='${(step.testIds && step.testIds.length ? step.testIds : [TEST_ID]).join(',')}' testSectionMap='' testSampleTypeMap='' panels='' rejected='false' ` +
         "rejectReasonId='' initialConditionIds='' storageLocationId='' storageLocationType='' " +
         "storagePositionCoordinate='' gpsLatitude='' gpsLongitude='' gpsAccuracy='' " +
         "gpsCaptureMethod='' collectionMethod='' sampleTemperature='' specimenOrigin='' " +
@@ -415,8 +414,9 @@ const seedPlanInBrowser = async (args: {
     // /rest/order/search is the only read that returns it.
     const order = await getJson(`${R}/order/search?labNumber=${labNo}`);
     let referralId: string | null = null;
+    const allReferralIds: string[] = [];
     for (const si of (order && order.samples) || []) {
-      for (const ri of si.referralItems || []) if (ri.referralId) referralId = String(ri.referralId);
+      for (const ri of si.referralItems || []) if (ri.referralId) { referralId = String(ri.referralId); allReferralIds.push(referralId); }
     }
     if (!referralId) {
       errors.push(`[${step.tag}] order ${labNo} saved but no referralId came back from /rest/order/search`);
@@ -425,14 +425,16 @@ const seedPlanInBrowser = async (args: {
 
     let actualStatus = 'DRAFT';
     if (step.end !== 'draft') {
-      const disp = await sendJson('POST', `${R}/referrals/${referralId}/dispatch-subcontract`, {
-        handoffDatetime: d.handoff,
-        notes: `QA_AUTO dispatch ${step.tag}`,
-      });
-      if (disp.status !== 200) {
-        errors.push(`[${step.tag}] dispatch -> ${disp.status} ${disp.body}`);
-      } else {
-        actualStatus = 'REQUESTED';
+      for (const rid of allReferralIds) {
+        const disp = await sendJson('POST', `${R}/referrals/${rid}/dispatch-subcontract`, {
+          handoffDatetime: d.handoff,
+          notes: `QA_AUTO dispatch ${step.tag}`,
+        });
+        if (disp.status !== 200) {
+          errors.push(`[${step.tag}] dispatch ${rid} -> ${disp.status} ${disp.body}`);
+        } else {
+          actualStatus = 'REQUESTED';
+        }
       }
     }
     if (step.end === 'rejected' && actualStatus === 'REQUESTED') {
@@ -521,7 +523,7 @@ export async function runReferralSeed(page: Page): Promise<ReferralSeedState> {
 export async function createDispatchedReferral(
   page: Page,
   tag: string,
-  opts: { sentDaysAgo?: number; priority?: string; end?: 'draft' | 'requested' | 'rejected' } = {}
+  opts: { sentDaysAgo?: number; priority?: string; end?: 'draft' | 'requested' | 'rejected'; testIds?: string[] } = {}
 ): Promise<SeededReferral> {
   const sentDaysAgo = opts.sentDaysAgo ?? 3;
   const step = {
@@ -530,6 +532,7 @@ export async function createDispatchedReferral(
     sentDaysAgo,
     priority: opts.priority ?? 'ROUTINE',
     end: opts.end ?? 'requested',
+    testIds: opts.testIds,
   };
 
   await page.goto(BASE, { waitUntil: 'domcontentloaded' });
