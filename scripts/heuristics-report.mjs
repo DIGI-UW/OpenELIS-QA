@@ -32,12 +32,27 @@ function walk(dir, acc = []) {
   return acc;
 }
 
+// Casey's rulings: findings marked deferred are listed separately, not as open work.
+let deferred = [], falseAlarm = [];
+try {
+  const dec = JSON.parse(readFileSync(new URL('../references/heuristics-decisions.json', import.meta.url), 'utf8'));
+  deferred = dec.deferred || []; falseAlarm = dec.falseAlarm || [];
+} catch { /* no decisions file */ }
+const match = list => r => list.find(d => d.id === r.id && d.page === r.page && (!d.detail || new RegExp(d.detail).test(r.detail)));
+const isDeferred = match(deferred);
+const isFalseAlarm = match(falseAlarm);
+
 const rows = [];
+let ruledOut = 0;
 for (const f of walk(root)) {
   const j = JSON.parse(readFileSync(f, 'utf8'));
-  for (const r of j.results || []) rows.push({ ...r, test: j.test });
+  for (const r of j.results || []) {
+    if (r.verdict !== 'pass' && isFalseAlarm(r)) { ruledOut++; continue; }
+    rows.push({ ...r, test: j.test });
+  }
 }
 if (!rows.length) { console.error(`no heuristic results under ${root}`); process.exit(1); }
+
 
 const tally = {};
 for (const r of rows) {
@@ -45,16 +60,21 @@ for (const r of rows) {
   tally[r.id][r.verdict]++;
 }
 const ids = Object.keys(NAMES).filter(id => tally[id]);
-let md = `# UX heuristic pass\n\nGenerated ${new Date().toISOString().slice(0, 16)}Z from ${rows.length} checks.\n\n`;
+let md = `# UX heuristic pass\n\nGenerated ${new Date().toISOString().slice(0, 16)}Z from ${rows.length} checks${ruledOut ? ` (${ruledOut} more left out: ruled false alarms in references/heuristics-decisions.json)` : ''}.\n\n`;
 md += '| Heuristic | Pass | Warn | Fail |\n|---|---|---|---|\n';
 for (const id of ids) md += `| ${id} ${NAMES[id]} | ${tally[id].pass} | ${tally[id].warn} | ${tally[id].fail} |\n`;
 for (const id of ids) {
-  const bad = rows.filter(r => r.id === id && r.verdict !== 'pass');
+  const bad = rows.filter(r => r.id === id && r.verdict !== 'pass' && !isDeferred(r));
   if (!bad.length) continue;
   md += `\n## ${id} ${NAMES[id]}\n\n| Verdict | Page | Step | Reason | Verdict ok? |\n|---|---|---|---|---|\n`;
   for (const r of bad.sort((a, b) => (a.verdict === b.verdict ? a.page.localeCompare(b.page) : a.verdict === 'fail' ? -1 : 1))) {
     md += `| ${r.verdict} | \`${r.page}\` | ${r.step || ''} | ${String(r.detail).replace(/\|/g, '/')} | |\n`;
   }
+}
+const later = rows.filter(r => r.verdict !== 'pass' && isDeferred(r));
+if (later.length) {
+  md += `\n## Deferred by Casey (references/heuristics-decisions.json)\n\n| Heuristic | Verdict | Page | Reason | Note |\n|---|---|---|---|---|\n`;
+  for (const r of later) md += `| ${r.id} | ${r.verdict} | \`${r.page}\` | ${String(r.detail).replace(/\|/g, '/')} | ${isDeferred(r).note} |\n`;
 }
 writeFileSync(out, md);
 console.log(`${out}: ${rows.length} checks, ${rows.filter(r => r.verdict === 'fail').length} fail, ${rows.filter(r => r.verdict === 'warn').length} warn`);

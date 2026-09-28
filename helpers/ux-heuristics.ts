@@ -82,19 +82,30 @@ const route = (page: Page) => new URL(page.url()).pathname + new URL(page.url())
 // clear the "Still There?" idle modal first, and mask patient names and the seed patient's ID.
 const PII = ['[data-testid="patient-name"]', 'td:has-text("0123456")'];
 
-async function shot(page: Page, info: TestInfo | undefined, name: string): Promise<string | undefined> {
+// Casey 2026-09-28: screenshots showed the page but not the behavior being ruled on. Every
+// heuristic shot now carries a caption band (what to look at) and is taken while the behavior is
+// on screen (dropdown open, page still scrolled, form still filled after Save).
+async function shot(page: Page, info: TestInfo | undefined, name: string, caption?: string): Promise<string | undefined> {
   if (!info) return undefined;
   const idle = page.locator('.cds--modal.is-visible').filter({ hasText: /still there/i });
   if (await idle.count().catch(() => 0)) {
     await idle.getByRole('button', { name: /keep me|stay|continue|extend|i'?m here|^yes$/i }).first().click({ timeout: 2000 }).catch(() => undefined);
   }
   const p = info.outputPath(`heur-${name.replace(/[^A-Za-z0-9]+/g, '-')}.png`);
+  if (caption) await page.evaluate((c) => {
+    const d = document.createElement('div');
+    d.id = 'heur-caption';
+    d.textContent = c;
+    d.setAttribute('style', 'position:fixed;left:0;right:0;bottom:0;z-index:2147483647;background:#161616;color:#fff;font:600 15px/1.4 IBM Plex Sans,Arial,sans-serif;padding:10px 16px;border-top:4px solid #da1e28;pointer-events:none');
+    document.body.appendChild(d);
+  }, caption.slice(0, 300)).catch(() => undefined);
   await page.screenshot({ path: p, animations: 'disabled', mask: PII.map(sel => page.locator(sel)) }).catch(() => undefined);
+  if (caption) await page.evaluate(() => document.getElementById('heur-caption')?.remove()).catch(() => undefined);
   return p;
 }
 
 /** Screenshot the viewport with every element tagged data-heur=<id> outlined in red and the first one scrolled into view. */
-async function shotMarked(page: Page, info: TestInfo | undefined, id: string, pg: string): Promise<string | undefined> {
+async function shotMarked(page: Page, info: TestInfo | undefined, id: string, pg: string, caption?: string): Promise<string | undefined> {
   if (!info) return undefined;
   const any = await page.evaluate((id) => {
     const els = Array.from(document.querySelectorAll(`[data-heur~="${id}"]`)) as HTMLElement[];
@@ -106,7 +117,7 @@ async function shotMarked(page: Page, info: TestInfo | undefined, id: string, pg
     els[0].scrollIntoView({ block: 'center' });
     return true;
   }, id).catch(() => false);
-  const p = await shot(page, info, `${id}-${pg}`);
+  const p = await shot(page, info, `${id}-${pg}`, caption ? `${id} (outlined in red): ${caption}` : undefined);
   if (any) await page.evaluate(() => document.getElementById('heur-mark')?.remove()).catch(() => undefined);
   return p;
 }
@@ -143,7 +154,7 @@ export async function landing(page: Page, opts: { info?: TestInfo; siteDateForma
     detail: scrolled || firstHidden
       ? `opens scrolled (window ${scroll.y}px${scroll.scrollers.length ? `, ${scroll.scrollers.map(s => `${s.tag} ${s.top}px`).join(', ')}` : ''}; first heading/field at ${scroll.firstTop}px; focus ${scroll.activeLabel || 'none'} at ${scroll.activeTop}px)`
       : 'opens at the top',
-    screenshot: scrolled || firstHidden ? await shot(page, opts.info, `H2-${pg}`) : undefined,
+    screenshot: scrolled || firstHidden ? await shot(page, opts.info, `H2-${pg}`, `H2: this is where the page opened, ${scroll.y}px down; the page header and first field are above the fold`) : undefined,
   });
 
   // H5: "Unsaved changes" on an untouched page.
@@ -151,13 +162,17 @@ export async function landing(page: Page, opts: { info?: TestInfo; siteDateForma
   const unsaved = await unsavedLoc.count();
   if (unsaved) await unsavedLoc.first().evaluate(e => e.setAttribute('data-heur', 'H5')).catch(() => undefined);
   out.push({ id: 'H5', page: pg, verdict: unsaved ? 'fail' : 'pass', detail: unsaved ? 'shows "Unsaved changes" before anything was typed' : 'no unsaved badge',
-    screenshot: unsaved ? await shotMarked(page, opts.info, 'H5', pg) : undefined });
+    screenshot: unsaved ? await shotMarked(page, opts.info, 'H5', pg, '"Unsaved changes" is shown on a page nobody has typed into yet') : undefined });
 
   // H4: disabled primary buttons with no stated reason.
   const disabled = await page.evaluate((src) => {
     const re = new RegExp(src, 'i');
     return Array.from(document.querySelectorAll('main button[disabled], main button[aria-disabled=true]'))
       .filter(b => re.test((b.textContent || '').trim()) && (b as HTMLElement).offsetParent !== null)
+      // Casey 2026-09-28 (review votes): a disabled Search/Filter explains itself (/SampleManagement).
+      // One-off rulings (the /Storage Save) live in references/heuristics-decisions.json, not here:
+      // a "pristine form" rule also hid the Save & Next and Batch Entry Next findings she voted real.
+      .filter(b => !/^(search|find|filter|apply)$/i.test((b.textContent || '').trim()))
       .map(b => {
         const why = b.getAttribute('title') || b.getAttribute('aria-describedby') || '';
         const near = (b.closest('form, section, [class*=footer], [class*=actions]') || b.parentElement)?.textContent || '';
@@ -168,7 +183,7 @@ export async function landing(page: Page, opts: { info?: TestInfo; siteDateForma
   }, PRIMARY.source);
   const silent = disabled.filter(d => !d.explained);
   out.push({ id: 'H4', page: pg, verdict: silent.length ? 'warn' : 'pass', detail: silent.length ? `disabled with no reason shown: ${silent.map(d => d.label).join(', ')}` : disabled.length ? 'disabled buttons explain themselves' : 'no disabled primary button',
-    screenshot: silent.length ? await shotMarked(page, opts.info, 'H4', pg) : undefined });
+    screenshot: silent.length ? await shotMarked(page, opts.info, 'H4', pg, `${silent.map(d => d.label).join(', ')} is disabled and nothing nearby says what is missing`) : undefined });
 
   // H7: date formats visible on the page.
   const dates = await page.evaluate(() => {
@@ -194,7 +209,7 @@ export async function landing(page: Page, opts: { info?: TestInfo; siteDateForma
     id: 'H7', page: pg,
     verdict: fmts.length > 1 ? 'fail' : wrong.length ? 'warn' : 'pass',
     detail: fmts.length > 1 ? `${fmts.length} date formats on one page: ${fmts.join(', ')}` : wrong.length ? `uses ${wrong.join(', ')}, site is ${opts.siteDateFormat}` : fmts.length ? `one format (${fmts[0]})` : 'no date fields',
-    screenshot: fmts.length > 1 || wrong.length ? await shotMarked(page, opts.info, 'H7', pg) : undefined,
+    screenshot: fmts.length > 1 || wrong.length ? await shotMarked(page, opts.info, 'H7', pg, fmts.length > 1 ? `dates in ${fmts.join(' and ')} on the same page` : `date in ${wrong.join(', ')}; the site uses ${opts.siteDateFormat}`) : undefined,
   });
 
   // H9: raw keys, enum codes, [object Object].
@@ -213,7 +228,7 @@ export async function landing(page: Page, opts: { info?: TestInfo; siteDateForma
     return list;
   });
   out.push({ id: 'H9', page: pg, verdict: raw.length ? 'warn' : 'pass', detail: raw.length ? `raw text: ${raw.join(', ')}` : 'clean',
-    screenshot: raw.length ? await shotMarked(page, opts.info, 'H9', pg) : undefined });
+    screenshot: raw.length ? await shotMarked(page, opts.info, 'H9', pg, `raw key or enum shown to the user: ${raw.slice(0, 3).join(', ')}`) : undefined });
 
   // H11: dropdown values cut off. Native <select>: measure each option's text against the
   // control's inner width (a selected long option renders clipped). Carbon dropdown/combobox:
@@ -221,14 +236,20 @@ export async function landing(page: Page, opts: { info?: TestInfo; siteDateForma
   const clipped: string[] = await page.evaluate(() => {
     const c = document.createElement('canvas').getContext('2d')!;
     const hits: string[] = [];
+    // Casey 2026-09-28 (review votes): long QA_AUTO fixture names (QA_AUTO Reference Lab Alpha,
+    // "Validator Hematology only,QA") and ENUM_VALUES are not what a real lab would see cut off.
+    // Not every QA_ name: "QA_Surface Water" in a narrow box was voted real, because a real sample
+    // type of that length is cut too. Only the QA_AUTO fixtures and seeded users are unusually long.
+    const SEEDISH = (t: string) => /QA_AUTO|,\s*QA$|^[A-Z0-9]+(?:_[A-Z0-9]+)+$/.test(t);
+    (window as any).__heurSeedish = SEEDISH;
     for (const el of Array.from(document.querySelectorAll('main select'))) {
       const sel = el as HTMLSelectElement;
       if (sel.offsetParent === null) continue;
       const st = getComputedStyle(sel);
       c.font = `${st.fontWeight} ${st.fontSize} ${st.fontFamily}`;
       const inner = sel.clientWidth - parseFloat(st.paddingLeft) - parseFloat(st.paddingRight);
-      const long = Array.from(sel.options).map(o => ({ t: o.text.trim(), w: c.measureText(o.text.trim()).width })).filter(o => o.t && o.w > inner + 2);
-      if (long.length) {
+      const long = Array.from(sel.options).map(o => ({ t: o.text.trim(), w: c.measureText(o.text.trim()).width })).filter(o => o.t && o.w > inner + 2 && !SEEDISH(o.t));
+      if (long.length && !(sel.options.length >= 50 && long.length / sel.options.length < 0.05)) {
         sel.setAttribute('data-heur', 'H11');
         const label = (sel.id && document.querySelector(`label[for="${sel.id}"]`)?.textContent?.trim()) || sel.getAttribute('aria-label') || sel.id || 'select';
         hits.push(`${label}: ${long.length}/${sel.options.length} options wider than the box (e.g. "${long[0].t.slice(0, 50)}")`);
@@ -256,7 +277,11 @@ export async function landing(page: Page, opts: { info?: TestInfo; siteDateForma
     const { cut, clippedMenu } = await page.evaluate(() => {
       const items = Array.from(document.querySelectorAll('.cds--list-box__menu-item__option, .cds--list-box__menu-item')).map(e => e as HTMLElement).filter(e => e.offsetParent !== null);
       // Text cut off sideways: only when the option really ellipsizes (ignore the hidden checkmark slot).
-      const cut = items.filter(e => e.classList.contains('cds--list-box__menu-item__option') && e.scrollWidth > e.clientWidth + 8).map(e => (e.textContent || '').trim()).slice(0, 3);
+      const seedish = (window as any).__heurSeedish || ((_t: string) => false);
+      const opts = items.filter(e => e.classList.contains('cds--list-box__menu-item__option'));
+      let cutAll = opts.filter(e => e.scrollWidth > e.clientWidth + 8).map(e => (e.textContent || '').trim()).filter(t => !seedish(t));
+      if (opts.length >= 50 && cutAll.length / opts.length < 0.05) cutAll = []; // a handful of very long names in a 200+ list
+      const cut = cutAll.slice(0, 3);
       // Menu clipped by a parent: the open menu's own box is not fully visible because an ancestor
       // with overflow hidden/auto (a card, a section) cuts it off. Casey 2026-09-28: the Program menu
       // on Add Clinical Order shows two items and the rest are cut off by the section.
@@ -270,7 +295,8 @@ export async function landing(page: Page, opts: { info?: TestInfo; siteDateForma
           if (/(hidden|auto|scroll|clip)/.test(st.overflowY + st.overflow)) { const ar = a.getBoundingClientRect(); top = Math.max(top, ar.top); bottom = Math.min(bottom, ar.bottom); }
         }
         const shown = Math.max(0, bottom - top), full = r.height;
-        if (full > 20 && shown < full - 6) {
+        // Casey 2026-09-28: a menu that loses only its last row (audit trail, 202 of 220px) is fine.
+        if (full > 20 && shown < full * 0.85) {
           const visibleItems = items.filter(e => { const ir = e.getBoundingClientRect(); return ir.top >= top - 1 && ir.bottom <= bottom + 1; }).length;
           clippedMenu = `menu clipped: ${Math.round(shown)} of ${Math.round(full)}px visible, ${visibleItems} of ${items.length} options shown`;
           menu.setAttribute('data-heur', 'H11');
@@ -280,17 +306,25 @@ export async function landing(page: Page, opts: { info?: TestInfo; siteDateForma
     });
     const label = await t.evaluate(e => (e.getAttribute('aria-label') || e.closest('.cds--list-box__wrapper, .cds--dropdown__wrapper, .cds--combo-box')?.querySelector('label')?.textContent || e.id || 'dropdown').trim()).catch(() => 'dropdown');
     if (cut.length) clipped.push(`${label}: menu items cut off (e.g. "${cut[0].slice(0, 50)}")`);
-    if (clippedMenu) { clipped.push(`${label}: ${clippedMenu}`); if (opts.info) clipShots.push(await shot(page, opts.info, `H11-menu-${pg}-${i}`)); }
+    if (clippedMenu) clipped.push(`${label}: ${clippedMenu}`);
+    // Take the shot with the menu still open, so the cut-off or clipped options are visible.
+    if ((cut.length || clippedMenu) && opts.info) {
+      if (cut.length) await page.evaluate(() => document.querySelectorAll('.cds--list-box__menu-item__option').forEach(e => { const h = e as HTMLElement; if (h.scrollWidth > h.clientWidth + 8) h.setAttribute('data-heur', 'H11'); })).catch(() => undefined);
+      await page.evaluate(() => { const st = document.createElement('style'); st.id = 'heur-mark'; st.textContent = '[data-heur~="H11"]{outline:3px solid #da1e28 !important;outline-offset:-3px !important}'; document.head.appendChild(st); }).catch(() => undefined);
+      clipShots.push(await shot(page, opts.info, `H11-menu-${pg}-${i}`, `H11 (open menu, outlined in red): ${label}: ${clippedMenu || `options cut off, e.g. "${cut[0].slice(0, 60)}"`}`));
+      await page.evaluate(() => document.getElementById('heur-mark')?.remove()).catch(() => undefined);
+    }
     await page.keyboard.press('Escape').catch(() => undefined);
   }
   out.push({ id: 'H11', page: pg, verdict: clipped.length ? 'warn' : 'pass', detail: clipped.length ? clipped.join('; ') : 'dropdown values fit',
-    screenshot: clipped.length ? (clipShots.find(Boolean) ?? await shotMarked(page, opts.info, 'H11', pg)) : undefined });
+    screenshot: clipped.length ? (clipShots.find(Boolean) ?? await shotMarked(page, opts.info, 'H11', pg, clipped[0])) : undefined });
 
   // H8: horizontal overflow at each width, then restore.
   const vp = page.viewportSize();
   const overflow: string[] = [];
   let h8shot: string | undefined;
-  for (const w of opts.widths ?? [1280, 1024]) {
+  // Casey 2026-09-28: 1024px is not a supported width; overflow there was voted a false alarm.
+  for (const w of opts.widths ?? [1280]) {
     await page.setViewportSize({ width: w, height: vp?.height ?? 800 });
     await page.waitForTimeout(400);
     const over = await page.evaluate(() => {
@@ -298,7 +332,7 @@ export async function landing(page: Page, opts: { info?: TestInfo; siteDateForma
       const main = document.querySelector('main') as HTMLElement | null;
       return Math.max(d.scrollWidth - d.clientWidth, main ? main.scrollWidth - main.clientWidth : 0);
     });
-    if (over > 24) { overflow.push(`${w}px (+${over}px)`); if (!h8shot) h8shot = await shot(page, opts.info, `H8-${pg}-${w}`); } // <=24px is a scrollbar gutter, not content
+    if (over > 24) { overflow.push(`${w}px (+${over}px)`); if (!h8shot) { await page.evaluate(() => window.scrollTo({ left: document.documentElement.scrollWidth })).catch(() => undefined); h8shot = await shot(page, opts.info, `H8-${pg}-${w}`, `H8: at ${w}px the page scrolls sideways by ${over}px (shown scrolled to the right edge)`); await page.evaluate(() => window.scrollTo({ left: 0 })).catch(() => undefined); } } // <=24px is a scrollbar gutter, not content
   }
   if (vp) await page.setViewportSize(vp);
   out.push({ id: 'H8', page: pg, verdict: overflow.length ? 'warn' : 'pass', detail: overflow.length ? `scrolls sideways at ${overflow.join(', ')}` : 'fits', screenshot: h8shot });
@@ -333,7 +367,7 @@ export async function afterSave(
     verdict: reset ? 'pass' : 'fail',
     detail: reset ? (moved ? `moved to ${route(page)}` : readOnly ? 'form turned read-only' : 'form cleared')
       : `form still holds ${kept.length}/${keys.length} values${sameLab ? ` and the same lab number ${before.labNumber}` : ''}, so a second Save reuses this order`,
-    screenshot: reset ? undefined : await shot(page, opts.info, `H1-${pg}`),
+    screenshot: reset ? undefined : await shot(page, opts.info, `H1-${pg}`, `H1: this is the form right after Save succeeded: ${kept.length}/${keys.length} values still filled${sameLab ? `, same lab number ${before.labNumber}` : ''}`),
   });
 
   const unsaved = await page.getByText(/unsaved changes/i).locator('visible=true').count();
