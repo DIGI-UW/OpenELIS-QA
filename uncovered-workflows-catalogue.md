@@ -373,6 +373,12 @@ Covered by TC-SHIPF-00/01 below (simulated external lab, 2026-09-28). **Criterio
 ### TC-SHIPI-13: Import from FHIR explains when no remote server or site organization is configured
 **Today:** says only "No incoming shipments" (POST import-from-fhir returns imported 0). With the shipped default remote.source.identifier=Practitioner/* nothing can ever match either (R83). **Criterion:** RENDER.
 
+### TC-SHIPI-14: Add to Box with no draft box carries the sample into the new box
+Unassigned Samples > Add to Box for a destination with no DRAFT box, then Create New Box. **Today:** Create Box opens empty (destination "Select", 0 samples) although the URL carries facilityId and sampleItemId (R91). Automated (test.fail, read-only). **Criterion:** CROSS-LINK.
+
+### TC-SHIPI-15: Referrals whose results are already back are not offered for shipping
+**Today:** DEV01260000000000069 listed with its referral COMPLETED (R92). Automated (test.fail). **Criterion:** FUNCTION.
+
 ## Inbound shipments and referrals over FHIR (TC-SHIPF)
 
 Needs the simulated external lab in `scripts/fhir-sim` (plain HAPI server on the compose network, two property changes, a webapp restart). `tests/fhir-inbound-shipment.spec.ts` automates the read-only checks and skips when the simulated data is absent. The cases marked **Manual** change the remote server or settings between steps; follow the bundle numbers in the README.
@@ -418,6 +424,32 @@ Push 07, wait for the 2-minute poller (Task becomes accepted, electronic order E
 
 ### TC-SHIPF-13: Results for a received referral reach the sending lab
 Creatinine 1.1 released on DEV01260000000000498; the sender's Task stays accepted and no Observation appears on the simulator. OpenELIS may expect the sender to pull results from this lab's own FHIR store, which needs mTLS to read; not yet checked. **Criterion:** CROSS-LINK.
+
+## Referral results returned by the reference lab (TC-RRET)
+
+This lab refers a test out; the simulated external lab (scripts/fhir-sim bundles 10-return-*) plays the reference lab and publishes a completed Task, a completed ServiceRequest and Observations. The 2-minute poller moves the referral to Returned; Accept on Reference Lab Results posts the result. `tests/referral-return-fhir.spec.ts` finds each fixture by its requestor tag (QA_AUTO RET-*) and skips when absent.
+
+### TC-RRET-00: The reference lab acknowledging the Task moves the referral to At reference lab
+RET-ACK: remote Task accepted, referral REQUESTED to RECEIVED on the next poll. Works. Automated. **Criterion:** FUNCTION.
+
+### TC-RRET-01: A returned result is listed with value and unit, and Accept posts it
+RET-NORMAL: Returned card "5.4 mmol/L"; Accept 204; row moves to History; the value is on the Results page. Works. Automated. **Criterion:** CROSS-LINK.
+
+### TC-RRET-02: The posted value keeps the reference lab's unit or is converted
+**Today:** 5.4 mmol/L stored as 5.4 on a mg/dl test (R95). Automated (test.fail). **Criterion:** FUNCTION.
+
+### TC-RRET-03: A test the reference lab did not perform is recorded as not performed, with the reason
+Observation status cancelled + dataAbsentReason not-performed + note. **Today:** Accept makes it Results final with a blank value; the reason is dropped (R93). Automated (test.fail). **Criterion:** FUNCTION.
+
+### TC-RRET-04: A reflex test added by the reference lab can be accepted and lands on its own test
+Two Observations (the referred Glucose plus ALT). **Today:** Accept 500, nothing posted, stuck in Returned (R94); the code would put the ALT value on the Glucose analysis anyway. Expected: the reflex test is added to the order (flagged as done by the reference lab) with its result. Automated (test.fail). **Criterion:** CROSS-LINK.
+
+### TC-RRET-05: Entering a referral result by hand offers "not performed" and adding tests the reference lab ran
+Reference Lab Results > Enter result opens Results for the referred analysis. **Today:** the panel offers a value, method, analyser, notes, Report Non-Conformity and a reference lab report date; there is no not-performed/cancelled outcome and no way to add a reflex test to the referral (only Modify Order, which adds an ordinary in-house test) (R96). Manual. **Criterion:** FUNCTION.
+
+### TC-RRET-06: A referral of several tests where the reference lab performs only some
+One referral covering two tests; the reference lab returns one result and marks the other not performed. Not run yet: `createDispatchedReferral` seeds one test per referral, and setReferralResult carries "TODO make this work for multiple service requests". Manual. **Criterion:** CROSS-LINK.
+
 
 ## Aliquot workflow (TC-ALQW)
 

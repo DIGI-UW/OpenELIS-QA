@@ -270,13 +270,13 @@
     "FHIR interoperability": {
       "coverage": "deep",
       "deep": 3,
-      "shallow": 2,
+      "shallow": 3,
       "smoke": 0,
       "status": {
         "fresh": 0,
         "partial": 1,
         "drift": 0,
-        "unknown": 4
+        "unknown": 5
       }
     },
     "Labels & Barcode": {

@@ -116,3 +116,57 @@ bundle("08-referral2-box", [sd("QA-EXT-BOX-0014", "7a1c2e10-0000-4000-8000-00000
 bundle("09-injection-and-nonuuid", [
     sd("QA-EXT-BOX-0013", "7a1c2e10-0000-4000-8000-00000000e013", notes=XSS, src='QA Lab <img src=x onerror="window.__qaxss=2">', temp="2-8C <b>x</b>"),
     sd("QA-EXT-BOX-0010", "qa-ext-nonuuid-10", notes="QA non-UUID resource id")])
+
+
+# ---- 10: this lab referred tests OUT; the simulator plays the reference lab returning results.
+# The poller finds the remote Task by the referral's fhir_uuid (status completed), follows
+# Task.basedOn to the original ServiceRequest (id = the analysis fhir_uuid), then looks for a
+# completed ServiceRequest basedOn it with Observations basedOn that. Ids come from the seeded
+# referrals (createDispatchedReferral tags QA_AUTO RET-*); read them with the SQL in README.
+RETURNS = [
+    # tag, referral fhir_uuid (Task id), analysis fhir_uuid (original SR id), kind
+    ("RET-NORMAL", "05d3d31f-be18-4d22-af33-633b77bd5da9", "118de7f8-c37b-4cb8-b4ad-2f4a676023db", "normal"),
+    ("RET-NP", "4af4e23f-dc1d-4e57-b8f7-e57e1bba0efc", "43b6ad4a-8bcb-4fb8-8b6a-28f59c7a95c2", "not-performed"),
+    ("RET-REFLEX", "893e86ad-a450-4f3d-957d-5116a973f7cf", "61b10013-a884-4c96-b005-d5e0964cb365", "reflex"),
+    ("RET-ACK", "d092d81c-86ef-44e4-9f2d-3fba6a4eedb1", "7e483ac8-d365-40ed-acf9-1f2f5460f6fb", "accepted-only"),
+]
+GLU = {"coding": [{"system": "http://loinc.org", "code": "2345-7", "display": "Glucose"}]}
+ALT = {"coding": [{"system": "http://loinc.org", "code": "1742-6", "display": "Alanine aminotransferase"}]}
+
+
+def ret_bundle(tag, task_id, sr_id, kind):
+    n = task_id[:8]
+    done_sr = f"7a1c2e10-0000-4000-8000-{n}0001"[:36]
+    res = [
+        {"resourceType": "ServiceRequest", "id": sr_id, "status": "active", "intent": "original-order", "code": GLU,
+         "subject": {"display": tag}},
+        {"resourceType": "Task", "id": task_id, "status": "accepted" if kind == "accepted-only" else "completed",
+         "intent": "order", "basedOn": [{"reference": "ServiceRequest/" + sr_id}],
+         "owner": {"reference": "Organization/" + ALPHA}, "description": f"QA reference-lab return {tag}"},
+    ]
+    if kind == "accepted-only":
+        return res
+    res.append({"resourceType": "ServiceRequest", "id": done_sr, "status": "completed", "intent": "order", "code": GLU,
+                "basedOn": [{"reference": "ServiceRequest/" + sr_id}]})
+
+    def obs(oid, code, **kw):
+        o = {"resourceType": "Observation", "id": oid, "status": "final", "code": code,
+             "basedOn": [{"reference": "ServiceRequest/" + done_sr}], "issued": "2026-09-28T09:00:00Z"}
+        o.update(kw)
+        return o
+    if kind == "normal":
+        res.append(obs(f"{done_sr[:-4]}0101", GLU, valueQuantity={"value": 5.4, "unit": "mmol/L"}))
+    elif kind == "not-performed":
+        res.append(obs(f"{done_sr[:-4]}0201", GLU, status="cancelled",
+                       dataAbsentReason={"coding": [{"system": "http://terminology.hl7.org/CodeSystem/data-absent-reason", "code": "not-performed", "display": "Not Performed"}]},
+                       note=[{"text": "QA: specimen haemolysed at reference lab, test not performed"}]))
+    elif kind == "reflex":
+        res.append(obs(f"{done_sr[:-4]}0301", GLU, valueQuantity={"value": 12.0, "unit": "mmol/L"},
+                       interpretation=[{"coding": [{"system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation", "code": "H"}]}]))
+        res.append(obs(f"{done_sr[:-4]}0302", ALT, valueQuantity={"value": 44, "unit": "U/L"},
+                       note=[{"text": "QA: reflex test added by the reference lab"}]))
+    return res
+
+
+for tag, task_id, sr_id, kind in RETURNS:
+    bundle(f"10-return-{tag.lower()}", ret_bundle(tag, task_id, sr_id, kind))

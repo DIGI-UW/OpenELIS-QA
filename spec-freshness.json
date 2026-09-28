@@ -3751,6 +3751,16 @@
       "drift": [],
       "notes": "Discovered — not yet assessed against the current build.",
       "depth": "deep"
+    },
+    {
+      "file": "tests/referral-return-fhir.spec.ts",
+      "area": "referral",
+      "kind": "misc",
+      "status": "unknown",
+      "lastBuild": null,
+      "drift": [],
+      "notes": "Discovered — not yet assessed against the current build.",
+      "depth": "shallow"
     }
   ]
 }

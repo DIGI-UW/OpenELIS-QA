@@ -128,5 +128,40 @@ test.describe('Sample Shipment integrity', () => {
     expect(text, 'dialog names the test').toContain(pick!.referralTestsAsString!);
     expect(text, 'dialog names the destination').toContain(pick!.referralTests[0].organizationName);
   });
+  test('TC-SHIPI-14: Add to Box with no draft box carries the sample and destination into Create Box', async ({ page }) => {
+    // FLIP-WHEN-FIXED (R91). Observed 2026-09-28: the dialog promises "A new box will be created" for
+    // the sample, but Create Box ignores ?facilityId=&sampleItemId= (destination "Select", 0 samples).
+    // Read-only: the form is cancelled, nothing is saved.
+    test.setTimeout(300_000); // Create New Box is a full page load (window.location)
+    await open(page, '/SampleShipment/unassigned');
+    const items = await getJson<Unassigned[]>(page, 'unassigned-sample/items');
+    let pick: Unassigned | undefined;
+    for (const fac of [...new Set(items.map(i => i.destinationFacilityId))]) {
+      const boxes = await getJson<Box[]>(page, `shipping-box/by-facility/${fac}`);
+      if (!(Array.isArray(boxes) ? boxes : []).some(b => b.state === 'DRAFT')) { pick = items.find(i => i.destinationFacilityId === fac); break; }
+    }
+    test.skip(!pick, 'every destination with unassigned samples already has a draft box');
+    await page.getByRole('row').filter({ hasText: pick!.accessionNumber }).first().getByRole('button', { name: 'Add to Box' }).click();
+    const dialog = page.getByRole('dialog').filter({ hasText: 'Add Sample to Box' });
+    await expect(dialog, 'the dialog offers a new box').toContainText('A new box will be created');
+    await dialog.getByRole('button', { name: 'Create New Box' }).click();
+    await page.waitForURL(/create-box/, { timeout: 180_000 });
+    await expect(page.locator('main')).toContainText('Samples Added', { timeout: 30_000 });
+    await page.waitForLoadState('networkidle');
+    const summary = await page.locator('main').innerText();
+    await page.getByRole('button', { name: 'Cancel', exact: true }).last().click().catch(() => {});
+    test.fail();
+    expect(summary, `${pick!.accessionNumber} is in the new box`).toMatch(/Samples Added:\s*1/);
+  });
+
+  test('TC-SHIPI-15: a referral whose results are already back is not offered for shipping', async ({ page }) => {
+    // FLIP-WHEN-FIXED (R92). Observed 2026-09-28: DEV01260000000000069 listed with its referral COMPLETED.
+    await open(page, '/SampleShipment/unassigned');
+    const items = await getJson<Unassigned[]>(page, 'unassigned-sample/items');
+    const done = items.filter(i => i.referralTests.length > 0 && i.referralTests.every(t => t.status === 'COMPLETED'));
+    test.skip(items.length === 0, 'no referral data on this instance');
+    test.fail(done.length > 0, 'R92 still open');
+    expect(done.map(d => d.accessionNumber), 'no fully returned referral in Unassigned Samples').toEqual([]);
+  });
 });
 
