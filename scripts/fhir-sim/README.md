@@ -27,6 +27,21 @@ Accept Sample can be tested end to end. First used 2026-09-28 on testing 3.2.3.0
 The referral poller runs every 2 minutes (remote.poll.frequency), so push 05 or 07, wait,
 then push the matching box (06 or 08). Bundle 03 blocks every import until 03b is pushed (R84).
 
+## Results coming back from a reference lab (bundles 10-return-*)
+
+Here the simulator plays the reference lab for a referral this lab sent out.
+
+1. Seed referrals in REQUESTED with `createDispatchedReferral(page, 'QA_AUTO RET-NORMAL')` (and RET-NP, RET-REFLEX, RET-ACK).
+2. Read their ids and put them in `RETURNS` in build.py:
+
+       select r.fhir_uuid as task_id, a.fhir_uuid as service_request_id
+       from clinlims.referral r join clinlims.analysis a on a.id = r.analysis_id
+       where r.id in (...);
+
+3. Rebuild, push the four `10-return-*` bundles, wait for the poller (2 minutes).
+   RET-ACK moves to At reference lab; the others appear under Returned on Reference Lab Results.
+4. Run `tests/referral-return-fhir.spec.ts`.
+
 ## Clean up
 
 `docker rm -f qa-extlab-fhir`, restore common.properties from the backup, restart the webapp.
