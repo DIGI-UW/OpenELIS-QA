@@ -367,6 +367,12 @@ Capacity 1, scan two samples. Observed working 2026-09-27 (1 / 1, second not add
 ### TC-SHIPI-11: Cancel Referral and Mark as Lost dialogs name the referral's destination and test
 **Today:** both fields empty (R73). Reason is required (button disabled until typed): working. **Criterion:** RENDER.
 
+### TC-SHIPI-12: Import from FHIR brings in an inbound box addressed to this lab
+Needs Site Organization (FHIR) set in Shipment Settings and a remote FHIR source (org.openelisglobal.remote.source.uri) holding a SupplyDelivery for this lab, plus a webapp restart. **Blocked on configuration** (both empty on testing, 2026-09-28). **Criterion:** CROSS-LINK.
+
+### TC-SHIPI-13: Import from FHIR explains when no remote server or site organization is configured
+**Today:** says only "No incoming shipments" (POST import-from-fhir returns imported 0). **Criterion:** RENDER.
+
 ## Aliquot workflow (TC-ALQW)
 
 `tests/aliquot.spec.ts` (TC-ALQ-01..13) checks that the page loads and searches. Nothing split a sample and read the aliquot back.
@@ -540,8 +546,11 @@ Results Entry row panel, "Storage & sample disposal".
 ### TC-VOL-02: Recording part of the volume decrements it and leaves the sample active
 **Criterion:** PERSIST.
 
-### TC-VOL-03: Mark used up disposes the sample and it disappears from Storage and from aliquot sources
-**Today:** an exhausted aliquot (remaining 0) keeps status SampleEntered and shows "Active" in Storage > Sample Items (R78). **Criterion:** CROSS-LINK.
+### TC-VOL-03: Mark used up, then Start disposal and Confirm disposal, shows the item as Disposed in Storage
+Observed working 2026-09-28 (DEV...0370-1.1: exhausted, then disposed with reason, method and notes; Storage shows "Disposed"). Exhausted-but-not-disposed items stay "Active" by design. **Criterion:** CROSS-LINK.
+
+### TC-VOL-04: Mark used up asks for confirmation; Confirm disposal says which field is missing
+**Today:** Mark used up acts on one click; Confirm disposal with no method does nothing and says nothing (R78). **Criterion:** FUNCTION.
 
 ## Results Entry row panel helpers (TC-RPH)
 
@@ -549,7 +558,10 @@ Results Entry row panel, "Storage & sample disposal".
 **Today:** writes "1.00" into a 0-decimal test and Save refuses it (R79). **Criterion:** FUNCTION.
 
 ### TC-RPH-02: Reagent lots recorded on a result decrement inventory (FEFO) and write a consumption transaction
-Needs a test with reagents linked in the Test Catalog. **Criterion:** CROSS-LINK.
+Observed working 2026-09-28: Amylase linked to QA Amylase Reagent Kit; lot shown once QC Passed; 9 of 5 refused (409); 1 used -> lot 5 to 4, inventory_usage row for the analysis. Automated: `tests/reagent-consumption.spec.ts`. **Criterion:** CROSS-LINK.
+
+### TC-RPH-05: A reagent lot awaiting QC is shown as awaiting QC, not as missing
+**Today:** "No available lots in inventory for this reagent". **Criterion:** RENDER.
 
 ### TC-RPH-03: Interpretation entered by rule or free text prints on the patient report
 Observed working 2026-09-28 for free text (printed as a dated note under the result). Rule-based interpretation not yet tried. **Criterion:** CROSS-LINK.

@@ -522,13 +522,13 @@
     "Unmapped": {
       "coverage": "deep",
       "deep": 5,
-      "shallow": 5,
+      "shallow": 6,
       "smoke": 8,
       "status": {
         "fresh": 0,
         "partial": 0,
         "drift": 0,
-        "unknown": 18
+        "unknown": 19
       },
       "files": [
         "agnostic-picker-guard.docs.spec.ts",
@@ -542,6 +542,7 @@
         "panel-sample-type-leak.spec.ts",
         "qa-contracts.spec.ts",
         "qa-surfaces.spec.ts",
+        "reagent-consumption.spec.ts",
         "reval2.spec.ts",
         "revalidate-ogc1120-unauth.spec.ts",
         "revalidate-ogc1120.spec.ts",
