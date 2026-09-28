@@ -1,0 +1,99 @@
+{
+  "_about": "Casey's rulings on heuristic findings (Heuristic Review votes, 2026-09-28). 'deferred': real, but not being fixed now; listed in their own section. 'falseAlarm': one-off findings she ruled not a problem where no general rule fits; left out of the report and counted. Match by id and route, optional 'detail' regex.",
+  "deferred": [
+    {
+      "id": "H4",
+      "page": "/order/clinical/enter",
+      "note": "Real, but not worth fixing now: the order workflow is being redesigned (Casey 2026-09-28)"
+    },
+    {
+      "id": "H4",
+      "page": "/order/clinical/collect",
+      "note": "Real, but not worth fixing now: the order workflow is being redesigned (Casey 2026-09-28)"
+    },
+    {
+      "id": "H4",
+      "page": "/order/clinical/label",
+      "note": "Real, but not worth fixing now: the order workflow is being redesigned (Casey 2026-09-28)"
+    },
+    {
+      "id": "H4",
+      "page": "/order/environmental/enter",
+      "note": "Real, but not worth fixing now: the order workflow is being redesigned (Casey 2026-09-28)"
+    },
+    {
+      "id": "H4",
+      "page": "/order/environmental/label",
+      "note": "Real, but not worth fixing now: the order workflow is being redesigned (Casey 2026-09-28)"
+    },
+    {
+      "id": "H4",
+      "page": "/order/vector/enter",
+      "note": "Real, but not worth fixing now: the order workflow is being redesigned (Casey 2026-09-28)"
+    },
+    {
+      "id": "H4",
+      "page": "/order/vector/label",
+      "note": "Real, but not worth fixing now: the order workflow is being redesigned (Casey 2026-09-28)"
+    },
+    {
+      "id": "H5",
+      "page": "/order/clinical/enter",
+      "note": "Real, but not worth fixing now: the order workflow is being redesigned (Casey 2026-09-28)"
+    },
+    {
+      "id": "H5",
+      "page": "/order/clinical/collect",
+      "note": "Real, but not worth fixing now: the order workflow is being redesigned (Casey 2026-09-28)"
+    },
+    {
+      "id": "H5",
+      "page": "/order/clinical/label",
+      "note": "Real, but not worth fixing now: the order workflow is being redesigned (Casey 2026-09-28)"
+    },
+    {
+      "id": "H5",
+      "page": "/order/environmental/enter",
+      "note": "Real, but not worth fixing now: the order workflow is being redesigned (Casey 2026-09-28)"
+    },
+    {
+      "id": "H5",
+      "page": "/order/environmental/label",
+      "note": "Real, but not worth fixing now: the order workflow is being redesigned (Casey 2026-09-28)"
+    },
+    {
+      "id": "H5",
+      "page": "/order/vector/enter",
+      "note": "Real, but not worth fixing now: the order workflow is being redesigned (Casey 2026-09-28)"
+    },
+    {
+      "id": "H5",
+      "page": "/order/vector/label",
+      "note": "Real, but not worth fixing now: the order workflow is being redesigned (Casey 2026-09-28)"
+    },
+    {
+      "id": "H11",
+      "page": "/ImmunohistochemistryDashboard",
+      "note": "Real, but deferred for the pending redesign (Casey 2026-09-28)"
+    },
+    {
+      "id": "H11",
+      "page": "/ReportNonConformingEvent",
+      "note": "Real, but does not need a fix (Casey 2026-09-28)"
+    }
+  ],
+  "falseAlarm": [
+    {
+      "id": "H4",
+      "page": "/Storage",
+      "detail": "Save",
+      "note": "Voted false alarm (Casey 2026-09-28)"
+    },
+    {
+      "id": "H11",
+      "page": "/SampleShipment/reference-lab-results",
+      "detail": "Days outstanding",
+      "note": "Voted false alarm (Casey 2026-09-28)"
+    }
+  ]
+}
