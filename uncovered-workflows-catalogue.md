@@ -368,10 +368,56 @@ Capacity 1, scan two samples. Observed working 2026-09-27 (1 / 1, second not add
 **Today:** both fields empty (R73). Reason is required (button disabled until typed): working. **Criterion:** RENDER.
 
 ### TC-SHIPI-12: Import from FHIR brings in an inbound box addressed to this lab
-Needs Site Organization (FHIR) set in Shipment Settings and a remote FHIR source (org.openelisglobal.remote.source.uri) holding a SupplyDelivery for this lab, plus a webapp restart. **Blocked on configuration** (both empty on testing, 2026-09-28). **Criterion:** CROSS-LINK.
+Covered by TC-SHIPF-00/01 below (simulated external lab, 2026-09-28). **Criterion:** CROSS-LINK.
 
 ### TC-SHIPI-13: Import from FHIR explains when no remote server or site organization is configured
-**Today:** says only "No incoming shipments" (POST import-from-fhir returns imported 0). **Criterion:** RENDER.
+**Today:** says only "No incoming shipments" (POST import-from-fhir returns imported 0). With the shipped default remote.source.identifier=Practitioner/* nothing can ever match either (R83). **Criterion:** RENDER.
+
+## Inbound shipments and referrals over FHIR (TC-SHIPF)
+
+Needs the simulated external lab in `scripts/fhir-sim` (plain HAPI server on the compose network, two property changes, a webapp restart). `tests/fhir-inbound-shipment.spec.ts` automates the read-only checks and skips when the simulated data is absent. The cases marked **Manual** change the remote server or settings between steps; follow the bundle numbers in the README.
+
+### TC-SHIPF-00: Import from FHIR answers 200, and a second run imports nothing
+Automated. **Criterion:** FUNCTION.
+
+### TC-SHIPF-01: An imported box shows sender, temperature and every expected specimen
+QA-EXT-BOX-0001: inbound, In Transit, "QA External Reference Lab", 2-8C, 0 accepted / 3 expected. Automated. **Criterion:** CROSS-LINK.
+
+### TC-SHIPF-02: Text sent by another lab is displayed, not executed
+QA-EXT-BOX-0013 carries an img/onerror payload in source, notes and temperature. Automated (works). **Criterion:** SECURITY.
+
+### TC-SHIPF-03: A box whose FHIR id is not a UUID keeps its specimen list
+**Today:** 0 accepted / 0 expected (R90). Automated (test.fail). **Criterion:** CROSS-LINK.
+
+### TC-SHIPF-04: A referral specimen in a box names its order and offers Accept Sample
+QA-EXT-BOX-0012 shows QA-EXT-ORD-0001, Awaiting acceptance. Automated. **Criterion:** CROSS-LINK.
+
+### TC-SHIPF-05: Accept Sample opens Add Order filled from the referral
+**Today:** LabOrderSearchProvider 500 (NPE) and an empty form when the sender's order number is not its ServiceRequest id (R87); ignored entirely while "external orders" is off. Works for an OpenELIS-style sender (referral 2: patient, requester, Serum + Creatinine filled). Automated (test.fail). **Criterion:** CROSS-LINK.
+
+### TC-SHIPF-06: Incoming Orders finds a referral by the referring lab number
+**Today:** "No Electronic Orders" for QA-EXT-ORD-0001; found by name and national ID (R89). Automated (test.fail). **Criterion:** FUNCTION.
+
+### TC-SHIPF-07: This Laboratory filters which boxes are imported
+Set This Laboratory to Beta, push bundle 02, import. **Today:** QA-EXT-BOX-0004 (to Alpha) imported, 0005 (to Beta) skipped (R83). Manual. **Criterion:** FUNCTION.
+
+### TC-SHIPF-08: One malformed delivery does not block the others
+Push 03 then 04, import. **Today:** 500 and nothing imports until the sender pushes 03b (R84). Expected: the good box imports and the bad one is reported by box ID. Manual. **Criterion:** FUNCTION.
+
+### TC-SHIPF-09: A box ID that already exists locally is reported, not dropped
+Bundle 02 includes BOX-2026-0002. **Today:** silently skipped (R85). Manual. **Criterion:** RENDER.
+
+### TC-SHIPF-10: Referral end to end: Task, order, box, reception
+Push 07, wait for the 2-minute poller (Task becomes accepted, electronic order Entered), push 08, import, Accept Sample, pick the site, Submit (order Realized), scan QA-EXT-BOX-0014 (1 accepted / 1 expected, sample linked), Confirm Reception (RECEIVED). Verified working 2026-09-28 (DEV01260000000000498). Manual. **Criterion:** CROSS-LINK.
+
+### TC-SHIPF-11: Confirm Reception with specimens unaccounted records them
+**Today:** "Confirm reception of 0 sample(s)?", box RECEIVED, the missing specimen is not recorded; the list shows the box In Transit until reload (R86). Manual (changes box state). **Criterion:** FUNCTION.
+
+### TC-SHIPF-12: "external orders" off refuses inbound referrals
+**Today:** the Task is accepted and the order created anyway (R88). Manual. **Criterion:** FUNCTION.
+
+### TC-SHIPF-13: Results for a received referral reach the sending lab
+Creatinine 1.1 released on DEV01260000000000498; the sender's Task stays accepted and no Observation appears on the simulator. OpenELIS may expect the sender to pull results from this lab's own FHIR store, which needs mTLS to read; not yet checked. **Criterion:** CROSS-LINK.
 
 ## Aliquot workflow (TC-ALQW)
 
