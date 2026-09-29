@@ -55,6 +55,11 @@
       "file": "uncovered-workflows-catalogue.md",
       "area": "Workflows rated none/smoke: timezone, alerts, programs, study, cytology, IHC, notebook, org admin, e-signatures, i18n, accessibility",
       "note": "Written 2026-09-27 from the 3.2.3.0 walk-through; catalogued, mostly not yet automated."
+    },
+    {
+      "file": "order-entry-off-happy-path-test-cases.md",
+      "area": "Order entry off the happy path (legacy Add Order, Enter Order v4, Modify Order)",
+      "note": "Feature suite, 2026-09-29. Spec: tests/order-entry-off-happy-path.spec.ts."
     }
   ],
   "notCatalogues": [
