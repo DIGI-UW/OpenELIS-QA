@@ -57,8 +57,8 @@ test.describe('Order workflow steps', () => {
   });
 
   test('TC-OWF-02: a freshly loaded order shows no "Unsaved changes" warning', async ({ page }) => {
-    // FLIP-WHEN-FIXED (R63b).
-    test.fail();
+    // FLIPPED 2026-09-29 (R63b). This was a tripwire; it passed unexpectedly in three
+    // runs on local develop, webapp image 2026-09-28 23:01 UTC, frontend 2026-09-29 01:21 UTC.
     await loadOrder(page, 'collect');
     await expect(page.getByText(/Unsaved changes/i), 'no unsaved-changes banner before any edit').toHaveCount(0);
   });

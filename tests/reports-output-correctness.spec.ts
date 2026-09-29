@@ -163,10 +163,10 @@ test.describe('Date pickers on a full page load (R26)', () => {
   });
 
   test('TC-DP-01: after a full load the picker maxDate is today, not 9 January', async ({ page }) => {
-    // FLIP-WHEN-FIXED (R26). Observed 2026-09-27: maxDate "Fri Jan 09 2026" on a full load of
-    // any report page (site date locale fr-FR); in-app navigation to the same URL gives today.
-    // Typed dates after 9 Jan are silently clamped.
-    test.fail();
+    // FLIPPED 2026-09-29 (R26). Observed 2026-09-27: maxDate "Fri Jan 09 2026" on a full load of
+    // any report page (site date locale fr-FR); in-app navigation to the same URL gave today, and
+    // typed dates after 9 Jan were silently clamped. Passed unexpectedly in three runs on
+    // local develop, webapp image 2026-09-28 23:01 UTC, frontend 2026-09-29 01:21 UTC.
     await openReport(page, 'indicator', 'activityReportByTest');
     // The 9 January maxDate arrives with late config; reading it the moment the picker
     // mounts raced that load (flaky on 2026-09-27). Let the page settle first.

@@ -72,8 +72,8 @@ test.describe('Validation review panel provenance', () => {
   });
 
   test('TC-TBL-02: "Entered by" names the user who entered the result', async ({ page }) => {
-    // FLIP-WHEN-FIXED (R4). Observed 2026-09-27: "Entered by Not recorded".
-    test.fail();
+    // FLIPPED 2026-09-29 (R4). Observed 2026-09-27: "Entered by Not recorded". This was a
+    // tripwire; it passed unexpectedly in three runs on local develop, webapp image 2026-09-28 23:01 UTC, frontend 2026-09-29 01:21 UTC.
     const text = await (await openReviewPanel(page)).innerText();
     const enteredBy = (text.match(/Entered by\s*\n?\s*([^\n]+)/) ?? [])[1] ?? '';
     expect(enteredBy.trim(), '"Entered by" is a user, not "Not recorded"').not.toMatch(/not recorded|^$/i);
