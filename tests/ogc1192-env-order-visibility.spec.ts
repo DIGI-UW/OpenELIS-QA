@@ -113,14 +113,12 @@ test.describe('OGC-1192: environmental order routing and patientless samples', (
 
   // §1 routing ----------------------------------------------------------------
   test('OGC1192-1: the saved env order is listed on the Environmental dashboard', async ({ page }) => {
-    // FLIP-WHEN-FIXED (R34 = OGC-1192). Today: "No orders found".
-    test.fail();
+    // FLIPPED 2026-09-30 (OGC-1192; passes on local develop, webapp image 2026-09-29 14:43 UTC). Was FLIP-WHEN-FIXED (R34 = OGC-1192). Today: "No orders found".
     expect(await dashboardText(page, '/order/environmental'), `${accession} on the Environmental dashboard`).toContain(accession);
   });
 
   test('OGC1192-2: the saved env order is NOT listed on the Clinical dashboard', async ({ page }) => {
-    // FLIP-WHEN-FIXED (R34). Today it is listed there with patient "---".
-    test.fail();
+    // FLIPPED 2026-09-30 (OGC-1192; passes on local develop, webapp image 2026-09-29 14:43 UTC). Was FLIP-WHEN-FIXED (R34). Today it is listed there with patient "---".
     expect(await dashboardText(page, '/order/clinical'), `${accession} absent from the Clinical dashboard`).not.toContain(accession);
   });
 
@@ -131,17 +129,15 @@ test.describe('OGC-1192: environmental order routing and patientless samples', (
   });
 
   test('OGC1192-4: Modify Order on the env order does not open the clinical patient wizard', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Today: "No Patient Information Available" + clinical program list.
-    test.fail();
+    // FLIPPED 2026-09-30 (OGC-1192; passes on local develop, webapp image 2026-09-29 14:43 UTC). Was FLIP-WHEN-FIXED. Today: "No Patient Information Available" + clinical program list.
     await page.goto(`${BASE}/ModifyOrder?accessionNumber=${accession}`, { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle');
     await expect(page.getByText(/No Patient Information Available/i), 'no clinical "no patient" banner for an env order').toHaveCount(0);
   });
 
   test('TC-ENVC-01: the Environmental Compliance Dashboard counts the env order', async ({ page }) => {
-    // FLIP-WHEN-FIXED (R34 = OGC-1192). Observed 2026-09-27: Total Orders 0 and Sites
+    // FLIPPED 2026-09-30 (OGC-1192; passes on local develop, webapp image 2026-09-29 14:43 UTC). Was FLIP-WHEN-FIXED (R34 = OGC-1192). Observed 2026-09-27: Total Orders 0 and Sites
     // Monitored 0 for the last month with env orders present.
-    test.fail();
     await page.goto(`${BASE}/EnvironmentalDashboard`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByText(/Total Orders/i).first(), 'the compliance tiles render').toBeVisible({ timeout: 20_000 });
     await page.evaluate(() => {

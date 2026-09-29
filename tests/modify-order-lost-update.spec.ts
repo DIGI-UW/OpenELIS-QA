@@ -53,8 +53,7 @@ test('TC-RCON-03: a stale Modify Order submit does not undo another user\'s prio
     return j?.sampleOrderItems?.priority;
   }, accession);
   test.info().annotations.push({ type: 'observed', description: `second submit ${second}, stored priority ${stored}` });
-  // FLIP-WHEN-FIXED (R81). Observed 2026-09-28: second submit 200, priority back to ROUTINE.
-  test.fail();
+  // FLIPPED 2026-09-30 (OGC-1376 (a); passes on local develop, webapp image 2026-09-29 14:43 UTC). Was FLIP-WHEN-FIXED (R81). Observed 2026-09-28: second submit 200, priority back to ROUTINE.
   expect(second === 409 || stored === 'STAT', `second submit ${second}; stored priority ${stored}`).toBe(true);
   await ctx.close();
 });

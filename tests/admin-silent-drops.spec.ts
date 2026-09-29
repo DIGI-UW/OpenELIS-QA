@@ -48,16 +48,16 @@ test.describe('Sample Type Editor (R35)', () => {
   test('TC-ASD-01: a sample type created in the editor is stored with its name', async ({ page }) => {
     // Canary for TC-ASD-02.
     const name = `QA_AUTO_ST_${STAMP}a`;
-    const id = await createSampleTypeViaUi(page, name, 'QA canary description');
+    // The description must be unique within the domain since #4466 (409 otherwise), so stamp it.
+    const id = await createSampleTypeViaUi(page, name, `QA canary description ${STAMP}`);
     const list = await getJson<{ data?: SampleTypeRow[] }>(page, '/api/OpenELIS-Global/rest/sample-types');
     const row = (list.data ?? []).find(r => String(r.id) === id);
     expect(row?.name, 'the new sample type is listed under its name').toBe(name);
   });
 
   test('TC-ASD-02: the description typed on create is stored', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-09-27: POST /rest/SampleTypeCreate carries no description;
+    // FLIPPED 2026-09-30 (R35, fixed by OpenELIS-Global-2 #4466; passes on local develop, webapp image 2026-09-29 14:43 UTC). Was FLIP-WHEN-FIXED. Observed 2026-09-27: POST /rest/SampleTypeCreate carries no description;
     // the saved type shows its NAME as the description, although Description is marked required.
-    test.fail();
     const name = `QA_AUTO_ST_${STAMP}b`;
     const description = `QA description ${STAMP}`;
     const id = await createSampleTypeViaUi(page, name, description);
