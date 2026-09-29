@@ -67,9 +67,9 @@ test.describe('Modify Order priority (R62)', () => {
   });
 
   test('TC-MOP-01: Modify Order changes the priority back to Routine', async ({ page }) => {
-    // FLIP-WHEN-FIXED (R62). Observed 2026-09-27: posts "Routine" (label) instead of ROUTINE;
-    // 400 and "Oops, Server error please contact administrator"; the order stays STAT.
-    test.fail();
+    // FLIPPED 2026-09-29 (R62, OGC-1366, fixed by OpenELIS-Global-2 #4469). Observed 2026-09-27:
+    // posts "Routine" (label) instead of ROUTINE; 400 and "Oops, Server error please contact
+    // administrator"; the order stayed STAT. Passes on local develop (webapp image 2026-09-29 08:22 UTC).
     await toOrderStep(page);
     await page.locator('#priorityId').selectOption('ROUTINE');
     expect(await submit(page), 'priority change answers 200').toBe(200);

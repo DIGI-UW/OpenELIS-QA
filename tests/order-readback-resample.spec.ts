@@ -115,8 +115,8 @@ test.describe('Order read-back: panels (OGC-1268)', () => {
   });
 
   test('ORB-01: an order with no panel shows no panel (Amylase alone is not "Bilan Biochimique")', async ({ page }) => {
-    // FLIP-WHEN-FIXED (OGC-1268)
-    test.fail();
+    // FLIPPED 2026-09-29 (OGC-1268). This was a tripwire; it passed unexpectedly in three
+    // runs on local develop, webapp image 2026-09-28 23:01 UTC, frontend 2026-09-29 01:21 UTC.
     const containing = await panelsContainingAmylase(page);
     test.skip(containing.length === 0, 'Amylase is in no Serum panel on this instance, so there is nothing to invent');
     const { accession } = await seedModifiableOrder(page, { testIds: [AMYLASE] });
