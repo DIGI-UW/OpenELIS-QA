@@ -60,6 +60,11 @@
       "file": "order-entry-off-happy-path-test-cases.md",
       "area": "Order entry off the happy path (legacy Add Order, Enter Order v4, Modify Order)",
       "note": "Feature suite, 2026-09-29. Spec: tests/order-entry-off-happy-path.spec.ts."
+    },
+    {
+      "file": "order-entry-duplicate-patient-test-cases.md",
+      "area": "Order entry creating duplicate patients (Enter Order v4, OGC-1407)",
+      "note": "Feature suite, 2026-09-30. Spec: tests/order-entry-duplicate-patient.spec.ts."
     }
   ],
   "notCatalogues": [
