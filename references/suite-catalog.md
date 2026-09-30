@@ -425,7 +425,7 @@ from this list is not proof it was removed. Re-extract each cycle rather than pr
 `/SystemLog`, `/Inventory` (capital I), `/Storage/samples`, `/WorkPlanByTest`, `/WorkPlanByPanel`,
 `/WorkPlanByPriority`, `/analyzers/errors`.
 
-> **Route-verification status — 2026-10-01 (monthly consolidation):** the list above replaces the
+> **Route-verification status: 2026-10-01 (monthly consolidation):** the list above replaces the
 > 2026-07-01 "presumed valid" patterns. It is a router read, not a behaviour check: no screen was
 > opened while logged in this cycle. Screen-level status still comes from the latest run reports
 > and the drift tracker.

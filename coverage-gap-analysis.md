@@ -313,7 +313,7 @@ Domain filtering (not built — see openelis-design current-state-gotchas). New 
 (Test Notification, Menu Config, Application Properties) are admin-route coverage — deferred to
 `openelis-design/admin-ia-inventory.md`, not maintained here.
 
-## 2026-10-01 — Monthly consolidation: new-surface coverage delta
+## 2026-10-01: Monthly consolidation: new-surface coverage delta
 
 Method: routes in the shipped router (2026-10-01) and develop merges since 2026-09-01, checked
 against `master-test-cases.md` and the Playwright specs by route and ticket string. A spec that
@@ -322,7 +322,7 @@ here was run. Confirm each item before authoring; expected results are **not** p
 workflows marked NEEDS-GUIDANCE.
 
 **UNCOVERED (no case and no spec found):**
-- **Microbiology case and worklist** — `/MicrobiologyWorklist`, `/MicrobiologyCaseView/:caseId`,
+- **Microbiology case and worklist**: `/MicrobiologyWorklist`, `/MicrobiologyCaseView/:caseId`,
   admin `MicrobiologyReference`. First shipped micro screens. NEEDS-GUIDANCE (open-question 9):
   which case states are live on testing versus spec-only.
 - **Validation triage and "Release all clear"** (OGC-1027 to OGC-1030, OGC-1226). The drift check
