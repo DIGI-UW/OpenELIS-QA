@@ -100,7 +100,7 @@ test.describe('Calculated Values Management (Phase 28)', () => {
     await page.goto(`${BASE}${CALC_VALUE_URL}`);
     await page.waitForLoadState('networkidle');
 
-    const ruleName = `${QA_PREFIX}_CalcTest`;
+    const ruleName = `${QA_PREFIX}_CalcTest_${Date.now()}`;
 
     // Create a calculated value rule via API
     const result = await page.evaluate(async (name) => {
@@ -292,7 +292,7 @@ test.describe('Calculated Values Extended (TC-CALC-EXT)', () => {
     await page.goto(`${BASE}${CALC_VALUE_URL}`);
     await page.waitForLoadState('networkidle');
 
-    const ruleName = `${QA_PREFIX}_CalcVerify`;
+    const ruleName = `${QA_PREFIX}_CalcVerify_${Date.now()}`;
 
     // Create via POST
     const createResult = await page.evaluate(async (name) => {
