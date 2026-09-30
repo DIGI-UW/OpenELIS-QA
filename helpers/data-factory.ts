@@ -608,10 +608,15 @@ export async function createOrderViaAPI(
         if (!labNo) return { err: 'SampleEntryGenerateScanProvider returned no accession' };
 
         const pay = (await j('/api/OpenELIS-Global/rest/displayList/PAYMENT_OPTIONS')) || [];
+        // Today as the SERVER sees it. The server refuses a request/received date after its own
+        // today, so a browser pinned east of the server (e.g. a spec using Pacific/Port_Moresby)
+        // seeded "tomorrow" every day from 14:00 UTC and got 400 "Date may not be in the future".
+        const st = await j('/api/OpenELIS-Global/rest/server-time');
+        const iso = st && typeof st.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(st.date) ? st.date : '';
         const today = new Date();
-        const dd = String(today.getDate()).padStart(2, '0');
-        const mm = String(today.getMonth() + 1).padStart(2, '0');
-        const date = `${dd}/${mm}/${today.getFullYear()}`;
+        const date = iso
+          ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
+          : `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
 
         const body = {
           rememberSiteAndRequester: false,
