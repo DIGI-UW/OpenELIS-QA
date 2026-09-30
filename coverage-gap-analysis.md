@@ -312,3 +312,41 @@ boxes (`/SampleShipment` → `/boxes`).
 Domain filtering (not built — see openelis-design current-state-gotchas). New admin config pages
 (Test Notification, Menu Config, Application Properties) are admin-route coverage — deferred to
 `openelis-design/admin-ia-inventory.md`, not maintained here.
+
+## 2026-10-01 — Monthly consolidation: new-surface coverage delta
+
+Method: routes in the shipped router (2026-10-01) and develop merges since 2026-09-01, checked
+against `master-test-cases.md` and the Playwright specs by route and ticket string. A spec that
+mentions a route may only visit it; "no case" means no row in `master-test-cases.md`. Nothing
+here was run. Confirm each item before authoring; expected results are **not** proposed for
+workflows marked NEEDS-GUIDANCE.
+
+**UNCOVERED (no case and no spec found):**
+- **Microbiology case and worklist** — `/MicrobiologyWorklist`, `/MicrobiologyCaseView/:caseId`,
+  admin `MicrobiologyReference`. First shipped micro screens. NEEDS-GUIDANCE (open-question 9):
+  which case states are live on testing versus spec-only.
+- **Validation triage and "Release all clear"** (OGC-1027 to OGC-1030, OGC-1226). The drift check
+  confirmed the lanes and the guarded button live on 2026-09-22, but no case asserts the lane
+  rule and `tests/validation-review*.spec.ts` have never run (no config collects them).
+  NEEDS-GUIDANCE (open-question 10): whether a QA run may press Release on shared data.
+- **Optional patient sex and age** (OGC-1362, develop PR #4455, merged 2026-09-28): the two new
+  Order Entry Configuration settings and the "Range not applied" review signal. NEEDS-GUIDANCE
+  (open-question 11): the range shown when sex is blank.
+- **Storage Inventory Lots tab** (`/Storage/inventory-lots`, PRs #4016/#4033/#4026): lot storage
+  location and barcode; "free a disposed lot's box" untested (needs a disposed lot).
+- **Provider titles** (`providerTitleMenu`, OGC-1223) and **Programs admin** (OGC-781, develop PR
+  #3979; `tests/programs-admin.spec.ts` exists, no case).
+- **Analyzer profile authoring** (`/analyzers/types/:profileId/mapping`, Bridge profile catalog):
+  no case. See `openelis-design` / `analyzer-mapping-spec` for the new profile model.
+- **Admin pages with no case:** `ComplianceStandardsAdmin`, `stuckAnalyzerEvents` (route presence
+  only; admin coverage is owned by `openelis-design/admin-ia-inventory.md`).
+
+**THIN (spec exists, no master case):** `/qa/qi/*` and `/qa/qms/*` (QA module, develop PR #4069,
+merged 2026-09-24; 2 specs each), `/qa/eqa/*` (coverage sits on the unmerged `qa/eqa-coverage`
+branch), `/vector/deconvolution` (2 specs; still blocked on open-question 1's resolved intent
+being authored), `/LaporanHasil`, `/EnvironmentalDashboard`, `/MasterListsPage/CatalogImport`
+(render only; no import exercised).
+
+**Carried from 2026-07-01, now resolvable:** the referral reference-lab view has its intent
+(open-question 2 resolved); Analyzer Maintenance is still not built, so still not a gap.
+

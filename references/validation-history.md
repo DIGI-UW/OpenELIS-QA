@@ -336,3 +336,16 @@ timeouts); catalogUi.open() now re-logs once. A REST read before the first navig
 record a TypeError as their expected failure; fixed, and tripwire failure reasons are now read from the JSON
 report. Final run: 27/27, every tripwire failing on its spec assertion.
 Terminology cleared-code stays open (open question 6). No Jira tickets filed; one combined bug draft awaits Casey.
+
+## 2026-10-01 -- monthly consolidation pass (no test execution)
+
+State-only refresh by the scheduled skill-consolidation task. testing.openelis-global.org is up
+and serving bundle `index-DDcS0cc-.js`, a newer build than the drift tracker's last record
+(`index-DiLvlcZ5.js`, 2026-09-22) and than `spec-freshness.json`'s `currentBuild`
+(`index-u12wW6QI.js`). No login was used, so no screen behaviour was checked. The shipped router
+was re-read and `references/suite-catalog.md` Section 5 rewritten from it: EQA and QC moved under
+`/qa/*` (old paths redirect), a new Quality menu (`/qa/qi/*`, `/qa/qms/*`), Microbiology and
+vector routes, `/Storage/:resource` with inventory lots, and `/analyzers/errors` gone. Coverage
+gaps and new questions: `coverage-gap-analysis.md` (2026-10-01 section) and
+`references/open-questions.md` rows 9 to 13. Bug state stays in Jira; nothing filed.
+

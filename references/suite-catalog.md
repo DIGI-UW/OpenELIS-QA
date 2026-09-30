@@ -396,34 +396,39 @@
 
 ## Section 5 — URL Discovery Patterns
 
-For screens not in the confirmed URL table, try these patterns in order:
+Non-admin routes only (admin routes: `openelis-design/references/admin-ia-inventory.md`).
+**Re-read 2026-10-01 from the shipped router** of testing.openelis-global.org (bundle
+`index-DDcS0cc-.js`, route strings plus `Redirect` pairs, read without logging in). A React SPA
+answers 200 for any path, so an HTTP status never confirms a route; the router does. Routes built
+at runtime (for example `/analyzers/:id/...`) don't show up as literal strings, so a route missing
+from this list is not proof it was removed. Re-extract each cycle rather than probing by hand.
 
-**Results screens:** `/AccessionResults`, `/ResultsByPatient`, `/ResultsByOrder`, `/PatientResults`
-**Validation screens:** `/ResultValidation?type=routine`, `/ResultValidation?type=order`, `/ResultValidation`, `/AccessionValidation`, `/AccessionValidationRange`, `/ResultValidationByTestDate`
-**Workplan:** `/WorkPlanByTest?type=test`, `/WorkPlanByPanel?type=panel`, `/WorkPlanByTestSection?type=`, `/WorkPlanByPriority?type=priority`
-**Reports:** `/Report?type=patient` (confirmed working), Hamburger -> Reports menu
-**FHIR:** `<BASE>/api/fhir/metadata` (WARNING: BUG-14 — times out 60s)
-**NC Events:** `/ReportNonConformingEvent`, `/ViewNonConformingEvent`, `/NCECorrectiveAction`
-**LOINC:** `/MasterListsPage/LOINCCodes`, `/LOINCManagement`
-**Audit:** `/AuditLog`, `/SystemLog`, `/MasterListsPage/AuditLog`
-**Pathology:** `/PathologyDashboard`, `/ImmunohistochemistryDashboard`, `/CytologyDashboard`
-**Analyzers:** `/analyzers`, `/analyzers/errors`, `/analyzers/types`
-**EQA:** `/EQADistribution`, `/EQAManagement`, `/EQAParticipants`, `/EQAResults`
-**Inventory:** `/Inventory` (Dashboard+Catalog+Reports tabs)
-**Alerts:** `/Alerts`
-**Orders:** `/ElectronicOrders`, `/SampleBatchEntrySetup`, `/PrintBarcode`
-**Storage:** `/Storage`, `/Storage/samples`
-**Aliquot:** `/Aliquot`
-**Order Programs:** `/genericProgram`
+**Results:** `/Results` (unified worklist), `/AccessionResults`, `/PatientResults(/:patientId)`, `/LogbookResults`, `/RangeResults`, `/StatusResults`, `/AnalyzerResults`, `/result`
+**Validation:** `/ResultValidation` (Routine; select a Test Unit to see the triage lanes), `/AccessionValidation`, `/AccessionValidationRange`, `/ResultValidationByTestDate`, `/validation`
+**Workplan:** `/Workplan`, `/WorkplanByTest`, `/WorkplanByPanel`, `/WorkplanByPriority`, `/WorkPlanByTestSection` (only this one keeps the capital P)
+**Orders:** `/order/{clinical,environmental,vector}/{enter,collect,label,qa}` (vector also `/complete`), `/order/enter`, `/SamplePatientEntry` (legacy), `/ModifyOrder`, `/SampleEdit`, `/SampleManagement`, `/ElectronicOrders`, `/SampleBatchEntrySetup`, `/PrintBarcode`, `/GenericSample/{Order,Edit,Import,Results}`, `/genericProgram`, `/programView/:programSampleId`
+**Patient:** `/PatientManagement/:patientId`, `/PatientHistory`, `/PatientMerge`
+**Reports:** `/Report`, `/RoutineReport(s)`, `/StudyReport(s)`, `/TATReport`, `/LaporanHasil`, `/VectorSurveillanceReport`; generation via JSP `/api/OpenELIS-Global/ReportPrint`
+**Referrals / shipment:** `/SampleShipment` (+ `/:tab`, `/receive`, `/create-box`, `/box/:boxId`, `/reference-lab-results`, `/reports`, `/settings`), `/ReferredOutTests`
+**Quality (new menu):** `/qa/overview`; QC `/qa/qc/{dashboard,alerts,control-lots,manual-qc,reagent-qc,rule-config}`; QI `/qa/qi/{dashboard,amendment,callback,config,rejection,tat}`; QMS `/qa/qms/{accreditation,audit-trail,capa-register,e-signature-log,nce-register}`
+**EQA:** `/qa/eqa/{management,my-programs,my-cycles,participants,follow-up-queue,in-house,analyst-competency}`, `/qa/eqa/lab-performance/{coverage,recent}`, `/qa/eqa/provider/{schemes,follow-ups}`, `/qa/eqa/provider/cycles/:cycleId/workbench`. The old `/EQAManagement`, `/EQADistribution`, `/EQAParticipants`, `/EQAResults`, `/EQAOrders`, `/EQAMyPrograms` are now **redirects** into `/qa/eqa/*`
+**Analyzers:** `/analyzers`, `/analyzers/types`, `/analyzers/types/:profileId/mapping`, `/analyzers/qc/charts/:analyzerId`, `/analyzers/qc/instruments/:instrumentId`, `/analyzers/qc/control-lots/{new,:id}`; `/analyzers/qc/{db,control-lots,rule-config}` redirect to `/qa/qc/*`. `/analyzers/errors` is **gone** (retired, open-question 8)
+**NC Events:** `/NceDashboard`, `/ReportNonConformingEvent`, `/ViewNonConformingEvent`, `/NCECorrectiveAction`
+**Storage / inventory:** `/Storage`, `/Storage/:resource` with resource `sample-items|inventory-lots|rooms|devices|shelves|racks|boxes`, `/inventory` (lowercase), `/FreezerMonitoring` (Cold Storage)
+**Pathology:** `/PathologyDashboard`, `/ImmunohistochemistryDashboard`, `/CytologyDashboard`, each with `…CaseView/:sampleId`
+**Microbiology (new):** `/MicrobiologyWorklist`, `/MicrobiologyCaseView/:caseId`
+**Vector / environmental:** `/vector/deconvolution`, `/vector/identification`, `/VectorManualEntry`, `/EnvironmentalDashboard`
+**Other:** `/Alerts`, `/Aliquot`, `/AuditTrailReport`, `/Dashboard`, `/NoteBookDashboard` (+ entry/instance forms), `/landing`
+**FHIR:** `<BASE>/api/fhir/metadata` (BUG-14: has timed out at 60s)
 
-If a URL returns 404, try alternates before marking as GAP. Record the working URL in your log.
+**Not routes (drop them):** `/ResultsByPatient`, `/ResultsByOrder`, `/LOINCManagement`, `/AuditLog`,
+`/SystemLog`, `/Inventory` (capital I), `/Storage/samples`, `/WorkPlanByTest`, `/WorkPlanByPanel`,
+`/WorkPlanByPriority`, `/analyzers/errors`.
 
-> **Route-verification status — 2026-07-01 (monthly consolidation):** the non-admin patterns
-> above were **not** re-verified against the live app this cycle (unattended run; the instance is
-> up but gated at login and no authenticated session was available). They carry their
-> last-confirmed **v3.2.1.x** status — treat as presumed-valid, not freshly confirmed. No 404s or
-> route changes are asserted this cycle. Admin routes remain owned by
-> `openelis-design/references/admin-ia-inventory.md`.
+> **Route-verification status — 2026-10-01 (monthly consolidation):** the list above replaces the
+> 2026-07-01 "presumed valid" patterns. It is a router read, not a behaviour check: no screen was
+> opened while logged in this cycle. Screen-level status still comes from the latest run reports
+> and the drift tracker.
 
 ---
 

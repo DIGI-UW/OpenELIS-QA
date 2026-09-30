@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-01 - monthly consolidation (state only, no test execution)
+
+- `references/suite-catalog.md` Section 5 rewritten from the shipped router (bundle
+  `index-DDcS0cc-.js`): EQA and QC now under `/qa/*` with redirects from the old paths, a new
+  Quality menu, Microbiology and vector routes, `/Storage/:resource`, `/analyzers/errors` gone, and
+  a "not routes" list. Supersedes the 2026-07-01 presumed-valid patterns (the 2026-08 branch that
+  rebuilt them was never merged).
+- `coverage-gap-analysis.md`: 2026-10-01 delta (7 uncovered areas, 6 thin).
+- `references/open-questions.md`: questions 9 to 13 (micro lifecycle, pressing Release all clear,
+  blank-sex range display, freshness-manifest build stamps, missing analyzer profiles).
+- `references/validation-history.md`: dated note. `bug-triage.md` re-checked: Jira stays the
+  source of truth and the 2-of-3 revalidation gate stands; no status table re-added.
+- Rebuilt `openelis-test-catalog-qa.skill`.
+
 
 ## 2026-09-21 - the silent-save contract; Label Presets write coverage (testing 3.2.2.0)
 
