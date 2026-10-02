@@ -27,6 +27,11 @@ on:
   # when develop actually changed.
   schedule:
     - cron: '0 */3 * * *'
+    # Weekly lab-time-zone run (Wednesday 02:30 UTC). Casey 2026-09-28: country servers run in
+    # the lab's own zone, so the realistic check is server AND browser in that zone, not a UTC
+    # server behind a UTC+10 browser. This run sets TZ for the whole job (compose passes it to
+    # the webapp and FHIR containers, Node and Chromium read it too).
+    - cron: '30 2 * * 3'
   workflow_dispatch:
     inputs:
       force:
@@ -38,6 +43,10 @@ on:
         type: choice
         options: [all, docs]
         default: all
+      lab_tz:
+        description: 'Time zone for the whole run: server containers, Node and the browser (e.g. Pacific/Port_Moresby, Asia/Jakarta)'
+        type: string
+        default: UTC
       order_path:
         description: 'Which order-entry path the chain seeder uses. domain is normative; legacy is being retired.'
         type: choice
@@ -70,6 +79,10 @@ jobs:
       APP_REPO: DIGI-UW/OpenELIS-Global-2
       BASE: https://localhost:10443
       BASE_URL: https://localhost:10443
+      # One zone for everything in the job. docker-compose.develop.yml sets TZ=${TZ:-UTC} on the
+      # webapp and FHIR containers, and Node and Chromium both honour TZ, so a lab-zone run
+      # needs nothing else.
+      TZ: ${{ inputs.lab_tz || (github.event.schedule == '30 2 * * 3' && 'Pacific/Port_Moresby') || 'UTC' }}
       # modules.config.ts makes the argument for this and the nightly already sets it:
       # "retries exist to absorb flake; in a suite that has never run, the failures are not
       # flake -- they are the point. Retrying them doubles the cost of every failure for no
@@ -97,7 +110,7 @@ jobs:
           SUBJ=$(gh api "repos/$APP_REPO/commits/develop" --jq '.commit.message' | head -1)
           echo "sha=$SHA"        >> "$GITHUB_OUTPUT"
           echo "short=${SHA:0:8}" >> "$GITHUB_OUTPUT"
-          echo "### develop \`${SHA:0:8}\` — $SUBJ" >> "$GITHUB_STEP_SUMMARY"
+          echo "### develop \`${SHA:0:8}\` — $SUBJ (TZ \`$TZ\`)" >> "$GITHUB_STEP_SUMMARY"
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -108,7 +121,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .last-tested-sha
-          key: develop-tested-${{ steps.head.outputs.sha }}
+          key: develop-tested-${{ steps.head.outputs.sha }}-${{ env.TZ }}
 
       - name: Skip if develop has not moved
         if: steps.seen.outputs.cache-hit == 'true' && inputs.force != true
