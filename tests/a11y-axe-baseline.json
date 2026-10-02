@@ -1,0 +1,25 @@
+{
+  "home": [],
+  "add-order": [],
+  "enter-order": [],
+  "results": [],
+  "validation": [
+    "aria-required-children"
+  ],
+  "patient": [],
+  "pathology-dashboard": [],
+  "pathology-case": [
+    "label"
+  ],
+  "eqa-my-cycles": [],
+  "inventory": [
+    "aria-allowed-attr"
+  ],
+  "storage": [
+    "aria-allowed-attr",
+    "button-name"
+  ],
+  "locations": [],
+  "admin": [],
+  "alerts": []
+}
