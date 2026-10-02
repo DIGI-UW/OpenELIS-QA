@@ -1,18 +1,21 @@
-// OGC-1407: Enter Order v4 creates a new patient record on every save of an order for a NEW patient.
+// OGC-1407 regression guards: Clinical Order Entry v4 must keep ONE patient per new-patient order.
+// v4 (#4490) has three steps (Enter Order, Prepare Samples, Sample check) and the footer
+// Discard / Save and exit / Save and next. Each save posts /rest/SamplePatientEntry.
 // Creates QA patients and orders (letters-only "Qadp..." last names, "QADP..." national IDs).
 //
-// TC-DUPPAT-01  New patient typed in, Save, Save, Save & Next  -> exactly one patient for that national ID
-// TC-DUPPAT-02  New patient typed in, Save & Next, Save on Collect -> exactly one patient
-// TC-DUPPAT-03  Guard: existing patient chosen from the search, Save & Next -> still one patient
-// TC-DUPPAT-04  Every save after the first carries the saved patientPK (not ADD with an empty PK)
+// TC-DUPPAT-01  New patient typed in, Save and next, then Save and exit on Prepare Samples -> one patient
+// TC-DUPPAT-02  Every save after the first carries the saved patient id (not ADD with an empty id)
+// TC-DUPPAT-03  Guard: existing patient chosen from the search, Save and next -> still one patient
+// TC-DUPPAT-04  Server guard: the first order POST replayed with the patient id blanked -> still one patient
 //
-// FLIP-WHEN-FIXED: 01, 02 and 04 are test.fail() tripwires asserting the spec. When OGC-1407 is fixed,
-// Playwright reports "Expected to fail, but passed": remove test.fail() and keep the assertions.
+// OGC-1407 was fixed by #4488/#4490 and verified on 2026-10-02 (image 2026-10-01 17:48 UTC):
+// these were tripwires in the first draft and are now plain regression guards.
 import { test, expect, Page } from '@playwright/test';
 import { BASE, ADMIN, login } from '../helpers/test-helpers';
 import { createPatientViaAPI } from '../helpers/data-factory';
 
 test.setTimeout(240000);
+const ENTRY = /\/rest\/SamplePatientEntry$/;
 const letters = (n: number) => Array.from({ length: n }, () => String.fromCharCode(97 + Math.floor(Math.random() * 26))).join('');
 
 async function patientsFor(page: Page, last: string, nid: string): Promise<string[]> {
@@ -23,15 +26,17 @@ async function patientsFor(page: Page, last: string, nid: string): Promise<strin
   }, { ln: last, id: nid });
 }
 
+type Post = { pk: string; status: string; body: string };
 function watchPosts(page: Page) {
-  const posts: { pk: string; status: string }[] = [];
+  const posts: Post[] = [];
   page.on('request', (req) => {
-    if (req.method() !== 'POST' || !/\/rest\/SamplePatientEntry$/.test(new URL(req.url()).pathname)) return;
+    if (req.method() !== 'POST' || !ENTRY.test(new URL(req.url()).pathname)) return;
+    const body = req.postData() || '{}';
     try {
-      const b = JSON.parse(req.postData() || '{}');
+      const b = JSON.parse(body);
       const pp = b.patientProperties || {};
-      posts.push({ pk: String(pp.patientPK || ''), status: String(pp.patientUpdateStatus || b.patientUpdateStatus || '') });
-    } catch { posts.push({ pk: '', status: 'unparsed' }); }
+      posts.push({ pk: String(pp.patientPK || ''), status: String(pp.patientUpdateStatus || b.patientUpdateStatus || ''), body });
+    } catch { posts.push({ pk: '', status: 'unparsed', body }); }
   });
   return posts;
 }
@@ -66,10 +71,11 @@ async function pickSerumAndFirstTest(page: Page) {
   await page.locator(`label[for="${await first.getAttribute('id')}"]`).click();
 }
 
-async function save(page: Page, next = false) {
-  const b = next ? page.getByRole('button', { name: /Save (&|and) Next/i }).first() : page.getByRole('button', { name: /^Save$/ }).last();
-  await expect(b, `${next ? 'Save & Next' : 'Save'} should be enabled`).toBeEnabled({ timeout: 15000 });
-  const resp = page.waitForResponse((r) => r.request().method() === 'POST' && /\/rest\/SamplePatientEntry$/.test(new URL(r.url()).pathname), { timeout: 60000 });
+// v4 footer: "Save and next" moves to the next step, "Save and exit" returns to the order list.
+async function save(page: Page, which: 'next' | 'exit') {
+  const b = page.getByRole('button', { name: which === 'next' ? /^Save and next$/i : /^Save and exit$/i }).last();
+  await expect(b, `Save and ${which} should be enabled`).toBeEnabled({ timeout: 15000 });
+  const resp = page.waitForResponse((r) => r.request().method() === 'POST' && ENTRY.test(new URL(r.url()).pathname), { timeout: 60000 });
   await b.click();
   expect((await resp).status(), 'order save should succeed').toBeLessThan(400);
   await page.waitForTimeout(1500);
@@ -78,29 +84,31 @@ async function save(page: Page, next = false) {
 
 test.beforeEach(async ({ page }) => { await login(page, ADMIN.user, ADMIN.pass); });
 
-test('TC-DUPPAT-01 new patient, Save, Save, Save & Next gives one patient (OGC-1407)', async ({ page }) => {
-  test.fail(true, 'OGC-1407: each save posts ADD with an empty patientPK and creates another patient');
+test('TC-DUPPAT-01 new patient, Save and next, Save and exit gives one patient (OGC-1407)', async ({ page }) => {
   const last = `Qadpa${letters(6)}`, nid = `QADPA${Date.now()}`;
   await openEnterOrder(page);
   await typeNewPatient(page, last, nid);
   await pickSerumAndFirstTest(page);
-  await save(page);
-  await save(page);
-  await save(page, true);
+  await save(page, 'next');
+  await expect(page, 'Save and next should move to Prepare Samples').toHaveURL(/\/order\/clinical\/collect/, { timeout: 20000 });
+  await save(page, 'exit');
   const ids = await patientsFor(page, last, nid);
-  expect(ids.length, `one order saved three times must leave ONE patient for ${nid}, found ${ids.join(', ')}`).toBe(1);
+  expect(ids.length, `one order saved twice must leave ONE patient for ${nid}, found ${ids.join(', ')}`).toBe(1);
 });
 
-test('TC-DUPPAT-02 new patient, Save & Next, Save on Collect gives one patient (OGC-1407)', async ({ page }) => {
-  test.fail(true, 'OGC-1407: the Collect save re-sends ADD and creates a second patient');
+test('TC-DUPPAT-02 saves after the first carry the saved patient id (OGC-1407)', async ({ page }) => {
   const last = `Qadpb${letters(6)}`, nid = `QADPB${Date.now()}`;
+  const posts = watchPosts(page);
   await openEnterOrder(page);
   await typeNewPatient(page, last, nid);
   await pickSerumAndFirstTest(page);
-  await save(page, true);
-  await save(page);
+  await save(page, 'next');
+  await save(page, 'exit');
+  expect(posts.length, 'two saves should send two POSTs').toBe(2);
+  expect(posts[0].status, 'the first save creates the patient').toBe('ADD');
   const ids = await patientsFor(page, last, nid);
-  expect(ids.length, `Enter then Collect must leave ONE patient for ${nid}, found ${ids.join(', ')}`).toBe(1);
+  expect(posts[1].pk, `the second save must reference the patient created by the first, got ${posts[1].pk}/${posts[1].status}`).toBe(ids[0]);
+  expect(posts[1].status, 'the second save must not ADD again').not.toBe('ADD');
 });
 
 test('TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)', async ({ page }) => {
@@ -119,22 +127,25 @@ test('TC-DUPPAT-03 existing patient chosen from the search stays one patient (gu
   if ((await radio.count()) && !(await radio.isChecked())) await row.locator('label').first().click();
   await expect(radio, 'the searched patient should be selected').toBeChecked({ timeout: 10000 });
   await pickSerumAndFirstTest(page);
-  await save(page, true);
+  await save(page, 'next');
   expect(posts[0]?.pk, 'the order POST should carry the selected patient PK').toBe(String(c.id));
   expect(await patientsFor(page, last, nid), 'ordering for an existing patient must not add a patient').toEqual([String(c.id)]);
 });
 
-test('TC-DUPPAT-04 saves after the first carry the saved patientPK (OGC-1407)', async ({ page }) => {
-  test.fail(true, 'OGC-1407: patientPK is not propagated after the first save');
+test('TC-DUPPAT-04 replayed add-without-id does not create a second patient (server guard, OGC-1407)', async ({ page }) => {
   const last = `Qadpd${letters(6)}`, nid = `QADPD${Date.now()}`;
   const posts = watchPosts(page);
   await openEnterOrder(page);
   await typeNewPatient(page, last, nid);
   await pickSerumAndFirstTest(page);
-  await save(page);
-  await save(page);
-  expect(posts.length, 'two saves should send two POSTs').toBe(2);
-  expect(posts[0].status, 'the first save creates the patient').toBe('ADD');
-  expect(posts[1].pk, `the second save must reference the patient created by the first, got ${JSON.stringify(posts[1])}`).not.toBe('');
-  expect(posts[1].status, 'the second save must not ADD again').not.toBe('ADD');
+  await save(page, 'next');
+  expect(await patientsFor(page, last, nid), 'the first save creates one patient').toHaveLength(1);
+  const b = JSON.parse(posts[0].body);
+  b.patientProperties = { ...(b.patientProperties || {}), patientPK: '', patientUpdateStatus: 'ADD' };
+  const status = await page.evaluate(async (body) => {
+    const r = await fetch('/api/OpenELIS-Global/rest/SamplePatientEntry', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': localStorage.getItem('CSRF') || '' }, body });
+    return r.status;
+  }, JSON.stringify(b));
+  const ids = await patientsFor(page, last, nid);
+  expect(ids.length, `a replayed ADD for the same national ID must not add a patient (replay answered ${status}), found ${ids.join(', ')}`).toBe(1);
 });
