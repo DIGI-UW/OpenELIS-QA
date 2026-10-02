@@ -81,7 +81,7 @@ test.describe('Accessibility scan, WCAG 2.1 A/AA (TC-AXE)', () => {
         written[t.key] = [...new Set(heavy.map((v) => v.rule))].sort();
         fs.mkdirSync('test-results', { recursive: true });
         fs.writeFileSync('test-results/a11y-axe-baseline.json', JSON.stringify(written, null, 2) + '\n');
-        return;
+        test.skip(true, 'A11Y_WRITE_BASELINE=1: baseline written to test-results, page not judged');
       }
       const known = new Set(baseline[t.key] ?? []);
       const fresh = heavy.filter((v) => !known.has(v.rule));
