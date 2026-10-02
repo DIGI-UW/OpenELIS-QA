@@ -174,13 +174,13 @@ Canary for TC-ELNW-02. Observed working 2026-09-27. Automated: `tests/notebook-p
 ## Provider & Organization admin (TC-ORGW)
 
 ### TC-ORGW-00: A new organization saves and is listed
-Canary for TC-ORGW-02. Automated: `tests/org-admin.spec.ts`. **Criterion:** ROUND-TRIP.
+**Retired 2026-10-02.** Organization Management was replaced by Locations & Organizations (OGC-1363, #4500); `tests/org-admin.spec.ts` drove the old screen and is removed. Now TC-LOC-02 (create with every section, read back in list, form, REST and DB). **Criterion:** ROUND-TRIP.
 
 ### TC-ORGW-01: A new organization saves and is offered as a referring site on Add Order
 **Criterion:** ROUND-TRIP.
 
 ### TC-ORGW-02: A duplicate organization name is refused
-Organization Management > Add, name of an existing organization. **Today:** accepted (R60: organization 15 "QA Auto Clinic", toast "Organization Information Updated Succesfully."). Automated (test.fail): `tests/org-admin.spec.ts`. **Criterion:** PERSIST.
+**Retired 2026-10-02.** The OGC-1363 FRS (FR-C4) makes a duplicate name in the same type and place a warning, not a refusal. Now TC-LOC-06b (warns and saves; today the warning is overwritten by "added.", tripwire). **Criterion:** PERSIST.
 
 ### TC-ORGW-03: A new provider saves and is offered as requester on Add Order
 **Criterion:** ROUND-TRIP.
@@ -190,6 +190,86 @@ Organization Management > Add, name of an existing organization. **Today:** acce
 
 ### TC-ORGW-05: Add Order Site Name search matches a multi-word name as it is typed
 Type "QA Aut" for "QA Auto Clinic". **Expected:** the clinic is suggested. Observed working by hand 2026-09-27 (one input event per character lists the sites; they are preloaded in referringSiteList). Two Playwright runs typing key by key saw "No suggestions available"; treated as a harness timing issue, the spec uses fill(). **Criterion:** FUNCTION.
+
+## Locations & Organizations admin (TC-LORG; OGC-1363, OpenELIS-Global-2 #4500)
+
+Added 2026-10-02 against local develop (images 2026-10-01 17:48 UTC). Automated: `tests/locations-organizations.spec.ts`; how the page is driven: `references/playwright-notes/locations-organizations.md`. Replaces TC-ORGW-00 and TC-ORGW-02 (the Organization Management screen they drove is gone). "Today" is what develop does where it differs from the FRS; those cases are `test.fail()` tripwires.
+
+| Case | What it holds | AC / FR | Criterion | Today |
+|---|---|---|---|---|
+| TC-LORG-01 | SideNav entry with four items in order; legacy routes redirect; breadcrumb and explainer on each view; `q`/`status` restored from the URL | AC1 | RENDER | pass |
+| TC-LORG-01b | `organizationEdit?ID=` / `?id=` opens a record that is not on page 1 | AC1 | FUNCTION | **fails**: only page-1 records open |
+| TC-LORG-02 | A record with every section filled reads back the same in list, form, REST and DB (identifiers, location, referral block, category, ownership) | FR-C3 | ROUND-TRIP | pass |
+| TC-LORG-03 | Each section edit is saved; History lists user, time, old and new values; the old name still finds it | AC22, FR-K | PERSIST | pass |
+| TC-LORG-04-* (7) | A save answered 500 (JSON, HTML), 502 empty, 400, 409, 422 or no response says it failed, keeps the typed values, saves nothing, and Save works again | OGC-1263 | FUNCTION | pass |
+| TC-LORG-04m-* (3) | The failure text is written for a lab user | OGC-1263 residual | RENDER | **fails**: "Unexpected token '<' ... is not valid JSON", "Failed to execute 'json' ...", "Failed to fetch" |
+| TC-LORG-04p | An error notification stays until dismissed | heuristic | RENDER | **fails**: gone after 6 s |
+| TC-LORG-04-low, 04-ok | Error and success notices are on screen when the record is low in the list | heuristic | RENDER | **fail**: the notice sits at the page top, 500 to 900 px above |
+| TC-LORG-05 | Every input is capped at its column length or refuses; nothing is cut silently | OGC-1264 | PERSIST | **fails**: Contact name (and Description) uncapped, cut to 100 with "saved." |
+| TC-LORG-05b | Over-long REST values are refused with 422 | OGC-1264 | PERSIST | **fails**: name and identifier 500; street, website, code cut and saved |
+| TC-LORG-05c | A malformed email is refused under Email; a long valid one saves exactly | OGC-1265 | PERSIST | pass |
+| TC-LORG-05d | A 150-character identifier typed in the form is refused with a readable message | OGC-1264 | FUNCTION | **fails**: 500 and "org.hibernate.exception.DataException" shown |
+| TC-LORG-06 | Required name and type, GPS ranges, duplicate identifier (names the other record), repeated label | FR-C4, FR-I3 | FUNCTION | pass |
+| TC-LORG-06b | A duplicate name warns and saves | FR-C4 | RENDER | **fails**: warning overwritten by "added." |
+| TC-LORG-06c | A referral lab without an approval status is refused visibly | FR-J1 | RENDER | **fails**: message far below the fold, nothing else |
+| TC-LORG-06d | The Add form saves without a code | FR-I2 | FUNCTION | **fails**: blank pre-filled Code row answers 422 |
+| TC-LORG-07 | Exact code listed first; ward name returns its organization; no ward at top level | AC3, FR-B3, FR-B6 | FUNCTION | pass |
+| TC-LORG-07w | A ward search opens its organization with the ward highlighted | AC3, FR-B6 | FUNCTION | **fails**: not expanded |
+| TC-LORG-07b | Type = referral lab, Status = Inactive: only inactive referral labs; named tag; URL restores | AC2 | FUNCTION | pass |
+| TC-LORG-07c | Location = province includes records beneath it; Location sort groups them | AC18 | FUNCTION | pass |
+| TC-LORG-07g | Default Name sort is in name order | FR-B2 | RENDER | **fails**: two name-sorted runs back to back ("QA 1263" ... "Test LIMS", then "QA Loc ...") |
+| TC-LORG-07d | DHIS2 ID search finds and says so; typed labels are suggested on other records | AC19 | FUNCTION | pass |
+| TC-LORG-07e | Review overdue tag and filter | AC21 | RENDER | pass |
+| TC-LORG-07f | No-match empty state names matches in the other view | FR-B8, FR-B9 | RENDER | pass |
+| TC-LORG-08 | Two wards added inline save as dept under the organization and show in `departments-for-site` | AC5, FR-D2, FR-D4 | ROUND-TRIP | pass |
+| TC-LORG-08b | Own GPS kept on move, inherited GPS follows the new parent, inactive ward leaves the picker | AC5, FR-D2a, FR-D3 | PERSIST | pass |
+| TC-LORG-08c | Draft wards are saved or warned about when the form Save is pressed | heuristic | PERSIST | **fails**: dropped silently |
+| TC-LORG-08d | A partial ward save does not duplicate on retry | FR-D2 | PERSIST | **fails**: first ward saved twice |
+| TC-LORG-09 | Guard counts, "only" keeps wards active, Undo restores, ward under inactive parent blocked, history has both | AC4, AC23, FR-E | PERSIST | pass |
+| TC-LORG-09b | Guard open-order count matches usage; Cancel changes nothing | AC4 | FUNCTION | pass |
+| TC-LORG-09c | No Delete anywhere | AC4 | RENDER | pass |
+| TC-LORG-09d | Inactive organizations leave the order entry site list and referral lab list | FR-E1 | FUNCTION | pass |
+| TC-LORG-13 | A site added here is a vector sampling site; rename and deactivation mirrored; order site search follows | FR-A3, AC6 | ROUND-TRIP | pass |
+| TC-LORG-13b | A site made through the vector API appears here, edits mirrored | FR-A3 | ROUND-TRIP | pass |
+| TC-LORG-14 | Areas added at the top and under a parent with level-named buttons; rename keeps the old name searchable | FR-B7 | PERSIST | pass |
+| TC-LORG-14t | An area name can be typed key by key | FR-B7 | FUNCTION | **fails**: one character, focus lost |
+| TC-LORG-14e | A parent shows its new child (aria-expanded) | FR-B7, FR-L1 | RENDER | **fails** until reload |
+| TC-LORG-14b | Tree by keyboard; level and expanded state exposed | AC24, FR-L1 | FUNCTION | pass |
+| TC-LORG-14c | Area with active contents cannot be deactivated; child under inactive parent cannot be reactivated | FR-B7, FR-E3 | FUNCTION | pass |
+| TC-LORG-15 | Row click opens nothing; one row at a time; sticky Save / Cancel | AC25, FR-C1 | FUNCTION | pass |
+| TC-LORG-15t | Type picker names the chosen types | FR-C3, FR-B4 | RENDER | **fails**: shows "1" |
+| TC-LORG-15b | Close with unsaved changes asks | FR-C1 | FUNCTION | **fails**: no prompt |
+| TC-LORG-16 | On 409 the user's typed values are kept | FR-C5 | PERSIST | **fails**: replaced by the stored record |
+| TC-LORG-17 | Registry record: tag, edit warning, never in Replace deactivations (registry simulated by `source`) | AC17, FR-H | FUNCTION | pass |
+| TC-LORG-18 | FHIR UUID kept through edits; Shipment Settings still Alpha; FHIR and legacy reads answer | FR-A5 | ROUND-TRIP | pass |
+| TC-LORG-18f | FHIR Organization carries labelled identifiers | FR-I5 | ROUND-TRIP | **fails**: DHIS2 ID missing, no type.text |
+| TC-LORG-19-* (3) | Receptionist, Lab Tech, Validator: no page, writes 403 | Access | FUNCTION | pass |
+| TC-LORG-20 | Add & update by code: same id, rest created, nothing else changed (DB checksum) | AC7 | PERSIST | pass |
+| TC-LORG-21 | Preview writes nothing (DB checksum of four tables) | AC10 | PERSIST | pass |
+| TC-LORG-22 | Blank cell keeps value; active=N deactivates; Replace reactivates | AC11, FR-F5 | PERSIST | pass |
+| TC-LORG-23 | Ward-scoped Replace touches only that organization's wards; acknowledgement gate | AC15, FR-F3b, FR-F9 | PERSIST | pass |
+| TC-LORG-24 | Sites-only Replace deactivates only sites (preview) | AC8, FR-F3a | FUNCTION | pass |
+| TC-LORG-24t | Replace preview shows real open-order counts for sites | FR-F6 | RENDER | **fails**: 0 for a site with 44 |
+| TC-LORG-25 | Decision queue, Apply gated, Remember this name | AC9, FR-F8 | FUNCTION | pass |
+| TC-LORG-26 | Possible rename, "Same place, renamed" keeps id and history | AC16, FR-F12 | PERSIST | pass |
+| TC-LORG-27 | identifier:DHIS2 ID matches (preview) | AC20 | FUNCTION | pass |
+| TC-LORG-28 | Export in the import format with identifier columns; sites round trip 0 / 0 / 0 | AC12, FR-G, FR-I5 | ROUND-TRIP | pass |
+| TC-LORG-28t | Referral-lab export round trip in Replace changes nothing | AC12 | PERSIST | **fails**: 36 referring clinics would be deactivated |
+| TC-LORG-29 | Malformed files refused with reasons, never 500; quoted commas; 5,000 rows in under 30 s | FR-F7 | FUNCTION | pass |
+| TC-LORG-29d | An identifier value repeated inside one file is rejected | FR-F7, FR-I3 | FUNCTION | **fails**: both rows preview as new |
+| TC-LORG-29w | An unknown column is reported as ignored | FR-M | RENDER | **fails**: no warning |
+| TC-LORG-29e | Excel "CSV UTF-8" (BOM) and Windows-1252 files import | FR-F1 | FUNCTION | **fails** |
+| TC-LORG-29b | Different "... Health Centre" names are not offered as renames | FR-F12 | FUNCTION | **fails**: every one is |
+| TC-LORG-30 | Runs listed with who, when, mode, counts; report downloads; previews recorded | FR-F10, FR-F9 | RENDER | pass |
+| TC-LORG-30t | Runs name their files and mark preview vs apply | FR-F10 | RENDER | **fails** |
+| TC-LORG-31 | Indonesia levels and values files preview as no change where the startup loader ran | AC13 | FUNCTION | pass |
+| TC-LORG-40 | Four routes open at the top, no raw keys, no sideways scroll (except Import, below) | H1-H11 | RENDER | pass |
+| TC-LORG-40t | Import / Export fits 1280 px | heuristic | RENDER | **fails**: 253 px wider |
+| TC-LORG-41 | Keyboard path Edit -> fields in reading order -> Save | FR-L | FUNCTION | pass |
+| TC-LORG-42 | Add, Cancel, Add opens an empty form | heuristic | FUNCTION | pass |
+| TC-LORG-99 | Retires every record the run made | data rule | n/a | n/a |
+
+Area-dependent cases skip on an instance with no geographic levels (testing.openelis-global.org). Not automated yet: AC6 and FR-I4 on upgraded data (checked on the 3.2.2 copy with seeded CLIA numbers and sampling sites, see the session doc), AC14 in French (only 5 of 244 `locations` keys are in fr.json), downstream order entry UI (the site and department lists are checked through `/rest/SamplePatientEntry` and `/rest/departments-for-site`), M-16 and WHONET consumers.
 
 ## Electronic signatures (TC-ESIGW; the page-level TC-ESIG-01..13 live in tests/electronic-signature.spec.ts)
 
