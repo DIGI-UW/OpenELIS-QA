@@ -67,7 +67,10 @@ jobs:
     # running after 79 minutes. A cancelled run produces no verdict at all, which is the one
     # outcome worse than a red one. Each shard now carries a slice, so this is headroom
     # rather than an expectation.
-    timeout-minutes: 180
+    # 360 is the ceiling GitHub allows a job on a hosted runner; there is no shorter limit
+    # we want. The modules shard ran into 180 on every run from 3 Oct and was cancelled
+    # with no verdict (Casey, 6 Oct: no reason to cap it below the platform limit).
+    timeout-minutes: 360
     strategy:
       # Every shard must report. Stopping the others because one went red would throw away
       # exactly the information the run exists to collect.
@@ -159,14 +162,27 @@ jobs:
           path: app
           fetch-depth: 1
 
+      # Move the app OUT of the QA workspace. Every config uses `testDir: '.'`, so with the
+      # app checked out at ./app Playwright also collects the app's own Playwright suite
+      # (app/frontend/playwright, added by OpenELIS-Global-2 #4479 on 3 Oct). Its
+      # participant-auth.setup.ts matched our setup projects and its DB seed failed, so
+      # from run 3 Oct onward about twenty configs reported "3 passed, 1 failed, N did not
+      # run", and all-tc also ran six app specs. Outside the workspace it cannot be collected,
+      # and the root-owned bind mounts (app/volume/lucene) are no longer walked either.
+      - name: Move the app outside the QA workspace
+        if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
+        run: |
+          mv app "$RUNNER_TEMP/app"
+          echo "APP_DIR=$RUNNER_TEMP/app" >> "$GITHUB_ENV"
+
       - name: Bring up the develop stack
         if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
         run: |
           set -euo pipefail
           # These two are not in the repo and the compose file mounts them.
-          mkdir -p app/volume/plugins app/volume/lucene
-          cp environments/develop-local/docker-compose.develop.yml app/
-          cd app
+          mkdir -p "$APP_DIR/volume/plugins" "$APP_DIR/volume/lucene"
+          cp environments/develop-local/docker-compose.develop.yml "$APP_DIR/"
+          cd "$APP_DIR"
           docker compose -p oedevqa -f docker-compose.develop.yml pull --quiet
           docker compose -p oedevqa -f docker-compose.develop.yml up -d
           docker compose -p oedevqa -f docker-compose.develop.yml ps
@@ -199,7 +215,7 @@ jobs:
             sleep 20
           done
           echo "::error::stack did not come up in time"
-          docker compose -p oedevqa -f app/docker-compose.develop.yml logs --tail 60 oe.openelis.org || true
+          docker compose -p oedevqa -f "$APP_DIR/docker-compose.develop.yml" logs --tail 60 oe.openelis.org || true
           exit 1
 
       # The stack bind-mounts ./volume/lucene and ./volume/plugins, and the
@@ -215,7 +231,7 @@ jobs:
       # Making the tree traversable is enough; nothing needs to write to it.
       - name: Let the runner traverse the stack's bind mounts
         if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
-        run: sudo chmod -R a+rX app/volume || true
+        run: sudo chmod -R a+rX "$APP_DIR/volume" || true
 
       - name: Authenticate
         if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
@@ -298,7 +314,7 @@ jobs:
           # swallowed -- it is recorded and re-asserted in Verdict.
           set +e +o pipefail
           mkdir -p out
-          sudo chmod -R a+rX app/volume || true
+          sudo chmod -R a+rX "$APP_DIR/volume" || true
 
           WANT="${{ inputs.suite || 'all' }}"
           SHARD="${{ matrix.shard }}"
@@ -529,4 +545,4 @@ jobs:
       - name: Tear down
         if: always()
         run: |
-          docker compose -p oedevqa -f app/docker-compose.develop.yml down -v || true
+          docker compose -p oedevqa -f "$APP_DIR/docker-compose.develop.yml" down -v || true
