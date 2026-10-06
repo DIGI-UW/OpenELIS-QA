@@ -67,7 +67,10 @@ jobs:
     # running after 79 minutes. A cancelled run produces no verdict at all, which is the one
     # outcome worse than a red one. Each shard now carries a slice, so this is headroom
     # rather than an expectation.
-    timeout-minutes: 180
+    # 360 is the ceiling GitHub allows a job on a hosted runner; there is no shorter limit
+    # we want. The modules shard ran into 180 on every run from 3 Oct and was cancelled
+    # with no verdict (Casey, 6 Oct: no reason to cap it below the platform limit).
+    timeout-minutes: 360
     strategy:
       # Every shard must report. Stopping the others because one went red would throw away
       # exactly the information the run exists to collect.
