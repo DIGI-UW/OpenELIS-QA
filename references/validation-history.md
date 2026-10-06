@@ -349,3 +349,15 @@ vector routes, `/Storage/:resource` with inventory lots, and `/analyzers/errors`
 gaps and new questions: `coverage-gap-analysis.md` (2026-10-01 section) and
 `references/open-questions.md` rows 9 to 13. Bug state stays in Jira; nothing filed.
 
+## 2026-10-06 -- monthly consolidation top-up (no test execution)
+
+Second state-only pass this month (the scheduled task fired again). testing.openelis-global.org
+now serves bundle `index-CeaYeajT.js` (was `index-DDcS0cc-.js` on 2026-10-01); no drift-check run
+recorded either redeploy. Router delta written into `references/suite-catalog.md` Section 5:
+Microbiology under `/Microbiology/*`, `/AuditTrailReport` redirects to `/qa/qms/audit-trail`,
+`/ReferredOutTests` gone. Upstream constitution is now **1.12.0** (2026-09-29): new Principle V.7
+Test Isolation is MANDATORY (tests own their data, scope reads to it, never widen an assertion, pin
+time); the harness's shared-database seeds and "today" reads should be checked against it (see
+`coverage-gap-analysis.md` 2026-10-06). Stale markers on `main`: ST-2b, ST-3, ST-4, STW-4 and STW-6
+still carry `test.fail()` for OGC-1156/OGC-1157, which the tracker records as fixed and closed by
+2026-10-01. No login, no Jira filing.

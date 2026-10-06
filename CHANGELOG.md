@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-06 - monthly consolidation top-up (state only, no test execution)
+
+- `references/suite-catalog.md` Section 5: router re-read from `index-CeaYeajT.js`. Microbiology
+  moved to `/Microbiology/*` (old paths redirect), `/AuditTrailReport` redirects to
+  `/qa/qms/audit-trail`, `/ReferredOutTests` gone, three EQA routes added.
+- `coverage-gap-analysis.md`: 2026-10-06 delta (closed by #197/#202/#203/#204; new uncovered:
+  WHONET export, validation search, critical acknowledgement, Prepare Samples refer-out and labels,
+  Label Presets editor, retired legacy pages; stale `test.fail()` markers for OGC-1156/1157).
+- `references/open-questions.md`: questions 14 (constitution V.7 Test Isolation vs this harness)
+  and 15 (Referred Out Tests route).
+- `references/validation-history.md`: dated note. `bug-triage.md` re-checked, unchanged.
+- Rebuilt `openelis-test-catalog-qa.skill`.
+
 ## 2026-10-01 - monthly consolidation (state only, no test execution)
 
 - `references/suite-catalog.md` Section 5 rewritten from the shipped router (bundle
