@@ -384,10 +384,10 @@ test.describe('Sample Type Editor - create', () => {
     expect(r.row, 'the new sample type reads back from GET /sample-types').toBeTruthy();
   });
 
-  test('TC-SA-31: FLIP-WHEN-FIXED - the required Description typed on create is stored', async ({ page }) => {
+  test('TC-SA-31: the required Description typed on create is stored [FIXED Delta-SA4]', async ({ page }) => {
     // Delta-SA4. Today: SampleTypeManagement builds the create payload without `description`,
     // so the server falls back to the name. The field is marked required (*) and is discarded.
-    test.fail(true, 'Delta-SA4: create payload omits description; flips when it is sent');
+    // FIXED Delta-SA4, flipped 2026-10-08 (passes in CI run 126 and on local develop 2026-10-08); was FLIP-WHEN-FIXED. Was: Delta-SA4: create payload omits description; flips when it is sent
     const desc = `QA typed description ${RUN}`;
     const r = await createSampleType(page, `QASB${RUN}-ST`, desc);
     expect(r.row, 'precondition: the sample type was created').toBeTruthy();

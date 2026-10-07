@@ -34,7 +34,8 @@ const SECTIONS: { slug: string; heading: RegExp; marker: RegExp; stage: 'v1' | '
   { slug: 'labels',         heading: /labels/i,            marker: /label preset|label type/i,            stage: 'v2' },
   { slug: 'terminology',    heading: /terminology/i,       marker: /loinc|snomed|add mapping/i,           stage: 'v1' },
   { slug: 'reagents',       heading: /reagents/i,          marker: /link reagent/i,                       stage: 'v2' },
-  { slug: 'analyzers',      heading: /analyzers/i,         marker: /read-only|analyzer configuration/i,   stage: 'v1' },
+  // REWORKED 2026-10-08: develop spells it "Analysers" ("...on the analyser configuration screen").
+  { slug: 'analyzers',      heading: /analy[sz]ers/i,      marker: /read-only|analy[sz]er configuration/i, stage: 'v1' },
   { slug: 'alerts',         heading: /alerts/i,            marker: /add rule|notify/i,                    stage: 'v2' },
   { slug: 'reflex-calc',    heading: /reflex.*calc/i,      marker: /reflex|calculated/i,                  stage: 'v2' },
   { slug: 'display-order',  heading: /display order/i,     marker: /sample type|reorder/i,                stage: 'v1' },

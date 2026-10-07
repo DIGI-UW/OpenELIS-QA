@@ -149,7 +149,9 @@ async function ensureFixture(page: Page): Promise<string> {
   if (!unit) {
     await openAddForm(page);
     await page.locator(NAME_EN).fill(FIXTURE_NAME);
-    await page.locator('input').nth(1).fill(FIXTURE_NAME_FR);
+    // REWORKED 2026-10-08: by id. input.nth(1) is no longer the French name (the header search
+    // field and one name field per locale came first on develop).
+    await page.locator('#lu-name-fr').fill(FIXTURE_NAME_FR);
     await page.getByRole('button', { name: /Create Lab Unit/i }).click();
     await expect(page).toHaveURL(new RegExp(`${LIST_ROUTE}/\\d+/basic-info$`), { timeout: 20000 });
     unit = await findFixture(page);
@@ -236,8 +238,10 @@ test.describe('Lab Unit Management — write paths (OGC-189, PR #4121)', () => {
 
     // Observed 2026-09-02: Name (English), Name (Francais), Domain. No Active toggle and no
     // Description — which is why a created unit landing Inactive is not a misleading control.
-    await expect(page.getByText('Name (English)')).toBeVisible();
-    await expect(page.getByText('Name (Francais)')).toBeVisible();
+    // REWORKED 2026-10-08: develop offers one name field per active locale, spelt "Name (Français)",
+    // "Name (Español)" and so on, each capped at 20 with a counter.
+    await expect(page.getByText('Name (English)', { exact: false }).first()).toBeVisible();
+    await expect(page.getByRole('textbox', { name: /^Name \(Fran[cç]ais\)/ })).toBeVisible();
     await expect(page.getByRole('radio', { name: 'Clinical' })).toBeVisible();
     await expect(
       page.getByText('Active', { exact: true }),
@@ -250,28 +254,28 @@ test.describe('Lab Unit Management — write paths (OGC-189, PR #4121)', () => {
     ).toBeDisabled();
   });
 
-  test('LU-W-2: [negative] Add refuses an over-length name with a readable message and creates nothing', async ({ page }) => {
+  test('LU-W-2: [negative] Add caps an over-length name at 20 characters and creates nothing', async ({ page }) => {
     const before = (await listUnits(page)).length;
     await openAddForm(page);
 
     const tooLong = 'QA_OVERLENGTH_NAME_EXCEEDS_TWENTY';
     expect(tooLong.length, 'sanity: the probe really is over the cap').toBeGreaterThan(NAME_MAX);
+    // REWORKED 2026-10-08: the name field now carries maxlength=20 with a "n/20" counter, so an
+    // over-length name cannot be typed at all and there is no message to show. The refusal is the
+    // field itself: it keeps the first 20 characters and says so. Create is not pressed (it would
+    // create the truncated name), so nothing is created.
     await page.locator(NAME_EN).fill(tooLong);
-    await page.getByRole('button', { name: /Create Lab Unit/i }).click();
-
-    await expect(
-      page.getByText(`Name must be ${NAME_MAX} characters or less`),
-      'the cap is explained in words, not as an HTTP status',
-    ).toBeVisible();
-    await expect(page.locator(NAME_EN), 'the offending field is marked invalid').toHaveAttribute(
-      'aria-invalid',
-      'true',
-    );
+    await expect(page.locator(NAME_EN), 'the field caps the name').toHaveAttribute('maxlength', String(NAME_MAX));
+    expect((await page.locator(NAME_EN).inputValue()).length, 'only 20 characters are kept').toBe(NAME_MAX);
+    await expect(page.getByText(`${NAME_MAX}/${NAME_MAX}`).first(), 'the counter shows the cap is reached').toBeVisible();
     await expect(page, 'still on the Add form — nothing was created').toHaveURL(/\/new\/basic-info$/);
     expect((await listUnits(page)).length, 'the unit count did not move').toBe(before);
   });
 
-  test('LU-W-3: [DEFECT] the 20-character name cap is enforced on Add but NOT on Edit (FLIP-WHEN-FIXED)', async ({ page }) => {
+  test('LU-W-3: the 20-character name cap holds on Edit as well as on Add [FIXED]', async ({ page }) => {
+    // FIXED, flipped 2026-10-08: the name input now carries maxlength="20" (CI run 126), so the
+    // edit path can no longer store an over-long name. Was a DEFECT case (FLIP-WHEN-FIXED) that
+    // asserted no maxlength and an over-long name persisting through PUT.
     const id = await ensureFixture(page);
     const overLong = 'QA_RENAME_OVER_TWENTY_CHARS_LONG';
     expect(overLong.length).toBeGreaterThan(NAME_MAX);
@@ -279,35 +283,36 @@ test.describe('Lab Unit Management — write paths (OGC-189, PR #4121)', () => {
     await page.goto(`${BASE}${LIST_ROUTE}/${id}/basic-info`);
     await expect(page.locator(NAME_EN)).toHaveValue(FIXTURE_NAME);
 
-    // The asymmetry is visible in the markup before a single click: Description is capped by
-    // the browser, the name is not.
     await expect(
       page.locator('textarea'),
       'Description is hard-capped by the input itself',
     ).toHaveAttribute('maxlength', String(DESC_MAX));
-    expect(
-      await page.locator(NAME_EN).getAttribute('maxlength'),
-      'DEFECT: the name input carries no maxlength, so the cap depends entirely on validation that the edit path skips',
-    ).toBeNull();
+    await expect(
+      page.locator(NAME_EN),
+      'the name is hard-capped by the input itself, on Edit as on Add',
+    ).toHaveAttribute('maxlength', String(NAME_MAX));
 
     await page.locator(NAME_EN).fill(overLong);
-    await page.getByRole('button', { name: 'Save', exact: true }).click();
-    await page.waitForTimeout(2500);
-
-    // WHEN FIXED: expect the same readable message LU-W-2 asserts, and the name unchanged.
-    const readback = await api(page, `/lab-units-management/${id}`);
-    expect(
-      readback.body?.data?.name,
-      'DEFECT: an over-length name persisted through the edit path — neither client nor server enforced the cap on PUT',
-    ).toBe(overLong);
-    expect((readback.body?.data?.name || '').length).toBeGreaterThan(NAME_MAX);
-
-    // Restore the fixture regardless of the assertion outcome above.
-    await page.locator(NAME_EN).fill(FIXTURE_NAME);
-    await page.getByRole('button', { name: 'Save', exact: true }).click();
-    await expect
-      .poll(async () => (await api(page, `/lab-units-management/${id}`)).body?.data?.name, { timeout: 20000 })
-      .toBe(FIXTURE_NAME);
+    const saveBtn = page.getByRole('button', { name: 'Save', exact: true });
+    if (await saveBtn.isEnabled()) {
+      await saveBtn.click();
+      await page.waitForTimeout(2500);
+    }
+    try {
+      const readback = await api(page, `/lab-units-management/${id}`);
+      expect(
+        (readback.body?.data?.name || '').length,
+        'no name longer than the cap is stored through the edit path',
+      ).toBeLessThanOrEqual(NAME_MAX);
+    } finally {
+      // Restore the fixture regardless of the assertion outcome above.
+      await page.goto(`${BASE}${LIST_ROUTE}/${id}/basic-info`);
+      await page.locator(NAME_EN).fill(FIXTURE_NAME);
+      if (await saveBtn.isEnabled()) await saveBtn.click();
+      await expect
+        .poll(async () => (await api(page, `/lab-units-management/${id}`)).body?.data?.name, { timeout: 20000 })
+        .toBe(FIXTURE_NAME);
+    }
   });
 
   test('LU-W-4: [negative] a duplicate name is refused case-insensitively on Add', async ({ page }) => {
@@ -334,6 +339,11 @@ test.describe('Lab Unit Management — write paths (OGC-189, PR #4121)', () => {
     const typed = await page.locator('textarea').inputValue();
     expect(typed.length, 'the field refuses the 61st character rather than erroring on save').toBe(DESC_MAX);
     await expect(page.getByText(`${DESC_MAX}/${DESC_MAX}`)).toBeVisible();
+
+    // The French name is written here too, so the round-trip is this case's own (REWORKED
+    // 2026-10-08: it relied on the fixture's create, which typed the French name into the wrong
+    // field on develop and left an English copy behind).
+    await page.locator('#lu-name-fr').fill(FIXTURE_NAME_FR);
 
     // Make sure Active ends up ON whatever it was before, so the fixture is left usable.
     const beforeActive = (await api(page, `/lab-units-management/${id}`)).body?.data?.isActive;

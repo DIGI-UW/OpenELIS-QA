@@ -224,7 +224,11 @@ test('TC-DEEP-PANEL-ASSIGN: assign test to a panel reads back via REST [ROUND-TR
   const before = (await sectionJson(page.request, 'panels'))?.memberships || [];
   const assignedIds = new Set(before.map((m: any) => String(m.panelId)));
   const avail = await availPanels(page.request);
-  const pick = avail.find((p: any) => !assignedIds.has(String(p.id)));
+  // REWORKED 2026-10-08: since OGC-1209 a panel carries the domain of its sample types, and a test
+  // only joins panels of its own domain; the first unassigned panel was a vector panel for this
+  // clinical test, which (rightly) never stuck. Pick from the test's own domain.
+  const domain = String((await sectionJson(page.request, 'basic-info'))?.domain ?? 'CLINICAL');
+  const pick = avail.find((p: any) => !assignedIds.has(String(p.id)) && (!p.domain || String(p.domain) === domain));
   test.skip(!pick, 'test already belongs to every panel — nothing left to assign');
   const name: string = pick.name;
 
