@@ -1295,12 +1295,14 @@ test.describe('Phase 4 — S-DEEP: Order Extended Fields', () => {
   test.beforeEach(async ({ page }) => { await login(page, ADMIN.user, ADMIN.pass); });
 
   test('TC-S-DEEP-01: Order entry step structure', async ({ page }) => {
+    // REWORKED 2026-10-08: the four steps (Enter Order, Collect, Label & Store, QA Review) became
+    // three on develop: Enter Order, Prepare Samples, Sample check, with a "n/3 steps" counter.
     await page.goto(`${BASE}/order/enter`);
     await expect(page).toHaveURL(/\/order\/(clinical\/)?enter/);
     await expect(page.getByTestId('order-step-enter')).toContainText('Enter Order');
-    await expect(page.getByTestId('order-step-collect')).toContainText('Collect');
-    await expect(page.getByTestId('order-step-label')).toContainText('Label & Store');
-    await expect(page.getByTestId('order-step-qa')).toContainText('QA Review');
+    await expect(page.getByTestId('order-step-prepare')).toContainText('Prepare Samples');
+    await expect(page.getByTestId('order-step-check')).toContainText('Sample check');
+    await expect(page.locator('main').getByText(/\b\d\/3 steps\b/).first()).toBeVisible();
     await expect(page.locator('#labNumber')).toBeVisible();
   });
 
@@ -1309,12 +1311,17 @@ test.describe('Phase 4 — S-DEEP: Order Extended Fields', () => {
     await page.getByRole('button', { name: 'New Patient' }).first().click();
     await expect(page.getByRole('heading', { name: 'Patient Information' })).toBeVisible();
     const main = page.locator('main');
-    for (const label of ['Unique Health ID number', 'National ID', 'Primary phone']) {
+    // REWORKED 2026-10-08: "Unique Health ID number" is labelled "Patient ID / Clinic ID / UR number"
+    // on develop, and the contact and additional fields moved into three collapsed sections.
+    for (const label of ['Patient ID / Clinic ID / UR number', 'National ID', 'Primary phone']) {
       await expect(main.locator('label', { hasText: label }).first()).toBeVisible();
     }
-    // Contact and additional-information fields sit in a collapsed section: present, not necessarily shown.
-    for (const label of ['Contact last name', 'Contact first name', 'Occupation']) {
-      await expect(main.locator('label', { hasText: label }).first()).toBeAttached();
+    for (const section of ['Emergency Contact Info', 'Additional Information', 'Identification Documents']) {
+      await expect(main.getByRole('button', { name: section })).toBeVisible();
+    }
+    // Emergency contact fields sit in a collapsed section: present, not necessarily shown.
+    for (const id of ['patientContact.person.lastName', 'patientContact.person.firstName']) {
+      await expect(main.locator(`[id="${id}"]`)).toBeAttached();
     }
   });
 });
@@ -1425,10 +1432,18 @@ test.describe('Phase 5 — B-DEEP: Order Entry Field Enumeration Tests', () => {
   test.beforeEach(async ({ page }) => { await login(page, ADMIN.user, ADMIN.pass); });
 
   test('TC-B-DEEP-01: Patient section fields present', async ({ page }) => {
+    // REWORKED 2026-10-08: the patient search on Enter Order is the shared search form, so its
+    // fields carry the "order-patient-search-" prefix; asserted by label as well as by id.
     await page.goto(`${BASE}/order/enter`);
-    for (const id of ['#patientId', '#previousLabNumber', '#lastName', '#firstName', '#dateOfBirth', '#gender-male', '#gender-female']) {
-      await expect(page.locator(id)).toBeAttached();
+    const search = page.getByTestId('order-patient-search');
+    for (const id of ['patientId', 'labNumber', 'lastName', 'firstName']) {
+      await expect(search.locator(`#order-patient-search-${id}`)).toBeAttached();
     }
+    for (const label of ['Patient Id', 'Previous Lab Number', 'Last Name', 'First Name', 'Date of Birth']) {
+      await expect(search.getByRole('textbox', { name: label, exact: true })).toBeVisible();
+    }
+    await expect(search.getByRole('radio', { name: 'Male', exact: true })).toBeAttached();
+    await expect(search.getByRole('radio', { name: 'Female' })).toBeAttached();
     await expect(page.getByRole('button', { name: 'Search for Patient' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'New Patient' }).first()).toBeVisible();
     await expect(page.locator('#noPatientOverride')).toBeAttached();

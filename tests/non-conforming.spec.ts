@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, getFutureDate, navigateViaMenu, tryNavigateToURL, selectSampleType, orderWizardForward, selectOrderProgram } from '../helpers/test-helpers';
+import { ensureReferringClinic } from '../helpers/data-factory';
+import { seededPatient, sampleTypeWithTest, legacyPickPatient, legacyToAddSample, legacyTickTest, legacyFillOrderStep } from '../helpers/legacy-order-entry';
 
 /**
  * Non-Conforming Samples and Events Test Suite
@@ -76,83 +78,38 @@ test.describe('Non-conforming samples (TC-NC)', () => {
   });
 
   test('TC-NC-03: Order with rejected sample submits and shows NC icon in Results view', async ({ page }) => {
-    await page.goto(`${BASE}/SamplePatientEntry`);
+    // REWORKED 2026-10-08: written against the old testing server's demo data (patient 0123456,
+    // HGB test 743, sites "Adiba SC" / "Anga, Dr"), none of which exists on a fresh or CI stack.
+    // It now seeds its own patient and uses the Add Sample step's #reject_0 / #rejectedReasonId_0.
+    const p = await seededPatient(page, 'NC3');
+    await ensureReferringClinic(page);
+    const st = await sampleTypeWithTest(page);
+    await legacyPickPatient(page, p);
+    await legacyToAddSample(page);
+    await page.locator('#sampleId_0').selectOption(st.typeId);
+    await legacyTickTest(page, st.testId);
 
-    // Complete Add Order flow with rejected sample
-    await page.locator('input[placeholder*="patient" i]').first().fill('0123456');
-    await page.keyboard.press('Enter');
-    await orderWizardForward(page).click();
-    await selectOrderProgram(page);
-    await orderWizardForward(page).click();
-    await selectSampleType(page, '4');
-
-    // Check Reject Sample
-    const rejectLabel = page.getByText('Reject Sample', { exact: false });
-    if (await rejectLabel.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await rejectLabel.click();
-      await page.waitForTimeout(500);
-      // Select first rejection reason if dropdown present
-      const reasonSelect = page.locator('select[id*="reject"], select[id*="reason"]').first();
-      if (await reasonSelect.isVisible({ timeout: 1000 }).catch(() => false)) {
-        const opts = await reasonSelect.locator('option').all();
-        if (opts.length > 1) await reasonSelect.selectOption({ index: 1 }); // first real option
-      }
-    }
-
-    // Select HGB test
-    const hgbCb = page.locator('input#test_0_743');
-    if (await hgbCb.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await hgbCb.check();
-    }
+    // Reject the sample and give the first real reason.
+    await page.locator('label[for="reject_0"]').click();
+    await expect(page.locator('#reject_0'), 'Reject Sample is ticked').toBeChecked();
+    await expect(page.locator('#rejectedReasonId_0'), 'a rejection reason list appears').toBeVisible();
+    await page.locator('#rejectedReasonId_0').selectOption({ index: 1 });
 
     await orderWizardForward(page).click();
+    const labNo = await legacyFillOrderStep(page);
+    const post = page.waitForResponse((r) => /\/rest\/SamplePatientEntry/.test(r.url()) && r.request().method() === 'POST', { timeout: 30_000 });
+    await orderWizardForward(page).filter({ hasText: /Submit/ }).click();
+    expect((await post).status(), 'the order with a rejected sample saves').toBe(200);
+    await expect(page.getByText(/Successfully saved|Succesfuly saved/i).first()).toBeVisible({ timeout: 15000 });
 
-    // Add Order step
-    await page.getByText('Generate', { exact: false }).click();
-
-    // Fill site and requester
-    const siteInput = page.getByRole('textbox', { name: /site/i }).first();
-    if (await siteInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await siteInput.fill('a');
-      await page.getByText('Adiba SC').click();
-    }
-    const requesterInput = page.getByRole('textbox', { name: /requester/i }).first();
-    if (await requesterInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await requesterInput.fill('a');
-      await page.getByText('Anga, Dr').click();
-    }
-
-    await page.getByRole('button', { name: /Submit/i }).click();
-    await page.waitForTimeout(3000);
-
-    const savedText = await page.getByText(/Successfully saved|Succesfuly saved/i).isVisible({ timeout: 10000 }).catch(() => false);
-    console.log(`TC-NC-03: Order submitted with rejected sample — success: ${savedText}`);
-
-    if (savedText) {
-      // Get accession
-      const accText = await page.locator('[class*="accession"], [id*="accession"], :text-matches("[0-9]{2}CPHL[0-9]+[A-Z]")').first().textContent().catch(() => null);
-      console.log(`TC-NC-03: NC accession = ${accText}`);
-      const NC_ACCESSION = accText?.replace(/[^A-Z0-9]/g, '') || '';
-
-      if (NC_ACCESSION) {
-        // Navigate to Results By Order and check for NC indicator
-        await page.getByText('Done').click().catch(() => {});
-        await page.goto(`${BASE}/AccessionResults`);
-        const searchInput = page.locator('input').first();
-        await searchInput.fill(NC_ACCESSION);
-        await page.getByRole('button', { name: /Search/i }).click();
-        await page.waitForTimeout(2000);
-
-        // Look for NC indicator (orange warning icon, NC badge, etc.)
-        const ncIndicator = page.locator('[class*="nonconform"], [class*="NC"], [aria-label*="nonconform" i]').first();
-        const warningIcon = page.locator('svg[class*="warn"], svg[class*="alert"]').first();
-        const hasNcIndicator = await ncIndicator.isVisible({ timeout: 3000 }).catch(() => false);
-        const hasWarning = await warningIcon.isVisible({ timeout: 3000 }).catch(() => false);
-
-        console.log(`TC-NC-03: NC indicator visible = ${hasNcIndicator || hasWarning}`);
-        expect(savedText).toBe(true); // At minimum, the order must have saved
-      }
-    }
+    // Informational: look for an NC marker for this lab number in the unified Results page.
+    await page.goto(`${BASE}/Results`);
+    const search = page.locator('main').getByRole('searchbox', { name: /lab number/i });
+    await search.fill(labNo);
+    await search.press('Enter');
+    await page.waitForTimeout(2000);
+    const ncIndicator = page.locator('main').locator('[class*="nonconform" i], [aria-label*="nonconform" i], [title*="non-conform" i], [title*="nonconform" i]').first();
+    console.log(`TC-NC-03: ${labNo} saved with a rejected sample; NC indicator in Results = ${await ncIndicator.isVisible().catch(() => false)}`);
   });
 
   test('TC-NC-04: NC order result field behavior', async ({ page }) => {

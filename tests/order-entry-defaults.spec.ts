@@ -92,9 +92,8 @@ test.describe('Add Order defaults (UTC+10)', () => {
     expect(Math.min(diff, 1440 - diff), `pre-filled ${defaultReception} vs local ${localAtStep}`).toBeLessThanOrEqual(3);
   });
 
-  test('TC-OED-01: an empty Date of next visit stays empty', async ({ page }) => {
-    // FLIP-WHEN-FIXED (R57). Observed 2026-09-27: today's date stored.
-    test.fail();
+  test('TC-OED-01: an empty Date of next visit stays empty [FIXED R57]', async ({ page }) => {
+    // FIXED R57, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED (R57). Observed 2026-09-27: today's date stored.
     await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
     const r = await apiGet<{ sampleOrderItems?: { nextVisitDate?: string } }>(page, `/rest/SampleEdit?accessionNumber=${labNo}`);
     expect(r.json?.sampleOrderItems?.nextVisitDate ?? '', 'no next visit date stored').toBe('');

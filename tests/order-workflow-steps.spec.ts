@@ -5,6 +5,11 @@
  * agree with the steps it shows as Complete, and is a freshly loaded order free of an
  * "Unsaved changes" warning? Written 2026-09-27 against testing 3.2.3.0
  * (release-qa-3.2.3 R63; uncovered-workflows-catalogue TC-OWF-00/01/02).
+ *
+ * REWORKED 2026-10-08 for develop, where the workflow has three steps, not four:
+ *   Enter Order -> Prepare Samples (/order/clinical/collect) -> Sample check (/order/clinical/qa).
+ * /order/clinical/label now redirects to Prepare Samples, and the counter reads "n/3 steps".
+ * The counter and step names are read for either layout, so the spec still runs on 3.2.x.
  */
 import { test, expect, Page } from '@playwright/test';
 import { seedOrder } from '../helpers/data-factory';
@@ -14,7 +19,7 @@ test.describe.configure({ mode: 'serial' });
 
 let accession = '';
 
-async function loadOrder(page: Page, step: 'collect' | 'label' | 'qa') {
+async function loadOrder(page: Page, step: 'collect' | 'qa') {
   await page.goto(`${BASE}/order/clinical/${step}`, { waitUntil: 'domcontentloaded' });
   const scan = page.locator('#order-barcode-search');
   await expect(scan).toBeVisible({ timeout: 20_000 });
@@ -26,8 +31,8 @@ async function loadOrder(page: Page, step: 'collect' | 'label' | 'qa') {
 
 async function progress(page: Page): Promise<{ counter: number; complete: number }> {
   const text = await page.locator('main').innerText();
-  const counter = Number((text.match(/(\d)\s*\/\s*4 steps/) ?? [])[1] ?? -1);
-  const steps = await page.locator('main button').filter({ hasText: /^(Enter Order|Collect|Label & Store|QA Review)\s*\n?\s*(Complete|Current|Incomplete)$/ }).allInnerTexts();
+  const counter = Number((text.match(/(\d)\s*\/\s*[34] steps/) ?? [])[1] ?? -1);
+  const steps = await page.locator('main li button').filter({ hasText: /^(Enter Order|Collect|Label & Store|QA Review|Prepare Samples|Sample check)[\s\S]*(Complete|Current|Incomplete)\s*$/ }).allInnerTexts();
   return { counter, complete: steps.filter(s => /Complete$/.test(s.trim())).length };
 }
 
@@ -49,7 +54,7 @@ test.describe('Order workflow steps', () => {
   test('TC-OWF-01: the progress counter matches the steps shown Complete', async ({ page }) => {
     // FLIP-WHEN-FIXED (R63a). Observed 2026-09-27: one behind (2/4 with three Complete).
     test.fail();
-    for (const step of ['collect', 'label', 'qa'] as const) {
+    for (const step of ['collect', 'qa'] as const) {
       await loadOrder(page, step);
       const p = await progress(page);
       expect(p.counter, `${step}: counter ${p.counter} vs ${p.complete} steps Complete`).toBe(p.complete);
