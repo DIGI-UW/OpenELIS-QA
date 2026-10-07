@@ -73,17 +73,24 @@ test.describe('Performance Smoke (TC-PERF)', () => {
   });
 
   test('TC-PERF-04: Validation queue load time', async ({ page }) => {
+    // REWORKED 2026-10-08: the one-page Validation (#4513) lists nothing until a lab unit is
+    // loaded, so waiting for a table row always burned the full 15 s and the case measured its own
+    // timeout. It now times what a validator waits for: the page, then one lab unit's queue.
     await login(page, ADMIN.user, ADMIN.pass);
     const start = Date.now();
-    const valUrls = ['/ResultValidation?type=order', '/ResultValidation'];
-    for (const u of valUrls) {
-      const res = await page.goto(`${BASE}${u}`).catch(() => null);
-      if (res && res.ok() && !page.url().includes('LoginPage')) break;
-    }
-    await page.getByRole('row').first().waitFor({ timeout: 15000 }).catch(() => {});
+    await page.goto(`${BASE}/validation`);
+    const unit = page.locator('main').getByRole('combobox', { name: 'Lab Unit' });
+    await unit.locator('option', { hasText: 'Hematology' }).waitFor({ state: 'attached', timeout: 15000 });
+    const pageReady = Date.now() - start;
+    await unit.selectOption({ label: 'Hematology' });
+    const queue = page.waitForResponse((r) => /\/rest\/AccessionValidation\?/.test(r.url()) && r.request().method() === 'GET', { timeout: 15000 });
+    await page.locator('main').getByRole('button', { name: 'Load results' }).click();
+    expect((await queue).status(), 'the queue answers').toBe(200);
+    // 'main table' never became visible here although the rows rendered; a role query skips hidden tables.
+    await page.locator('main').getByRole('table').first().waitFor({ timeout: 15000 });
     const elapsed = Date.now() - start;
 
-    console.log(`TC-PERF-04: Validation queue loaded in ${elapsed}ms`);
+    console.log(`TC-PERF-04: Validation page ready in ${pageReady}ms, Hematology queue loaded in ${elapsed}ms`);
     const domNodes = await page.evaluate(() => document.querySelectorAll('*').length);
     console.log(`TC-PERF-04: DOM nodes = ${domNodes}`);
     expect(elapsed).toBeLessThan(15000);
@@ -299,11 +306,14 @@ test.describe('Phase 4 — X-DEEP: Performance', () => {
   });
 
   test('TC-X-DEEP-02: Large dropdown renders', async ({ page }) => {
-    await page.click('text=Workplan');
-    await page.click('text=By Test Type');
-    await page.waitForSelector('select');
+    // REWORKED 2026-10-08: the menu path "Workplan > By Test Type" no longer exists by that text;
+    // clicking 'text=...' landed on another page and counted the locale picker's options. The
+    // page is Workplan By Test (/WorkPlanByTest); its test type picker is the large dropdown.
+    await page.goto(`${BASE}/WorkPlanByTest`);
+    await expect(page.getByRole('heading', { name: 'Workplan By Test' })).toBeVisible();
+    await page.locator('main select').first().locator('option').nth(100).waitFor({ state: 'attached', timeout: 30000 }).catch(() => {});
     const optionCount = await page.evaluate(() => {
-      const selects = Array.from(document.querySelectorAll('select'));
+      const selects = Array.from(document.querySelectorAll('main select')) as HTMLSelectElement[];
       const largest = selects.reduce((max, s) => s.options.length > max ? s.options.length : max, 0);
       return largest;
     });
@@ -335,11 +345,14 @@ test.describe('Phase 4 — Y-DEEP: Data Integrity', () => {
     const dashKPI = await page.locator('text=Ready For Validation').locator('..').innerText();
     const kpiValue = parseInt(dashKPI.match(/\d+/)?.[0] || '0');
     expect(kpiValue).toBeGreaterThanOrEqual(0);
-    // Navigate to Validation - page should load
-    await page.click('text=Validation');
-    await page.click('text=Routine');
-    await page.waitForSelector('text=Validation');
-    await expect(page.locator('text=Select Test Unit')).toBeVisible();
+    // Navigate to Validation - page should load. REWORKED 2026-10-08: Validation is one page now
+    // (#4513); its Routine submenu and "Select Test Unit" picker became the Lab Unit filter.
+    await page.getByRole('navigation', { name: 'Side navigation' }).getByText('Validation', { exact: true }).first().click();
+    const routine = page.getByRole('navigation', { name: 'Side navigation' }).getByText('Routine', { exact: true });
+    if (await routine.isVisible({ timeout: 2000 }).catch(() => false)) await routine.click();
+    await expect(page).toHaveURL(/\/validation\b|ResultValidation/i);
+    await expect(page.getByRole('heading', { name: 'Validation', exact: true })).toBeVisible();
+    await expect(page.locator('main').getByRole('combobox', { name: 'Lab Unit' })).toBeVisible();
   });
 
   test('TC-Y-DEEP-02: Cross-module data model consistency', async ({ page }) => {

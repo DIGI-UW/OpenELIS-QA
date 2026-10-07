@@ -24,17 +24,25 @@ let enteredAtLocal = ''; // HH:mm in the browser zone when Save was pressed
 
 async function openReviewPanel(page: Page) {
   // A freshly saved result can take a little while to reach the validation list; reload
-  // the unit a few times rather than waiting on one stale render.
+  // a few times rather than waiting on one stale render.
   // The validation list is built from role="row" elements, not <tr>.
+  // REWORKED 2026-10-08: Validation is one page now (#4513). /ResultValidation redirects to
+  // /validation, which has no #unitType; the order is found with the "Lab number" search and
+  // Load results, and the row opens with "Expand Row" (or "Review →" on a row that needs review).
   const row = page.getByRole('row').filter({ hasText: accession }).first();
   await expect(async () => {
-    await page.goto(`${BASE}/ResultValidation`, { waitUntil: 'domcontentloaded' });
-    await page.locator('#unitType').selectOption({ label: 'Biochemistry' });
+    await page.goto(`${BASE}/validation`, { waitUntil: 'domcontentloaded' });
+    const search = page.locator('main').getByRole('searchbox', { name: 'Lab number' });
+    await search.fill(accession);
+    await page.locator('main').getByRole('button', { name: 'Load results' }).click();
     await expect(row).toBeVisible({ timeout: 10_000 });
-  }, `${accession} is waiting in Biochemistry validation`).toPass({ timeout: 60_000 });
-  await row.getByRole('button', { name: /review/i }).click();
-  // Review expands an inline panel under the row (div.validationReviewPanel), not a dialog.
-  const panel = page.locator('.validationReviewPanel, .unifiedExpandedPanel').filter({ hasText: /Entered by/ }).first();
+  }, `${accession} is waiting in validation`).toPass({ timeout: 60_000 });
+  await row.getByRole('button', { name: /expand row|review/i }).first().click();
+  // Review expands an inline panel under the row, not a dialog.
+  const legacy = page.locator('.validationReviewPanel, .unifiedExpandedPanel').filter({ hasText: /Entered by/ });
+  const panel = (await legacy.count())
+    ? legacy.first()
+    : page.locator('main div').filter({ has: page.getByRole('button', { name: 'Validate & release' }) }).filter({ hasText: /Entered by/ }).last();
   await expect(panel, 'the review panel opens').toBeVisible({ timeout: 10_000 });
   return panel;
 }

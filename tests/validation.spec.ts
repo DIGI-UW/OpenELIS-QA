@@ -59,14 +59,15 @@ test.describe('Validation workflow (TC-VAL)', () => {
     expect(page.url(), 'Must not redirect to login — validator must be authenticated').not.toMatch(/LoginPage|login/i);
     console.log(`TC-VAL-01: Validation reached at ${reachedUrl}`);
 
-    // A heading is required so the validator knows what screen they're on
-    const heading = page.locator('h1, h2').first();
-    await expect(heading, 'Validation page must have an h1/h2 heading').toBeVisible({ timeout: 5000 });
+    // A heading is required so the validator knows what screen they're on. REWORKED 2026-10-08:
+    // the one-page Validation (#4513) titles itself with an h3, so the check is by role and name.
+    const heading = page.getByRole('heading', { name: 'Validation', exact: true });
+    await expect(heading, 'Validation page must name itself in a heading').toBeVisible({ timeout: 15_000 });
 
     // A table or search input is required — without either, the validator has nothing to act on
-    const hasTable = await page.locator('table, .cds--data-table, [role="table"]').first()
+    const hasTable = await page.locator('main table, main .cds--data-table, main [role="table"]').first()
       .isVisible({ timeout: 3000 }).catch(() => false);
-    const hasSearch = await page.locator('.cds--search-input, input[placeholder*="accession" i]').first()
+    const hasSearch = await page.locator('main').getByRole('searchbox', { name: /lab number|accession/i }).first()
       .isVisible({ timeout: 3000 }).catch(() => false);
 
     expect(
@@ -131,12 +132,33 @@ test.describe('Validation workflow (TC-VAL)', () => {
   });
 
   test('TC-VAL-04: Save button is present and clickable on validation screen', async ({ page }) => {
+    // REWORKED 2026-10-08: the one-page Validation (#4513) has no page-level Save. A result is
+    // released from its row ("Validate & release" in the expanded row), and the page offers a
+    // guarded bulk "Release all clear (n)". Both appear once a lab unit with waiting results is
+    // loaded, so the case finds one through the queue the page itself reads. Nothing is released.
     await goToValidation(page);
-    const saveBtn = page.getByRole('button', { name: /Save|Validate|Submit/i });
-    await expect(saveBtn).toBeVisible({ timeout: 5000 });
-    // Verify it is not disabled
-    const isDisabled = await saveBtn.isDisabled();
-    console.log(`TC-VAL-04: Save button visible; disabled = ${isDisabled}`);
+    const units: Array<{ id: string; value: string }> = await page.evaluate(async () => {
+      const r = await fetch('/api/OpenELIS-Global/rest/user-test-sections/Validation', { headers: { Accept: 'application/json' } });
+      return r.ok ? r.json() : [];
+    });
+    let unitWithWork = '';
+    for (const u of units) {
+      const n = await page.evaluate(async (id) => {
+        const r = await fetch(`/api/OpenELIS-Global/rest/AccessionValidation?labNumberFrom=&labNumberTo=&testSectionId=${id}&fromDate=&toDate=&patientId=`, { headers: { Accept: 'application/json' } });
+        if (!r.ok) return 0;
+        const j = await r.json();
+        return (j.resultList ?? []).length;
+      }, u.id);
+      if (n > 0) { unitWithWork = u.value; break; }
+    }
+    expect(unitWithWork, 'precondition: some lab unit has results waiting for validation (enter and save a result first)').not.toBe('');
+    await page.locator('main').getByRole('combobox', { name: 'Lab Unit' }).selectOption({ label: unitWithWork });
+    await page.locator('main').getByRole('button', { name: 'Load results' }).click();
+    await expect(page.locator('main').getByRole('button', { name: /^Release all clear \(\d+\)$/ })).toBeVisible({ timeout: 30_000 });
+    await page.locator('main').getByRole('button', { name: 'Expand Row' }).first().click();
+    const release = page.locator('main').getByRole('button', { name: 'Validate & release' }).first();
+    await expect(release, 'an expanded row offers Validate & release').toBeVisible({ timeout: 15_000 });
+    console.log(`TC-VAL-04: ${unitWithWork}: Validate & release visible; disabled = ${await release.isDisabled()}`);
   });
 
   test('TC-VAL-05: Notes / comment field is accessible on result row', async ({ page }) => {

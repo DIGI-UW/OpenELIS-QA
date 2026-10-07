@@ -17,9 +17,12 @@ import { seedModifiableOrder } from '../helpers/data-factory';
 const REST = '/api/OpenELIS-Global/rest';
 const RDT_TEST = '31'; // "HIV rapid test HIV": dictionary result, Serum; same test qc-hold-release uses
 // Generic config menus (GenericConfigEdit): name -> the menu that holds it.
-const SETTINGS: Array<{ menu: string; record: string; name: string; value: string }> = [
+// REWORKED 2026-10-08: resultsEntryUnifiedRoute was retired on develop (OpenELIS-Global-2 #4528; the
+// unified Results page is the only route), so it is optional: set where a build still has it (3.2.x),
+// never a reason to skip. Skipping on it left the later cases running without a seeded order.
+const SETTINGS: Array<{ menu: string; record: string; name: string; value: string; optional?: boolean }> = [
   { menu: 'SiteInformationMenu', record: 'SiteInformation', name: 'electronicSignatureEnabled', value: 'true' },
-  { menu: 'ResultConfigurationMenu', record: 'ResultConfiguration', name: 'resultsEntryUnifiedRoute', value: 'true' },
+  { menu: 'ResultConfigurationMenu', record: 'ResultConfiguration', name: 'resultsEntryUnifiedRoute', value: 'true', optional: true },
 ];
 
 test.describe.configure({ mode: 'serial' });
@@ -143,12 +146,15 @@ test.describe('Electronic signatures end to end (TC-ESIGW)', () => {
 
   test('TC-ESIGW-00 [setup]: signatures on, order seeded', async ({ page }) => {
     state.original = [];
+    const present: typeof SETTINGS = [];
     for (const s of SETTINGS) {
       const cur = await readConfig(page, s.menu, s.name);
+      if (!cur && s.optional) continue;
       test.skip(!cur, `this build has no "${s.name}" setting`);
       state.original.push({ ...s, value: cur!.value });
+      present.push(s);
     }
-    for (const s of SETTINGS) await setConfig(page, s.menu, s.record, s.name, s.value);
+    for (const s of present) await setConfig(page, s.menu, s.record, s.name, s.value);
     const info = await getJson(page, `/test-catalog/tests/${RDT_TEST}/basic-info`);
     state.labUnit = String(info.labUnitId);
     const { accession } = await seedModifiableOrder(page, { testIds: [RDT_TEST] });

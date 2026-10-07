@@ -170,58 +170,76 @@ test.describe('Validation queue and review panel', () => {
     const row = seeded!.row;
     // Named one by one rather than as a count: a drifted field name is the exact
     // failure this canary exists to catch, and a count would not say which.
-    for (const field of ['analysisId', 'testId', 'result', 'normalRange', 'qcStatus',
+    for (const field of ['analysisId', 'testId', 'result', 'qcStatus',
       'analysisLastupdated', 'nonconforming', 'nceOpen', 'ackPending', 'critical',
       'normal', 'modified', 'autoValidated']) {
       expect(Object.prototype.hasOwnProperty.call(row, field),
         `queue row is missing "${field}"; keys served were [${Object.keys(row).join(',')}]`).toBe(true);
     }
+    // REWORKED 2026-10-08: since the one-page Validation (#4513) the queue omits empty fields, so
+    // normalRange is absent (not "") on a test with no reference range, which is what the seeded
+    // out-of-range row usually is. Present, it must be a string; the Clear lane treats absent as
+    // "no known range", exactly as it treated "".
+    if (Object.prototype.hasOwnProperty.call(row, 'normalRange')) {
+      expect(typeof row.normalRange, 'normalRange, when served, is text').toBe('string');
+    }
     expect(String(row.analysisLastupdated ?? ''),
       'analysisLastupdated is the stale-page token and must be epoch millis').toMatch(/^[0-9]{10,}$/);
   });
 
+  // REWORKED 2026-10-08 (VR-01, VR-02): the four validation submenus (Routine by unit, By Order,
+  // By Range, By Test Date) became one page, /validation, in #4513. Its single search area takes a
+  // lab number or a range "A..B", a Lab Unit and a From/To date, so there is no per-submenu form left
+  // to tell apart. The legacy routes redirect there, and the side menu now has one "Validation"
+  // link (to /validation) instead of four submenus. VR-01 loads each legacy route fresh; VR-02 keeps
+  // the #4301 check (an in-app switch must render the new screen, not the previous one) on the
+  // switch that still exists: Results to Validation and back through the side menu.
+  const LEGACY_VALIDATION_ROUTES = ['/ResultValidation', '/AccessionValidation', '/AccessionValidationRange', '/ResultValidationByTestDate'];
+
+  async function expectOnePageValidation(page: Page, from: string) {
+    await expect(page, `${from} lands on the one-page Validation`).toHaveURL(/\/validation\b/, { timeout: 30_000 });
+    await expect(page.getByRole('heading', { name: 'Validation', exact: true }), `${from}: heading`).toBeVisible({ timeout: 20_000 });
+    const area = page.getByTestId('validation-search-area');
+    await expect(area, `${from}: the search area renders`).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('main').getByRole('searchbox', { name: 'Lab number' }), `${from}: lab number / range search`).toBeVisible();
+    await expect(page.locator('main').getByRole('combobox', { name: 'Lab Unit' }), `${from}: Lab Unit filter`).toBeVisible();
+    await expect(page.locator('main').getByRole('textbox', { name: 'From' }), `${from}: date filter`).toBeVisible();
+  }
+
   test('VR-01: each validation submenu, loaded fresh, renders its own search form', async ({ page }) => {
     test.setTimeout(240_000);
-    // route -> the control that ONLY that submenu shows.
-    const lanes: Array<{ route: string; expect: string; locator: string }> = [
-      { route: '/ResultValidation', expect: 'Select Test Unit', locator: '#unitType' },
-      { route: '/AccessionValidation', expect: 'Enter Accession Number', locator: '#accessionNumber' },
-      { route: '/AccessionValidationRange', expect: 'Load Next 99 Records Starting at Lab Number', locator: '#accessionNumber' },
-      { route: '/ResultValidationByTestDate', expect: 'Enter Test Date', locator: 'input' },
-    ];
-    for (const lane of lanes) {
-      await page.goto(lane.route, { waitUntil: 'domcontentloaded' });
-      await page.waitForSelector('#root > *', { timeout: 30_000 });
-      await page.waitForTimeout(6000);
-      await expect(page.locator(lane.locator).first(),
-        `${lane.route} did not render ${lane.locator}`).toBeVisible({ timeout: 20_000 });
-      await expect(page.getByText(lane.expect, { exact: false }).first(),
-        `${lane.route} should label its search "${lane.expect}"`).toBeVisible({ timeout: 20_000 });
+    for (const route of LEGACY_VALIDATION_ROUTES) {
+      await page.goto(route, { waitUntil: 'domcontentloaded' });
+      await expectOnePageValidation(page, route);
+      expect(new URL(page.url()).pathname, `${route} redirects to /validation`).toBe('/validation');
     }
   });
 
-  test('VR-02: switching submenu without a page load renders the new submenu, not the previous one (#4301)', async ({ page }) => {
+  test('VR-02: switching to Validation without a page load renders Validation, not the previous screen (#4301)', async ({ page }) => {
     test.setTimeout(240_000);
     // The bug was invisible on a fresh load and only appeared on an in-app
-    // navigation, so this case must NOT call page.goto for the second route.
-    await page.goto('/ResultValidationByTestDate', { waitUntil: 'domcontentloaded' });
-    await page.waitForSelector('#root > *', { timeout: 30_000 });
-    await page.waitForTimeout(6000);
-    await expect(page.getByText('Enter Test Date', { exact: false }).first()).toBeVisible({ timeout: 20_000 });
-
-    const link = page.locator('a[href="/AccessionValidation"]').first();
-    const reachable = await link.count();
-    expect(reachable,
-      'no in-app link to /AccessionValidation in the rendered navigation, so the #4301 regression '
-      + 'cannot be exercised; a fresh load of the route always worked and proves nothing').toBeGreaterThan(0);
-
-    await link.click();
-    await page.waitForTimeout(6000);
-    expect(page.url(), 'the click did not change the route').toContain('/AccessionValidation');
-    await expect(page.getByText('Enter Accession Number', { exact: false }).first(),
-      'the URL changed to /AccessionValidation but the page still shows the previous submenu — this is #4301')
-      .toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText('Enter Test Date', { exact: false })).toHaveCount(0);
+    // navigation, so this case must NOT call page.goto after the first page.
+    // The Dashboard is the other end because its side-menu link (Home) is always rendered;
+    // Results sits in a collapsed section.
+    const dashboardMarker = () => page.getByRole('heading', { name: 'Orders Entered By Users Today' });
+    await page.goto('/Dashboard', { waitUntil: 'domcontentloaded' });
+    await expect(dashboardMarker()).toBeVisible({ timeout: 30_000 });
+    const nav = page.getByRole('navigation', { name: 'Side navigation' });
+    const validationLinks = nav.locator('a[href="/validation"], a[href^="/validation?"]');
+    await expect(validationLinks, 'the side menu has one Validation link').toHaveCount(1);
+    for (const route of LEGACY_VALIDATION_ROUTES) {
+      await expect(nav.locator(`a[href="${route}"]`), `the side menu no longer links ${route}`).toHaveCount(0);
+    }
+    const home = nav.getByRole('link', { name: 'Home', exact: true });
+    for (let round = 1; round <= 2; round++) {
+      await validationLinks.first().dispatchEvent('click'); // the side menu may be collapsed to a rail
+      await expectOnePageValidation(page, `in-app round ${round}`);
+      await expect(dashboardMarker(), 'the Dashboard is gone').toHaveCount(0);
+      await home.dispatchEvent('click');
+      await expect(page, `round ${round}: back on the Dashboard`).toHaveURL(/\/Dashboard\b/, { timeout: 30_000 });
+      await expect(dashboardMarker()).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByTestId('validation-search-area'), 'the Validation screen is gone').toHaveCount(0);
+    }
   });
 
   test('VR-03: a by-order search returns only that sample, and an unknown accession is an empty result, not an error', async ({ page }) => {

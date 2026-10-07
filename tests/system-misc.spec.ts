@@ -1409,14 +1409,17 @@ test.describe('Phase 5 — E2E-DEEP: End-to-End Order Trace Tests', () => {
   });
 
   test('TC-E2E-DEEP-03: Validation by lab unit loads', async ({ page }) => {
+    // REWORKED 2026-10-08: /ResultValidation redirects to the one-page Validation (#4513). Its
+    // unit picker is the "Lab Unit" filter (was #unitType), and the queue loads on "Load results".
     await page.goto(`${BASE}/ResultValidation?type=&test=`);
     await expect(page.getByRole('heading', { name: 'Validation', exact: true })).toBeVisible();
-    const unit = page.locator('#unitType');
+    const unit = page.locator('main').getByRole('combobox', { name: 'Lab Unit' });
     await unit.locator('option', { hasText: 'Hematology' }).waitFor({ state: 'attached', timeout: 15000 });
     const opts = (await unit.locator('option').allInnerTexts()).map(t => t.trim()).filter(Boolean);
     expect(opts).toContain('Hematology');
+    await unit.selectOption({ label: 'Hematology' });
     const res = page.waitForResponse(r => /AccessionValidation|ResultValidation/i.test(r.url()) && r.request().method() === 'GET');
-    await unit.selectOption('Hematology');
+    await page.locator('main').getByRole('button', { name: 'Load results' }).click();
     expect((await res).status()).toBe(200);
   });
 });

@@ -71,8 +71,11 @@ test.describe('TC-WP-UNIT — Workplan By Unit', () => {
     });
 
     await page.goto('/WorkPlanByTestSection?type=');
-    const picker = page.locator('#select-1');
+    const picker = page.locator('main select').first();
     await expect(picker).toBeVisible();
+    // REWORKED 2026-10-08: the units arrive after mount; reading the options straight away found
+    // only the "Select Unit Type" placeholder in CI. Wait for a real unit before picking one.
+    await picker.locator('option:not([value=""])').first().waitFor({ state: 'attached', timeout: 30_000 });
 
     const firstUnit = await picker
       .locator('option')
