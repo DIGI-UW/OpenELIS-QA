@@ -113,18 +113,30 @@ test.describe('Group editor - Ranges and Storage', () => {
     await seedDivergence(page);
     await openStorageTab(page);
     await watchToasts(page);
+    // REWORKED 2026-10-08: group Storage now writes only the fields the user changes ("saving
+    // applies the fields you change to every selected test and leaves the other fields as they
+    // are"), so Save stays disabled until something changes. Change the storage condition to a
+    // value neither test has, then check it reached both.
+    const cond = page.locator('#storage-condition');
+    const target = await cond.locator('option').evaluateAll((os) =>
+      (os as HTMLOptionElement[]).map((o) => o.value).find((v) => v && !/FROZEN|REFRIGERATED/i.test(v)) ?? '');
+    expect(target, 'a storage condition other than the two seeded ones is offered').not.toBe('');
+    await cond.selectOption(target);
     const resp = nextResponse(page, 'PUT', /\/group\/storage$/);
     await page.getByRole('button', { name: /^save$/i }).last().click();
     expect((await resp).status(), 'group storage save answered').toBe(200);
     const a = await storageOf(page, A); const b = await storageOf(page, B);
-    expect(a.storageCondition, 'both tests now share one storage condition').toBe(b.storageCondition);
+    expect(a.storageCondition, 'the changed field reached the first test').toBe(target);
+    expect(b.storageCondition, 'and the second').toBe(target);
+    expect(a.protectFromLight, 'an untouched field keeps each test\'s own value').toBe(true);
+    expect(b.protectFromLight).toBe(false);
     expect((await successToasts(page)).length, 'the UI confirmed the save').toBeGreaterThan(0);
   });
 
-  test('TC-SD-04: FLIP-WHEN-FIXED - group Storage warns when the tests differ, as group Ranges does', async ({ page }) => {
+  test('TC-SD-04: group Storage warns when the tests differ, as group Ranges does [FIXED SD-G2]', async ({ page }) => {
     // SD-G2. The tab loads ONLY the first test's storage and shows no warning; an untouched Save
     // then overwrites the other test (A: Frozen + protect from light became Refrigerated, 2026-09-23).
-    test.fail(true, 'SD-G2: group storage has no "differs" warning; flips when it gets one');
+    // FIXED SD-G2, flipped 2026-10-08 (passes in CI run 126 and on local develop 2026-10-08); was FLIP-WHEN-FIXED. Was: SD-G2: group storage has no "differs" warning; flips when it gets one
     await open(page, `/MasterListsPage/TestCatalogEditor/${A}/basic-info`);
     await seedDivergence(page);
     expect((await storageOf(page, A)).storageCondition, 'precondition: A differs from B').not.toBe((await storageOf(page, B)).storageCondition);
@@ -177,10 +189,10 @@ test.describe('Methods - Copy from Test', () => {
     expect(r.links.map((l) => l.methodName), 'the source method is now linked to the target').toContain(methodName);
   });
 
-  test('TC-SD-11: FLIP-WHEN-FIXED - copying from a test with no methods must not show a success toast', async ({ page }) => {
+  test('TC-SD-11: copying from a test with no methods must not show a success toast [FIXED SD-M1]', async ({ page }) => {
     // SD-M1. handleCopyFromTest ignores its response and always toasts success, titled with the
     // button label "Copy from Test". Confirmed 2026-09-23: nothing copied, green toast.
-    test.fail(true, 'SD-M1: Methods copy always toasts success; flips when it reports what was copied');
+    // FIXED SD-M1, flipped 2026-10-08 (passes in CI run 126 and on local develop 2026-10-08); was FLIP-WHEN-FIXED. Was: SD-M1: Methods copy always toasts success; flips when it reports what was copied
     await open(page, `/MasterListsPage/TestCatalogEditor/${target}/methods`);  // a relative fetch fails on about:blank
     const before = (await apiGet<any[]>(page, `/rest/test/${target}/methods`)).json as any[];
     expect(Array.isArray(before), 'precondition: the methods read-back works').toBe(true);
@@ -299,11 +311,11 @@ test.describe('Display Order', () => {
     expect((await successToasts(page)).some((t) => /display order saved/i.test(t.text)), 'toast confirms').toBe(true);
   });
 
-  test('TC-SD-31: FLIP-WHEN-FIXED - order entry lists a sample type\'s tests in the configured display order', async ({ page }) => {
+  test('TC-SD-31: order entry lists a sample type\'s tests in the configured display order [FIXED SD-D1]', async ({ page }) => {
     // SD-D1. Order entry sorts by test.sortOrder, not sampletype_test.display_order, so the
     // Display Order section has no visible effect. Confirmed 2026-09-23 in the order entry screen
     // (a test saved at position 26 of 41 still listed first).
-    test.fail(true, 'SD-D1: order entry ignores Display Order; flips when it honours it');
+    // FIXED SD-D1, flipped 2026-10-08 (passes in CI run 126 and on local develop 2026-10-08); was FLIP-WHEN-FIXED. Was: SD-D1: order entry ignores Display Order; flips when it honours it
     await open(page, `/MasterListsPage/TestCatalogEditor/${T}/basic-info`);
     const configured = await savedOrder(page);
     const shown = (await orderEntryOrder(page)).filter((id) => configured.includes(id));
@@ -312,10 +324,10 @@ test.describe('Display Order', () => {
       .toEqual(configured.filter((id) => shown.includes(id)));
   });
 
-  test('TC-SD-32: FLIP-WHEN-FIXED - Display Order opens on the edited test\'s own sample type', async ({ page }) => {
+  test('TC-SD-32: Display Order opens on the edited test\'s own sample type [FIXED SD-D2]', async ({ page }) => {
     // SD-D2. The section ignores testId and opens on the first sample type in the list (Fluid on
     // testing), so the admin does not see the test they came from.
-    test.fail(true, 'SD-D2: Display Order ignores the current test; flips when it preselects its sample type');
+    // FIXED SD-D2, flipped 2026-10-08 (passes in CI run 126 and on local develop 2026-10-08); was FLIP-WHEN-FIXED. Was: SD-D2: Display Order ignores the current test; flips when it preselects its sample type
     await open(page, `/MasterListsPage/TestCatalogEditor/${T}/display-order`);
     await page.getByTestId('display-order-section').waitFor({ state: 'visible', timeout: 60_000 });
     await expect(page.locator('#display-order-sample-type'), 'preselect the test\'s sample type (Serum)').toHaveValue(SERUM);
@@ -566,7 +578,8 @@ test.describe('Read-only sections', () => {
     if (want.length) {
       await page.locator('[data-testid^="analyzer-row-"]').first().waitFor({ state: 'visible', timeout: 60_000 });
     } else {
-      await expect(page.getByText(/no analyzers are mapped to this test yet/i), 'empty state shown when nothing is bound').toBeVisible({ timeout: 60_000 });
+      // develop spells it "analysers" (REWORKED 2026-10-08).
+      await expect(page.getByText(/no analy[sz]ers are mapped to this test yet/i), 'empty state shown when nothing is bound').toBeVisible({ timeout: 60_000 });
     }
     const shown = (await page.locator('[data-testid^="analyzer-row-"]').evaluateAll((els) =>
       els.map((e) => (e.getAttribute('data-testid') || '').replace('analyzer-row-', '')))).sort();

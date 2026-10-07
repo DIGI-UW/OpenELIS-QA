@@ -119,11 +119,11 @@ test.describe('Sample Type Editor — create', () => {
       'a created sample type is expected to start inactive; if this flips, the create contract changed').toBe(false);
   });
 
-  test('STW-4: [SPEC-DIVERGENCE — OGC-1156] the Description typed on the form is persisted', async ({ page }) => {
+  test('STW-4: [SPEC-DIVERGENCE OGC-1156] the Description typed on the form is persisted [FIXED OGC-1156]', async ({ page }) => {
     // The form marks Description REQUIRED and will not enable Create without it, yet the
     // backend stores description = name. Marked failing so the suite is green while the defect
     // is open and turns RED the moment it is fixed. Do NOT assert the buggy behaviour.
-    test.fail();
+    // FIXED OGC-1156, flipped 2026-10-08 (passes in CI run 126 and on local develop 2026-10-08); was FLIP-WHEN-FIXED.
     await page.goto('/MasterListsPage/SampleTypeEditor', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(5000);
     const list = await api(page, '/sample-types');
@@ -135,7 +135,7 @@ test.describe('Sample Type Editor — create', () => {
       .toBe(`QA description ${STAMP}`);
   });
 
-  test('STW-6: [SPEC-DIVERGENCE — OGC-1157] an abbreviation collision is refused with a validation error, not a 500', async ({ page }) => {
+  test('STW-6: [SPEC-DIVERGENCE OGC-1157] an abbreviation collision is refused with a validation error, not a 500 [FIXED OGC-1157]', async ({ page }) => {
     // `abbreviation` is derived as name.slice(0,10) and is unique in the database. Two DISTINCT
     // names sharing their first ten characters therefore collide on a field the user never sees
     // and cannot edit. The product answers that collision with an unhandled HTTP 500 from
@@ -146,7 +146,7 @@ test.describe('Sample Type Editor — create', () => {
     //
     // Marked failing: a 4xx with a readable message is the expected behaviour. This turns RED
     // when OGC-1157 is fixed.
-    test.fail();
+    // FIXED OGC-1157, flipped 2026-10-08 (passes on local develop 2026-10-08 (same fix as ST-3/ST-4)); was FLIP-WHEN-FIXED.
     const statuses: number[] = [];
     page.on('response', r => {
       if (r.request().method() === 'POST' && /SampleTypeCreate/.test(r.url())) statuses.push(r.status());
@@ -217,18 +217,15 @@ test.describe('Panel Editor — create', () => {
   test('PW-2: the created panel round-trips by id, inactive and with no derived sample types', async ({ page }) => {
     await page.goto('/MasterListsPage/TestCatalogList?entity=panels', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(5000);
-    const id = new URL(page.url()).pathname; // not used; find by name through the editor route below
-    const found = await page.evaluate(async (name) => {
-      // The BARE list endpoint returns active panels only (see PW-3), so walk ids around the top
-      // of the range rather than searching it. The SCREEN does show this panel; see PW-3.
-      for (let i = 60; i >= 1; i--) {
-        const r = await fetch('/api/OpenELIS-Global/rest/test-catalog/panels/' + i, { credentials: 'include' });
-        if (!r.ok) continue;
-        const b = await r.json().catch(() => null);
-        if (b && b.name === name) return b;
-      }
-      return null;
-    }, PANEL_NAME);
+    // REWORKED 2026-10-08: this walked ids 60..1 looking for the name, which misses on any
+    // instance with more than 60 panels (local develop has hundreds of QA panels). Take the id
+    // from the list the screen loads (?includeInactive=true, see PW-3), then read it back by id.
+    const all = await api(page, '/test-catalog/panels?includeInactive=true');
+    const row = ((all.body as any[]) || []).find((p: any) => p.name === PANEL_NAME);
+    expect(row, `"${PANEL_NAME}" is in the panel list the screen loads`).toBeTruthy();
+    const byId = await api(page, `/test-catalog/panels/${row.id}`);
+    expect(byId.status, `GET panels/${row.id}`).toBe(200);
+    const found = byId.body;
 
     expect(found, `"${PANEL_NAME}" could not be fetched by id after a 201 create`).toBeTruthy();
     console.log('PW-2 panel=' + JSON.stringify(found));

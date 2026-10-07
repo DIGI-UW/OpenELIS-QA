@@ -189,25 +189,25 @@ test.describe('Sample Type Management — create flow (OGC-296)', () => {
     await deactivate(page, created);
   });
 
-  test('ST-3: [SPEC-DIVERGENCE — OGC-1157] a duplicate sample type name is rejected with a validation error', async ({ page }) => {
+  test('ST-3: [SPEC-DIVERGENCE OGC-1157] a duplicate sample type name is rejected with a validation error [FIXED OGC-1157]', async ({ page }) => {
     // OGC-296 AC: "Sample type names must be unique."
     //
     // SPEC-DIVERGENCE (OGC-1157): a duplicate name necessarily produces a duplicate derived
     // abbreviation, so this lands on the same unhandled-collision path and returns a bare 500
     // instead of a validation error. ST-3 and ST-4 are therefore ONE defect reached by two
     // premises, not two defects — confirmed live 2026-08-10 (Serum -> 500).
-    test.fail();
+    // FIXED OGC-1157, flipped 2026-10-08 (passes in CI run 126 and on local develop 2026-10-08); was FLIP-WHEN-FIXED.
 
     const dup = await api(page, '/SampleTypeCreate', 'POST', createPayload('Serum'));
     expect(dup.status, 'duplicate name -> 4xx validation error').toBeGreaterThanOrEqual(400);
     expect(dup.status, 'duplicate name -> 4xx, not an unhandled 500').toBeLessThan(500);
   });
 
-  test('ST-4: [SPEC-DIVERGENCE — OGC-1157] a distinct name colliding on the derived abbreviation is rejected with a validation error', async ({ page }) => {
+  test('ST-4: [SPEC-DIVERGENCE OGC-1157] a distinct name colliding on the derived abbreviation is rejected with a validation error [FIXED OGC-1157]', async ({ page }) => {
     // Distinct from ST-3: the full name is unique, only the first ten characters collide.
     // Borrows an existing seeded record as the collision donor so this case performs no writes
     // of its own (the create is expected to be refused).
-    test.fail();
+    // FIXED OGC-1157, flipped 2026-10-08 (passes on local develop 2026-10-08 (same fix as ST-3)); was FLIP-WHEN-FIXED.
 
     const list = await api(page, '/sample-types');
     const donor = ((list.body?.data as any[]) || []).find((s) => (s.name || '').length >= 10);

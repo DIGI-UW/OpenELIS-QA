@@ -125,6 +125,9 @@ test.describe('Lab unit visibility — choosers vs viewers (OGC-189)', () => {
 
   test('G-2: [FLIP-WHEN-FIXED] the filtering is inverted — the VIEWER hides inactive units while the CHOOSER offers them', async ({ page }) => {
     // One test for the inversion itself, because the two halves only make sense together.
+    // 2026-10-08: CI run 126 failed this on a fresh stack that has NO inactive lab unit, where
+    // both halves read false; locally (with inactive units) it still holds. The precondition
+    // below makes that explicit instead of reporting a fix that did not happen.
     await goAdmin(page);
     const units = await labUnits(page);
     const inactiveNames = new Set(units.filter((u) => !u.isActive).map((u) => u.name));
@@ -150,6 +153,7 @@ test.describe('Lab unit visibility — choosers vs viewers (OGC-189)', () => {
       .evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).text.trim()).filter(Boolean));
     const viewerOffersInactive = viewerNames.some((n) => inactiveNames.has(n));
 
+    expect(inactiveNames.size, 'precondition: the instance has inactive units to reason about (seed one)').toBeGreaterThan(0);
     // WHEN FIXED: chooserOffersInactive === false and viewerOffersInactive === true.
     expect(
       { chooserOffersInactive, viewerOffersInactive },

@@ -883,7 +883,11 @@ test.describe('Panel creation write path (2026-09-22)', () => {
     expect(result.readDomain, 'a fresh read must show the chosen domain').toBe('ENVIRONMENTAL');
   });
 
-  test('TC-DEEP-29: FLIP-WHEN-FIXED — legacy /rest/PanelCreate is CLINICAL-only', async ({ page }) => {
+  test('TC-DEEP-29: legacy /rest/PanelCreate stores the domain it is given, CLINICAL when none [FIXED]', async ({ page }) => {
+    // FIXED (never filed), flipped 2026-10-08: PanelCreateForm now carries a domain and the legacy
+    // create stores it (local develop 2026-10-08 probe: ENVIRONMENTAL, VECTOR and CLINICAL each
+    // stored as sent, no domain -> CLINICAL; CI run 126 failed the defect assertion the same way).
+    // Was FLIP-WHEN-FIXED asserting a 400 for any domain and CLINICAL-only storage.
     const result = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
       const H = { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf };
@@ -919,8 +923,11 @@ test.describe('Panel creation write path (2026-09-22)', () => {
         `${B}/test-catalog/panels?includeInactive=true`, { headers: H },
       )).json();
       const mine = Array.isArray(panels) ? panels.find((p: { name?: string }) => p?.name === name) : null;
+      const theirs = Array.isArray(panels) ? panels.find((p: { name?: string }) => p?.name === `QA-PNLD-${stamp}`) : null;
       return {
         sampleTypeId,
+        withDomainFound: !!theirs,
+        withDomainDomain: theirs?.domain ?? null,
         withDomainStatus: withDomain.status,
         okStatus: ok.status,
         found: !!mine,
@@ -929,21 +936,18 @@ test.describe('Panel creation write path (2026-09-22)', () => {
     });
 
     expect(result.sampleTypeId, 'the legacy create needs an active sample type').toBeTruthy();
-    // The form cannot carry a domain — a request that names one is rejected
-    // outright rather than honoured or quietly dropped.
-    expect(result.withDomainStatus,
-      'PanelCreateForm has no domain property, so a domain makes the body unreadable').toBe(400);
+    expect(result.withDomainStatus, 'a create that names a domain is accepted').toBe(200);
+    expect(result.withDomainFound, 'and persists a panel').toBe(true);
+    expect(result.withDomainDomain, 'filed under the domain that was asked for').toBe('ENVIRONMENTAL');
     expect(result.okStatus, 'the legacy create must be accepted').toBe(200);
     expect(result.found, 'the legacy create must actually persist a panel').toBe(true);
-    // THE DEFECT, asserted as it stands: createPanel() never calls setDomain, so
-    // the panel lands on CLINICAL and no request can say otherwise. When the
-    // legacy screen learns about domains this flips to a FAILURE, which is the
-    // signal to rewrite this case to assert the requested domain.
-    expect(result.domain,
-      'DEFECT: legacy PanelCreate can only store CLINICAL').toBe('CLINICAL');
+    expect(result.domain, 'a create that names no domain defaults to CLINICAL').toBe('CLINICAL');
   });
 
-  test('TC-DEEP-31: FLIP-WHEN-FIXED — legacy /rest/PanelCreate answers 200 and creates nothing without a LOINC', async ({ page }) => {
+  test('TC-DEEP-31: legacy /rest/PanelCreate refuses a panel without a LOINC instead of a silent 200 [FIXED]', async ({ page }) => {
+    // FIXED (never filed), flipped 2026-10-08: the create without a LOINC now answers 400 (local
+    // develop and CI run 126). Was FLIP-WHEN-FIXED asserting a 200 that echoed the name while
+    // nothing was written.
     const result = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
       const H = { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf };
@@ -968,18 +972,15 @@ test.describe('Panel creation write path (2026-09-22)', () => {
     });
 
     expect(result.sampleTypeId, 'the legacy create needs an active sample type').toBeTruthy();
-    // THE DEFECT: postPanelCreate() swallows the insert failure —
-    // `catch (LIMSRuntimeException e) { LogEvent.logDebug(e); }`
-    // (PanelCreateRestController:145) — then returns the form with HTTP 200 and
-    // the submitted name echoed back. Nothing was written. The screen has no way
-    // to tell an operator that their panel does not exist.
-    expect(result.status, 'the endpoint answers 200 even when the insert fails').toBe(200);
-    expect(result.echoedName, 'and echoes the name back, which reads as success').toBe(true);
-    expect(result.found,
-      'DEFECT: no panel was created, and the 200 said otherwise').toBe(false);
+    // Was: postPanelCreate() swallowed the insert failure and answered 200 with the name echoed.
+    expect(result.status, 'a panel without a LOINC is refused as a bad request').toBe(400);
+    expect(result.found, 'and nothing was created').toBe(false);
   });
 
-  test('TC-DEEP-30: FLIP-WHEN-FIXED — the domain guard refuses with an empty body', async ({ page }) => {
+  test('TC-DEEP-30: the domain guard refuses with a body the editor can show [FIXED]', async ({ page }) => {
+    // FIXED (never filed), flipped 2026-10-08: the 422 now carries a body (357 characters on local
+    // develop; CI run 126 failed the empty-body assertion the same way). Was FLIP-WHEN-FIXED
+    // asserting an empty body.
     const result = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
       const H = { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf };
@@ -1024,13 +1025,9 @@ test.describe('Panel creation write path (2026-09-22)', () => {
     // The guard itself is correct per the OGC-224 FRS: a panel never mixes
     // domains. What is wrong is HOW it refuses.
     expect(result.moveStatus, 'moving a panel away from its member tests must be refused').toBe(422);
-    // THE DEFECT: the refusal carries no body, so the editor has no reason to
-    // show and falls back to a generic "error.panel.save" — or, as observed in
-    // Chrome on testing 2026-09-22, shows nothing at all while leaving the radio
-    // on the domain that was NOT saved. A body here flips this to a FAILURE,
-    // which is the signal that the server started explaining itself.
+    // Was: the refusal carried no body, so the editor fell back to a generic "error.panel.save".
     expect(result.moveBodyLength,
-      'DEFECT: the 422 is empty — the UI has nothing to tell the operator').toBe(0);
+      'the 422 explains itself, so the editor has a reason to show').toBeGreaterThan(0);
     expect(result.readDomain, 'the refused move must leave the stored domain alone').toBe('CLINICAL');
   });
 });

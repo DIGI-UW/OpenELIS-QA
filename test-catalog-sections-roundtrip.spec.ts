@@ -36,7 +36,11 @@ const BASE = process.env.BASE || 'https://testing.openelis-global.org';
 const REST = `${BASE}/api/OpenELIS-Global/rest`;
 const TC = `${REST}/test-catalog`;
 const ADMIN = { user: process.env.OE_USER || 'admin', pass: process.env.OE_PASS || 'adminADMIN!' };
-const STAMP = `QA_AUTO_${new Date().toISOString().slice(5, 10).replace('-', '')}`;
+// Two base-36 characters of the runner's process id are appended (2026-10-08): with the day alone,
+// a second run on the same day found the first run's tests by name (createTest reuses a test it
+// finds) and inherited their panels, e.g. TCF-02b saw an earlier run's panel. The parent pid is the
+// same for every worker of one run (a restarted worker keeps the stamp) and differs between runs.
+const STAMP = `QA_AUTO_${new Date().toISOString().slice(5, 10).replace('-', '')}${(process.ppid % 1296).toString(36).padStart(2, '0')}`;
 const SERUM = process.env.SERUM_ID || '2';           // Serum sample type
 const BIOCHEM = 'Biochemistry';                       // lab unit
 
@@ -262,6 +266,24 @@ async function sectionSave(page: Page) {
   await page.waitForTimeout(1500);
 }
 
+
+/**
+ * Set up the test's first result component. REWORKED 2026-10-08: on develop a new test starts with
+ * a PRIMARY component (code "PRIMARY", fixed and disabled; label editable), and "Add component"
+ * adds a SECOND one. The cases used to click Add component and type a code into the first field,
+ * which is now that disabled PRIMARY code, and timed out. Use the primary as the first component;
+ * on a build without one, add it as before.
+ */
+async function firstComponent(page: Page, code: string, label: string): Promise<void> {
+  const add = page.getByRole('button', { name: /add component/i }).first();
+  await expect(add).toBeVisible({ timeout: 30_000 });
+  const code0 = page.locator('#comp-code-0');
+  if ((await code0.count()) === 0) await add.click();
+  await expect(code0).toBeVisible({ timeout: 15_000 });
+  if (await code0.isEditable()) await code0.fill(code);
+  await page.locator('#comp-label-0').fill(label);
+}
+
 test.describe('Test Catalog editor — section round-trips (A–G)', () => {
   test.beforeEach(async ({ page }) => login(page));
 
@@ -288,14 +310,19 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
     await gotoSection(page, id, 'sample-results');
 
     // component 1
-    await page.getByRole('button', { name: /add component/i }).first().click();
-    await page.getByLabel('Component code', { exact: false }).first().fill('COMPA');
-    await page.getByLabel('Component label', { exact: false }).first().fill('Component A');
+    await firstComponent(page, 'COMPA', 'Component A');
     // component 2
     await page.getByRole('button', { name: /add component/i }).first().click();
     const codes = page.getByLabel('Component code', { exact: false });
     const labels = page.getByLabel('Component label', { exact: false });
     await codes.last().fill('COMPB'); await labels.last().fill('Component B');
+    // REWORKED 2026-10-08: Save now refuses a component with no result type ("Select a result
+    // type for "Component A" before saving."), so give both components one.
+    const freeText = page.getByRole('radio', { name: /^Free text/ });
+    await expect(freeText).toHaveCount(2);
+    for (let i = 0; i < 2; i++) await page.getByText('Free text', { exact: true }).nth(i).click();
+    await expect(freeText.nth(0)).toBeChecked();
+    await expect(freeText.nth(1)).toBeChecked();
     await sectionSave(page);
 
     let sr = await getJson(request, `${TC}/tests/${id}/sample-results`);
@@ -304,7 +331,7 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
 
     // reorder: move the first component's down-arrow, save, expect order swapped
     await gotoSection(page, id, 'sample-results');
-    await page.locator('button:has(svg)').filter({ hasText: '' }).nth(1).click().catch(() => {}); // down arrow (icon button)
+    await page.getByRole('button', { name: 'Move component down' }).first().click(); // REWORKED 2026-10-08: named arrows
     await sectionSave(page);
     sr = await getJson(request, `${TC}/tests/${id}/sample-results`);
     const firstLabelAfter = sr.components.sort((a: any, b: any) => a.displayOrder - b.displayOrder)[0].label;
@@ -315,9 +342,7 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
   test('TCC-D: dictionary result type with select-list options round-trips (value/sort/normal)', async ({ page, request }) => {
     const id = await createTest(page, `${STAMP} SelectList`, `${STAMP}_SEL`);
     await gotoSection(page, id, 'sample-results');
-    await page.getByRole('button', { name: /add component/i }).first().click();
-    await page.getByLabel('Component code', { exact: false }).first().fill('RESULT');
-    await page.getByLabel('Component label', { exact: false }).first().fill('Interpretation');
+    await firstComponent(page, 'RESULT', 'Interpretation');
     // guided result-type chooser (FR-28): click the "Single-select list (dictionary)" card
     await page.getByText(/Single-select list \(dictionary\)/i).click();
     // add two options via the dictionary typeahead
@@ -326,8 +351,12 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
     await page.getByRole('option', { name: /^Positive/i }).first().click();
     await opt.click(); await opt.fill('Negative');
     await page.getByRole('option', { name: /^Negative/i }).first().click();
-    // mark the 2nd option (Negative) as Normal
-    await page.locator('input[type=checkbox]:visible').nth(1).check({ force: true });
+    // mark the 2nd option (Negative) as Normal. REWORKED 2026-10-08: the options table gained a
+    // Qualifiable column, so the 2nd visible checkbox is now Positive's Qualifiable box; pick the
+    // Normal cell (3rd column) of the Negative row instead.
+    const negative = page.getByRole('row').filter({ has: page.getByRole('cell', { name: 'Negative', exact: true }) });
+    await negative.locator('td').nth(2).locator('input[type=checkbox]').check({ force: true });
+    await expect(negative.locator('td').nth(2).locator('input[type=checkbox]')).toBeChecked();
     await sectionSave(page);
 
     const sr = await getJson(request, `${TC}/tests/${id}/sample-results`);
@@ -344,27 +373,25 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
   // The advanced/legacy chooser offers Multi-select (M), Cascading (C), Titer (T), Alpha (A).
   // Type selection round-trips (verified M and A persist). BUT for Multi-select, the select-list
   // options editor is a no-op — choosing a dictionary value adds no row (OGC-1123). Dictionary (D)
-  // options DO persist (see TCC-D). This guard PASSES while the bug is present; flip when fixed.
-  test('TCC-M: multi-select type persists but select-list options do NOT (FIXME OGC-1123)', async ({ page, request }) => {
+  // options DO persist (see TCC-D).
+  // FIXED OGC-1123, flipped 2026-10-08: on local develop the option persists (readback
+  // {"resultType":"M","options":["DETECTED"]}). The case now asserts the fixed behaviour.
+  test('TCC-M: multi-select type and its select-list options persist [FIXED OGC-1123]', async ({ page, request }) => {
     const id = await createTest(page, `${STAMP} MultiSel`, `${STAMP}_MSL`);
     await gotoSection(page, id, 'sample-results');
-    await page.getByRole('button', { name: /add component/i }).first().click();
-    await page.getByLabel('Component code', { exact: false }).first().fill('MS');
-    await page.getByLabel('Component label', { exact: false }).first().fill('Organisms');
+    await firstComponent(page, 'MS', 'Organisms');
     await page.getByRole('button', { name: /advanced \/ legacy types/i }).click();
     await page.getByText(/^Multi-select list/).click();
     // attempt to add an option via the dictionary typeahead
     const opt = page.getByPlaceholder(/search dictionary values/i);
     await opt.click(); await opt.fill('Detected');
-    await page.getByRole('option', { name: /^Detected/i }).first().click().catch(() => {});
+    await page.getByRole('option', { name: /^Detected/i }).first().click();
     await sectionSave(page);
 
     const comp = (await getJson(request, `${TC}/tests/${id}/sample-results`)).components[0];
     console.log('TCCM_READBACK=' + JSON.stringify({ testId: id, resultType: comp.resultType, options: (comp.options || []).map((o: any) => o.valueName || o.value) }));
     expect(comp.resultType, 'multi-select type persists').toBe('M');
-    // FIXME(OGC-1123): options do not persist for multi-select — stays empty. When fixed, this
-    // becomes .toBeGreaterThan(0) and the assertion flips.
-    expect((comp.options || []).length, 'multi-select options do not persist (bug present)').toBe(0);
+    expect((comp.options || []).map((o: any) => String(o.valueName || o.value).toUpperCase()), 'the multi-select option persists').toContain('DETECTED');
   });
 
   // ---------- D. Ranges: Normal + Critical + VALID (new) + component association ----------
@@ -372,16 +399,23 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
     const id = await createTest(page, `${STAMP} Ranges`, `${STAMP}_RG`);
     // give it one component so range→component has a target
     await gotoSection(page, id, 'sample-results');
-    await page.getByRole('button', { name: /add component/i }).first().click();
-    await page.getByLabel('Component code', { exact: false }).first().fill('COMPX');
-    await page.getByLabel('Component label', { exact: false }).first().fill('Component X');
+    await firstComponent(page, 'COMPX', 'Component X');
+    // REWORKED 2026-10-08: Save refuses a component with no result type, and ranges belong to a
+    // numeric result, so make it Numeric. Without this the component was never saved and the range
+    // dialog had no component to bind to.
+    await page.getByText('Numeric', { exact: true }).first().click();
+    await expect(page.getByRole('radio', { name: /^Numeric/ }).first()).toBeChecked();
     await sectionSave(page);
     const comp = (await getJson(request, `${TC}/tests/${id}/sample-results`)).components[0];
+    expect(comp?.label, 'the component saved').toBe('Component X');
 
     await gotoSection(page, id, 'ranges');
     await page.getByText(/add range/i).first().click();
     // dialog: Result component select, then Normal/Critical/Valid low/high
-    await page.locator('#range-component').selectOption({ label: 'Component X' }).catch(() => {});
+    // With a single component the dialog may offer no component chooser; only pick when it does
+    // (a bare selectOption on a missing element waited out the whole test timeout).
+    await expect(page.getByRole('dialog', { name: 'Add reference range' })).toBeVisible();
+    if (await page.locator('#range-component').count()) await page.locator('#range-component').selectOption({ label: 'Component X' });
     await page.getByLabel('Normal low', { exact: false }).fill('10');
     await page.getByLabel('Normal high', { exact: false }).fill('90');
     await page.getByLabel('Critical low', { exact: false }).fill('2');
@@ -405,14 +439,25 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
   test('TCF-02: add-to-existing-panel and remove-membership round-trip', async ({ page, request }) => {
     const id = await createTest(page, `${STAMP} Panels`, `${STAMP}_PN`);
     await gotoSection(page, id, 'panels');
-    // add to an existing panel via the "Add to panel" combobox
-    await pickCombo(page, 'Add to panel', 'Bilan Biochimique');
+    // add to an existing panel via the "Add to panel" combobox. REWORKED 2026-10-08: the combobox
+    // now clears itself once the panel is added to the memberships table, so pickCombo (which
+    // checks the combobox kept the text) reported a failure for a pick that worked. Pick the
+    // option directly and look for the table row instead.
+    const addTo = page.getByRole('combobox', { name: 'Add to panel' });
+    await addTo.click(); await addTo.fill('Bilan Bio');
+    await page.getByRole('option', { name: /^Bilan Biochimique/ }).first().click();
+    const memberships = page.getByRole('table', { name: 'panel-memberships' });
+    await expect(memberships.getByRole('cell', { name: 'Bilan Biochimique', exact: true })).toBeVisible();
     await sectionSave(page);
     let panels = await getJson(request, `${TC}/tests/${id}/panels`);
     expect(panels.memberships.map((m: any) => m.panelName)).toContain('Bilan Biochimique');
 
     // remove membership (trash icon), save
-    await page.getByRole('button', { name: /remove|delete/i }).last().click().catch(() => {});
+    await page.getByRole('table', { name: 'panel-memberships' }).getByRole('button', { name: 'Remove from panel' }).first().click();
+    // Removing now asks to confirm ("Remove test from panel?").
+    const confirm = page.getByRole('dialog', { name: 'Remove test from panel?' });
+    await confirm.getByRole('button', { name: /Remove from panel/ }).click();
+    await expect(confirm).toBeHidden();
     await sectionSave(page);
     panels = await getJson(request, `${TC}/tests/${id}/panels`);
     expect(panels.memberships.length, 'membership removed').toBe(0);
@@ -446,8 +491,17 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
     await page.getByRole('button', { name: /link method/i }).first().click();
     await page.locator('#link-method-select').first().click();   // label matches 2 elements; target the combobox by id
     await page.getByRole('option', { name: /^EIA$/i }).first().click();
-    await page.getByLabel('Effective Date', { exact: false }).fill('2026-07-08');
-    await page.getByRole('button', { name: /link method/i }).last().click();
+    // REWORKED 2026-10-08: the dialog's "+ Link Method" stayed disabled because the typed date was
+    // never committed. Use today's date, commit it, and require the button to enable before
+    // clicking (it used to wait out the test timeout).
+    const eff = page.getByRole('dialog', { name: 'Link Method' }).getByLabel('Effective Date', { exact: false });
+    await eff.fill(new Date().toISOString().slice(0, 10));
+    // The typed date only counts once Enter commits it (probed 2026-10-08: the button stays
+    // disabled after fill or a click elsewhere, and enables on Enter).
+    await eff.press('Enter');
+    const linkBtn = page.getByRole('dialog', { name: 'Link Method' }).getByRole('button', { name: /link method/i });
+    await expect(linkBtn, 'Link Method enables once a method and a date are chosen').toBeEnabled({ timeout: 10_000 });
+    await linkBtn.click();
     await page.waitForTimeout(1200);
     const methods = await getJson(request, `${REST}/test/${id}/methods`);
     expect(Array.isArray(methods)).toBeTruthy();
@@ -457,8 +511,15 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
   test('TCF-04 Labels: preset + override toggle persist', async ({ page, request }) => {
     const id = await createTest(page, `${STAMP} Labels`, `${STAMP}_LAB`);
     await gotoSection(page, id, 'labels');
-    await pickCombo(page, 'Add Label Type', 'Specimen Label');
-    await page.waitForTimeout(1200);
+    // REWORKED 2026-10-08: "Add Label Type" is now a plain dropdown (no text input, so pickCombo
+    // hung on it) and the section has its own Save, disabled until something changes.
+    await page.getByRole('combobox', { name: 'Add Label Type' }).click();
+    await page.getByRole('option', { name: /Specimen/i }).first().click();
+    const save = page.locator('main').getByRole('button', { name: 'Save', exact: true }).last();
+    await expect(save, 'Save enables after adding a label type').toBeEnabled({ timeout: 10_000 });
+    const wrote = page.waitForResponse((r) => /labelConfig|label/i.test(r.url()) && r.request().method() !== 'GET', { timeout: 15_000 });
+    await save.click();
+    expect((await wrote).status(), 'the label configuration write').toBeLessThan(300);
     const cfg = await getJson(request, `${REST}/api/tests/${id}/labelConfig`);
     const links = cfg.links || [];
     expect(JSON.stringify(links)).toMatch(/Specimen/i);          // preset present
@@ -470,9 +531,14 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
     await gotoSection(page, id, 'alerts');
     await page.getByRole('button', { name: /add rule/i }).click();
     await page.getByLabel('Rule Name', { exact: false }).fill(`${STAMP} CritAlert`);
-    await page.getByRole('radio', { name: /^Critical$/ }).check();
-    await page.getByRole('checkbox', { name: /Email/i }).check();
-    await page.getByRole('button', { name: /^Save$/ }).last().click();
+    // REWORKED 2026-10-08: the rule form is a modal whose Carbon inputs never settle for check()
+    // ("element is not stable" until the test timed out); click the labels inside the dialog.
+    const dlg = page.getByRole('dialog', { name: 'Add Alert Rule' });
+    await dlg.getByText('Critical', { exact: true }).click();
+    await expect(dlg.getByRole('radio', { name: 'Critical', exact: true })).toBeChecked();
+    await dlg.getByText('Email', { exact: true }).click();
+    await expect(dlg.getByRole('checkbox', { name: 'Email', exact: true })).toBeChecked();
+    await dlg.getByRole('button', { name: /^Save$/ }).click();
     await page.waitForTimeout(1200);
     const alerts = await getJson(request, `${TC}/${id}/alerts`);   // NB: /test-catalog/{id}/alerts (no /tests/)
     const rule = (alerts || []).find((a: any) => a.name === `${STAMP} CritAlert`);
@@ -484,8 +550,19 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
   // ---------- G / bug guards (API — deterministic) ----------
   test('OGC-1116: created + activated test becomes orderable in /rest/test-list', async ({ page, request }) => {
     const id = await createTest(page, `${STAMP} Orderable`, `${STAMP}_ORD`);
-    const actStatus = await apiWrite(page, 'POST', `${TC}/tests/${id}/activate`);  // CSRF-authenticated
-    console.log('OGC1116_ACTIVATE_STATUS=' + actStatus);
+    // REWORKED 2026-10-08: activating a bare test now answers 422 (a test needs a component with a
+    // result type before it can go live), so give it a Free text result first, then activate and
+    // read the answer instead of assuming it worked.
+    await gotoSection(page, id, 'sample-results');
+    await firstComponent(page, 'ORD', 'Result');
+    await page.getByText('Free text', { exact: true }).first().click();
+    await sectionSave(page);
+    const act = await page.evaluate(async (u) => {
+      const r = await fetch(u, { method: 'POST', headers: { Accept: 'application/json', 'X-CSRF-Token': localStorage.getItem('CSRF') || '' }, credentials: 'include' });
+      return { status: r.status, body: (await r.text()).slice(0, 600) };
+    }, `${TC}/tests/${id}/activate`);
+    console.log('OGC1116_ACTIVATE=' + JSON.stringify(act));
+    expect(act.status, `activate answered ${act.status}: ${act.body}`).toBeLessThan(300);
     await page.waitForTimeout(1500); // allow index refresh (orderability was reindex-dependent)
     const list = await getJson(request, `${REST}/test-list`);
     const present = (list || []).some((t: any) => String(t.id) === id);
@@ -507,22 +584,31 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
     expect(is2xx(del), `DELETE-activate should not succeed while bug present (got ${del})`).toBe(false);
   });
 
-  test('OGC-1120: sample-type-tests 500 without param, 200 with param (robustness guard)', async ({ request }) => {
+  test('OGC-1120: sample-type-tests answers 4xx, not 500, without its param; 200 with it [FIXED OGC-1120]', async ({ request }) => {
+    // FIXED OGC-1120, flipped 2026-10-08: the param-less call answers 400 (CI run 126 and local
+    // develop). Was a bug-present guard asserting 500.
     const noParam = await request.get(`${REST}/sample-type-tests`, { headers: { Accept: 'application/json' } });
     const withParam = await request.get(`${REST}/sample-type-tests?sampleType=${SERUM}`, { headers: { Accept: 'application/json' } });
-    expect(noParam.status(), 'param-less currently 500 (bug present)').toBe(500);
+    expect(noParam.status(), 'param-less is refused as a bad request').toBeGreaterThanOrEqual(400);
+    expect(noParam.status(), 'param-less is not an unhandled 500').toBeLessThan(500);
     expect(withParam.status()).toBe(200);
   });
 
-  test('OGC-1114: top-toolbar Save does not persist Basic Info edits (FIXME when fixed)', async ({ page, request }) => {
+  test('OGC-1114: top-toolbar Save persists Basic Info edits [FIXED OGC-1114]', async ({ page, request }) => {
+    // FIXED OGC-1114, flipped 2026-10-08: the top Save now stores the edit (CI run 126 read back
+    // "EDITED-via-top-save"). Was a bug-present guard asserting nothing was stored.
     const id = await createTest(page, `${STAMP} TopSave`, `${STAMP}_TS`);
+    // Descriptions must now be unique ("Another test already uses this description"), so a fixed
+    // text collided with the previous run's test (2026-10-08). Stamp it per run.
+    const EDITED = `EDITED-via-top-save ${STAMP}`;
     const before = (await getJson(request, `${TC}/tests/${id}/basic-info`)).description || '';
     await gotoSection(page, id, 'basic-info');
     const desc = page.getByLabel('Description', { exact: false }).first();
-    await desc.click(); await desc.fill('EDITED-via-top-save');
+    await desc.click(); await desc.fill(EDITED);
     await page.getByRole('button', { name: /^Save$/ }).first().click();   // TOP toolbar Save
     await page.waitForTimeout(1500);
     const after = (await getJson(request, `${TC}/tests/${id}/basic-info`)).description || '';
-    expect(after, 'top Save persists nothing (bug present)').toBe(before);
+    expect(before, 'the edit differs from what was stored').not.toBe(EDITED);
+    expect(after, 'top Save stores the Basic Info edit').toBe(EDITED);
   });
 });

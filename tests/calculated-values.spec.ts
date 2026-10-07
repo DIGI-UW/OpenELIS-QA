@@ -201,14 +201,13 @@ test.describe('Calculated Values — Integration with TestAdd (Phase 28)', () =>
     await login(page, ADMIN.user, ADMIN.pass);
   });
 
-  test('TC-CALC-01: TestAdd wizard accessible for creating numeric tests', async ({ page }) => {
+  test('TC-CALC-01: the old TestAdd link opens the Test Catalog editor\'s new-test form', async ({ page }) => {
+    // REWORKED 2026-10-08: the six-step TestAdd wizard was retired; /MasterListsPage/TestAdd now
+    // redirects to the Test Catalog editor (TestCatalogEditor/new/basic-info), where numeric tests
+    // for calculations are created. The check follows the replacement instead of the old URL.
     await page.goto(`${BASE}/MasterListsPage/TestAdd`);
-    await page.waitForLoadState('networkidle');
-
-    // Verify TestAdd wizard loads (6-step form)
-    const bodyText = await page.locator('body').textContent();
-    expect(bodyText).toBeTruthy();
-    expect(page.url()).toContain('TestAdd');
+    await expect(page, 'TestAdd lands on the editor\'s new-test form').toHaveURL(/\/TestCatalogEditor\/new\b/, { timeout: 30_000 });
+    await expect(page.locator('main input:visible').first(), 'the Basic Info form renders').toBeVisible({ timeout: 30_000 });
   });
 });
 
@@ -273,10 +272,13 @@ test.describe('Calculated Values Extended (TC-CALC-EXT)', () => {
     console.log(`TC-CALC-EXT-02: API returned ${rules.count} calculated value rules`);
     expect(rules.status).toBe(200);
 
-    // If rules exist, the UI table should show them
+    // If rules exist, the UI table should show them. REWORKED 2026-10-08: the rules are listed
+    // as one collapsible entry each (a "Calculation Name" field and View Rule), not as table rows.
     if (rules.count > 0) {
-      const tableRows = await page.locator('tbody tr, [role="row"]').count();
-      console.log(`TC-CALC-EXT-02: UI table rows visible: ${tableRows}`);
+      const entries = page.locator('main').getByRole('textbox', { name: 'Calculation Name' });
+      await expect(entries.first()).toBeVisible({ timeout: 15_000 });
+      const tableRows = await entries.count();
+      console.log(`TC-CALC-EXT-02: UI rule entries visible: ${tableRows}`);
       // At least 1 row should be visible
       expect(tableRows, 'Table must render at least 1 row when rules exist').toBeGreaterThan(0);
     } else {
@@ -346,12 +348,18 @@ test.describe('Calculated Values Extended (TC-CALC-EXT)', () => {
      */
     await page.goto(`${BASE}${CALC_VALUE_URL}`);
     await page.waitForLoadState('networkidle');
+    // REWORKED 2026-10-08: the formula builder (its "Add" buttons per operation type) shows inside
+    // an opened rule; open the first one, or start a new one when there are none.
+    const view = page.locator('main').getByRole('button', { name: 'View Rule' }).first();
+    if (await view.isVisible({ timeout: 10_000 }).catch(() => false)) await view.click();
+    else await page.locator('main').getByRole('button', { name: /add rule|add calculation|new/i }).first().click().catch(() => {});
+    await page.locator('main').getByRole('button', { name: 'Mathematical Function' }).first().waitFor({ timeout: 10_000 }).catch(() => {});
 
     const bodyText = await page.locator('body').innerText();
 
     // Check for operation type terms — may be in dropdown options or UI labels
     const expectedTypes = ['TEST_RESULT', 'MATH_FUNCTION', 'INTEGER', 'PATIENT_ATTRIBUTE'];
-    const humanTerms = ['Test Result', 'Math Function', 'Integer', 'Patient Attribute'];
+    const humanTerms = ['Test Result', 'Mathematical Function', 'Integer', 'Patient Attribute'];
 
     // Check either exact API type names or human-readable variants
     const foundTypes = expectedTypes.filter(t => bodyText.includes(t));

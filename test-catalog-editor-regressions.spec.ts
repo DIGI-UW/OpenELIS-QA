@@ -99,13 +99,22 @@ test.describe('Test Catalog editor — reconciled regression guards (OGC-1142)',
   // POSITIVE CONTROL — the completeness read path works on a real, active test.
   test('CONTROL: an existing active test reports complete via /completeness', async ({ page }) => {
     // Discover a currently-active test from the list, then assert its completeness reads true.
+    // REWORKED 2026-10-08: the first active test is not necessarily complete on develop (the
+    // seeded OCL tests 696/697 report missing parts, on CI and locally), so the control looks
+    // for an active test that IS complete among the first page and reports why when none is.
     const list = (await apiCall(page, `/test-catalog/tests?page=1&pageSize=100`, 'GET')).body;
     const rows = list?.rows ?? [];
-    const active = rows.find((r: any) => r.active === true) ?? rows[0];
-    test.skip(!active, 'no tests available to sample');
-    const id = String(active.testId ?? active.id);
-    const comp = await apiCall(page, `/test-catalog/tests/${id}/completeness`, 'GET');
-    expect(comp.status, 'completeness -> 200').toBe(200);
-    expect(comp.body.complete, `active test ${id} should be complete`).toBe(true);
+    const actives = rows.filter((r: any) => r.active === true);
+    test.skip(!actives.length, 'no active tests available to sample');
+    let firstIncomplete: { id: string; body: unknown } | null = null;
+    let completeId = '';
+    for (const r of actives.slice(0, 40)) {
+      const id = String(r.testId ?? r.id);
+      const comp = await apiCall(page, `/test-catalog/tests/${id}/completeness`, 'GET');
+      expect(comp.status, `completeness of ${id} -> 200`).toBe(200);
+      if (comp.body?.complete === true) { completeId = id; break; }
+      firstIncomplete ??= { id, body: comp.body };
+    }
+    expect(completeId, `an active test reports complete; the first incomplete one said ${JSON.stringify(firstIncomplete)}`).not.toBe('');
   });
 });

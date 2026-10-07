@@ -46,12 +46,12 @@ test.describe('Test Catalog — downstream cross-links', () => {
     }
   });
 
-  // Robustness guard: the param-less endpoint 500s (should be empty/400). FIXME when fixed.
-  // Filed as OGC-1120 (re-verified 500 on 2026-07-07; ?sampleType=2 returns 200).
-  test('sample-type-tests without a sampleType param returns 500 (robustness bug guard) [OGC-1120]', async ({ request }) => {
+  // Robustness guard for OGC-1120 (re-verified 500 on 2026-07-07; ?sampleType=2 returns 200).
+  // FIXED OGC-1120, flipped 2026-10-08: the param-less call answers 400 on develop (CI run 126).
+  test('sample-type-tests without a sampleType param is refused with a 4xx, not a 500 [FIXED OGC-1120]', async ({ request }) => {
     const res = await request.get(`${REST}/sample-type-tests`, { headers: { Accept: 'application/json' } });
-    // FIXME(OGC-1120): currently 500; when handled gracefully this becomes 200 (empty) or 400 → update.
-    expect(res.status(), 'param-less sample-type-tests currently errors').toBe(500);
+    expect(res.status(), 'param-less sample-type-tests is a bad request').toBeGreaterThanOrEqual(400);
+    expect(res.status(), 'param-less sample-type-tests is not an unhandled 500').toBeLessThan(500);
   });
 
   /**

@@ -464,8 +464,11 @@ test.describe('Panel Editor filters', () => {
     expect(matched + emptied, 'no domain option was exercised').toBe(options.length - 1);
   });
 
-  test('TC-PANEL-09 — a panel is filed under the domain of the sample types its tests use', async ({ page }) => {
-    // [FLIP-WHEN-FIXED] OGC-1209.
+  test('TC-PANEL-09: a panel is filed under the domain of the sample types its tests use [FIXED OGC-1209]', async ({ page }) => {
+    // FIXED OGC-1209 for a fresh install, flipped 2026-10-08: passes in CI run 126 (a new database).
+    // An UPGRADED database keeps the old domains: on local develop (data from before the fix) 27
+    // vector panels still read CLINICAL, so this guard fails there until existing panels are
+    // migrated. Was [FLIP-WHEN-FIXED].
     // CURRENT BEHAVIOUR on develop 5fe0ecb: every panel carries domain CLINICAL, including the
     // twenty-one whose only member sample type is a VECTOR one (Mosquito, Fly, Flea, Rodent).
     // The Panel Editor's Domain dropdown therefore offers Environmental and Vector options that
@@ -474,7 +477,6 @@ test.describe('Panel Editor filters', () => {
     // This is marked test.fail() ON PURPOSE: the assertion states the SPEC, not the bug. The
     // suite stays green while OGC-1209 is open and turns RED the moment the domain is derived
     // (or set) correctly — at which point delete the test.fail() line, not the assertion.
-    test.fail();
 
     await page.goto(PANEL_ROUTE, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(6000);
