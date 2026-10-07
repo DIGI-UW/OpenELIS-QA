@@ -552,6 +552,11 @@ export async function createOrderViaAPI(
       return null;
     }
 
+    // A fresh stack (the develop-stack CI job) has no referring clinic (organization type 5),
+    // and every order POST needs one. Make sure it exists before building the payload, so
+    // data.setup, seedOrder, chain-seed and the referral seed all get their orders (harness 12.27).
+    await ensureReferringClinic(page, state.setupErrors);
+
     const result = await page.evaluate(
       async (args: {
         patientId: string;
