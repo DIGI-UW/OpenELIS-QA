@@ -1,5 +1,9 @@
-import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, orderWizardForward, selectOrderProgram } from '../helpers/test-helpers';
+import { test, expect, type Page } from '@playwright/test';
+import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, orderWizardForward, selectOrderProgram, clickFormSearch, checkCarbonRadio } from '../helpers/test-helpers';
+import { createPatientViaAPI, ensureReferringClinic, seedModifiableOrder } from '../helpers/data-factory';
+import {
+  type SeededPatient, letters, seededPatient, sampleTypeWithTest, legacyPickPatient, legacyToAddSample, legacyTickTest, legacyFillOrderStep,
+} from '../helpers/legacy-order-entry';
 
 /**
  * Order Entry and Batch Workflow Test Suites
@@ -40,6 +44,15 @@ async function tryNavigateToURL(page: any, urls: string[]): Promise<boolean> {
   return false;
 }
 
+// ── Run fixtures ──────────────────────────────────────────────────────────────
+// REWORKED 2026-10-08. The Add Order, Edit Order, Referral and batch cases below were written
+// against the old testing server's demo data: patient "Abby Sebby" (0123456), lab number
+// 26CPHL00008T, HGB (test 743) on Whole Blood (sample type 4) and the sites "Adiba SC" / "Anga, Dr".
+// None of that exists on a fresh or CI stack, and on develop a bare /Next/ also matches the patient
+// results table's "Next Page" button. The cases now make their own patient and order, find a sample
+// type and a test the instance really has, and press the wizard's own forward button.
+// The fixtures live in helpers/legacy-order-entry.ts.
+
 test.describe('Add Order workflow', () => {
   test.beforeEach(async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
@@ -52,48 +65,26 @@ test.describe('Add Order workflow', () => {
   });
 
   test('TC-AO-02: Patient search finds existing patient', async ({ page }) => {
-    await page.goto(`${BASE}/SamplePatientEntry`);
-    // Fill patient ID
-    const patientIdField = page.locator('input[placeholder*="patient" i], input[id*="patientId" i]').first();
-    await patientIdField.fill('0123456');
-    await page.keyboard.press('Enter');
-    // Patient name should appear
-    await expect(page.getByText(/Abby|Sebby|0123456/i)).toBeVisible({ timeout: 5000 });
+    const p = await seededPatient(page, 'AO2');
+    await legacyPickPatient(page, p);
+    await expect(page.locator(`[data-cy="patient-result-row-${p.id}"]`), 'the result row names the patient').toContainText(p.lastName);
   });
 
   test('TC-AO-03: Full Add Order flow with HGB test', async ({ page }) => {
-    await page.goto(`${BASE}/SamplePatientEntry`);
-
-    // Step 1: Patient Info — search Abby Sebby
-    await page.locator('input[placeholder*="patient" i], input[id*="patientId" i]').first().fill('0123456');
-    await page.keyboard.press('Enter');
-    await page.getByText(/Next/i).first().click();
-
-    // Step 2: Program Selection — Routine Testing
-    await selectOrderProgram(page);
-    await page.getByRole('button', { name: /Next/i }).click();
-
-    // Step 3: Add Sample — select Whole Blood
-    await selectSampleType(page, '4');
-    // Select HGB test
-    const hgbCheckbox = page.getByText(/HGB\(Whole Blood\)/i).locator('..');
-    await hgbCheckbox.click();
-    await page.getByRole('button', { name: /Next/i }).click();
-
-    // Step 4: Add Order — generate lab number and submit
-    await page.getByRole('button', { name: /Generate/i }).click();
-    const labNumber = await page.locator('[id*="accessionNumber"], [class*="accession"]').first().textContent();
-    expect(labNumber).toBeTruthy();
-    // Fill request date
-    const dateInput = page.locator('input[placeholder*="dd/mm/yyyy" i]').first();
-    const today = new Date();
-    const dd = String(today.getDate()).padStart(2, '0');
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const yyyy = today.getFullYear();
-    await dateInput.fill(`${dd}/${mm}/${yyyy}`);
-    // Submit
-    await page.getByRole('button', { name: /Submit/i }).click();
-    await expect(page.getByText(/Successfully saved/i)).toBeVisible({ timeout: 10000 });
+    // HGB on Whole Blood was the demo data's test; any sample type with a test exercises the flow.
+    const p = await seededPatient(page, 'AO3');
+    await ensureReferringClinic(page);
+    const st = await sampleTypeWithTest(page);
+    await legacyPickPatient(page, p);
+    await legacyToAddSample(page);
+    await page.locator('#sampleId_0').selectOption(st.typeId);
+    await legacyTickTest(page, st.testId);
+    await orderWizardForward(page).click();
+    const labNo = await legacyFillOrderStep(page);
+    const saved = page.waitForResponse((r) => /\/rest\/SamplePatientEntry/.test(r.url()) && r.request().method() === 'POST', { timeout: 30_000 });
+    await orderWizardForward(page).filter({ hasText: /Submit/ }).click();
+    expect((await saved).status(), `the order ${labNo} is saved`).toBe(200);
+    await expect(page.getByText(/Successfully saved|Succesfuly saved/i).first()).toBeVisible({ timeout: 15000 });
   });
 });
 
@@ -110,20 +101,25 @@ test.describe('Edit Order (ModifyOrder)', () => {
   });
 
   test('TC-EO-02: Accession search loads ModifyOrder', async ({ page }) => {
+    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
+    const { accession } = await seedModifiableOrder(page);
     await page.goto(`${BASE}/SampleEdit?type=readwrite`);
-    const accInput = page.locator('input[placeholder*="accession" i], input[id*="accession" i]').first();
-    await accInput.fill('26CPHL00008T'); // current active accession from QA run
-    await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/ModifyOrder/, { timeout: 5000 });
+    // The lab number field is "Enter Accession Number" with placeholder "Enter Lab No".
+    const accInput = page.locator('main input#labNumber[placeholder="Enter Lab No"]');
+    await accInput.fill(accession);
+    await page.locator('main').getByRole('button', { name: 'Submit' }).first().click();
+    await expect(page).toHaveURL(/ModifyOrder/, { timeout: 15000 });
   });
 
   test('TC-EO-03: ModifyOrder Add Sample step shows Current Tests and Available Tests', async ({ page }) => {
-    await page.goto(`${BASE}/ModifyOrder?accessionNumber=26CPHL00008T`);
+    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
+    const { accession } = await seedModifiableOrder(page);
+    await page.goto(`${BASE}/ModifyOrder?accessionNumber=${encodeURIComponent(accession)}`);
     // Step 1: Program Selection
-    await page.getByRole('button', { name: /Next/i }).click();
+    await orderWizardForward(page).last().click();
     // Step 2: Add Sample — should see Current Tests section
-    await expect(page.getByText(/Current Tests/i)).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText(/Available Tests/i)).toBeVisible();
+    await expect(page.getByText(/Current Tests/i).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/Available Tests/i).first()).toBeVisible();
   });
 
   test(
@@ -132,25 +128,25 @@ test.describe('Edit Order (ModifyOrder)', () => {
       // This test documents the known BUG-4 behavior.
       // Expected (desired): accession stays the same after modifying tests.
       // Actual (current): new accession is generated.
-      await page.goto(`${BASE}/ModifyOrder?accessionNumber=26CPHL00008T`);
-      await page.getByRole('button', { name: /Next/i }).click(); // to Add Sample
+      await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
+      const { accession } = await seedModifiableOrder(page);
+      await page.goto(`${BASE}/ModifyOrder?accessionNumber=${encodeURIComponent(accession)}`);
+      await orderWizardForward(page).last().click(); // to Add Sample
 
       // Assign a test
       const assignCheckboxes = page.locator('input[id*="assign_"], input[name*="assign"]');
       if (await assignCheckboxes.count() > 0) {
         await assignCheckboxes.first().check();
       }
-      await page.getByRole('button', { name: /Next/i }).click(); // to Add Order
-      await page.getByRole('button', { name: /Generate/i }).click();
-      await page.getByRole('button', { name: /Submit/i }).click();
+      await orderWizardForward(page).last().click(); // to Add Order
+      const generate = page.getByRole('button', { name: /Generate/i });
+      if (await generate.isVisible({ timeout: 3000 }).catch(() => false)) await generate.click();
+      await orderWizardForward(page).last().click(); // Submit
 
       // Confirm accession changed (BUG-4)
-      const newAccession = await page.locator('[class*="accession"], [id*="accession"]').first().textContent();
-      // BUG-4: newAccession !== '26CPHL00008T'
-      // When fixed, this assertion should be:
-      //   expect(newAccession).toContain('26CPHL00008T');
-      // Currently documenting that it changes:
-      console.log(`BUG-4: new accession after ModifyOrder = ${newAccession}`);
+      const newAccession = await page.locator('[class*="accession"], [id*="accession"]').first().textContent().catch(() => '');
+      // BUG-4: newAccession !== the original. When fixed, assert expect(newAccession).toContain(accession).
+      console.log(`BUG-4: accession ${accession} after ModifyOrder = ${newAccession}`);
     }
   );
 });
@@ -160,120 +156,86 @@ test.describe('Referral section (Add Order)', () => {
     await login(page, ADMIN.user, ADMIN.pass);
   });
 
+  /** Picks a seeded patient and reaches Add Sample with a sample type that has a test. */
+  async function toAddSampleWithType(page: Page) {
+    const p = await seededPatient(page, 'REF');
+    const st = await sampleTypeWithTest(page);
+    await legacyPickPatient(page, p);
+    await legacyToAddSample(page);
+    await page.locator('#sampleId_0').selectOption(st.typeId);
+    await page.waitForTimeout(1500);
+    return st;
+  }
+
   test('TC-REF-01: Referral checkbox enables table header', async ({ page }) => {
-    await page.goto(`${BASE}/SamplePatientEntry`);
-    // Patient search
-    await page.locator('input[placeholder*="patient" i]').first().fill('0123456');
-    await page.keyboard.press('Enter');
-    await page.getByRole('button', { name: /Next/i }).first().click();
-    // Program selection
-    await selectOrderProgram(page);
-    await page.getByRole('button', { name: /Next/i }).click();
-    // Add Sample — select Whole Blood
-    await selectSampleType(page, '4');
+    await toAddSampleWithType(page);
     // Check referral checkbox
-    const referralCheckbox = page.getByRole('checkbox').last();
-    const referralLabel = page.getByText('Refer test to a reference lab', { exact: false });
-    await referralLabel.click();
+    await page.getByText('Refer test to a reference lab', { exact: false }).first().click();
     // Table header should appear
-    await expect(page.getByText('Institute', { exact: false })).toBeVisible({ timeout: 3000 });
-    await expect(page.getByText('Select Test Name', { exact: false })).toBeVisible();
+    await expect(page.getByText('Institute', { exact: false }).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Select Test Name', { exact: false }).first()).toBeVisible();
   });
 
   test('TC-REF-02: Referral row requires test selection first', async ({ page }) => {
-    await page.goto(`${BASE}/SamplePatientEntry`);
-    await page.locator('input[placeholder*="patient" i]').first().fill('0123456');
-    await page.keyboard.press('Enter');
-    await page.getByRole('button', { name: /Next/i }).first().click();
-    await selectOrderProgram(page);
-    await page.getByRole('button', { name: /Next/i }).click();
-    await selectSampleType(page, '4');
+    const st = await toAddSampleWithType(page);
 
     // Check referral BEFORE selecting a test
-    await page.getByText('Refer test to a reference lab', { exact: false }).click();
+    await page.getByText('Refer test to a reference lab', { exact: false }).first().click();
     // Table header visible but NO input row (BUG-2a: no instructional text)
     const tbodyRows = page.locator('.cds--data-table tbody tr');
     await expect(tbodyRows).toHaveCount(0);
 
     // Now select a test
-    await page.getByText(/HGB\(Whole Blood\)/i).click();
+    await legacyTickTest(page, st.testId);
     // Row should now appear
     await expect(tbodyRows).toHaveCount(1);
-    await expect(page.locator('select#referralReasonId_0_743, select[id*="referralReason"]')).toBeVisible();
+    await expect(page.locator('select[id*="referralReason"]').first()).toBeVisible();
   });
 
+  /**
+   * The referral row's selects. They carry no accessible name, so they are found by column:
+   * Referral Reason, referrer, Institute, Sent Date, Select Test Name.
+   */
+  function referralRowSelects(page: Page) {
+    const row = page.locator('main table').filter({ has: page.getByRole('columnheader', { name: /Institute/ }) }).locator('tbody tr').first();
+    return { row, institute: row.locator('td').nth(2).locator('select'), testName: row.locator('td').nth(4).locator('select') };
+  }
+
   test(
-    'TC-REF-03 [BUG-2 KNOWN]: Institute dropdown selection reverts to Select...',
+    'TC-REF-03: the Institute chosen on a referral row stays selected (was BUG-2 KNOWN)',
     async ({ page }) => {
-      await page.goto(`${BASE}/SamplePatientEntry`);
-      await page.locator('input[placeholder*="patient" i]').first().fill('0123456');
-      await page.keyboard.press('Enter');
-      await page.getByRole('button', { name: /Next/i }).first().click();
-      await selectOrderProgram(page);
-      await page.getByRole('button', { name: /Next/i }).click();
-      await selectSampleType(page, '4');
+      // REWORKED 2026-10-08: the demo data's six labs (values 2, 14, 3, 20, 6, 7) are not on every
+      // instance, and the Institute select has no accessible name; it is found by column and
+      // offered whatever labs the instance has. The case now states the expected behaviour (the
+      // choice sticks); it used to assert the BUG-2 revert, which it could not observe here.
+      const st = await toAddSampleWithType(page);
+      await legacyTickTest(page, st.testId);
+      await page.getByText('Refer test to a reference lab', { exact: false }).first().click();
 
-      // Select test + enable referral
-      await page.getByText(/HGB\(Whole Blood\)/i).click();
-      await page.getByText('Refer test to a reference lab', { exact: false }).click();
-
-      // Attempt to select a lab — BUG-2: will revert
-      const instituteSelect = page.getByRole('combobox', { name: /institute|lab/i }).first();
-      await instituteSelect.waitFor({ state: 'visible' });
-
-      // Try each of the 6 labs
-      const labs = [
-        { value: '2', name: 'Central Public Health Laboratory' },
-        { value: '14', name: 'Doherty Institute' },
-        { value: '3', name: 'Queensland Mycobacterium Reference Laboratory' },
-        { value: '20', name: 'Research Institute for Tropical Medicine' },
-        { value: '6', name: 'SYD PATH Pathology' },
-        { value: '7', name: 'Victorian Infectious Diseases Reference Laboratory' },
-      ];
-
-      for (const lab of labs) {
-        await instituteSelect.selectOption({ value: lab.value });
-        const selectedValue = await instituteSelect.inputValue();
-        // BUG-2: selectedValue === '' (reverts immediately)
-        // When fixed, assert: expect(selectedValue).toBe(lab.value)
-        console.log(`BUG-2: Lab "${lab.name}" (${lab.value}): selected value = "${selectedValue}"`);
-        if (selectedValue === '') {
-          console.log(`  → FAIL: selection reverted to empty (BUG-2 confirmed for ${lab.name})`);
-        } else {
-          console.log(`  → PASS: selection persisted`);
-        }
-      }
-
-      // Document current broken state
-      await instituteSelect.selectOption({ value: '2' });
-      const finalValue = await instituteSelect.inputValue();
-      // When BUG-2 is fixed, change this to: expect(finalValue).toBe('2');
-      expect(finalValue).toBe(''); // documents current broken state
+      const { institute } = referralRowSelects(page);
+      await institute.waitFor({ state: 'visible', timeout: 15_000 });
+      const labs = await institute.locator('option').evaluateAll((os) =>
+        (os as HTMLOptionElement[]).filter((o) => o.value && (o.textContent || '').trim()).map((o) => o.value));
+      expect(labs.length, 'the instance offers at least one reference lab').toBeGreaterThan(0);
+      await institute.selectOption(labs[0]);
+      await page.waitForTimeout(500);
+      expect(await institute.inputValue(), 'the chosen institute stays selected').toBe(labs[0]);
     }
   );
 
   test(
-    'TC-REF-04 [BUG-2 KNOWN]: Select Test Name dropdown selection reverts',
+    'TC-REF-04: the referral row names the ticked test (was BUG-2 KNOWN)',
     async ({ page }) => {
-      await page.goto(`${BASE}/SamplePatientEntry`);
-      await page.locator('input[placeholder*="patient" i]').first().fill('0123456');
-      await page.keyboard.press('Enter');
-      await page.getByRole('button', { name: /Next/i }).first().click();
-      await selectOrderProgram(page);
-      await page.getByRole('button', { name: /Next/i }).click();
-      await selectSampleType(page, '4');
-      await page.getByText(/HGB\(Whole Blood\)/i).click();
-      await page.getByText('Refer test to a reference lab', { exact: false }).click();
+      // REWORKED 2026-10-08: on develop the referral row's test is filled from the ticked test and
+      // the select is locked, so there is no manual choice left to revert. The case checks that the
+      // row names the ticked test.
+      const st = await toAddSampleWithType(page);
+      await legacyTickTest(page, st.testId);
+      await page.getByText('Refer test to a reference lab', { exact: false }).first().click();
 
-      const testNameSelect = page.getByRole('combobox', { name: /test/i }).first();
-      await testNameSelect.waitFor({ state: 'visible' });
-      // Attempt to select HGB (value=743)
-      await testNameSelect.selectOption({ value: '743' });
-      const val = await testNameSelect.inputValue();
-      // BUG-2: val === '' (reverts)
-      console.log(`BUG-2: Select Test Name: selected value = "${val}"`);
-      // When fixed: expect(val).toBe('743');
-      expect(val).toBe(''); // documents current broken state
+      const { testName } = referralRowSelects(page);
+      await testName.waitFor({ state: 'attached', timeout: 15_000 });
+      expect(await testName.inputValue(), 'the referral row carries the ticked test').toBe(st.testId);
     }
   );
 });
@@ -285,63 +247,28 @@ test.describe('Multi-Patient Batch Workflow (TC-BATCH)', () => {
     await login(page, ADMIN.user, ADMIN.pass);
   });
 
-  async function placeSimpleOrder(page: any, patientId: string, testCheckboxId?: string): Promise<string> {
-    await page.goto(`${BASE}/SamplePatientEntry`);
-    await page.waitForTimeout(2000);
-
-    // Step 1: patient search — enter patient ID
-    const patField = page.locator('input[id*="national" i], input[id*="patientId" i]').first();
-    if (await patField.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await patField.fill(patientId);
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(1500);
-    }
-
-    // Next
-    const nextBtn = orderWizardForward(page);
-    for (let i = 0; i < 3 && await nextBtn.isVisible({ timeout: 1000 }).catch(() => false); i++) {
-      await nextBtn.click();
-      await page.waitForTimeout(1000);
-    }
-
-    // Generate lab number
-    const genLink = page.getByText(/generate/i).first();
-    if (await genLink.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await genLink.click();
-      await page.waitForTimeout(1000);
-    }
-
-    // Submit
-    const submitBtn = page.getByRole('button', { name: /submit|save|accept/i }).first();
-    if (await submitBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await submitBtn.click();
-      await page.waitForTimeout(2000);
-    }
-
-    // Extract accession from confirmation
-    const bodyText = await page.textContent('body') ?? '';
-    const accMatch = bodyText.match(/\b\d{2}CPHL[\dA-Z]{6}\b/);
-    return accMatch?.[0] ?? '';
+  /** One legacy Add Order for a fresh patient; returns the saved lab number ('' when not saved). */
+  async function placeSimpleOrder(page: Page, tag: string): Promise<string> {
+    const p = await seededPatient(page, tag);
+    await ensureReferringClinic(page);
+    const st = await sampleTypeWithTest(page);
+    await legacyPickPatient(page, p);
+    await legacyToAddSample(page);
+    await page.locator('#sampleId_0').selectOption(st.typeId);
+    await legacyTickTest(page, st.testId);
+    await orderWizardForward(page).click();
+    const labNo = await legacyFillOrderStep(page);
+    const saved = page.waitForResponse((r) => /\/rest\/SamplePatientEntry/.test(r.url()) && r.request().method() === 'POST', { timeout: 30_000 });
+    await orderWizardForward(page).filter({ hasText: /Submit/ }).click();
+    return (await saved).status() === 200 ? labNo : '';
   }
 
   test('TC-BATCH-01: Place 3 orders — unique accessions generated', async ({ page }) => {
-    // Order 1: Abby Sebby
-    const acc1 = await placeSimpleOrder(page, '0123456');
-    if (acc1) {
-      batchAccessions.push(acc1);
-      console.log(`TC-BATCH-01 Order 1: accession = ${acc1}`);
-    } else {
-      console.log('TC-BATCH-01 Order 1: FAIL — no accession extracted from confirmation');
+    for (const tag of ['BA1', 'BA2', 'BA3']) {
+      const acc = await placeSimpleOrder(page, tag);
+      console.log(`TC-BATCH-01 ${tag}: accession = ${acc || '(not saved)'}`);
+      if (acc) batchAccessions.push(acc);
     }
-
-    // For order 2 and 3, use any second patient found in search
-    await page.goto(`${BASE}/SamplePatientEntry`);
-    await page.waitForTimeout(1500);
-    // We'll just place two more with patient 0123456 if no second patient readily available
-    const acc2 = await placeSimpleOrder(page, '0123456');
-    if (acc2) batchAccessions.push(acc2);
-    const acc3 = await placeSimpleOrder(page, '0123456');
-    if (acc3) batchAccessions.push(acc3);
 
     console.log(`TC-BATCH-01: ${batchAccessions.length} orders placed: ${batchAccessions.join(', ')}`);
 
@@ -356,21 +283,20 @@ test.describe('Multi-Patient Batch Workflow (TC-BATCH)', () => {
   });
 
   test('TC-BATCH-02: All batch orders searchable in Results By Order', async ({ page }) => {
-    // Use known accession if batch didn't run
-    const toCheck = batchAccessions.length > 0 ? batchAccessions : ['26CPHL00008V'];
+    // Runs after TC-BATCH-01 in the same worker; on its own it places one order to look for.
+    const toCheck = batchAccessions.length > 0 ? [...batchAccessions] : [await placeSimpleOrder(page, 'BA4')];
+    expect(toCheck.filter(Boolean).length, 'there is at least one placed order to look for').toBeGreaterThan(0);
 
     let allFound = true;
     for (const acc of toCheck) {
       if (!acc) continue;
+      // /AccessionResults opens the unified Results page; its lab number search is a searchbox.
       await page.goto(`${BASE}/AccessionResults`);
-      await page.waitForTimeout(1000);
-      const accField = page.locator('input[id*="accession" i]').first();
-      if (await accField.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await accField.fill(acc);
-        await page.keyboard.press('Enter');
-        await page.waitForTimeout(2000);
-      }
-      const found = await page.getByText(/Sebby|HGB|result/i).isVisible({ timeout: 5000 }).catch(() => false);
+      const accField = page.locator('main').getByRole('searchbox', { name: /lab number/i });
+      await accField.fill(acc);
+      await accField.press('Enter');
+      // isVisible() does not wait, so wait for the row explicitly.
+      const found = await page.locator('main').getByText(acc).first().waitFor({ state: 'visible', timeout: 15000 }).then(() => true, () => false);
       console.log(found ? `TC-BATCH-02 ${acc}: PASS` : `TC-BATCH-02 ${acc}: FAIL — not found`);
       if (!found) allFound = false;
     }
@@ -488,28 +414,27 @@ test.describe('Multi-Patient Batch Workflow (TC-BATCH)', () => {
   });
 
   test('TC-BATCH-06: List views handle pagination gracefully', async ({ page }) => {
-    // Check Results By Order for pagination
-    await page.goto(`${BASE}/AccessionResults`);
-    await page.waitForTimeout(2000);
-
-    const pagination = page.locator('[class*="pagination"], [aria-label*="pagination" i], button[aria-label*="page" i]');
-    const hasPagination = await pagination.count().then(n => n > 0);
-
-    if (hasPagination) {
-      console.log('TC-BATCH-06: Pagination controls found — testing page 2');
-      const page2Btn = page.locator('[aria-label*="page 2" i], button:has-text("2")').first();
-      if (await page2Btn.isVisible({ timeout: 2000 }).catch(() => false)) {
-        const page1Rows = await page.getByRole('row').allTextContents();
-        await page2Btn.click();
-        await page.waitForTimeout(1500);
-        const page2Rows = await page.getByRole('row').allTextContents();
-        const noDups = !page2Rows.some(r => page1Rows.includes(r));
-        expect(noDups, 'page 2 repeated rows from page 1 — pagination is not advancing the offset').toBeTruthy();
-      }
-    } else {
+    // REWORKED 2026-10-08: /AccessionResults is now the unified Results page, which lists nothing
+    // until a lab unit is loaded, and whose "All (2)" filter chips matched the old
+    // `button:has-text("2")` page-2 guess. The header row also counted as a "repeated" row. Load a
+    // lab unit, page with the pager's own Next Page button and compare data rows only.
+    await page.goto(`${BASE}/Results`);
+    const main = page.locator('main');
+    await main.getByRole('combobox', { name: 'Lab Unit' }).selectOption({ label: 'Hematology' });
+    await main.getByRole('button', { name: 'Load results' }).click();
+    await expect(main.getByRole('table').first()).toBeVisible({ timeout: 30_000 });
+    const next = main.getByRole('button', { name: 'Next Page' });
+    if (!(await next.count()) || (await next.isDisabled())) {
       // Legitimately absent: too little data to paginate. Visible as a skip.
-      test.skip(true, 'no pagination controls — single-page list at the current data volume');
+      test.skip(true, 'single-page Hematology worklist at the current data volume');
     }
+    const dataRows = () => main.locator('tbody tr').filter({ hasNot: page.locator('th') }).allTextContents();
+    const page1Rows = await dataRows();
+    await next.click();
+    await expect.poll(dataRows, { timeout: 15_000 }).not.toEqual(page1Rows);
+    const page2Rows = await dataRows();
+    const repeated = page2Rows.filter((r) => r.trim() && page1Rows.includes(r));
+    expect(repeated, 'page 2 repeated rows from page 1, so pagination is not advancing the offset').toEqual([]);
   });
 });
 

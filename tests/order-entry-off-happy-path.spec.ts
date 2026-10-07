@@ -203,8 +203,8 @@ test.describe('Order entry off the happy path', () => {
     expect(await legacyResultReporting(page)).toContain(A.tests[0].name);
   });
 
-  test('TC-OEX-01: legacy Add Order: an unticked test is not ordered (OGC-1388)', async ({ page }) => {
-    test.fail();
+  test('TC-OEX-01: legacy Add Order: an unticked test is not ordered (OGC-1388) [FIXED OGC-1388]', async ({ page }) => {
+    // FIXED OGC-1388, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED.
     const [A] = await sampleTypes(page);
     await legacySampleStep(page);
     await legacyPick(page, A.id);
@@ -213,8 +213,8 @@ test.describe('Order entry off the happy path', () => {
     expect(await legacyResultReporting(page), 'Result Reporting must not list the unticked test').not.toContain(A.tests[0].name);
   });
 
-  test('TC-OEX-02: legacy Add Order: Next then Back keeps an unticked test unticked (OGC-1388)', async ({ page }) => {
-    test.fail();
+  test('TC-OEX-02: legacy Add Order: Next then Back keeps an unticked test unticked (OGC-1388) [FIXED OGC-1388]', async ({ page }) => {
+    // FIXED OGC-1388, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED.
     const [A] = await sampleTypes(page);
     await legacySampleStep(page);
     await legacyPick(page, A.id);
@@ -226,8 +226,8 @@ test.describe('Order entry off the happy path', () => {
     await expect(page.locator(`[id="test_0_${A.tests[0].id}"]`), 'Back must not tick the test again').not.toBeChecked();
   });
 
-  test('TC-OEX-03: legacy Add Order: changing the sample type drops the old test from the order (OGC-1388)', async ({ page }) => {
-    test.fail();
+  test('TC-OEX-03: legacy Add Order: changing the sample type drops the old test from the order (OGC-1388) [FIXED OGC-1388]', async ({ page }) => {
+    // FIXED OGC-1388, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED.
     const [A, B] = await sampleTypes(page);
     const t = onlyIn(A, B);
     await legacySampleStep(page);
@@ -237,8 +237,8 @@ test.describe('Order entry off the happy path', () => {
     expect(await legacyResultReporting(page), `${t.name} must not be ordered on ${B.name}`).not.toContain(t.name);
   });
 
-  test('TC-OEX-04: legacy Add Order: test search follows a sample type change (OGC-1387)', async ({ page }) => {
-    test.fail();
+  test('TC-OEX-04: legacy Add Order: test search follows a sample type change (OGC-1387) [FIXED OGC-1387]', async ({ page }) => {
+    // FIXED OGC-1387, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED.
     const [A, B] = await sampleTypes(page);
     const t = onlyIn(A, B);
     await legacySampleStep(page);
@@ -305,8 +305,8 @@ test.describe('Order entry off the happy path', () => {
     expect(await modifySubmit(page, posts)).toMatch(new RegExp(`tests='${A.tests[0].id}'`));
   });
 
-  test('TC-OEX-21: Modify Order: a sample added with Add Sample is submitted when Sample 1 is empty (OGC-1406)', async ({ page }) => {
-    test.fail();
+  test('TC-OEX-21: Modify Order: a sample added with Add Sample is submitted when Sample 1 is empty (OGC-1406) [FIXED OGC-1406]', async ({ page }) => {
+    // FIXED OGC-1406, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED.
     const [A] = await sampleTypes(page);
     const posts = await modifySampleStep(page);
     await page.locator('.orderLegendBody button:has-text("Add Sample")').click();
@@ -328,8 +328,8 @@ test.describe('Order entry off the happy path', () => {
     expect(await modifySubmit(page, posts), 'no new-sample test after the untick').not.toMatch(new RegExp(`tests='${A.tests[0].id}'`));
   });
 
-  test('TC-OEX-23: Modify Order: a failed tests request does not blank the screen (OGC-1389)', async ({ page }) => {
-    test.fail();
+  test('TC-OEX-23: Modify Order: a failed tests request does not blank the screen (OGC-1389) [FIXED OGC-1389]', async ({ page }) => {
+    // FIXED OGC-1389, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED.
     const [A] = await sampleTypes(page);
     await modifySampleStep(page);
     await page.route('**/rest/sample-type-tests*', (r: Route) => r.fulfill({ status: 500, contentType: 'application/json', body: '{}' }));

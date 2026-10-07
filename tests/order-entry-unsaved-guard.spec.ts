@@ -21,7 +21,9 @@ test.describe('Enter Order unsaved-changes guard', () => {
 
   for (const p of PAGES) {
     test(`TC-OEG-01 ${p}: an untouched page shows no "Unsaved changes" and does not block leaving`, async ({ page }) => {
-      // FLIP-WHEN-FIXED (R75). Observed 2026-09-28 on all three: banner on load, "Leave site?" on exit.
+      // R75. Observed 2026-09-28 on all three: banner on load, "Leave site?" on exit.
+      // Environmental and Vector FIXED, flipped 2026-10-08 (pass on local develop and in CI run 126),
+      // so they are guards now. Clinical is still FLIP-WHEN-FIXED.
       await page.goto(`${BASE}${p}`, { waitUntil: 'domcontentloaded' });
       await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
       await page.waitForTimeout(2_000);
@@ -30,7 +32,7 @@ test.describe('Enter Order unsaved-changes guard', () => {
       const banner = await page.locator('main').getByText(/Unsaved changes/i).count();
       await page.close({ runBeforeUnload: true });
       await new Promise((r) => setTimeout(r, 1_000));
-      test.fail();
+      test.fail(p === '/order/clinical/enter');
       expect({ banner, asked }, `${p}: banner count ${banner}, Leave-site prompt ${asked}`).toEqual({ banner: 0, asked: false });
     });
   }

@@ -446,26 +446,15 @@ test.describe('Relocated from gap-suites', () => {
     });
 
   test('TC-ALQ-18: Aliquot entry form visible with fields', async ({ page }) => {
-      await login(page, ADMIN.user, ADMIN.pass);
-  
-      try {
-        await navigateViaMenu(page, ['Aliquot']);
-      } catch (e) {
-        await tryNavigateToURL(page, ['/Aliquot', '/SpecimenAliquot', '/aliquot']);
-      }
-  
-      await page.waitForTimeout(1000);
-  
-      const button = await page.$('button:has-text("Create"), button:has-text("New"), button:has-text("Add")');
-      if (button) {
-        await button.click();
-        await page.waitForTimeout(1000);
-      }
-  
-      const form = await page.$('form, [role="form"]');
-      const inputs = await page.$$('input, textarea, select');
-  
-      expect(form && inputs.length > 0).toBeTruthy();
+      // REWORKED 2026-10-08: /Aliquot opens on a sample search ("Enter Accession Number", Search);
+      // there is no Create/New/Add button, and the page-wide button match clicked a hidden header
+      // control. The entry form is that search: the aliquot fields follow once a sample is found
+      // (TC-ALQW in aliquot-workflow.spec.ts drives that part with a seeded sample).
+      await page.goto(`${BASE}/Aliquot`);
+      const main = page.locator('main');
+      await expect(main.getByRole('heading', { name: 'Aliquot' })).toBeVisible({ timeout: 30_000 });
+      await expect(main.locator('#accessionNumber'), 'the sample search field').toBeVisible();
+      await expect(main.getByRole('button', { name: 'Search' }), 'and its Search button').toBeVisible();
     });
 
   test('TC-ALQ-19: Aliquot creation workflow executes', async ({ page }) => {

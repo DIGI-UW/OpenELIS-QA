@@ -147,9 +147,8 @@ test.describe('Resample cross-reference banners (OGC-1269)', () => {
     expect(replacement).not.toBe(original);
   });
 
-  test('RSB-01: after a reload both banners name the other sample by lab number, never by #id', async ({ page }) => {
-    // FLIP-WHEN-FIXED (OGC-1269)
-    test.fail();
+  test('RSB-01: after a reload both banners name the other sample by lab number, never by #id [FIXED OGC-1269]', async ({ page }) => {
+    // FIXED OGC-1269, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED (OGC-1269)
     const { original, replacement } = await seedAndResample(page);
     await openOnQaReview(page, original);
     const originalText = await mainText(page);
@@ -162,9 +161,8 @@ test.describe('Resample cross-reference banners (OGC-1269)', () => {
     }).toEqual({ originalNamesReplacement: true, replacementNamesOriginal: true, anyHashId: false });
   });
 
-  test('RSB-02: right after commit the rejected original is read-only (no Resample offered)', async ({ page }) => {
-    // FLIP-WHEN-FIXED (OGC-1269)
-    test.fail();
+  test('RSB-02: right after commit the rejected original is read-only (no Resample offered) [FIXED OGC-1269]', async ({ page }) => {
+    // FIXED OGC-1269, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED (OGC-1269)
     await seedAndResample(page);
     await expect(page.getByText(/rejected and resampled.*read-only/i).first()).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole('button', { name: /^Resample/ })).toHaveCount(0);

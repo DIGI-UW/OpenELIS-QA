@@ -291,7 +291,8 @@ test.describe('Suite BC-DEEP — Electronic Orders API & Integration (TC-IO-06�
 
     console.log(`TC-IO-10: SamplePatientEntry → ${result.status}, programs=${result.programCount}, types=${result.sampleTypeCount}`);
     expect(result.status).toBe(200);
-    expect(result.programCount, 'Must have at least 5 programs for order acceptance').toBeGreaterThanOrEqual(5);
+    // REWORKED 2026-10-08: ">= 5" was the testing server's program list; a fresh stack has fewer.
+    expect(result.programCount, 'programs must be available for order acceptance').toBeGreaterThanOrEqual(1);
   });
 });
 
@@ -368,25 +369,13 @@ test.describe('Relocated from gap-suites', () => {
   test('TC-IO-13: Batch Order Entry screen loads', async ({ page }) => {
       await login(page, ADMIN.user, ADMIN.pass);
   
-      try {
-        await navigateViaMenu(page, ['Order', 'Batch Order Entry']);
-      } catch (e) {
-        const found = await tryNavigateToURL(page, ['/BatchOrderEntry', '/BatchEntry', '/order/batch']);
-        if (!found) {
-          test.skip();
-          return;
-        }
-      }
-  
-      await page.waitForTimeout(1000);
-  
+      // REWORKED 2026-10-08: Batch Order Entry is /SampleBatchEntrySetup ("Batch Order Entry Setup");
+      // the guessed URLs never existed, and the page's fields sit in <main>, after the header's own
+      // search box (which page.$('input[type="text"]') found first).
+      await page.goto(`${BASE}/SampleBatchEntrySetup`);
       expect(page.url()).not.toContain('login');
-  
-      // Check for form or input field
-      const textarea = await page.$('textarea, [role="textbox"]');
-      const input = await page.$('input[type="text"]');
-  
-      expect(textarea || input).toBeTruthy();
+      await expect(page.getByRole('heading', { name: 'Batch Order Entry Setup' })).toBeVisible({ timeout: 30_000 });
+      await expect(page.locator('main input[type="text"]').first(), 'the setup form has its date/time fields').toBeVisible();
     });
 
   test('TC-IO-14: Batch entry form accepts multiple accession numbers', async ({ page }) => {

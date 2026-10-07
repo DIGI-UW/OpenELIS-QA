@@ -77,6 +77,14 @@
  * so without it a regression back to silence would turn ENV-1 red and leave ENV-2 green,
  * reporting the readability of nothing.
  *
+ * REWORKED 2026-10-08: THE CLIENT NOW REFUSES THE BLANK-REQUESTER SAVE ITSELF. On develop the
+ * wizard's Save and Save & Next stay disabled until a requesting organisation or requestor is
+ * set, with "Required before saving: Add a requesting organisation or requestor before saving."
+ * The reproduction above no longer reaches the server (CI run 126: zero POSTs on both lanes), so
+ * the four cases fill a requestor and get their rejection from a stubbed POST that answers the
+ * exact 400 the backend sent on 2026-09-15. The notice under test is the same client code
+ * (SaveFailureNotice); only the trigger changed. ENV-0 and VEC-0 guard the new client-side hold.
+ *
  * VEC-1 is the CANARY. It drives the identical path on a lane where the notice IS mounted
  * and is NOT marked test.fail(). Without it, a broken driver — a wizard that never reaches
  * Save, a selector that never matches — would make every tripwire here report a confirmed
@@ -84,6 +92,7 @@
  */
 import { test, expect, Page } from '@playwright/test';
 import {
+  fillRequestor,
   generateLabNumber,
   selectSite,
   selectOrAddSite,
@@ -132,8 +141,24 @@ type Attempt = {
  * be committed through its Select/Add affordance, and Carbon checkboxes only update React
  * state when the VISIBLE LABEL is clicked (clicking the hidden input hangs for ~60s).
  */
-async function attemptSaveWithoutRequester(page: Page, lane: 'environmental' | 'vector'): Promise<Attempt> {
+/** The 400 the backend sent for a blank requester on 2026-09-15 (byte for byte, per the header). */
+const REJECTION_400 = JSON.stringify({
+  globalErrors: [],
+  fieldErrors: [{ field: 'sampleOrderItems', defaultMessage: 'errors.requester.org.or.requestor.required' }],
+});
+
+async function attemptOrderSave(
+  page: Page,
+  lane: 'environmental' | 'vector',
+  opts: { requestor?: boolean; stub400?: boolean } = { requestor: true, stub400: true },
+): Promise<Attempt> {
   const posts: { status: number; body: string }[] = [];
+  if (opts.stub400) {
+    await page.route('**/rest/SamplePatientEntry*', (route) =>
+      route.request().method() === 'POST'
+        ? route.fulfill({ status: 400, contentType: 'application/json', body: REJECTION_400 })
+        : route.continue());
+  }
   page.on('response', async (r) => {
     if (r.request().method() === 'POST' && /SamplePatientEntry/i.test(r.url())) {
       let body = '';
@@ -153,6 +178,7 @@ async function attemptSaveWithoutRequester(page: Page, lane: 'environmental' | '
   await page.waitForTimeout(800);
   const ticked = sampleType ? await pickTestAgnostic(page, sampleType.id, /^p\s*H$/i).catch(() => '') : '';
   if (lane === 'environmental') await selectComplianceStandard(page, /./).catch(() => {});
+  if (opts.requestor) await fillRequestor(page, 'QA', 'Tester').catch(() => false);
   await page.keyboard.press('Escape').catch(() => {});
   await page.waitForTimeout(500);
 
@@ -213,6 +239,21 @@ function assertReached400(a: Attempt, lane: string) {
 }
 
 test.describe('OGC-1159 — a failed order save must say so, readably', () => {
+  for (const lane of ['environmental', 'vector'] as const) {
+    const id = lane === 'environmental' ? 'ENV-0' : 'VEC-0';
+    test(`${id}: with no requester the ${lane} save is held, and the page says why in words`, async ({ page }) => {
+      // Added 2026-10-08 for the client-side hold that replaced the server round trip.
+      test.setTimeout(240_000);
+      const a = await attemptOrderSave(page, lane, { requestor: false, stub400: false });
+      expect(a.lab, `[${lane}] the wizard generated a lab number, so the form was really driven`).toMatch(/\w/);
+      expect(a.posts, `[${lane}] nothing is sent while the requester is missing`).toEqual([]);
+      await expect(page.locator('main').getByRole('button', { name: /^Save & Next$/ })).toBeDisabled();
+      const why = a.notices.join(' ');
+      expect(why, `[${lane}] the held save names what is missing`).toMatch(/requesting organi[sz]ation or requestor/i);
+      expect(a.notices.flatMap(rawKeysIn), `[${lane}] in words, not i18n keys`).toEqual([]);
+    });
+  }
+
   test('ENV-1: an Environmental save rejected with HTTP 400 puts something visible on the screen', async ({ page }) => {
     // OGC-1159, half 1: the lane the ticket was filed against. The recommended fix was one
     // import — mount `SaveFailureNotice` in `steps/EnvironmentalOrderEnter.jsx` the way
@@ -227,7 +268,7 @@ test.describe('OGC-1159 — a failed order save must say so, readably', () => {
     // assertion untouched.
     test.setTimeout(240_000);
 
-    const a = await attemptSaveWithoutRequester(page, 'environmental');
+    const a = await attemptOrderSave(page, 'environmental');
     assertReached400(a, 'environmental');
 
     expect(
@@ -251,7 +292,7 @@ test.describe('OGC-1159 — a failed order save must say so, readably', () => {
     // certifying the readability of nothing.
     test.setTimeout(240_000);
 
-    const a = await attemptSaveWithoutRequester(page, 'environmental');
+    const a = await attemptOrderSave(page, 'environmental');
     assertReached400(a, 'environmental');
 
     expect(
@@ -282,7 +323,7 @@ test.describe('OGC-1159 — a failed order save must say so, readably', () => {
     // "The order was not saved sampleOrderItems: errors.requester.org.or.requestor.required …"
     test.setTimeout(240_000);
 
-    const a = await attemptSaveWithoutRequester(page, 'vector');
+    const a = await attemptOrderSave(page, 'vector');
     assertReached400(a, 'vector');
 
     expect(
@@ -313,7 +354,7 @@ test.describe('OGC-1159 — a failed order save must say so, readably', () => {
     // bundle.
     test.setTimeout(240_000);
 
-    const a = await attemptSaveWithoutRequester(page, 'vector');
+    const a = await attemptOrderSave(page, 'vector');
     assertReached400(a, 'vector');
 
     expect(
