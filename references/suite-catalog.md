@@ -411,20 +411,27 @@ from this list is not proof it was removed. Re-extract each cycle rather than pr
 **Reports:** `/Report`, `/RoutineReport(s)`, `/StudyReport(s)`, `/TATReport`, `/LaporanHasil`, `/VectorSurveillanceReport`; generation via JSP `/api/OpenELIS-Global/ReportPrint`
 **Referrals / shipment:** `/SampleShipment` (+ `/:tab`, `/receive`, `/create-box`, `/box/:boxId`, `/reference-lab-results`, `/reports`, `/settings`). `/ReferredOutTests` is **not in the 2026-10-06 router** (no literal anywhere in the bundle; the Referred Out list now renders as a report component). UNVERIFIED logged in; the REST endpoint `/rest/ReferredOutTests` is a separate question
 **Quality (new menu):** `/qa/overview`; QC `/qa/qc/{dashboard,alerts,control-lots,manual-qc,reagent-qc,rule-config}`; QI `/qa/qi/{dashboard,amendment,callback,config,rejection,tat}`; QMS `/qa/qms/{accreditation,audit-trail,capa-register,e-signature-log,nce-register}`
-**EQA:** `/qa/eqa/{management,my-programs,my-cycles,participants,follow-up-queue,in-house,analyst-competency}`, `/qa/eqa/lab-performance/{coverage,recent}`, `/qa/eqa/provider/{schemes,follow-ups}`, `/qa/eqa/provider/cycles/:cycleId/workbench`, `/qa/eqa/provider/schemes/:schemeId/{performance,cycles/new}`, `/qa/eqa/in-house/new` (in the 2026-10-06 router). The old `/EQAManagement`, `/EQADistribution`, `/EQAParticipants`, `/EQAResults`, `/EQAOrders`, `/EQAMyPrograms` are now **redirects** into `/qa/eqa/*`
+**EQA:** `/qa/eqa/{management,my-programs,my-cycles,participants,follow-up-queue,in-house,analyst-competency}`, `/qa/eqa/lab-performance/{coverage,recent}`, `/qa/eqa/provider/{schemes,follow-ups}`, `/qa/eqa/provider/cycles/:cycleId/workbench`, `/qa/eqa/provider/schemes/:schemeId/{performance,cycles/new}`, `/qa/eqa/in-house/new` (in the 2026-10-06 router); `/qa/eqa/distribution` **redirects** to `/qa/eqa/provider/schemes`. The old `/EQAManagement`, `/EQADistribution`, `/EQAParticipants`, `/EQAResults`, `/EQAOrders`, `/EQAMyPrograms` are now **redirects** into `/qa/eqa/*`
 **Analyzers:** `/analyzers`, `/analyzers/types`, `/analyzers/types/:profileId/mapping`, `/analyzers/qc/charts/:analyzerId`, `/analyzers/qc/instruments/:instrumentId`, `/analyzers/qc/control-lots/{new,:id}`; `/analyzers/qc/{db,control-lots,rule-config}` redirect to `/qa/qc/*`. `/analyzers/errors` is **gone** (retired, open-question 8)
 **NC Events:** `/NceDashboard`, `/ReportNonConformingEvent`, `/ViewNonConformingEvent`, `/NCECorrectiveAction`
 **Storage / inventory:** `/Storage`, `/Storage/:resource` with resource `sample-items|inventory-lots|rooms|devices|shelves|racks|boxes`, `/inventory` (lowercase), `/FreezerMonitoring` (Cold Storage)
 **Pathology:** `/PathologyDashboard`, `/ImmunohistochemistryDashboard`, `/CytologyDashboard`, each with `…CaseView/:sampleId`
 **Microbiology:** `/Microbiology/worklist`, `/Microbiology/cases/:caseId`, `/Microbiology/whonet` (WHONET export, new 2026-10-06). The 2026-10-01 paths `/MicrobiologyWorklist` and `/MicrobiologyCaseView/:caseId` are now **redirects** to these (query string carried over)
 **Vector / environmental:** `/vector/deconvolution`, `/vector/identification`, `/VectorManualEntry`, `/EnvironmentalDashboard`
-**Other:** `/Alerts`, `/Aliquot`, `/AuditTrailReport` (now a **redirect** to `/qa/qms/audit-trail`, search string kept), `/Dashboard`, `/NoteBookDashboard` (+ entry/instance forms), `/landing`
+**Other:** `/Alerts`, `/Aliquot`, `/AuditTrailReport` (now a **redirect** to `/qa/qms/audit-trail`, search string kept), `/Dashboard`, `/NoteBookDashboard` (+ entry/instance forms: `/NoteBookEntryForm(/:notebookid)`, `/NoteBookInstanceEntryForm/:notebookid`, `/NoteBookInstanceEditForm/:notebookentryid`), `/NotebookSampleOrder/:notebookId(/:notebookEntryId)` (notebook sample order, RESULTS role), `/landing`
 **FHIR:** `<BASE>/api/fhir/metadata` (BUG-14: has timed out at 60s)
 
 **Not routes (drop them):** `/ResultsByPatient`, `/ResultsByOrder`, `/LOINCManagement`, `/AuditLog`,
 `/SystemLog`, `/Inventory` (capital I), `/Storage/samples`, `/WorkPlanByTest`, `/WorkPlanByPanel`,
 `/WorkPlanByPriority`, `/analyzers/errors`.
 
+> **Route-verification status: 2026-10-07 (third firing this month):** testing redeployed again,
+> now bundle `index-BrFrgJ_6.js`. The only develop commit since the 10-06 read is a Transifex
+> translations update (#4613), and every route literal listed above is still present (the two
+> marked gone are still absent). Two items the earlier reads missed were added:
+> `/NotebookSampleOrder/:notebookId(/:notebookEntryId)` and the `/qa/eqa/distribution` redirect.
+> Logged out; no screen behaviour checked.
+>
 > **Route-verification status: 2026-10-06 (consolidation top-up):** router re-read from bundle
 > `index-CeaYeajT.js` (testing redeployed since 2026-10-01). Changes: Microbiology moved to
 > `/Microbiology/*` with redirects from the old paths; `/AuditTrailReport` redirects to

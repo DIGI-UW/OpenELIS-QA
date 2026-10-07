@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-07 - consolidation task, third firing (state only, no test execution)
+
+- `references/suite-catalog.md` Section 5: re-checked against bundle `index-BrFrgJ_6.js`
+  (translations-only redeploy); added `/NotebookSampleOrder` and the `/qa/eqa/distribution` redirect.
+- `references/validation-history.md`: dated note. Rebuilt `openelis-test-catalog-qa.skill`.
+
 ## 2026-10-06 - monthly consolidation top-up (state only, no test execution)
 
 - `references/suite-catalog.md` Section 5: router re-read from `index-CeaYeajT.js`. Microbiology

@@ -361,3 +361,12 @@ time); the harness's shared-database seeds and "today" reads should be checked a
 `coverage-gap-analysis.md` 2026-10-06). Stale markers on `main`: ST-2b, ST-3, ST-4, STW-4 and STW-6
 still carry `test.fail()` for OGC-1156/OGC-1157, which the tracker records as fixed and closed by
 2026-10-01. No login, no Jira filing.
+
+## 2026-10-07 -- consolidation task fired a third time (no test execution)
+
+Catch-up firing about three hours after the 2026-10-06 top-up. testing.openelis-global.org now
+serves bundle `index-BrFrgJ_6.js` (was `index-CeaYeajT.js`); the only develop merge in between is a
+Transifex translations update (#4613), so no behaviour change is expected. Router literals re-checked
+against `suite-catalog.md` Section 5: all present; `/NotebookSampleOrder` and the
+`/qa/eqa/distribution` redirect added. The drift check is still disabled, so this redeploy is also
+unrecorded in the tracker. No login, no Jira filing.
