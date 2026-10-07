@@ -75,8 +75,11 @@ test.describe('Suite AJ — Workplan By Panel/Priority Core (TC-WPD)', () => {
     expect(loaded, 'Workplan By Panel must be reachable').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    // REWORKED 2026-10-08: a bare "404" also matched digits in counts and lab numbers on the page
+    // (CI run 126), so the page is judged by its own heading and by not-found wording.
+    await expect(page.getByRole('heading', { name: 'Workplan By Panel' })).toBeVisible();
     const bodyText = await page.locator('body').innerText();
-    expect(bodyText).not.toContain('404');
+    expect(bodyText).not.toMatch(/\b404\b\s*[-:]?\s*(not found|page)|page not found/i);
     expect(bodyText).not.toContain('Internal Server Error');
     console.log(`TC-WPD-01: PASS — Workplan By Panel at ${page.url()}`);
   });
@@ -206,19 +209,14 @@ test.describe('Suite N-DEEP-EXT — Workplan Deep Extended (TC-WPD-06–10)', ()
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    const result = await page.evaluate(async () => {
-      const csrf = localStorage.getItem('CSRF') || '';
-      const res = await fetch('/api/OpenELIS-Global/rest/test-section-for-logbook', {
-        headers: { 'X-CSRF-Token': csrf },
-      });
-      if (!res.ok) return { status: res.status, count: -1 };
-      const data = await res.json();
-      return { status: res.status, count: Array.isArray(data) ? data.length : -1 };
-    });
+    // REWORKED 2026-10-08: /rest/test-section-for-logbook went with LogbookResults (404 on develop).
+    // The sections the user can pick are the ones the page's own Unit Type picker offers.
+    const picker = page.locator('main select').first();
+    await picker.locator('option:not([value=""])').nth(4).waitFor({ state: 'attached', timeout: 30_000 }).catch(() => {});
+    const count = await picker.locator('option:not([value=""])').count();
 
-    console.log(`TC-WPD-07: Test sections available: ${result.count}`);
-    expect(result.status).toBe(200);
-    expect(result.count, 'Must have at least 5 test sections').toBeGreaterThanOrEqual(5);
+    console.log(`TC-WPD-07: Test sections available: ${count}`);
+    expect(count, 'Must have at least 5 test sections').toBeGreaterThanOrEqual(5);
   });
 
   test('TC-WPD-08: All four workplan views are reachable', async ({ page }) => {

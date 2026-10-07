@@ -12,9 +12,11 @@
 // 200 {"outcome":"released"} and toasts "Result validated and released." (OGC-1267). The
 // "QC fail (n)" filter chip reads 0 while the row carries the tag.
 //
-// SETTINGS: turns on qcFailBlocksValidation and resultsEntryUnifiedRoute (Result
-// Configuration) for the run and puts back whatever they were in afterAll. Casey approved
-// changing settings on testing for this (2026-09-27).
+// SETTINGS: turns on qcFailBlocksValidation (Result Configuration) for the run and puts back
+// whatever it was in afterAll. Casey approved changing settings on testing for this (2026-09-27).
+// resultsEntryUnifiedRoute was retired on develop (OpenELIS-Global-2 #4528: the unified Results
+// page is the only route now), so it is set only where a build still has it (3.2.x).
+// REWORKED 2026-10-08: QCH-00 used to skip the whole file when that setting was missing.
 //
 // Seeds its own patient and RDT-style order (QA- data, disposable instance). Serial: the
 // cases share one order and must run in order.
@@ -24,7 +26,9 @@ import { seedModifiableOrder } from '../helpers/data-factory';
 
 const REST = '/api/OpenELIS-Global/rest';
 const RDT_TEST = '31'; // "HIV rapid test HIV": dictionary result type, Serum (sample type 2)
-const SETTINGS: Record<string, string> = { qcFailBlocksValidation: 'true', resultsEntryUnifiedRoute: 'true' };
+const SETTINGS: Record<string, string> = { qcFailBlocksValidation: 'true' };
+/** Set when the build has them; retired settings are not a reason to skip. */
+const OPTIONAL_SETTINGS: Record<string, string> = { resultsEntryUnifiedRoute: 'true' };
 
 test.describe.configure({ mode: 'serial' });
 test.setTimeout(300000);
@@ -114,7 +118,14 @@ test.describe('QC-fail hold on Validation (OGC-1147 / OGC-1267)', () => {
       test.skip(!cur, `this build has no "${name}" setting`);
       state.original[name] = cur!.value;
     }
-    for (const [name, value] of Object.entries(SETTINGS)) await setResultConfig(page, name, value);
+    const wanted: Record<string, string> = { ...SETTINGS };
+    for (const [name, value] of Object.entries(OPTIONAL_SETTINGS)) {
+      const cur = await readResultConfig(page, name);
+      if (!cur) continue;
+      state.original[name] = cur.value;
+      wanted[name] = value;
+    }
+    for (const [name, value] of Object.entries(wanted)) await setResultConfig(page, name, value);
 
     const info = await getJson(page, `/test-catalog/tests/${RDT_TEST}/basic-info`);
     state.labUnit = String(info.labUnitId);
@@ -155,15 +166,19 @@ test.describe('QC-fail hold on Validation (OGC-1147 / OGC-1267)', () => {
     await openValidation(page);
     await expect(validationRow(page)).toContainText(/QC failed/i, { timeout: 20000 });
     await expandValidationRow(page);
-    await page.getByRole('button', { name: /Validate & release/i }).first().click();
-    await page.waitForTimeout(3000);
+    // Since the OGC-1267 fix the button is disabled on a held row; clicking it is only possible
+    // (and only needed) on builds where it is still enabled. REWORKED 2026-10-08.
+    const release = page.getByRole('button', { name: /Validate & release/i }).first();
+    if (await release.isEnabled()) {
+      await release.click();
+      await page.waitForTimeout(3000);
+    }
     await openValidation(page); // still in the queue after a fresh load
     await expect(validationRow(page)).toContainText(/QC failed/i);
   });
 
-  test('QCH-02: Validate & release on a held row never says "Result validated and released."', async ({ page }) => {
-    // FLIP-WHEN-FIXED (OGC-1267)
-    test.fail();
+  test('QCH-02: Validate & release on a held row never says "Result validated and released." [FIXED OGC-1267]', async ({ page }) => {
+    // FIXED OGC-1267, flipped 2026-10-08 (passes on local develop 2026-10-08, whole-file run: the button is disabled on a held row); was FLIP-WHEN-FIXED (OGC-1267)
     await openValidation(page);
     await expandValidationRow(page);
     const release = page.getByRole('button', { name: /Validate & release/i }).first();
@@ -184,9 +199,8 @@ test.describe('QC-fail hold on Validation (OGC-1147 / OGC-1267)', () => {
     expect(claimedReleased, `toast "Result validated and released." on a held row (button disabled: ${disabled})`).toBe(false);
   });
 
-  test('QCH-03: the "QC fail" filter counts the row that is tagged "QC failed"', async ({ page }) => {
-    // FLIP-WHEN-FIXED (OGC-1267, related observation)
-    test.fail();
+  test('QCH-03: the "QC fail" filter counts the row that is tagged "QC failed" [FIXED OGC-1267]', async ({ page }) => {
+    // FIXED OGC-1267, flipped 2026-10-08 (passes on local develop 2026-10-08 (whole-file run)); was FLIP-WHEN-FIXED (OGC-1267, related observation)
     await openValidation(page);
     await expect(validationRow(page)).toContainText(/QC failed/i);
     const chip = page.getByRole('button', { name: /^QC fail \(\d+\)/ }).first();

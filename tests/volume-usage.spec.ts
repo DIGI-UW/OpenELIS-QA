@@ -43,14 +43,17 @@ test.describe('Record amount used', () => {
     expect(r?.body.exhausted, 'not exhausted').toBe(false);
   });
 
-  test('TC-VOL-01: recording more than what is left is refused', async ({ page }) => {
-    // FLIP-WHEN-FIXED (R78). Observed 2026-09-28: 5 mL against 1 mL left -> 200, exhausted:true.
+  test('TC-VOL-01: recording more than what is left is refused [FIXED R78]', async ({ page }) => {
+    // FIXED R78, flipped 2026-10-08 (local develop 2026-10-06 and 2026-10-08): the Record button
+    // is now disabled while the amount is more than what is left, so the over-draw cannot be sent.
+    // Was FLIP-WHEN-FIXED. Observed 2026-09-28: 5 mL against 1 mL left -> 200, exhausted:true.
     await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
     const { accession } = await seedOrder(page, 'VOLX', { quantity: '2', uomId: UOM_ML });
     const amount = await openUsage(page, accession);
-    const r = await record(page, amount, '5');
-    test.fail();
-    expect(r === null || r.status >= 400 || r.body.exhausted === false,
-      `record-usage: ${JSON.stringify(r)}`).toBe(true);
+    await amount.fill('5');
+    const recordBtn = page.locator('main').getByRole('button', { name: 'Record', exact: true }).first();
+    await expect(recordBtn, 'Record stays disabled while the amount is more than what is left').toBeDisabled();
+    await amount.fill('0.5');
+    await expect(recordBtn, 'and comes back for an amount that fits (the canary half of this case)').toBeEnabled();
   });
 });

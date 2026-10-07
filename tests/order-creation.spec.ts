@@ -310,21 +310,25 @@ test.describe('Result Entry & BUG-31 Verification (Phase 30)', () => {
   });
 
   test('TC-RESULT-02: Hematology section accessible', async ({ page }) => {
+    // REWORKED 2026-10-08: LogbookResults was retired for the unified Results page; the old
+    // link redirects there and the section is picked in its Lab Unit filter.
     await page.goto(`${BASE}${LOGBOOK_URL}?type=Hematology`);
-    await page.waitForLoadState('networkidle');
-
-    const bodyText = await page.locator('body').textContent();
-    expect(bodyText).toBeTruthy();
-    expect(page.url()).toContain('Hematology');
+    await expect(page).toHaveURL(/\/(Results|LogbookResults)\b/, { timeout: 30_000 });
+    const unit = page.locator('main').getByRole('combobox', { name: 'Lab Unit' });
+    await expect(unit).toBeVisible({ timeout: 30_000 });
+    await unit.selectOption({ label: 'Hematology' });
+    await expect(unit.locator('option:checked')).toHaveText('Hematology');
   });
 
   test('TC-RESULT-03: Biochemistry section accessible', async ({ page }) => {
+    // REWORKED 2026-10-08: LogbookResults was retired for the unified Results page; the old
+    // link redirects there and the section is picked in its Lab Unit filter.
     await page.goto(`${BASE}${LOGBOOK_URL}?type=Biochemistry`);
-    await page.waitForLoadState('networkidle');
-
-    const bodyText = await page.locator('body').textContent();
-    expect(bodyText).toBeTruthy();
-    expect(page.url()).toContain('Biochemistry');
+    await expect(page).toHaveURL(/\/(Results|LogbookResults)\b/, { timeout: 30_000 });
+    const unit = page.locator('main').getByRole('combobox', { name: 'Lab Unit' });
+    await expect(unit).toBeVisible({ timeout: 30_000 });
+    await unit.selectOption({ label: 'Biochemistry' });
+    await expect(unit.locator('option:checked')).toHaveText('Biochemistry');
   });
 
   test('TC-RESULT-04: Validation page loads', async ({ page }) => {

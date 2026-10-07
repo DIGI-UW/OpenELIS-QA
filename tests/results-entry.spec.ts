@@ -107,90 +107,55 @@ test.describe('Result Entry', () => {
     //     indistinguishable from a real no-match. That false negative is what
     //     made results entry look broken (harness ref 12.30); clickFormSearch
     //     now excludes header buttons structurally.
+    //
+    // REWORKED 2026-10-08: Results By Order (/AccessionResults, #accessionNumber) was retired for the
+    // unified Results page, which the old route now opens. The same claim is checked there: the
+    // seeded order is found by lab number, a numeric result is entered and saved through
+    // POST /results-entry/analysis/{id}/result, and the server serves it back in the validation
+    // queue (the next stage reads it from there).
     const seeded = await seedOrder(page, 'RE03');
 
     await page.goto(`${BASE}/AccessionResults`);
-    await page.locator('#accessionNumber').fill(seeded.accession);
+    await expect(page).toHaveURL(/\/(Results|AccessionResults)\b/, { timeout: 30_000 });
+    const search = page.locator('main').getByRole('searchbox', { name: /lab number/i });
+    await search.fill(seeded.accession);
+    await search.press('Enter');
 
-    const searched = await clickFormSearch(page, '#accessionNumber');
-    expect(searched, 'Results By Order must have a form Search button').toBe(true);
-
-    // The row, before anything else. Assert on the sample item id
-    // (`<accession>-1`) because it is what the table actually renders as the
-    // Sample Info cell — measured in the payload's `sampleItemExternalId`.
-    await expect(
-      page.locator('body'),
-      `seeded order ${seeded.accession} must appear on Results By Order`,
-    ).toContainText(`${seeded.accession}-1`, { timeout: 20_000 });
-
-    // Carbon controlled input: React owns `value`, so a plain fill can be
-    // reverted on the next render. Drive the native setter and dispatch the
-    // events React listens for.
-    // MEASURED, not guessed (2026-09-10, local 3.2.2.0). The row's controls are:
-    //   input#ResultValue0            name="testResult[0].resultValue"  type=number
-    //   textarea#testResult0.note     name="testResult[0].note"
-    //   input#testDate-date-0, select#testDate-time-0_{hour,minute}
-    //   button "Accept"
-    // Selecting on `name` rather than `id` because the id is `ResultValue0`
-    // with a CAPITAL R — CSS attribute matching is case-SENSITIVE, so the
-    // earlier `input[id*="result"]` matched nothing and the failure read as
-    // "the analysis offers no result field", i.e. as a product defect.
-    const resultInput = page.locator('input[name$=".resultValue"]').first();
-    await expect(resultInput, 'the pending analysis must offer a result field').toBeVisible({
-      timeout: 15_000,
+    const resultInput = page.locator('input[id^="unifiedResultValue-"][id$="-primary"]').first();
+    await expect(resultInput, `the pending analysis of ${seeded.accession} must offer a result field`).toBeVisible({
+      timeout: 30_000,
     });
 
-    // AN INTEGER, DELIBERATELY. '14.5' was the old case's value and this screen
-    // silently rewrites it to '15': the test's own `significantDigits` is 0
-    // (read from the LogbookResults payload for testId 3, Glucose/Serum), and
-    // the field rounds to it on entry. That rounding is real product behaviour
-    // and worth its own case; using a value it cannot rewrite keeps THIS case
-    // about "does a result save", not about rounding.
+    // AN INTEGER, DELIBERATELY: the seeded Glucose reports 0 decimals and a decimal is refused
+    // (Save stays disabled), which would make this case about rounding rather than saving.
     const VALUE = '15';
-    await resultInput.evaluate((el, v) => {
-      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-      setter.call(el, v);
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-      el.dispatchEvent(new Event('change', { bubbles: true }));
-    }, VALUE);
+    await resultInput.fill(VALUE);
+    await resultInput.press('Tab');
     await expect(resultInput, 'the entered value must survive the next render').toHaveValue(VALUE);
 
-    // Save, and require the POST. `saveStatus === 0` is NOT a pass: a save
-    // that never left the browser has not saved anything.
+    // Save, and require the POST. A save that never left the browser has not saved anything.
     const savePost = page.waitForResponse(
-      (r) => r.request().method() === 'POST' && /Result/i.test(r.url()),
+      (r) => r.request().method() === 'POST' && /\/results-entry\/analysis\/\d+\/result$/.test(new URL(r.url()).pathname),
       { timeout: 30_000 },
     );
-    await page.getByRole('button', { name: /^\s*Save\s*$/i }).last().click();
+    await page.locator('main').getByRole('button', { name: 'Save', exact: true }).first().click();
     const resp = await savePost;
     expect(resp.status(), `save POST ${resp.url()} must be 2xx`).toBeGreaterThanOrEqual(200);
     expect(resp.status(), `save POST ${resp.url()} must be 2xx`).toBeLessThan(300);
 
-    // SAVE NAVIGATES. Measured 2026-09-10: the POST succeeds and the app then
-    // leaves the page, so evaluating straight after the response died with
-    // "Execution context was destroyed, most likely because of a navigation".
-    // Wait the navigation out, then read from a settled document.
-    await page.waitForLoadState('domcontentloaded').catch(() => { /* already settled */ });
-    await page.waitForTimeout(2_000);
-
-    // And it must be there on a fresh read — the server's own view, not the
-    // form's local state.
+    // And it must be there on a fresh read: the server's own view, not the form's local state.
     const persisted = await page.evaluate(async (acc) => {
-      const r = await fetch(
-        '/api/OpenELIS-Global/rest/LogbookResults?labNumber=' + acc +
-          '&upperRangeAccessionNumber=&patientPK=&testSectionId=&collectionDate=&recievedDate=' +
-          '&selectedTest=&selectedSampleStatus=&selectedAnalysisStatus=&doRange=false&finished=false',
-        { headers: { Accept: 'application/json' } },
-      );
+      const r = await fetch(`/api/OpenELIS-Global/rest/AccessionValidation?accessionNumber=${encodeURIComponent(acc)}&doRange=false`,
+        { headers: { Accept: 'application/json' } });
       const j = await r.json().catch(() => null);
-      const row = j && j.testResult && j.testResult[0];
-      return row ? { resultValue: row.resultValue, analysisStatusId: row.analysisStatusId } : null;
+      const row = j && j.resultList && j.resultList[0];
+      return row ? { resultValue: row.result, analysisId: row.analysisId } : null;
     }, seeded.accession);
 
-    expect(persisted, `LogbookResults must still return the analysis for ${seeded.accession}`).not.toBeNull();
+    expect(persisted, `the validation queue must serve the saved analysis for ${seeded.accession}`).not.toBeNull();
     console.log(
       `TC-RE-03: ${seeded.accession} saved ${resp.status()}; server now reports ` +
-        `resultValue="${persisted!.resultValue}" analysisStatusId=${persisted!.analysisStatusId}`,
+        `result="${persisted!.resultValue}" analysisId=${persisted!.analysisId}`,
     );
     expect(String(persisted!.resultValue), 'the saved result must be readable back from the server').toContain(VALUE);
   });
@@ -479,30 +444,17 @@ test.describe('Suite AJ — Results By Range & By Test/Date/Status', () => {
   });
 
   test('TC-RBR-04: Filter by test type returns results', async ({ page }) => {
+    // REWORKED 2026-10-08: "By Test, Date or Status" (/StatusResults) now opens the unified Results
+    // page; its filter is the Lab Unit, and the worklist renders on Load results.
     await login(page, ADMIN.user, ADMIN.pass);
-
-    try {
-      await navigateViaMenu(page, ['Results', 'By Test, Date or Status']);
-    } catch (e) {
-      await tryNavigateToURL(page, ['/ResultsByFilter', '/FilterResults', '/results/filter']);
-    }
-
-    await page.waitForTimeout(1000);
-
-    const selectorEl = page.locator('select').first();
-    if (await selectorEl.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await selectorEl.selectOption({ index: 1 }).catch(() => null);
-      await page.waitForTimeout(500);
-    }
-
-    const button = page.getByRole('button', { name: /search|submit/i }).first();
-    if (await button.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await button.click();
-      await page.waitForTimeout(2000);
-    }
-
-    const tableVisible = await page.locator('table, [role="table"]').first().isVisible({ timeout: 3000 }).catch(() => false);
-    expect(tableVisible).toBeTruthy();
+    await page.goto(`${BASE}/StatusResults?blank=true`);
+    const main = page.locator('main');
+    const unit = main.getByRole('combobox', { name: 'Lab Unit' });
+    await expect(unit).toBeVisible({ timeout: 30_000 });
+    await unit.locator('option').nth(1).waitFor({ state: 'attached', timeout: 15_000 });
+    await unit.selectOption({ index: 1 });
+    await main.getByRole('button', { name: 'Load results' }).click();
+    await expect(main.getByRole('table', { name: 'Results worklist' })).toBeVisible({ timeout: 30_000 });
   });
 
 });

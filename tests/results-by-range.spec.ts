@@ -334,25 +334,16 @@ test.describe('Relocated from gap-suites', () => {
   });
 
   test('TC-RBR-11: Results > By Range of Order Numbers screen loads', async ({ page }) => {
-      await login(page, ADMIN.user, ADMIN.pass);
-  
-      try {
-        await navigateViaMenu(page, ['Results', 'By Range of Order Numbers']);
-      } catch (e) {
-        const found = await tryNavigateToURL(page, ['/ResultsByRange', '/OrderRange', '/results/range']);
-        if (!found) {
-          test.skip();
-          return;
-        }
-      }
-  
-      await page.waitForTimeout(1000);
-  
+      // REWORKED 2026-10-08: the menu's "By Range of Order Numbers" (/RangeResults) now opens the
+      // unified Results page, which searches by lab number, lab unit, test date or patient in one
+      // form instead of a from/to pair. The case follows the entry point to its replacement.
+      await page.goto(`${BASE}/RangeResults`);
+      await expect(page).toHaveURL(/\/(Results|RangeResults)\b/, { timeout: 30_000 });
       expect(page.url()).not.toContain('login');
-  
-      // Check for from/to input fields
-      const inputs = await page.$$('input[type="text"], input[type="number"]');
-      expect(inputs.length).toBeGreaterThanOrEqual(2);
+      const main = page.locator('main');
+      await expect(main.getByRole('searchbox', { name: /lab number/i })).toBeVisible({ timeout: 30_000 });
+      await expect(main.getByRole('combobox', { name: 'Lab Unit' })).toBeVisible();
+      await expect(main.getByRole('button', { name: 'Load results' })).toBeVisible();
     });
 
   test('TC-RBR-12: Enter range returns results', async ({ page }) => {
@@ -409,30 +400,16 @@ test.describe('Relocated from gap-suites', () => {
     });
 
   test('TC-RBR-14: Filter by test type returns results', async ({ page }) => {
-      await login(page, ADMIN.user, ADMIN.pass);
-  
-      try {
-        await navigateViaMenu(page, ['Results', 'By Test, Date or Status']);
-      } catch (e) {
-        await tryNavigateToURL(page, ['/ResultsByFilter', '/FilterResults', '/results/filter']);
-      }
-  
-      await page.waitForTimeout(1000);
-  
-      const selector = await page.$('select');
-      if (selector) {
-        await selector.selectOption({ index: 1 }).catch(() => null);
-        await page.waitForTimeout(500);
-      }
-  
-      const button = await page.$('button:has-text("Search"), button:has-text("Submit")');
-      if (button) {
-        await button.click();
-        await page.waitForTimeout(2000);
-      }
-  
-      const table = await page.$('table, [role="table"]');
-      expect(table).toBeTruthy();
+      // REWORKED 2026-10-08: "By Test, Date or Status" (/StatusResults) now opens the unified
+      // Results page; its filter is the Lab Unit, and the worklist renders on Load results.
+      await page.goto(`${BASE}/StatusResults?blank=true`);
+      const main = page.locator('main');
+      const unit = main.getByRole('combobox', { name: 'Lab Unit' });
+      await expect(unit).toBeVisible({ timeout: 30_000 });
+      await unit.locator('option').nth(1).waitFor({ state: 'attached', timeout: 15_000 });
+      await unit.selectOption({ index: 1 });
+      await main.getByRole('button', { name: 'Load results' }).click();
+      await expect(main.getByRole('table', { name: 'Results worklist' })).toBeVisible({ timeout: 30_000 });
     });
 
   test('TC-RBR-15: Order Programs screen loads', async ({ page }) => {

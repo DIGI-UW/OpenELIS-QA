@@ -1,6 +1,22 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Locator } from '@playwright/test';
 import { BASE, ADMIN, login } from '../helpers/test-helpers';
 import { seedOrder } from '../helpers/data-factory';
+
+/**
+ * The total a Carbon pager shows. REWORKED 2026-10-08: develop's pagers dropped "1-17 of 17 items"
+ * for "17 items on this page" plus "of 1 page", which carries a total only when there is one page.
+ * Null when no total can be read.
+ */
+async function pagerTotal(scope: Locator): Promise<number | null> {
+  const text = (await scope.innerText()).replace(/\s+/g, ' ');
+  const full = text.match(/\b\d+\s*[-–]\s*\d+\s+of\s+(\d+)\s+items\b/i);
+  if (full) return Number(full[1]);
+  const onPage = scope.getByText(/^\s*\d+ items? on this page\s*$/).first();
+  const pages = scope.getByText(/^\s*of \d+ pages?\s*$/).first();
+  if (!(await onPage.count()) || !(await pages.count())) return null;
+  const n = Number((await onPage.innerText()).match(/\d+/)![0]);
+  return Number((await pages.innerText()).match(/\d+/)![0]) === 1 ? n : null;
+}
 
 /**
  * tests/workplan.spec.ts — Workplan by Test / Panel / Unit / Priority
@@ -346,14 +362,15 @@ test.describe('Phase 5 — N-DEEP: Workplan Interaction Tests', () => {
     await page.selectOption('#select-1', panel.value);
     await page.waitForTimeout(5_000);
     const body = (await page.locator('body').innerText()).replace(/\s+/g, ' ');
-    const counted = body.match(/\b\d+\s*-\s*\d+\s+of\s+(\d+)\s+items\b/i);
-    const hasEmpty = /no records to display|no data|nothing to show/i.test(body);
-    console.log(`TC-N-DEEP-02: panel ${panel.text} -> api ${expected} rows; screen count ${counted?.[1] ?? 'none'}, empty=${hasEmpty}`);
+    const total = await pagerTotal(page.locator('main'));
+    // develop words the empty state "No appropriate tests were found." (REWORKED 2026-10-08).
+    const hasEmpty = /no records to display|no data|nothing to show|no appropriate tests were found/i.test(body);
+    console.log(`TC-N-DEEP-02: panel ${panel.text} -> api ${expected} rows; screen count ${total ?? 'none'}, empty=${hasEmpty}`);
 
     if (expected > 0) {
-      expect(counted,
+      expect(total,
         `the endpoint returned ${expected} rows for "${panel.text}", so the screen must show a row count`).not.toBeNull();
-      expect(Number(counted![1]),
+      expect(total,
         `the screen's total must match the ${expected} rows the endpoint returned`).toBe(expected);
     } else {
       expect(hasEmpty,

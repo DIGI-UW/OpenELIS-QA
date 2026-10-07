@@ -345,7 +345,9 @@ test.describe('Suite R-DEEP — Alert Config & Notification (TC-ALERT-06 through
 
     // Must not receive a 403 Forbidden message
     const bodyText = await page.locator('body').innerText();
-    expect(bodyText, 'Admin must not see a Forbidden message on Alerts').not.toMatch(/403|forbidden|access denied/i);
+    // REWORKED 2026-10-08: a bare /403/ also matched digits inside lab numbers and counts on the
+    // page (DEV0126...403...), so the check now looks for the words, not the digits.
+    expect(bodyText, 'Admin must not see a Forbidden message on Alerts').not.toMatch(/\bforbidden\b|access denied|\b403 forbidden\b/i);
 
     console.log(`TC-ALERT-10: PASS — Admin accessed Alerts at ${url}`);
   });
@@ -531,23 +533,32 @@ test.describe('Suite R-EXT — Alerts Extended (TC-ALERT-EXT)', () => {
       const list = await fetch('/api/OpenELIS-Global/rest/alerts', { headers: { 'X-CSRF-Token': csrf } });
       const alerts = list.ok ? await list.json().catch(() => []) : [];
       if (!Array.isArray(alerts) || alerts.length === 0) {
-        return { status: list.status, url: '/rest/alerts', empty: true };
+        return { status: list.status, url: '/rest/alerts', empty: true, already: false };
       }
+      // REWORKED 2026-10-08: acknowledging an alert that is already Acknowledged or Resolved
+      // answers 409 by design, and the first row of a long-lived instance usually is. Pick an
+      // open alert; when none is open, the 409 on a repeat acknowledge is the expected answer.
+      const open = alerts.find((a: any) => !/ACKNOWLEDGED|RESOLVED|CLOSED/i.test(String(a.status ?? '')));
+      const target = open ?? alerts[0];
       // acknowledge takes a BODY (AcknowledgeAlertRequest {notes}); a bodyless PUT
       // answers 400, which is the request being wrong rather than the endpoint.
-      const url = `/api/OpenELIS-Global/rest/alerts/${alerts[0].id}/acknowledge`;
+      const url = `/api/OpenELIS-Global/rest/alerts/${target.id}/acknowledge`;
       const res = await fetch(url, {
         method: 'PUT',
         headers: { 'X-CSRF-Token': csrf, 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: 'QA automated acknowledgement' }),
       });
       const text = await res.text().catch(() => '');
-      return { status: res.status, url, empty: false, body: text.slice(0, 200) };
+      return { status: res.status, url, empty: false, already: !open, body: text.slice(0, 200) };
     });
 
-    console.log(`TC-ALERT-EXT-06: acknowledge → ${result.url} HTTP ${result.status} empty=${result.empty}`);
+    console.log(`TC-ALERT-EXT-06: acknowledge → ${result.url} HTTP ${result.status} empty=${result.empty} already=${result.already}`);
     if (result.empty) {
       expect(result.status, 'the alert listing must be served even when empty').toBe(200);
+      return;
+    }
+    if (result.already) {
+      expect(result.status, `a repeat acknowledge is refused as a conflict: ${result.body ?? ''}`).toBe(409);
       return;
     }
     expect(result.status, `acknowledge answered ${result.status}: ${result.body ?? ''}`).toBeLessThan(400);
