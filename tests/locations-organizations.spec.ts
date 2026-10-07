@@ -24,7 +24,15 @@ import {
   createWard, setActive, retire, openList, rows, search, openEdit, pickTypes, pickLocation, notice, inView,
 } from './helpers/locations';
 
-const S = process.env.LOC_STAMP ?? `${Date.now()}`.slice(-6);
+/**
+ * The run stamp. REWORKED 2026-10-08: it was `${Date.now()}`.slice(-6), which a restarted worker
+ * (Playwright restarts it after any failure) evaluates again, so every case after the first
+ * failure looked for fixtures and search codes under a stamp nobody had created (07b, 07d, 07e,
+ * 07f, 09c, 15 and 18 failed that way in CI). The test runner's process id is the same for every
+ * worker of one run and differs between runs, so it gives one stamp per run; the day digit keeps
+ * a recycled id on another day from reusing old names.
+ */
+const S = process.env.LOC_STAMP ?? `${new Date().getUTCDate() % 10}${String(process.ppid).padStart(5, '0').slice(-5)}`;
 const OUT = process.env.OUT || 'test-results';
 const evidence: Record<string, unknown> = {};
 const note = (k: string, v: unknown) => {
@@ -145,11 +153,10 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     await expect(rows(page).first()).toContainText(`QA Loc Facility ${S}`);
   });
 
-  test('TC-LORG-01b: an old organizationEdit link, or a pasted ?id= link, opens the record even when it is not on the first page (AC1)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-02: /MasterListsPage/organizationEdit?ID=<id> lands on /locations?id=<id>, but the
+  test('TC-LORG-01b: an old organizationEdit link, or a pasted ?id= link, opens the record even when it is not on the first page (AC1) [FIXED OGC-1363]', async ({ page }) => {
+    // FIXED OGC-1363, flipped 2026-10-08 (passes on local develop 2026-10-08 (whole-file run)); was FLIP-WHEN-FIXED. Observed 2026-10-02: /MasterListsPage/organizationEdit?ID=<id> lands on /locations?id=<id>, but the
     // record is only expanded when its row happens to be on page 1 of the default list; otherwise the list shows and
     // nothing opens. Alpha (29) opens; a record on page 2 does not.
-    test.fail();
     await page.goto(LOCATIONS);
     const p1 = await listOrgs(page, { view: 'organizations', status: 'active', sort: 'name', page: '1', pageSize: '25' });
     const onPage1 = p1.items.some((r: any) => r.id === F.low);
@@ -377,22 +384,20 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
   }
 
   for (const k of ['500-html', '502-empty', 'no-response']) {
-    test(`TC-LORG-04m-${k}: the failure message is written for a lab user, not a parser or browser error (OGC-1263 residual)`, async ({ page }) => {
-      // FLIP-WHEN-FIXED. Observed 2026-10-02 (local develop, image 10-01 17:48 UTC): the notification reads
+    test(`TC-LORG-04m-${k}: the failure message is written for a lab user, not a parser or browser error (OGC-1263 residual) [FIXED OGC-1263]`, async ({ page }) => {
+      // FIXED OGC-1263, flipped 2026-10-08 (all three pass on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED. Observed 2026-10-02 (local develop, image 10-01 17:48 UTC): the notification reads
       // "Unexpected token '<', "<html><bod"... is not valid JSON" (500-html), "Failed to execute 'json' on 'Response':
       // Unexpected end of JSON input" (502-empty) and "Failed to fetch" (no-response). putToOpenElisServerJsonResponse parses
       // every error body as JSON and LocationsError falls back to response.error when serverMessage() is empty.
-      test.fail();
       const o = await failedSave(page, FAILURES.find((f) => f.k === k)!, F.f1);
       note(`TC-LORG-04m.${k}`, o);
       expect(o.msg).not.toMatch(/Unexpected token|JSON|Failed to fetch|NetworkError|Failed to execute/);
     });
   }
 
-  test('TC-LORG-04p: an error notification stays until dismissed (heuristic; OGC-1263 residual)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-02: every error notification on the page disappears after 6 s
+  test('TC-LORG-04p: an error notification stays until dismissed (heuristic; OGC-1263 residual) [FIXED OGC-1263]', async ({ page }) => {
+    // FIXED OGC-1263, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED. Observed 2026-10-02: every error notification on the page disappears after 6 s
     // (LocationsPage notify(): setTimeout 6000 for any kind without an action), so a user who looks away misses it.
-    test.fail();
     const o = await failedSave(page, FAILURES[0], F.f1, 'search', 6_500);
     note('TC-LORG-04p', o);
     expect(o.stillThere).toBe(true);
@@ -427,11 +432,10 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     expect(obs.onScreen, `the success message is on screen (page scrolled ${obs.scrollY}px)`).toBe(true);
   });
 
-  test('TC-LORG-05d: an identifier value longer than its column, typed in the form, is refused with a message a lab user can read (OGC-1264)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
+  test('TC-LORG-05d: an identifier value longer than its column, typed in the form, is refused with a message a lab user can read (OGC-1264) [FIXED OGC-1264]', async ({ page }) => {
+    // FIXED OGC-1264, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
     // The identifier Value input has no maxLength. 150 characters answer 500 and the page shows
     // "org.hibernate.exception.DataException: could not execute batch" to the user.
-    test.fail();
     const id = F.f1;
     await openList(page, '', { q: `QLF${S}` });
     const form = await openEdit(page, id);
@@ -450,11 +454,10 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     expect.soft(msg, 'no Java exception text in front of the user').not.toMatch(/hibernate|exception|batch/i);
   });
 
-  test('TC-LORG-05: every text field is capped at its DB column length, or refuses with a message; nothing is cut silently (OGC-1264)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
+  test('TC-LORG-05: every text field is capped at its DB column length, or refuses with a message; nothing is cut silently (OGC-1264) [FIXED OGC-1264]', async ({ page }) => {
+    // FIXED OGC-1264, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
     // Contact name and Description have no maxLength. 108 characters typed in Contact name were stored as 100 and the
     // page said "<name> saved." (LocationsServiceImpl trimTo). The other inputs are capped at their column length.
-    test.fail();
     const id = F.f1;
     await openList(page, '', { q: `QLF${S}` });
     const form = await openEdit(page, id);
@@ -497,12 +500,11 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     }
   });
 
-  test('TC-LORG-05b: over-long values sent past the UI are refused with 422 and a field message, not a 500 or a silent cut (OGC-1264)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
+  test('TC-LORG-05b: over-long values sent past the UI are refused with 422 and a field message, not a 500 or a silent cut (OGC-1264) [FIXED OGC-1264]', async ({ page }) => {
+    // FIXED OGC-1264, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
     // PUT /rest/locations/organizations/<id>: a 260-character name and a 150-character identifier answer 500
     // "org.hibernate.exception.DataException: could not execute batch"; an 80-character street, a 90-character website
     // and a 25-character reporting code answer 200 and are cut to 30, 40 and 20 characters without a word.
-    test.fail();
     await page.goto(LOCATIONS);
     const base = await getDetail(page, F.f1);
     const tries: [string, (cur: any) => Record<string, unknown>][] = [
@@ -613,11 +615,10 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     if (p2.status() === 201) created.push((await p2.json()).detail.row.id);
   });
 
-  test('TC-LORG-06b: a duplicate name in the same type and place warns but saves (FR-C4)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
+  test('TC-LORG-06b: a duplicate name in the same type and place warns but saves (FR-C4) [FIXED OGC-1363]', async ({ page }) => {
+    // FIXED OGC-1363, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
     // The server returns warnings ["Another active record named ... exists here"], the page shows them with notify(),
     // then onSaved() calls notify() again with "<name> added." in the same single slot: the warning is never seen.
-    test.fail();
     await page.goto(LOCATIONS);
     const name = `QA Loc Dup ${S}`;
     F.dup1 = await createOrg(page, { name, typeIds: [F.tClinic], parentId: F.kec });
@@ -648,11 +649,10 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     expect(n.total).toBe(2);
   });
 
-  test('TC-LORG-06d: a new record saved with the pre-filled Code row left blank saves without a code (the code is optional, FR-I2)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
+  test('TC-LORG-06d: a new record saved with the pre-filled Code row left blank saves without a code (the code is optional, FR-I2) [FIXED OGC-1363]', async ({ page }) => {
+    // FIXED OGC-1363, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
     // The Add form starts with an empty "Code" identifier row. Saving without a code answers 422
     // "Every identifier needs a value"; the user has to find and press Remove on that row. The code is optional (FR-I2).
-    test.fail();
     await openList(page);
     await page.getByTestId('locations-add').click();
     const form = page.getByTestId('locations-form-new');
@@ -669,13 +669,12 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     expect(r.status(), `saved without a code: ${body}`).toBe(201);
   });
 
-  test('TC-LORG-06c: a referral lab with no approval status is refused, and the user can see why (FR-J1; why the 2 Oct probe sent nothing)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
+  test('TC-LORG-06c: a referral lab with no approval status is refused, and the user can see why (FR-J1; why the 2 Oct probe sent nothing) [FIXED OGC-1363]', async ({ page }) => {
+    // FIXED OGC-1363, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
     // Root cause of the 2 Oct probe's "no request": a referral lab needs an Approval status (FR-J1). Save is blocked on
     // the client with the only message, "Choose an approval status", under the Referral section far below the fold; no
     // notification, no scroll, focus stays on Save. Every existing referral lab (Alpha, Beta, Gamma and any migrated
     // one) has no approval status, so the first edit of each one looks like a dead Save button.
-    test.fail();
     await openList(page);
     const writes: string[] = [];
     page.on('request', (q) => { if (['POST', 'PUT'].includes(q.method()) && q.url().includes('/rest/locations/organizations')) writes.push(q.url()); });
@@ -694,7 +693,10 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     const focused = await page.evaluate(() => document.activeElement?.id || document.activeElement?.tagName);
     note('TC-LORG-06c', { writes: writes.length, errOnScreen, noticeShown, focused });
     expect(writes, 'blocked on the client').toHaveLength(0);
-    expect.soft(errOnScreen || noticeShown || /ref-status/.test(String(focused)), 'the reason is on screen, or focus moves to it').toBe(true);
+    // As a guard it pins what develop does today (2026-10-08: all three true): the message is in
+    // view and focus moves to the Approval status field.
+    expect.soft(errOnScreen, 'the reason is on screen').toBe(true);
+    expect.soft(String(focused), 'focus moves to the Approval status field').toMatch(/ref-status/);
   });
 
   // ---------------------------------------------------------------------------------------------
@@ -720,11 +722,10 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     expect((L.facilityTypes || []).map((t: any) => t.name.toLowerCase()), 'dept is not a facility type').not.toContain('dept');
   });
 
-  test('TC-LORG-07w: a ward name search opens its organization with the ward highlighted (AC3, FR-B6)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
+  test('TC-LORG-07w: a ward name search opens its organization with the ward highlighted (AC3, FR-B6) [FIXED OGC-1363]', async ({ page }) => {
+    // FIXED OGC-1363, flipped 2026-10-08 (passes on local develop 2026-10-08 (whole-file run)); was FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
     // Searching a ward's name returns its organization with the note "Ward / dept: <ward>", but the row is not
     // expanded, so the ward is not shown or highlighted. Seen three times (two runs and a separate probe).
-    test.fail();
     test.skip(!F.w1, 'needs TC-LORG-07');
     await openList(page);
     await search(page, `QA Loc Ward Maternity ${S}`, 1);
@@ -795,11 +796,10 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     if (pos.length) expect.soft(pos[pos.length - 1] - pos[0] + 1, 'records in the province sit together when sorted by Location').toBe(pos.length);
   });
 
-  test('TC-LORG-07g: the default sort (Name) lists records in name order across pages (FR-B1, FR-B2)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
+  test('TC-LORG-07g: the default sort (Name) lists records in name order across pages (FR-B1, FR-B2) [FIXED OGC-1363]', async ({ page }) => {
+    // FIXED OGC-1363, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
     // GET /rest/locations/organizations?sort=name answers two name-sorted runs back to back: "QA 1263" ... "Test LIMS",
     // then "QA Loc Annex" ... again. Records missing from page 1 look absent, and ?id= links to them open nothing (TC-LORG-01b).
-    test.fail();
     await page.goto(LOCATIONS);
     const a = await listOrgs(page, { view: 'organizations', status: 'active', sort: 'name', page: '1', pageSize: '100' });
     const names = a.items.map((r: any) => r.name as string);
@@ -831,7 +831,9 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     await openList(page);
     await search(page, `QLR${S}`, 1);
     await expect(rows(page).first()).toContainText('Review overdue');
-    await openList(page, '', { overdue: '1', q: 'QA Loc' });
+    // Narrowed to this run's record (REWORKED 2026-10-08): every earlier run leaves an overdue
+    // "QA Loc RefLab <stamp>" behind, so 'QA Loc' filled the first page with older ones.
+    await openList(page, '', { overdue: '1', q: `QA Loc RefLab ${S}` });
     const texts = await rows(page).allInnerTexts();
     expect(texts.join('\n')).toContain(`QA Loc RefLab ${S}`);
     // The filter is "overdue OR expired" by definition (FR-J2), so a row qualifies on either tag.
@@ -854,7 +856,8 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     await expect(empty).toContainText(/in Sampling Sites/i, { timeout: 10_000 });
     const t = await empty.innerText();
     note('TC-LORG-07f', t);
-    expect.soft(t).toMatch(/match(es)? in Sampling Sites/i);
+    // Develop words it "In Sampling Sites: 1 match"; 3.2.x said "1 match in Sampling Sites".
+    expect.soft(t).toMatch(/match(es)? in Sampling Sites|in Sampling Sites:\s*\d+\s*match(es)?/i);
     expect.soft(t).toMatch(/Clear filters/i);
   });
 
@@ -946,11 +949,10 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     expect(dep.text, 'inactive ward is not offered').not.toContain(`QA Loc ICU ${S}`);
   });
 
-  test('TC-LORG-08c: pressing the form Save with unsaved draft wards either saves them or warns; drafts are never dropped silently (heuristic)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
+  test('TC-LORG-08c: pressing the form Save with an unsaved draft ward keeps the draft and says it is not saved; drafts are never dropped silently [FIXED OGC-1363]', async ({ page }) => {
+    // FIXED OGC-1363, flipped 2026-10-08 (passes on local develop 2026-10-08 (whole-file run)); was FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
     // A draft ward (name and service type filled) is dropped without a word when the form's own Save is pressed:
     // the page says "<organization> saved.", the draft row is gone and no ward was created. Only "Save N wards" saves them.
-    test.fail();
     await openList(page);
     await search(page, `QWA${S}`, 1);
     const form = await openEdit(page, F.wa);
@@ -967,14 +969,18 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     const msg = await notice(page).innerText().catch(() => '');
     note('TC-LORG-08c', { saved, draftStill, dialog, msg });
     if (saved) created.push((wards.json as any[]).find((w) => w.name === `QA Loc Draft ${S}`).id);
-    expect(saved || draftStill > 0 || !!dialog || /draft|unsaved|not saved/i.test(msg), 'the draft ward is saved, kept, or the user is warned').toBe(true);
+    // Measured 2026-10-08 on develop: the draft stays and the notice reads "1 ward / dept is typed but
+    // not saved yet. Save them with Save wards, or remove them, then save the record." Assert that
+    // behaviour, not the old either-or (which the falsifiable gate rejects once the tripwire is gone).
+    expect(saved, 'the form Save does not quietly create the draft ward').toBe(false);
+    expect(draftStill, 'the draft ward is still on screen').toBeGreaterThan(0);
+    expect(msg, 'the user is told the draft is not saved').toMatch(/not saved/i);
   });
 
-  test('TC-LORG-08d: when one of two new wards fails to save, the user is told which, and retrying does not duplicate the one that saved (FR-D2)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
+  test('TC-LORG-08d: when one of two new wards fails to save, the user is told which, and retrying does not duplicate the one that saved (FR-D2) [FIXED OGC-1363]', async ({ page }) => {
+    // FIXED OGC-1363, flipped 2026-10-08 (passes on local develop 2026-10-08 (whole-file run)); was FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
     // WardsSection.saveNew posts all drafts with Promise.all; when the second POST fails, the first ward is saved but
     // both drafts stay on screen, so pressing "Save 2 wards" again creates the first ward a second time.
-    test.fail();
     await openList(page);
     await search(page, `QWA${S}`, 1);
     const form = await openEdit(page, F.wa);
@@ -1231,12 +1237,11 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     expect.soft(old.text, 'the old name still finds the area').toContain(`QA Loc District ${S} renamed`);
   });
 
-  test('TC-LORG-14t: a new area name can be typed key by key (the add row keeps focus) (FR-B7)', async ({ page }) => {
+  test('TC-LORG-14t: a new area name can be typed key by key (the add row keeps focus) (FR-B7) [FIXED OGC-1363]', async ({ page }) => {
     test.skip(!F.prov, 'no geographic levels on this instance');
-    // FLIP-WHEN-FIXED. Observed 2026-10-02, twice (fresh login, fresh browser context): typing into "New <level> *"
+    // FIXED OGC-1363, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED. Observed 2026-10-02, twice (fresh login, fresh browser context): typing into "New <level> *"
     // keeps only the first character and focus drops to <body>. AreasView defines AddRow as a component inside its render
     // function, so every keystroke remounts the row and its input. Paste (or Playwright fill) works; typing does not.
-    test.fail();
     await page.goto(`${LOCATIONS}/areas`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('locations-areas')).toBeVisible({ timeout: 30_000 });
     await page.getByTestId('locations-area-add-top').click();
@@ -1248,12 +1253,11 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     expect(got.value).toBe('QA Typing');
   });
 
-  test('TC-LORG-14e: after adding a child area, its parent row shows it has an open child (aria-expanded, expand control) (FR-B7, FR-L1)', async ({ page }) => {
+  test('TC-LORG-14e: after adding a child area, its parent row shows it has an open child (aria-expanded, expand control) (FR-B7, FR-L1) [FIXED OGC-1363]', async ({ page }) => {
     test.skip(!F.prov, 'no geographic levels on this instance');
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
+    // FIXED OGC-1363, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
     // After "+ Kabupaten/Kota" on a new region, the child row appears under it, but the region row still has no
     // aria-expanded and no expand button (childCount is not refreshed) until the page is reloaded.
-    test.fail();
     await page.goto(`${LOCATIONS}/areas`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('locations-areas')).toBeVisible({ timeout: 30_000 });
     await page.getByTestId('locations-area-add-top').click();
@@ -1337,11 +1341,10 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     for (const o of obs) expect.soft(o.saveOnScreen, `Save is on screen with ${o.at} in view`).toBe(true);
   });
 
-  test('TC-LORG-15t: the Organization type(s) picker shows the chosen types by name, not a count (FR-C3, FR-B4)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
+  test('TC-LORG-15t: the Organization type(s) picker shows the chosen types by name, not a count (FR-C3, FR-B4) [FIXED OGC-1363]', async ({ page }) => {
+    // FIXED OGC-1363, flipped 2026-10-08 (passes on local develop 2026-10-08 (whole-file run)); was FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
     // The FilterableMultiSelect shows a tag reading "1" (Carbon's count tag); the chosen type is named nowhere in the
     // field. FR-C3 asks for labelled tags, FR-B4 "never as a bare count".
-    test.fail();
     await openList(page, '', { q: `QWA${S}` });
     const form = await openEdit(page, F.wa);
     const field = form.locator(`#types-${F.wa}`).locator('xpath=ancestor::div[contains(@class,"cds--multi-select")][1]');
@@ -1350,11 +1353,10 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     expect(text).toMatch(/referring clinic/i);
   });
 
-  test('TC-LORG-15b: unsaved changes ask before the form closes (FR-C1)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
+  test('TC-LORG-15b: unsaved changes ask before the form closes (FR-C1) [FIXED OGC-1363]', async ({ page }) => {
+    // FIXED OGC-1363, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
     // With the contact name changed, pressing the row's Close collapses the form at once: no prompt, the edit is lost.
     // Only the form's own Cancel asks (RecordForm.cancel); the row button calls closeForm() directly.
-    test.fail();
     await openList(page, '', { q: `QLF${S}` });
     const form = await openEdit(page, F.f1);
     await form.locator(`#contact-${F.f1}`).fill(`QA unsaved ${S}`);
@@ -1367,12 +1369,11 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     await expect(form.locator(`#contact-${F.f1}`)).toHaveValue(`QA unsaved ${S}`);
   });
 
-  test('TC-LORG-16: when another admin saved first, the form keeps what this user typed and shows the other admin\'s change (FR-C5)', async ({ page, browser, baseURL }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
+  test('TC-LORG-16: when another admin saved first, the form keeps what this user typed and shows the other admin\'s change (FR-C5) [FIXED OGC-1363]', async ({ page, browser, baseURL }) => {
+    // FIXED OGC-1363, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
     // On 409 the form shows "Another admin saved this record first. Their values are shown below; reapply your changes
     // and save again." and replaces every field with the stored record, so what this user typed is gone. FR-C5 asks to keep
     // the user's input and show the other admin's changes.
-    test.fail();
     const other = await appPage(browser, baseURL);
     await openList(page, '', { q: `QLF${S}` });
     const form = await openEdit(page, F.f1);
@@ -1585,12 +1586,11 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
 
   });
 
-  test('TC-LORG-24t: the Replace preview flags in-use sites with the same open-order count the list shows (FR-F6) [preview only]', async ({ page }) => {
+  test('TC-LORG-24t: the Replace preview flags in-use sites with the same open-order count the list shows (FR-F6) [preview only] [FIXED OGC-1363]', async ({ page }) => {
     test.skip(!F.prov, 'no geographic levels on this instance');
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
+    // FIXED OGC-1363, flipped 2026-10-08 (passes on local develop 2026-10-08 (whole-file run)); was FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
     // A sites-only Replace preview lists QA_AUTO Vector Site for deactivation with inUse {open 0, total 0}; the list
     // (and the deactivation guard) say 44 open orders. The admin is not warned that an in-use site will be deactivated.
-    test.fail();
     await page.goto(LOCATIONS);
     const csv = `type,code,name,parentName,parentType\nsampling site,QVR${S},QA Loc Replace Site ${S},QA Loc Kec ${S},Kecamatan\n`;
     const p = await importCall(page, 'preview', [{ name: `organizations-sites-${S}.csv`, content: csv }], 'replace');
@@ -1754,12 +1754,11 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
 
   });
 
-  test('TC-LORG-29d: an identifier value repeated inside one file is rejected, and never lands on two records (FR-F7, FR-I3)', async ({ page }) => {
+  test('TC-LORG-29d: an identifier value repeated inside one file is rejected, and never lands on two records (FR-F7, FR-I3) [FIXED OGC-1363]', async ({ page }) => {
     test.skip(!F.prov, 'no geographic levels on this instance');
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
+    // FIXED OGC-1363, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
     // Two rows with the same identifier:DHIS2 ID preview as 2 new, 0 rejected (FR-F7 lists "identifier value duplicated
     // inside the file" as a rejection reason).
-    test.fail();
     await page.goto(LOCATIONS);
     if (!F.mf) { F.mf = await createArea(page, `QA MF Area ${S}`, `QMF${S}`, F.prov); saveFix(); }
     const csv = `type,name,parentCode,identifier:DHIS2 ID\nreferring clinic,QA Cedar Post ${S},QMF${S},DX${S}\nreferring clinic,QA Willow Station ${S},QMF${S},DX${S}\n`;
@@ -1780,11 +1779,10 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     expect(JSON.stringify({ e: p.json?.errors, r: (p.json?.rows || []).map((r: any) => r.reason) })).toMatch(/colour/i);
   });
 
-  test('TC-LORG-29e: files saved by Excel import: "CSV UTF-8" (with a byte-order mark) and plain "CSV" (Windows-1252) (FR-F1)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
+  test('TC-LORG-29e: files saved by Excel import: "CSV UTF-8" (with a byte-order mark) and plain "CSV" (Windows-1252) (FR-F1) [FIXED OGC-1363]', async ({ page }) => {
+    // FIXED OGC-1363, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
     // A UTF-8 file starting with a byte-order mark (what Excel's "CSV UTF-8" writes) is refused whole: "must have a
     // 'type' column". A Windows-1252 file (Excel's plain "CSV") previews "Sainte-Thérèse" as "Sainte-Th\ufffdr\ufffdse".
-    test.fail();
     await page.goto(LOCATIONS);
     const bom = await importCall(page, 'preview', [{ name: `organizations-bom-${S}.csv`, content: `\uFEFFtype,name\nreferring clinic,QA Bom Post ${S}\n` }], 'merge');
     const w1252 = await importCall(page, 'preview', [{ name: `organizations-ansi-${S}.csv`, content: `type,name\nreferring clinic,QA Clinique Sainte-Thérèse ${S}\n`, encoding: 'latin1' }], 'merge');
@@ -1793,13 +1791,12 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     expect(w1252.json?.rows?.[0]?.name || '', 'accents kept').toContain('Thérèse');
   });
 
-  test('TC-LORG-29b: two different health centres in the same district are not offered as a rename just for sharing "Health Centre" (FR-F12, national-list realism)', async ({ page }) => {
+  test('TC-LORG-29b: two different health centres in the same district are not offered as a rename just for sharing "Health Centre" (FR-F12, national-list realism) [FIXED OGC-1363]', async ({ page }) => {
     test.skip(!F.prov, 'no geographic levels on this instance');
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
+    // FIXED OGC-1363, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
     // Two new health centres in a district holding "QA Kaugere Health Centre" are both offered as "possible renames" of
     // it. The 60%-of-words rule pairs any names that share "Health Centre" (or a QA prefix and stamp): a 5,000-row file
     // previewed 5,000 possible renames, and Apply stays disabled until every one is decided (FR-F8).
-    test.fail();
     await page.goto(LOCATIONS);
     if (!F.hcArea) {
       F.hcArea = await createArea(page, `QA HC District ${S}`, `QHD${S}`, F.prov);
@@ -1834,11 +1831,10 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
 
   });
 
-  test('TC-LORG-30t: Recent imports names the files of each run and tells a preview from an apply (FR-F10)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
+  test('TC-LORG-30t: Recent imports names the files of each run and tells a preview from an apply (FR-F10) [FIXED OGC-1363]', async ({ page }) => {
+    // FIXED OGC-1363, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
     // GET /import/recent returns id, startedAt, finishedAt, user, mode, summary (a JSON string) and status COMPLETED for
     // previews and applies alike; no file names, no preview / apply marker.
-    test.fail();
     await page.goto(LOCATIONS);
     await importCall(page, 'preview', [{ name: `organizations-runname-${S}.csv`, content: `type,name\nreferring clinic,QA Run Name ${S}\n` }], 'merge');
     const r = (await api(page, 'GET', '/rest/locations/import/recent')).json as any[];
@@ -1899,11 +1895,10 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     }
   });
 
-  test('TC-LORG-18f: the FHIR Organization carries every identifier with type.text = its label, the reporting code as official (FR-I5)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
+  test('TC-LORG-18f: the FHIR Organization carries every identifier with type.text = its label, the reporting code as official (FR-I5) [FIXED OGC-1363]', async ({ page }) => {
+    // FIXED OGC-1363, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
     // GET /fhir/Organization/<uuid> lists identifiers org_code, org_uuid and facility_id (use=official, value "Test LIMS");
     // the DHIS2 ID is missing and no identifier has type.text.
-    test.fail();
     test.skip(db('select 1') === null, 'needs DB access for the FHIR UUID');
     await page.goto(LOCATIONS);
     const uuid = db(`select fhir_uuid from clinlims.organization where id=${F.f1}`);
@@ -1968,10 +1963,9 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     }
   });
 
-  test('TC-LORG-40t: Import / Export fits a 1280 px screen without sideways scroll (heuristic H-layout)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
+  test('TC-LORG-40t: Import / Export fits a 1280 px screen without sideways scroll (heuristic H-layout) [FIXED OGC-1363]', async ({ page }) => {
+    // FIXED OGC-1363, flipped 2026-10-08 (passes on local develop 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
     // At 1280 x 720 the Import / Export page is 253 px wider than the window (the list at 375 px is 406 px wider).
-    test.fail();
     await page.goto(`${LOCATIONS}/import`, { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle');
     const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

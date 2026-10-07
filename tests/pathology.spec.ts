@@ -1,5 +1,21 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Locator } from '@playwright/test';
 import { BASE, ADMIN, login } from '../helpers/test-helpers';
+
+/**
+ * The total a Carbon pager shows. REWORKED 2026-10-08: develop's pagers dropped "1-17 of 17 items"
+ * for "17 items on this page" plus "of 1 page", which carries a total only when there is one page.
+ * Null when no total can be read.
+ */
+async function pagerTotal(scope: Locator): Promise<number | null> {
+  const text = (await scope.innerText()).replace(/\s+/g, ' ');
+  const full = text.match(/\b\d+\s*[-–]\s*\d+\s+of\s+(\d+)\s+items\b/i);
+  if (full) return Number(full[1]);
+  const onPage = scope.getByText(/^\s*\d+ items? on this page\s*$/).first();
+  const pages = scope.getByText(/^\s*of \d+ pages?\s*$/).first();
+  if (!(await onPage.count()) || !(await pages.count())) return null;
+  const n = Number((await onPage.innerText()).match(/\d+/)![0]);
+  return Number((await pages.innerText()).match(/\d+/)![0]) === 1 ? n : null;
+}
 
 /**
  * tests/pathology.spec.ts — Pathology / Immunohistochemistry / Cytology dashboards
@@ -91,6 +107,27 @@ const TABLE_COLUMNS = [
 ];
 
 /** Open a dashboard and prove it rendered itself, not the SPA shell. */
+/**
+ * Open a dashboard and return the case list the page itself loaded (the last
+ * GET .../dashboard?... it made). REWORKED 2026-10-08: a hand-built "?statuses=&searchTerm=" now
+ * answers an empty list while the screen (default filter) shows the open cases, so the screen
+ * is held to the request it really made.
+ */
+async function openDashboardWithRows(page: Page, m: Module): Promise<number | null> {
+  let last: unknown = undefined;
+  const onResp = async (r: import('@playwright/test').Response) => {
+    if (r.request().method() === 'GET' && r.url().includes(`/rest/${m.api}/dashboard?`)) {
+      last = await r.json().catch(() => last);
+    }
+  };
+  page.on('response', onResp);
+  await openDashboard(page, m);
+  await page.waitForLoadState('networkidle').catch(() => undefined);
+  page.off('response', onResp);
+  expect(last, `${m.route} loads its case list from ${m.api}/dashboard`).not.toBeUndefined();
+  return dashboardRows(last);
+}
+
 async function openDashboard(page: Page, m: Module): Promise<void> {
   await page.goto(`${BASE}${m.route}`);
   await expect(page.locator('#statusFilter'), `${m.route} must render its status filter`)
@@ -158,6 +195,23 @@ async function filterStatuses(page: Page): Promise<string[]> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * The dashboard's row count. REWORKED 2026-10-08: the three dashboard endpoints became paged and
+ * answer {items:[...], paging:{...}} instead of a bare array. Either shape is a row collection;
+ * the total is the paging total when there is one, else the rows served. Null when neither.
+ */
+function dashboardRows(json: unknown): number | null {
+  if (Array.isArray(json)) return json.length;
+  const j = json as { items?: unknown[]; paging?: Record<string, unknown> } | null;
+  if (j && Array.isArray(j.items)) {
+    const p = j.paging || {};
+    const total = Number(p.totalItems ?? p.totalElements ?? p.total ?? NaN);
+    return Number.isFinite(total) ? total : j.items.length;
+  }
+  return null;
+}
+
 test.describe('Suite AK — Pathology / IHC / Cytology', () => {
   test.beforeEach(async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
@@ -307,15 +361,11 @@ test.describe('Phase 7 — BI-DEEP: Pathology Dashboard', () => {
     // API first, then hold the screen to it — the pattern that replaced an
     // either-or-pass in workplan.spec.ts. Correct on an empty instance and on a
     // busy one, which a "has a table" check is not.
-    await openDashboard(page, PATHOLOGY);
-    const res = await getJson(page, `${PATHOLOGY.api}/dashboard?statuses=&searchTerm=`);
-    expect(res.status, 'the dashboard endpoint must answer').toBe(200);
-    const rows = Array.isArray(res.json) ? (res.json as unknown[]).length : null;
+    const rows = await openDashboardWithRows(page, PATHOLOGY);
     expect(rows, 'the dashboard must return a row collection').not.toBeNull();
 
-    const body = (await page.locator('body').innerText()).replace(/\s+/g, ' ');
-    const counted = body.match(/\b\d+\s*-\s*\d+\s+of\s+(\d+)\s+items\b/i);
-    console.log(`TC-BI-DEEP-02: api ${rows} rows; screen total ${counted?.[1] ?? 'none'}`);
+    const total = await pagerTotal(page.locator('main'));
+    console.log(`TC-BI-DEEP-02: api ${rows} rows; screen total ${total ?? 'none'}`);
 
     // MEASURED 2026-09-10: on an empty instance this table shows "0-0 of 0
     // items" and does NOT print "no records to display". My first draft
@@ -323,8 +373,8 @@ test.describe('Phase 7 — BI-DEEP: Pathology Dashboard', () => {
     // failed against the real screen. The paging total is authoritative in both
     // cases, so compare it directly and drop the branch — one assertion that
     // holds on an empty instance and a busy one.
-    expect(counted, 'the case table must always show a paging total, even at zero').not.toBeNull();
-    expect(Number(counted![1]), `the shown total must match the ${rows} cases the endpoint returned`).toBe(rows);
+    expect(total, 'the case table must always show a paging total, even at zero').not.toBeNull();
+    expect(total, `the shown total must match the ${rows} cases the endpoint returned`).toBe(rows);
   });
 });
 
@@ -411,7 +461,7 @@ test.describe('Suite PATH-EXT — Pathology Module Extended', () => {
       console.log(`TC-PATH-EXT-01: ${m.key} count=${count.status} dashboard=${dash.status}`);
       expect(count.status, `${m.api}/dashboard/count must not error`).toBe(200);
       expect(dash.status, `${m.api}/dashboard must not error`).toBe(200);
-      expect(Array.isArray(dash.json), `${m.api}/dashboard must return an array; got ${dash.raw}`).toBe(true);
+      expect(dashboardRows(dash.json), `${m.api}/dashboard must return a row collection; got ${dash.raw}`).not.toBeNull();
     }
   });
 
@@ -508,16 +558,12 @@ test.describe('Relocated from gap-suites', () => {
   });
 
   test('TC-CYT-03: cytology tiles and table agree with the server on an empty instance', async ({ page }) => {
-    await openDashboard(page, CYTOLOGY);
-    const dash = await getJson(page, `${CYTOLOGY.api}/dashboard?statuses=&searchTerm=`);
-    expect(dash.status).toBe(200);
-    const rows = Array.isArray(dash.json) ? (dash.json as unknown[]).length : null;
+    const rows = await openDashboardWithRows(page, CYTOLOGY);
     expect(rows, 'the cytology dashboard must return a row collection').not.toBeNull();
 
-    const body = (await page.locator('body').innerText()).replace(/\s+/g, ' ');
-    const counted = body.match(/\b\d+\s*-\s*\d+\s+of\s+(\d+)\s+items\b/i);
-    console.log(`TC-CYT-03: api ${rows} rows; screen ${counted?.[1] ?? 'none'}`);
-    expect(counted, 'the cytology table must always show a paging total, even at zero').not.toBeNull();
-    expect(Number(counted![1]), `the shown total must match the ${rows} cases returned`).toBe(rows);
+    const total = await pagerTotal(page.locator('main'));
+    console.log(`TC-CYT-03: api ${rows} rows; screen ${total ?? 'none'}`);
+    expect(total, 'the cytology table must always show a paging total, even at zero').not.toBeNull();
+    expect(total, `the shown total must match the ${rows} cases returned`).toBe(rows);
   });
 });

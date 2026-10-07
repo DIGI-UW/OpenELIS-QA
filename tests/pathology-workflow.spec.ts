@@ -12,6 +12,7 @@
  */
 import { test, expect, Page } from '@playwright/test';
 import { apiGet } from '../helpers/silentSave';
+import { setStage, readStage, openSection, pressCaseSave } from '../helpers/pathology-case';
 import { createPatientViaAPI, ensureReferringClinic } from '../helpers/data-factory';
 import { orderThroughWizard } from '../helpers/order-wizard';
 
@@ -74,16 +75,29 @@ test.describe('Pathology workflow (TC-PATHW)', () => {
 
   test('TC-PATHW-02: questionnaire answers from the order appear on the case view', async ({ page }) => {
     await openCase(page);
+    // REWORKED 2026-10-08: the redesigned case view keeps the order's details in a "Case
+    // Information" section that starts collapsed; open it before reading.
+    // The section header is "1. Case Information"; the "Case Information Complete" button above it
+    // belongs to the progress bar and does not open anything.
+    const info = page.locator('main').getByRole('button', { name: /^\d+\. Case Information/ }).first();
+    if (await info.count()) {
+      if ((await info.getAttribute('aria-expanded')) === 'false') await info.click();
+      await page.waitForTimeout(1000);
+    }
     const text = await page.locator('main').innerText();
     for (const a of ANSWERS) expect(text, `case view shows "${a}"`).toContain(a);
   });
 
   test('TC-IHCW-01: referring the pathology case to IHC creates the IHC case', async ({ page }) => {
     await openCase(page);
+    // REWORKED 2026-10-08: the referral checkbox sits in the "Findings & Conclusion" section of the
+    // redesigned case view, which starts collapsed and unlocks from Ready for Pathologist on.
+    await setStage(page, 'UNDER_REVIEW');
+    await openSection(page, 'findings');
     await page.locator('label[for="referToImmunoHistoChemistry"]').click();
     await expect(page.locator('#referToImmunoHistoChemistry')).toBeChecked();
     const post = page.waitForResponse(r => /\/rest\/pathology\/caseView\/\d+$/.test(new URL(r.url()).pathname) && r.request().method() === 'POST');
-    await page.getByRole('button', { name: /^Save$/ }).last().click();
+    await pressCaseSave(page);
     expect((await post).status(), 'pathology case save answers 200').toBe(200);
     await expect(await findIhcRow(page), `IHC case for ${labNo} is listed`).toBeVisible({ timeout: 20_000 });
   });
@@ -98,13 +112,15 @@ test.describe('Pathology workflow (TC-PATHW)', () => {
     await page.waitForURL(/\/ImmunohistochemistryCaseView\/\d+/, { timeout: 15_000 });
     await expect(page.locator('main').getByText(labNo).first()).toBeVisible({ timeout: 20_000 });
     const caseUrl = page.url();
-    await page.locator('#status').selectOption({ label: 'Completed' });
-    await page.getByRole('button', { name: /^Save$/ }).last().click();   // the case-level Save
+    // The stage control is read and set through helpers/pathology-case.ts (2026-10-08) so a
+    // redesigned picker cannot make this tripwire "fail as expected" on a locator error.
+    await setStage(page, 'COMPLETED');
+    await pressCaseSave(page);   // the case-level Save
     await page.waitForTimeout(2500);
     await page.goto(caseUrl, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('main').getByText(labNo).first()).toBeVisible({ timeout: 20_000 });
     await page.waitForLoadState('networkidle');
-    const status = await page.locator('#status').evaluate((s: HTMLSelectElement) => s.options[s.selectedIndex]?.text ?? '');
+    const status = await readStage(page);
     expect(status, 'an empty IHC case is not stored as Completed').not.toBe('Completed');
   });
 
@@ -114,15 +130,17 @@ test.describe('Pathology workflow (TC-PATHW)', () => {
     test.fail();
     await openCase(page);
     const caseUrl = page.url();
-    await page.locator('#status').selectOption({ label: 'Completed' });
-    await page.getByRole('button', { name: /^Save$/ }).last().click();   // the case-level Save
+    // REWORKED 2026-10-08: the stage picker is a Carbon dropdown now, so the old selectOption threw
+    // and this tripwire "failed as expected" without testing anything.
+    await setStage(page, 'COMPLETED');
+    await pressCaseSave(page);   // the case-level Save
     await page.waitForTimeout(2500);
     await page.goto(caseUrl, { waitUntil: 'domcontentloaded' });
     // Read the status only once the case has loaded: before that the select shows its
     // placeholder stage (an early read "passed" this tripwire by race on 2026-09-27).
     await expect(page.locator('main').getByText(labNo).first()).toBeVisible({ timeout: 20_000 });
     await page.waitForLoadState('networkidle');
-    const status = await page.locator('#status').evaluate((s: HTMLSelectElement) => s.options[s.selectedIndex]?.text ?? '');
+    const status = await readStage(page);
     expect(status, 'an empty case is not stored as Completed').not.toBe('Completed');
   });
 });

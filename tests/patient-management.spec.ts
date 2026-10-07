@@ -138,8 +138,9 @@ test.describe('Patient Management (TC-PAT)', () => {
 
     const rowCount = await page.locator('table tbody tr').count();
     expect(rowCount, 'a search for a nonexistent last name must return no rows').toBe(0);
+    // REWORKED 2026-10-08: the Carbon pager now reads "0 items on this page" (it read "0-0 of 0 items").
     await expect(
-      page.getByText(/0-0 of 0 items/i),
+      page.locator('main').getByText(/0-0 of 0 items|\b0 items on this page\b/i).first(),
       'the results pager must report zero items for a search that matched nothing'
     ).toBeVisible({ timeout: TIMEOUT });
 

@@ -46,8 +46,14 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const EQA_PROGRAM_URL = '/MasterListsPage/eqaProgram';
+// REWORKED 2026-10-08: /MasterListsPage/eqaProgram is gone. EQA programs became "schemes",
+// administered at QA > EQA > Management ("Scheme Administration"), and distributions became
+// provider cycles (/qa/eqa/distribution now opens "EQA schemes we provide"). The old spellings
+// stay as fallbacks for 3.2.x.
+const EQA_PROGRAM_URL = '/qa/eqa/management';
+const EQA_PROGRAM_HEADING = /Scheme Administration|Program Administration/i;
 const EQA_DISTRIBUTION_URLS = [
+  '/qa/eqa/distribution',
   '/EQADistributions',
   '/QADistributions',
   '/eqa/distributions',
@@ -55,8 +61,8 @@ const EQA_DISTRIBUTION_URLS = [
 ];
 
 async function goToEQAProgramManagement(page: any): Promise<boolean> {
-  const res = await page.goto(`${BASE}${EQA_PROGRAM_URL}`);
-  if (res?.status() === 200 && !page.url().match(/LoginPage|login/i)) return true;
+  await page.goto(`${BASE}${EQA_PROGRAM_URL}`);
+  if (await page.getByRole('heading', { name: EQA_PROGRAM_HEADING }).first().isVisible({ timeout: 30_000 }).catch(() => false)) return true;
 
   // Fallback: navigate via Admin sidebar
   await page.goto(`${BASE}/MasterListsPage`);
@@ -121,9 +127,10 @@ test.describe('Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration'
     await goToEQAProgramManagement(page);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
+    // "Add Scheme" on develop; "Add/New EQA Program" on older builds.
     const addBtn = page
-      .getByRole('button', { name: /add|new|create/i })
-      .or(page.locator('a, button').filter({ hasText: /add|new|create/i }))
+      .locator('main')
+      .getByRole('button', { name: /^add scheme$|add|new|create/i })
       .first();
 
     const addVisible = await addBtn.isVisible({ timeout: 5000 }).catch(() => false);

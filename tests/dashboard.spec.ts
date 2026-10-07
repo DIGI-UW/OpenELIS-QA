@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange } from '../helpers/test-helpers';
-import { withIsolatedSession, reloginIsolated } from '../helpers/isolated-session';
+import { withIsolatedSession, reloginIsolated, logoutViaUi } from '../helpers/isolated-session';
 
 /**
  * Dashboard KPIs Test Suite
@@ -88,9 +88,10 @@ test.describe('Dashboard KPIs (TC-DASH)', () => {
     expect(bodyLen, 'Dashboard must render content (not blank)').toBeGreaterThan(500);
 
     // At least one KPI metric must be visible
-    const hasKPI = await page.locator(
-      '[class*="tile"], [class*="card"], [class*="kpi"], [class*="stat"], h2, h3'
-    ).first().isVisible({ timeout: 3000 }).catch(() => false);
+    // REWORKED 2026-10-08: the KPI tiles are plain divs (label h5, value h2); the class-name guess
+    // landed on hidden header elements first, so a visible dashboard read as none.
+    const hasKPI = await page.locator('main h2').filter({ hasText: /^\d+$/ }).first()
+      .isVisible({ timeout: 15000 }).catch(() => false); // each KPI tile shows its value as an h2
     expect(hasKPI, 'Dashboard must show at least one KPI or stat card').toBe(true);
   });
 });
@@ -278,18 +279,9 @@ test.describe('Dashboard Extended Tests (TC-DASH-EXT)', () => {
       await page.goto(`${BASE}`);
       await page.waitForTimeout(1500);
 
-      // Find and click a logout link/button
-      const logoutLocator = page.locator(
-        'a[href*="logout"], a[href*="Logout"], button:has-text("Logout"), button:has-text("Sign Out"), [data-testid*="logout"]'
-      ).first();
-
-      const logoutVisible = await logoutLocator.isVisible({ timeout: 3000 }).catch(() => false);
-      if (!logoutVisible) {
-        // Try navigating to logout URL directly
-        await page.goto(`${BASE}/logout`);
-      } else {
-        await logoutLocator.click();
-      }
+      // REWORKED 2026-10-08: Logout is an item of the header's User panel, which is closed on load,
+      // and /logout is not a page the SPA serves, so the old fallback never logged out.
+      await logoutViaUi(page);
 
       await page.waitForTimeout(2000);
       const afterUrl = page.url();

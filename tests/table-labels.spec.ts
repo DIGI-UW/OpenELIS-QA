@@ -35,9 +35,8 @@ test.describe('Tables', () => {
     expect(bad, 'dashboards with a single page-size option').toEqual([]);
   });
 
-  test('TC-IHCW-02: case dashboards show stages as words, not enum constants', async ({ page }) => {
-    // FLIP-WHEN-FIXED (R53a). Observed 2026-09-27: PREPARING_SLIDES, IN_PROGRESS.
-    test.fail();
+  test('TC-IHCW-02: case dashboards show stages as words, not enum constants [FIXED R53a]', async ({ page }) => {
+    // FIXED R53a, flipped 2026-10-08 (passes on local develop 2026-10-06 and 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED (R53a). Observed 2026-09-27: PREPARING_SLIDES, IN_PROGRESS.
     const found: string[] = [];
     for (const p of ['/CytologyDashboard', '/ImmunohistochemistryDashboard']) {
       await page.goto(`${BASE}${p}`, { waitUntil: 'domcontentloaded' });

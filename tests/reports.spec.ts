@@ -171,6 +171,9 @@ test.describe('Suite AE — Routine Reports', () => {
 
     // URL discovery pattern
     const candidates = [
+      // REWORKED 2026-10-08: the real route (side menu / route census) first; the guessed
+      // ones below never existed, and develop now answers an unknown path off the SPA.
+      '/Report?type=patient&report=patientCILNSP_vreduit',
       '/PatientStatusReport',
       '/Report/PatientStatus',
       '/reports/patient-status',
@@ -284,6 +287,9 @@ test.describe('Suite AE — Routine Reports', () => {
 
     // URL discovery
     const candidates = [
+      // REWORKED 2026-10-08: the real route (side menu / route census) first; the guessed
+      // ones below never existed, and develop now answers an unknown path off the SPA.
+      '/Report?type=indicator&report=statisticsReport',
       '/StatisticsReport',
       '/Report/Statistics',
       '/reports/statistics',
@@ -307,6 +313,9 @@ test.describe('Suite AE — Routine Reports', () => {
 
   test('TC-RPT-R04: Generate Statistics Report — verify table/data output', async ({ page }) => {
     const candidates = [
+      // REWORKED 2026-10-08: the real route (side menu / route census) first; the guessed
+      // ones below never existed, and develop now answers an unknown path off the SPA.
+      '/Report?type=indicator&report=statisticsReport',
       '/StatisticsReport',
       '/Report/Statistics',
       '/reports/statistics',
@@ -379,6 +388,9 @@ test.describe('Suite AE — Routine Reports', () => {
 
     // URL discovery
     const candidates = [
+      // REWORKED 2026-10-08: the real route (side menu / route census) first; the guessed
+      // ones below never existed, and develop now answers an unknown path off the SPA.
+      '/Report?type=indicator&report=indicatorHaitiLNSPAllTests',
       '/SummaryReport',
       '/Report/SummaryOfTests',
       '/reports/all-tests',
@@ -393,22 +405,22 @@ test.describe('Suite AE — Routine Reports', () => {
 
     expect(page.url()).not.toMatch(/LoginPage|login/i);
 
-    // Generate report if form exists
-    const dateSelectors = ['input[type="date"], input[placeholder*="date" i]'];
-    const dateRange = await getDateRange();
-    await fillDateField(page, dateRange.from, dateSelectors);
-    await fillDateField(page, dateRange.to, dateSelectors);
-
-    const buttonClicked = await clickButton(page, ['Generate', 'View', 'Report']);
-
-    if (buttonClicked) {
-      await page.waitForTimeout(2000);
-
-      const table = page.locator('table, [role="table"]').first();
-      await expect(table).toBeVisible({ timeout: 8000 }).catch(() => {
-        console.log('Note: Summary table not visible');
-      });
-    }
+    // REWORKED 2026-10-08: the form is now Start Date / End Date textboxes (dd/mm/yyyy) and a
+    // "Generate Printable Version" button that stays disabled until both are set. The old code
+    // filled the first date field twice with an ISO date, so the button never enabled.
+    const { from, to } = await getDateRange();
+    const dmy = (iso: string) => iso.split('-').reverse().join('/');
+    const main = page.locator('main');
+    await main.getByRole('textbox', { name: 'Start Date' }).fill(dmy(from));
+    await main.getByRole('textbox', { name: 'Start Date' }).press('Tab');
+    await main.getByRole('textbox', { name: 'End Date' }).fill(dmy(to));
+    await main.getByRole('textbox', { name: 'End Date' }).press('Tab');
+    const generate = main.getByRole('button', { name: /^Generate/i }).first();
+    await expect(generate, 'Generate enables once both dates are set').toBeEnabled({ timeout: 10000 });
+    const popup = page.context().waitForEvent('page', { timeout: 15000 }).catch(() => null);
+    await generate.click();
+    const opened = await popup;
+    console.log(`TC-RPT-R05: printable version ${opened ? `opened at ${opened.url()}` : 'did not open a new tab'}`);
   });
 });
 
@@ -447,6 +459,9 @@ test.describe('Suite AF — Management Reports', () => {
 
     // URL discovery
     const candidates = [
+      // REWORKED 2026-10-08: the real route (side menu / route census) first; the guessed
+      // ones below never existed, and develop now answers an unknown path off the SPA.
+      '/Report?type=indicator&report=sampleRejectionReport',
       '/RejectionReport',
       '/Report/Rejection',
       '/reports/rejections',
@@ -535,6 +550,9 @@ test.describe('Suite AF — Management Reports', () => {
 
     // URL discovery
     const candidates = [
+      // REWORKED 2026-10-08: the real route (side menu / route census) first; the guessed
+      // ones below never existed, and develop now answers an unknown path off the SPA.
+      '/Report?type=patient&report=referredOut',
       '/ReferredOutReport',
       '/Report/ReferredOut',
       '/reports/referrals',
@@ -603,6 +621,9 @@ test.describe('Suite AF — Management Reports', () => {
 
     // URL discovery
     const candidates = [
+      // REWORKED 2026-10-08: the real route (side menu / route census) first; the guessed
+      // ones below never existed, and develop now answers an unknown path off the SPA.
+      '/ReportPrint?type=indicator&report=validationBacklog',
       '/DelayedValidationReport',
       '/Report/DelayedValidation',
       '/reports/delays',
@@ -1127,7 +1148,9 @@ test.describe('Reports Extended — API & Edge Cases (TC-RPT-EXT)', () => {
      * US-RPT-4: Every time-based report needs start and end date pickers.
      * Without them, the supervisor cannot filter to the period they need.
      */
-    await page.goto(`${BASE}/Report?type=patient`);
+    // REWORKED 2026-10-08: /Report?type=patient without a report name renders an empty page; the
+    // rejection report (Management > Rejection) is a date-range report reachable from the menu.
+    await page.goto(`${BASE}/Report?type=indicator&report=sampleRejectionReport`);
     await page.waitForLoadState('networkidle');
 
     if (page.url().includes('LoginPage')) {
@@ -1136,8 +1159,9 @@ test.describe('Reports Extended — API & Edge Cases (TC-RPT-EXT)', () => {
       return;
     }
 
-    const dateInputCount = await page.locator(
-      'input[type="date"], input[placeholder*="mm/dd" i], input[id*="date" i], input[placeholder*="date" i]'
+    await page.locator('main input').first().waitFor({ timeout: 15000 }).catch(() => {});
+    const dateInputCount = await page.locator('main').locator(
+      'input[type="date"], input[placeholder*="mm/dd" i], input[placeholder*="dd/mm" i], input[id*="date" i], input[placeholder*="date" i]'
     ).count();
 
     console.log(`TC-RPT-EXT-04: Date inputs found: ${dateInputCount}`);

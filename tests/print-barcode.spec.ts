@@ -52,6 +52,15 @@ const BARCODE_URLS = [
 // Uses dynamic accession from data.setup.ts when available (falls back to jdhealthsolutions baseline)
 const KNOWN_ACCESSION = ACCESSION;
 
+/**
+ * The "Print Barcodes for Existing Orders" lab number field. REWORKED 2026-10-08: the page gained a
+ * Pre-Print Barcodes section above it whose first field is a number input ("Number of label sets"),
+ * so accessionInput(page) now lands there and cannot take a lab number.
+ */
+function accessionInput(page: any) {
+  return page.locator('main input#labNumber, main input[placeholder="Enter Lab No"]').first();
+}
+
 async function goToBarcodeScreen(page: any): Promise<boolean> {
   return navigateWithDiscovery(page, BARCODE_URLS);
 }
@@ -110,7 +119,7 @@ test.describe('Suite BB — Barcode Print Core (TC-BARCODE)', () => {
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    const accInput = page.locator('input').first();
+    const accInput = accessionInput(page);
     if (!await accInput.isVisible({ timeout: 2000 }).catch(() => false)) {
       console.log('TC-BARCODE-03: SKIP — no input found');
       test.skip();
@@ -221,7 +230,7 @@ test.describe('Suite BB-DEEP — Barcode API & Label Content (TC-BARCODE-06–10
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    const accInput = page.locator('input').first();
+    const accInput = accessionInput(page);
     if (!await accInput.isVisible({ timeout: 2000 }).catch(() => false)) {
       test.skip(); return;
     }
@@ -291,7 +300,9 @@ test.describe('Suite BB-DEEP — Barcode API & Label Content (TC-BARCODE-06–10
     expect(accResult.status).toBe(200);
 
     if (accResult.labNo) {
-      expect(accResult.labNo, 'Returned labNo must match the queried accession').toContain('26CPHL00008');
+      // The accession comes from .auth/test-data.json (seeded per run), not the old
+      // jdhealthsolutions baseline, so compare with what was queried.
+      expect(accResult.labNo, 'Returned labNo must match the queried accession').toContain(KNOWN_ACCESSION.replace(/[A-Z]$/, ''));
     }
   });
 });
@@ -315,7 +326,7 @@ test.describe('Suite BB-EXT — Barcode Extended (TC-BARCODE-EXT)', () => {
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    const input = page.locator('input').first();
+    const input = accessionInput(page);
     if (await input.isVisible({ timeout: 2000 }).catch(() => false)) {
       await input.fill(KNOWN_ACCESSION);
       await page.keyboard.press('Enter');
@@ -370,7 +381,7 @@ test.describe('Suite BB-EXT — Barcode Extended (TC-BARCODE-EXT)', () => {
 
     const accessions = ['26CPHL00008V', '26CPHL00008A', 'ZZINVALID999'];
     for (const acc of accessions) {
-      const input = page.locator('input').first();
+      const input = accessionInput(page);
       if (!await input.isVisible({ timeout: 2000 }).catch(() => false)) break;
       await input.fill(acc);
       await page.keyboard.press('Enter');
@@ -414,7 +425,7 @@ test.describe('Suite BB-EXT — Barcode Extended (TC-BARCODE-EXT)', () => {
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    const input = page.locator('input').first();
+    const input = accessionInput(page);
     if (await input.isVisible({ timeout: 2000 }).catch(() => false)) {
       await input.fill(KNOWN_ACCESSION);
       await page.keyboard.press('Enter');
@@ -446,7 +457,7 @@ test.describe('Suite BB-EXT — Barcode Extended (TC-BARCODE-EXT)', () => {
       });
       if (!res.ok) return { status: res.status, hasAccession: false };
       const text = await res.text();
-      return { status: res.status, hasAccession: text.includes('26CPHL00008') };
+      return { status: res.status, hasAccession: text.includes(acc.replace(/[A-Z]$/, '')) };
     }, KNOWN_ACCESSION);
 
     console.log(`TC-BARCODE-EXT-06: API includes accession=${result.hasAccession}`);

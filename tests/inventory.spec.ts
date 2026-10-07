@@ -29,7 +29,31 @@ import { BASE, ADMIN, QA_PREFIX, TIMEOUT, login } from '../helpers/test-helpers'
 
 const INVENTORY_URL = '/Inventory';
 
+/**
+ * The visible tab's panel. REWORKED 2026-10-08: Carbon Tabs keep every panel in the DOM, so a
+ * page-wide locator's .first() can land in a hidden panel (the Dashboard table also has an
+ * "Item Name" column and "All" filters). Every catalog and dashboard check is scoped to its panel.
+ */
+function tabPanel(page: any, name: 'Dashboard' | 'Catalog' | 'Reports') {
+  return page.getByRole('tabpanel', { name });
+}
+
 // Re-usable helper: fill a React-controlled input (Carbon TextInput pattern)
+// The Add Catalog Item modal. Carbon keeps closed modals mounted (hidden), and the
+// tab panels keep their toolbar inputs in the DOM, so a bare page.locator('input')
+// lands on a hidden search box. Scope everything to the visible dialog.
+async function openAddItemModal(page: any) {
+  await page.getByRole('button', { name: /^add catalog item$/i }).click();
+  const m = page.getByRole('dialog').last();
+  await expect(m, 'Add Catalog Item modal must open').toBeVisible({ timeout: TIMEOUT });
+  return m;
+}
+
+async function pickReagent(page: any, m: any) {
+  await m.getByRole('combobox').first().click();
+  await page.getByRole('option', { name: /^Reagent$/ }).click();
+}
+
 async function fillReactInput(page: any, selector: string, value: string): Promise<void> {
   await page.evaluate(
     ({ sel, val }: { sel: string; val: string }) => {
@@ -70,12 +94,13 @@ test.describe('Inventory Dashboard (US-INV-2)', () => {
       ).toBeVisible({ timeout: TIMEOUT });
     }
 
-    // Each card must contain a numeric value (even if 0)
-    const kpiValues = await page.locator('.kpi-value, [class*="kpi"] [class*="value"], h2, h3')
-      .filter({ hasText: /^\d+$/ })
-      .count();
-    // At minimum the page renders some numeric values
-    expect(kpiValues, 'At least one numeric KPI value should render').toBeGreaterThan(0);
+    // Each card must contain a numeric value (even if 0). REWORKED 2026-10-08: the tiles are plain
+    // divs (number above label), not h2/h3 or kpi-* classes, so each label's own tile is read.
+    const panel = tabPanel(page, 'Dashboard');
+    for (const label of kpiLabels) {
+      const tile = panel.getByText(label, { exact: true }).first().locator('..');
+      await expect(tile, `KPI card "${label}" shows a number`).toContainText(/\d+/);
+    }
   });
 
   test('TC-INV-02: Catalog tab is accessible and shows table column headers', async ({ page }) => {
@@ -87,32 +112,23 @@ test.describe('Inventory Dashboard (US-INV-2)', () => {
     const requiredColumns = ['Item Name', 'Item Type', 'Units', 'Status'];
     for (const col of requiredColumns) {
       await expect(
-        page.locator(`th, [role="columnheader"]`).filter({ hasText: col }).first(),
+        tabPanel(page, 'Catalog').locator(`th, [role="columnheader"]`).filter({ hasText: col }).first(),
         `Column "${col}" must appear in catalog table`,
       ).toBeVisible({ timeout: TIMEOUT });
     }
   });
 
-  test('TC-INV-03 (BUG-61): Actions column renders raw i18n key label.button.action', async ({ page }) => {
-    // Documents known cosmetic bug — header should say "Actions", not the key
-    // Test is expected to pass in its current "documenting the bug" form.
-    // When BUG-61 is fixed, update the assertion to expect "Actions".
+  test('TC-INV-03: the catalog Action column is labelled, not a raw i18n key [FIXED BUG-61]', async ({ page }) => {
+    // FIXED BUG-61, flipped 2026-10-08: the header reads "Action" on develop (it showed the raw key
+    // "label.button.action"). Was a documenting case that accepted either form and looked for the
+    // plural "Actions", which is why it failed once the key was resolved to the singular.
     await page.getByRole('tab', { name: /catalog/i }).click();
     await page.waitForLoadState('networkidle');
 
-    const bodyText = await page.locator('body').innerText();
-    const hasRawKey = bodyText.includes('label.button.action');
-    const hasResolvedLabel = bodyText.toLowerCase().includes('actions');
-
-    // One of the two must be true — the header exists in some form
-    expect(
-      hasRawKey || hasResolvedLabel,
-      'Actions column header must exist (either resolved or as raw key BUG-61)',
-    ).toBe(true);
-
-    if (hasRawKey) {
-      console.warn('BUG-61 still present: Actions column shows raw i18n key "label.button.action"');
-    }
+    const panel = tabPanel(page, 'Catalog');
+    await expect(panel.getByRole('columnheader', { name: /^Actions?$/ }).first(),
+      'the Action column header is a resolved label').toBeVisible({ timeout: TIMEOUT });
+    expect(await panel.innerText(), 'no raw i18n key in the catalog').not.toContain('label.button.action');
   });
 });
 
@@ -121,7 +137,8 @@ test.describe('Inventory Dashboard (US-INV-2)', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('Inventory Catalog CRUD (US-INV-1, US-INV-3)', () => {
-  const ITEM_NAME = `${QA_PREFIX}_REAGENT`;
+  // Unique per run so a same-day re-run does not collide with yesterday's item.
+  const ITEM_NAME = `${QA_PREFIX}_REAGENT_${String(Date.now()).slice(-6)}`;
 
   test.beforeEach(async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
@@ -152,51 +169,30 @@ test.describe('Inventory Catalog CRUD (US-INV-1, US-INV-3)', () => {
   test('TC-INV-05: Reagent type enforces stability validation before saving', async ({ page }) => {
     // US-INV-1: the system should prevent saving a reagent without stability data,
     // because expired reagents produce unreliable results
-    await page.getByRole('button', { name: /add catalog item/i }).click();
-    await page.waitForTimeout(500);
+    const m = await openAddItemModal(page);
+    await m.locator('#name').fill(`${ITEM_NAME}_VALIDATIONTEST`);
+    await pickReagent(page, m);
+    await m.locator('#units').fill('mL');
+    // Stability After Opening left empty.
+    await m.locator('#stabilityAfterOpening').fill('');
 
-    // Fill Item Name only, leave stability at 0
-    const nameInput = page.locator('input').first();
-    await nameInput.fill(`${ITEM_NAME}_VALIDATIONTEST`);
+    await m.getByRole('button', { name: /^save$/i }).click();
 
-    await page.getByRole('button', { name: /^save$/i }).click();
-    await page.waitForTimeout(500);
-
-    // Should see a validation error — not close the modal
-    const bodyText = await page.locator('body').innerText();
-    const hasError = /stability.*required|required.*stability/i.test(bodyText);
-    expect(hasError, 'Should block save and show stability validation error for reagents').toBe(true);
-
-    // Modal should still be open
-    const modalStillOpen = await page
-      .getByRole('dialog').or(page.locator('[class*="modal"]')).first()
-      .isVisible()
-      .catch(() => false);
-    expect(modalStillOpen, 'Modal should remain open after failed validation').toBe(true);
+    // Should see a validation error and the modal stays open.
+    await expect(m.getByText(/stability/i).filter({ hasText: /required|must|enter/i }).first(),
+      'Should block save and show stability validation error for reagents').toBeVisible({ timeout: TIMEOUT });
+    await expect(m, 'Modal should remain open after failed validation').toBeVisible();
   });
 
   test('TC-INV-06: Lab admin can create a catalog item and it appears in the list', async ({ page }) => {
     // US-INV-1: full happy-path — create item, confirm it shows up with Active status
-    await page.getByRole('button', { name: /add catalog item/i }).click();
-    await page.waitForTimeout(500);
-
-    // Fill item name
-    const nameInput = page.locator('input').first();
-    await nameInput.fill(ITEM_NAME);
-
-    // Fill Units
-    const unitsInput = page.locator('input[placeholder*="mL"], input[placeholder*="tests"], input[placeholder*="kits"]').first();
-    if (await unitsInput.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await unitsInput.fill('mL');
-    }
-
-    // Set Stability After Opening to 30 (required for Reagent type)
-    const stabilityInputs = page.locator('input[type="number"]');
-    const count = await stabilityInputs.count();
-    if (count >= 2) {
-      // Second numeric input is Stability After Opening
-      await stabilityInputs.nth(1).fill('30');
-    }
+    const m = await openAddItemModal(page);
+    await m.locator('#name').fill(ITEM_NAME);
+    await pickReagent(page, m);
+    await m.locator('#units').fill('mL');
+    await m.locator('#lowStockThreshold').fill('5');
+    // Required for the Reagent type.
+    await m.locator('#stabilityAfterOpening').fill('30');
 
     // Intercept the POST to confirm HTTP 201
     const [response] = await Promise.all([
@@ -204,18 +200,13 @@ test.describe('Inventory Catalog CRUD (US-INV-1, US-INV-3)', () => {
         (r) => r.url().includes('/rest/inventory/items') && r.request().method() === 'POST',
         { timeout: 10000 },
       ),
-      page.getByRole('button', { name: /^save$/i }).click(),
+      m.getByRole('button', { name: /^save$/i }).click(),
     ]);
 
     expect(response.status(), 'POST /rest/inventory/items should return 201 Created').toBe(201);
 
     // After save, the modal should close and the new item should appear in the table
-    await page.waitForTimeout(1000);
-    const modalGone = !(await page
-      .getByRole('dialog').or(page.locator('[class*="modal"]')).first()
-      .isVisible()
-      .catch(() => false));
-    expect(modalGone, 'Modal should close after successful save').toBe(true);
+    await expect(m, 'Modal should close after successful save').toBeHidden({ timeout: TIMEOUT });
 
     // New item should be in the catalog table
     await expect(
@@ -233,7 +224,7 @@ test.describe('Inventory Catalog CRUD (US-INV-1, US-INV-3)', () => {
 
   test('TC-INV-07: Catalog list can be filtered by Item Type', async ({ page }) => {
     // US-INV-3: a lab technician filtering by type should only see relevant items
-    const filterDropdowns = page.locator('button[aria-haspopup="listbox"], select').filter({ hasText: /all/i });
+    const filterDropdowns = tabPanel(page, 'Catalog').locator('button[aria-haspopup="listbox"], [role="combobox"], select').filter({ hasText: /all/i });
     const dropdownCount = await filterDropdowns.count();
     expect(dropdownCount, 'At least one "All" filter dropdown must be present in catalog').toBeGreaterThan(0);
 

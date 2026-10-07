@@ -20,7 +20,7 @@ async function openForEdit(page: Page, id: string) {
   return save;
 }
 
-test('TC-RCON-04: the second of two concurrent patient saves is refused with a message', async ({ browser }) => {
+test('TC-RCON-04: the second of two concurrent patient saves is refused with a message [FIXED R81c]', async ({ browser }) => {
   const ctx = await browser.newContext({ storageState: test.info().project.use.storageState as string });
   const a = await ctx.newPage();
   await a.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
@@ -31,7 +31,9 @@ test('TC-RCON-04: the second of two concurrent patient saves is refused with a m
   const saveA = await openForEdit(a, created.id!);
   const saveB = await openForEdit(b, created.id!);
 
-  await a.locator('#primaryPhone').fill('555-0101');
+  // The phone must match the site format "xxxx-xxxx" (REWORKED 2026-10-08: "555-0101" is now
+  // refused by the field and Save stays disabled, so the first save never happened).
+  await a.locator('#primaryPhone').fill('5555-0101');
   await a.locator('#primaryPhone').press('Tab');
   const ra = a.waitForResponse(r => r.url().includes('/rest/PatientManagement') && r.request().method() === 'POST');
   await saveA.click();
@@ -45,8 +47,9 @@ test('TC-RCON-04: the second of two concurrent patient saves is refused with a m
   expect(second.status(), 'the stale save is not accepted').not.toBe(200);
   await b.waitForTimeout(1_500);
   const said = await b.locator('.cds--inline-notification, .cds--toast-notification, .cds--actionable-notification, [role=alert], .cds--modal.is-visible').allInnerTexts();
-  // FLIP-WHEN-FIXED (R81c). Observed 2026-09-28: 500 with a raw Hibernate message, nothing on screen.
-  test.fail();
+  // FIXED R81c, flipped 2026-10-08 (passes on local develop 2026-10-08, once the phone format above
+  // let the first save through); was FLIP-WHEN-FIXED. Observed 2026-09-28: 500 with a raw Hibernate
+  // message, nothing on screen.
   expect(second.status(), 'a conflict status, not a server error').toBe(409);
   expect(said.join(' ').trim().length, 'the user is told').toBeGreaterThan(0);
   await ctx.close();
