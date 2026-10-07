@@ -152,34 +152,24 @@ test.describe('Storage Extended — Room Creation & Tab Navigation', () => {
     }
 
     await addBtn.click();
-    await page.waitForTimeout(500);
 
-    // Fill in room name
-    const roomName = `${QA_PREFIX}_TestRoom`;
-    const nameInput = page.locator('input[id*="name"], input[placeholder*="name"], input[name*="name"]').first();
-
-    if (await nameInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await nameInput.fill(roomName);
-    } else {
-      // Try the first text input
-      const firstText = page.locator('input[type="text"]').first();
-      if (await firstText.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await firstText.fill(roomName);
-      }
-    }
-
-    // Submit
-    const saveBtn = page.getByRole('button', { name: /save|submit|add/i }).first();
-    if (await saveBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await saveBtn.click();
-      await page.waitForLoadState('networkidle');
-      const bodyText = await page.locator('body').innerText();
-      expect(bodyText).not.toContain('Internal Server Error');
-      console.log(`TC-STOR-EXT-02: Room create submitted — name: ${roomName}`);
-    } else {
-      console.log('TC-STOR-EXT-02: SKIP — Save button not found after opening add form');
-      test.skip();
-    }
+    // REWORKED 2026-10-08: the room form is an "Add Room" dialog (Name, Code, Description, Active)
+    // whose primary button is "Create", disabled until the required fields are filled. The old
+    // page-wide /save|submit|add/ match clicked a button behind the dialog and hung.
+    const dialog = page.getByRole('dialog', { name: 'Add Room' });
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
+    const roomName = `${QA_PREFIX}_TestRoom_${Date.now().toString().slice(-6)}`;
+    const roomCode = `QR${Date.now().toString().slice(-6)}`;
+    await dialog.getByRole('textbox', { name: 'Name' }).fill(roomName);
+    await dialog.getByRole('textbox', { name: 'Code' }).fill(roomCode);
+    const create = dialog.getByRole('button', { name: 'Create' });
+    await expect(create, 'Create is enabled once Name and Code are filled').toBeEnabled({ timeout: 5_000 });
+    await create.click();
+    await expect(dialog, 'the dialog closes after a successful create').toBeHidden({ timeout: 15_000 });
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText).not.toContain('Internal Server Error');
+    await expect(page.locator('main').getByText(roomName).first(), 'the new room is listed').toBeVisible({ timeout: 15_000 });
+    console.log(`TC-STOR-EXT-02: Room created, name: ${roomName}`);
   });
 
   test('TC-STOR-EXT-03: Storage API endpoint returns valid data', async ({ page }) => {

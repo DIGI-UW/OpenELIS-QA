@@ -91,10 +91,13 @@ test.describe('Suite BD-DEEP — Patient History Core (TC-HIST)', () => {
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    const searchInput = page.locator(
-      'input[placeholder*="patient" i], input[placeholder*="national" i], input[placeholder*="name" i], input[placeholder*="search" i], input'
-    ).first();
-    const hasInput = await searchInput.isVisible({ timeout: 3000 }).catch(() => false);
+    // Scoped to the page body (REWORKED 2026-10-08): page-wide, .first() now lands on the header's
+    // own search box, which sits in a closed panel and is never visible.
+    // By role and name (2026-10-08): the CSS list's .first() could land on a hidden input ahead of
+    // the visible search fields.
+    const searchInput = page.locator('main').getByRole('textbox', { name: /patient id|last name|national id|search/i }).first();
+    // isVisible() does not wait; give the form time to render.
+    const hasInput = await searchInput.waitFor({ state: 'visible', timeout: 15_000 }).then(() => true, () => false);
 
     console.log(`TC-HIST-02: patient search input visible=${hasInput}`);
     expect(hasInput, 'Patient History must have a search input').toBe(true);

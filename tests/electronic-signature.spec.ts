@@ -56,6 +56,18 @@ async function goToSiteInformation(page: any): Promise<boolean> {
   return false;
 }
 
+/**
+ * Site Information's Modify button is disabled until a row's radio is selected (develop, 2026-10).
+ * Select the electronic-signature row when there is one, else the first row. REWORKED 2026-10-08.
+ */
+async function selectSiteInfoRow(page: any): Promise<void> {
+  const rows = page.locator('main tbody tr');
+  await expect(rows.first()).toBeVisible({ timeout: 15_000 });
+  const esig = rows.filter({ hasText: /electronic.{0,20}sign|e.?sign/i }).first();
+  const row = (await esig.count()) ? esig : rows.first();
+  await row.locator('input[type="radio"]').check({ force: true });
+}
+
 async function goToRoutineValidation(page: any): Promise<boolean> {
   // Primary candidate — Scribe shows "Routine" navigation
   const candidates = [
@@ -126,6 +138,7 @@ test.describe('Suite AY-ESIG-ADMIN — Site Information & Electronic Signature C
     expect(isVisible, '"Modify" button should be present on Site Information page').toBe(true);
 
     if (isVisible) {
+      await selectSiteInfoRow(page);
       await modifyBtn.click();
       await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
@@ -160,6 +173,7 @@ test.describe('Suite AY-ESIG-ADMIN — Site Information & Electronic Signature C
       .or(page.locator('a, button').filter({ hasText: /modify/i }))
       .first();
     if (await modifyBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await selectSiteInfoRow(page);
       await modifyBtn.click();
       await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
     }
@@ -193,12 +207,16 @@ test.describe('Suite AY-ESIG-ADMIN — Site Information & Electronic Signature C
       test.skip();
       return;
     }
+    await selectSiteInfoRow(page);
     await modifyBtn.click();
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     // Scribe step 8: Click Save
-    const saveBtn = page.getByRole('button', { name: /save/i }).first();
-    const saveVisible = await saveBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    // Scoped to the page body (REWORKED 2026-10-08): Modify opens an "Edit Record" form whose Save
+    // sits in <main>; page-wide, .first() matched a hidden header control.
+    const saveBtn = page.locator('main').getByRole('button', { name: /^save$/i }).first();
+    // isVisible() does not wait; give the edit form time to render.
+    const saveVisible = await saveBtn.waitFor({ state: 'visible', timeout: 10_000 }).then(() => true, () => false);
     expect(saveVisible, '"Save" button should be present in edit mode').toBe(true);
 
     if (saveVisible) {

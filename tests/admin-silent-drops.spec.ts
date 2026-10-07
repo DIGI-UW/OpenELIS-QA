@@ -93,10 +93,9 @@ test.describe('Label Presets (R37)', () => {
     expect(presets.some(p => p.name.toLowerCase() === name.toLowerCase()), 'the preset exists').toBe(true);
   });
 
-  test('TC-ASD-04: a new preset keeps the capitalisation that was typed', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-09-27: "QA Tube Label" was stored and listed as
+  test('TC-ASD-04: a new preset keeps the capitalisation that was typed [FIXED]', async ({ page }) => {
+    // FIXED (never filed), flipped 2026-10-08 (passes on local develop 2026-10-06 and 2026-10-08 and in CI run 126); was FLIP-WHEN-FIXED. Observed 2026-09-27: "QA Tube Label" was stored and listed as
     // "qa tube label"; the system presets are Title Case.
-    test.fail();
     const name = `QA Auto Preset ${STAMP}b`;
     await addPresetViaUi(page, name);
     const presets = await getJson<Preset[]>(page, '/api/OpenELIS-Global/api/labelPresets');

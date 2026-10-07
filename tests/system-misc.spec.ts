@@ -1027,26 +1027,29 @@ test.describe('Suite AM — Analyzers', () => {
 
 
 test.describe('Suite AN — EQA Distributions', () => {
+  // REWORKED 2026-10-08: EQA distributions became provider schemes and cycles. /qa/eqa/distribution
+  // now opens "EQA schemes we provide" (/qa/eqa/provider/schemes), where a cycle is started per
+  // scheme with "New cycle", and programs became schemes under "Scheme Administration".
 
   test('TC-EQA-01: EQA Distributions screen loads', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
     await page.goto(`${BASE}/qa/eqa/distribution`);
-    await expect(page.getByRole('heading', { name: 'EQA Distribution', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Create New Shipment' })).toBeVisible();
+    await expect(page).toHaveURL(/\/qa\/eqa\/(provider\/schemes|distribution)/);
+    await expect(page.getByRole('heading', { name: 'EQA schemes we provide', exact: true })).toBeVisible();
+    await expect(page.getByText(/start a new cycle/i).first()).toBeVisible();
   });
   test('TC-EQA-02: EQA distribution list or form visible', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
     await page.goto(`${BASE}/qa/eqa/distribution`);
-    for (const th of ['Shipment ID', 'Program', 'Status', 'Deadline']) {
+    for (const th of ['Scheme', 'Provider', 'Type', 'Enrolled labs', 'Active cycles', 'Last distribution']) {
       await expect(page.locator('main th', { hasText: th }).first()).toBeVisible();
     }
-    await expect(page.locator('#eqa-shipment-filter')).toBeVisible();
   });
   test('TC-EQA-03: EQA Program Management loads', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
     await page.goto(`${BASE}/qa/eqa/management`);
-    await expect(page.getByRole('heading', { name: 'Program Administration' })).toBeVisible();
-    await expect(page.locator('main th', { hasText: 'Program Name' }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Scheme Administration' })).toBeVisible();
+    await expect(page.locator('main th', { hasText: 'Scheme Name' }).first()).toBeVisible();
   });
 });
 
@@ -1225,23 +1228,33 @@ test.describe('Phase 4 — Q-DEEP: EQA Interactions', () => {
   test.beforeEach(async ({ page }) => { await login(page, ADMIN.user, ADMIN.pass); });
 
   test('TC-Q-DEEP-01: EQA distribution dashboard stats', async ({ page }) => {
+    // REWORKED 2026-10-08: the shipment dashboard became the provider schemes page with four KPIs.
     await page.goto(`${BASE}/qa/eqa/distribution`);
-    await expect(page.getByRole('heading', { name: 'EQA Distribution', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'EQA schemes we provide', exact: true })).toBeVisible();
     const main = page.locator('main');
-    for (const card of ['Draft Shipments', 'Shipped', 'Completed', 'Participants']) {
-      await expect(main.getByText(card, { exact: true }).first()).toBeVisible();
+    for (const [id, label] of [['kpi-active-schemes', 'Active schemes'], ['kpi-open-cycles', 'Open cycles'], ['kpi-enrolled', 'Enrolled participants'], ['kpi-followups-open', 'Follow-ups open']]) {
+      const tile = main.getByTestId(id);
+      await expect(tile, `${label} tile`).toContainText(label);
+      await expect(tile, `${label} shows a number`).toContainText(/\d+/);
     }
-    await expect(page.getByRole('heading', { name: 'Participant Network' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'EQA Shipments' })).toBeVisible();
   });
 
   test('TC-Q-DEEP-02: Create New Shipment wizard', async ({ page }) => {
+    // REWORKED 2026-10-08: "Create New Shipment" became "New cycle" on a provider scheme
+    // (/qa/eqa/provider/schemes/{id}/cycles/new), a five-step wizard. Needs one provider scheme;
+    // the EQA seed (eqa-prereq / chain F) creates it.
     await page.goto(`${BASE}/qa/eqa/distribution`);
-    await page.getByRole('button', { name: 'Create New Shipment' }).click();
-    await expect(page).toHaveURL(/\/qa\/eqa\/distribution\/create/);
-    const steps = page.locator('main .cds--progress-label');
-    await expect(steps).toHaveText(['Program & Details', 'Participants', 'Confirmation']);
-    for (const label of ['Distribution Name', 'EQA Program', 'Submission Deadline']) {
+    await expect(page.getByRole('heading', { name: 'EQA schemes we provide', exact: true })).toBeVisible();
+    const newCycle = page.locator('main').getByRole('button', { name: 'New cycle' }).first();
+    expect(await newCycle.isVisible({ timeout: 15_000 }).catch(() => false),
+      'precondition: this lab provides at least one EQA scheme (seed one with eqa-prereq)').toBe(true);
+    await newCycle.click();
+    await expect(page).toHaveURL(/\/qa\/eqa\/provider\/schemes\/\d+\/cycles\/new/);
+    await expect(page.getByRole('heading', { name: /^New cycle/ })).toBeVisible();
+    for (const step of ['Cycle', 'Panel', 'Participants', 'Distribution', 'Confirmation']) {
+      await expect(page.locator('main li').getByRole('button', { name: new RegExp(`^${step}\\b`) }).first(), `wizard step ${step}`).toBeVisible();
+    }
+    for (const label of ['Cycle name', 'Cycle number', 'Distribution date', 'Submission deadline']) {
       await expect(page.locator('main label', { hasText: label }).first()).toBeVisible();
     }
   });
@@ -1494,14 +1507,16 @@ test.describe('Phase 7 — BL-DEEP: EQA Program Management', () => {
 
   test('TC-BL-DEEP-01: Page structure', async ({ page }) => {
     // /MasterListsPage/eqaProgram no longer exists; EQA programs live under QA > EQA > Management.
+    // REWORKED 2026-10-08: programs are "schemes" now ("Scheme Administration", "EQA Schemes").
     await page.goto(`${BASE}/qa/eqa/management`);
-    await expect(page.getByRole('heading', { name: 'Program Administration' })).toBeVisible();
-    await expect(page.locator('main .cds--progress-label, main [role=tab]').filter({ hasText: 'EQA Programs' }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Scheme Administration' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'EQA Schemes' })).toBeVisible();
+    await expect(page.locator('main').getByRole('button', { name: 'Add Scheme' })).toBeVisible();
   });
 
   test('TC-BL-DEEP-02: Program listing', async ({ page }) => {
     await page.goto(`${BASE}/qa/eqa/management`);
-    for (const th of ['Program Name', 'Provider', 'Enrolled Participants', 'Status']) {
+    for (const th of ['Scheme Name', 'Provider', 'Scheme type', 'Enrolled Participants', 'Status']) {
       await expect(page.locator('main th', { hasText: th }).first()).toBeVisible();
     }
   });

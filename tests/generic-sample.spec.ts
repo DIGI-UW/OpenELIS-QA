@@ -188,7 +188,8 @@ test.describe('Generic Sample — Edit Order (US-GEN-2)', () => {
     ).first();
 
     await searchInput.fill(KNOWN_ACCESSION);
-    await page.getByRole('button', { name: /search/i }).click();
+    // Scoped to the page body: the header now has its own Search button (REWORKED 2026-10-08).
+    await page.locator('main').getByRole('button', { name: /search/i }).click();
     await page.waitForTimeout(2000);
 
     const bodyText = await page.locator('body').innerText();

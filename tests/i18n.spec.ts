@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange } from '../helpers/test-helpers';
 
 /**
@@ -134,19 +134,44 @@ test.describe('Localization and i18n (TC-I18N)', () => {
 // =====================================================================
 // Phase 5 — T-DEEP: i18n Locale Switching Tests (3 TCs)
 // =====================================================================
+/** The side navigation's Home entry, whatever language it is in. */
+function sideNavHome(page: Page) {
+  return page.getByRole('navigation', { name: 'Side navigation' }).locator('#menu_home');
+}
+
+/**
+ * Pick a language in the header's User panel ("Select Locale"), opening the panel if needed.
+ * Found by id and position, not by its English labels: once the page is in French the button is
+ * "Utilisateur" and the picker "Sélectionner la Langue", so switching back must not need English.
+ */
+async function setLocale(page: Page, label: RegExp) {
+  const select = page.getByRole('banner').getByRole('combobox').filter({ has: page.locator('option', { hasText: /^English$/ }) }).first();
+  if (!(await select.isVisible().catch(() => false))) {
+    await page.locator('#user-Icon').click();
+  }
+  await expect(select).toBeVisible({ timeout: 10_000 });
+  const value = await select.locator('option').evaluateAll(
+    (opts, src) => { const re = new RegExp(src, 'i'); const o = (opts as HTMLOptionElement[]).find((x) => re.test(x.textContent?.trim() ?? '')); return o?.value ?? ''; },
+    label.source,
+  );
+  expect(value, `the locale picker offers ${label}`).not.toBe('');
+  await select.selectOption(value);
+  await page.waitForTimeout(1500);
+}
+
 test.describe('Phase 5 — T-DEEP: i18n Locale Switching Tests', () => {
   test.beforeEach(async ({ page }) => { await login(page, ADMIN.user, ADMIN.pass); });
+  // A case that fails after switching to French must not leave the next case starting in French.
+  test.afterEach(async ({ page }) => { await setLocale(page, /^English$/).catch(() => undefined); });
 
   test('TC-T-DEEP-01: Locale switch EN to FR', async ({ page }) => {
+    // REWORKED 2026-10-08: the locale picker lives in the header's User panel ("Select Locale"),
+    // which is closed on load, so the old [role=combobox] filter never found it and the case only
+    // checked that "Home" was on screen (which now matches the side nav AND the breadcrumb).
     await page.goto(`${BASE}/Dashboard`);
-    // Find locale combobox and switch to French
-    const localeSelect = page.locator('[role="combobox"]').filter({ hasText: /en|fr/i }).first();
-    if (await localeSelect.isVisible()) {
-      await localeSelect.selectOption('fr');
-      await page.waitForTimeout(2000);
-    }
-    // Verify French sidebar labels
-    await expect(page.locator('text=Accueil').or(page.locator('text=Home'))).toBeVisible();
+    await setLocale(page, /^Fran[cç]ais$/);
+    await expect(sideNavHome(page), 'the side navigation is in French').toHaveText(/^Accueil$/, { timeout: 15_000 });
+    await setLocale(page, /^English$/); // leave the session in English for the next case
   });
 
   test('TC-T-DEEP-02: FR locale translation gaps', async ({ page }) => {
@@ -166,16 +191,11 @@ test.describe('Phase 5 — T-DEEP: i18n Locale Switching Tests', () => {
 
   test('TC-T-DEEP-03: FR to EN locale restore', async ({ page }) => {
     await page.goto(`${BASE}/Dashboard`);
-    // Switch to FR then back to EN
-    const localeSelect = page.locator('[role="combobox"]').filter({ hasText: /en|fr/i }).first();
-    if (await localeSelect.isVisible()) {
-      await localeSelect.selectOption('fr');
-      await page.waitForTimeout(2000);
-      await localeSelect.selectOption('en');
-      await page.waitForTimeout(2000);
-    }
+    await setLocale(page, /^Fran[cç]ais$/);
+    await expect(sideNavHome(page)).toHaveText(/^Accueil$/, { timeout: 15_000 });
+    await setLocale(page, /^English$/);
     // Verify English labels restored
-    await expect(page.locator('text=Home')).toBeVisible();
+    await expect(sideNavHome(page), 'the side navigation is back in English').toHaveText(/^Home$/, { timeout: 15_000 });
   });
 });
 

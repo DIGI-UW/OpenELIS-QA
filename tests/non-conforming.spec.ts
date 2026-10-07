@@ -4,6 +4,13 @@ import { ensureReferringClinic } from '../helpers/data-factory';
 import { seededPatient, sampleTypeWithTest, legacyPickPatient, legacyToAddSample, legacyTickTest, legacyFillOrderStep } from '../helpers/legacy-order-entry';
 
 /**
+ * Report Non-Conforming Event. REWORKED 2026-10-08: /NonConformingEvent is no longer a page on
+ * develop (the server answers it under /api), the report form lives at /ReportNonConformingEvent
+ * ("Report Non-Conformity Event"), as the route census and the side menu have it.
+ */
+const NCE_REPORT = '/ReportNonConformingEvent';
+
+/**
  * Non-Conforming Samples and Events Test Suite
  * Covers non-conforming sample rejection and corrective actions
  * Suite IDs: NC, AD, G-DEEP
@@ -115,10 +122,12 @@ test.describe('Non-conforming samples (TC-NC)', () => {
   test('TC-NC-04: NC order result field behavior', async ({ page }) => {
     // Use the known accession if we already have one, otherwise note as dependency
     // This test verifies the UX behavior — not a strict pass/fail
+    // REWORKED 2026-10-08: /AccessionResults opens the unified Results page, whose lab number
+    // search is a searchbox (Enter searches); the header has its own Search buttons now.
     await page.goto(`${BASE}/AccessionResults`);
-    const searchInput = page.locator('input').first();
+    const searchInput = page.locator('main').getByRole('searchbox', { name: /lab number/i });
     await searchInput.fill(ACCESSION); // existing order
-    await page.getByRole('button', { name: /Search/i }).click();
+    await searchInput.press('Enter');
     await page.waitForTimeout(2000);
 
     // Check for the NC warning legend that we know exists in the UI
@@ -401,7 +410,7 @@ test.describe('Suite NC-EXT — Non-Conforming Extended Tests (TC-NC-EXT)', () =
      * "Non-Conforming", "Non Conform Event", "Nonconforming". This test
      * documents which variant is shown on the main NCE screen.
      */
-    await page.goto(`${BASE}/NonConformingEvent`);
+    await page.goto(`${BASE}${NCE_REPORT}`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const bodyText = await page.locator('body').innerText();
@@ -439,7 +448,7 @@ test.describe('Suite NC-EXT — Non-Conforming Extended Tests (TC-NC-EXT)', () =
      * Report, View Events, and Corrective Actions.
      */
     const ncUrls = [
-      '/NonConformingEvent',
+      NCE_REPORT,
       '/ViewNonConformingEvent',
       '/NCECorrectiveAction',
     ];
@@ -464,7 +473,7 @@ test.describe('Suite NC-EXT — Non-Conforming Extended Tests (TC-NC-EXT)', () =
      * Submitting the NC event report form empty must show a validation
      * message, not an Internal Server Error.
      */
-    await page.goto(`${BASE}/NonConformingEvent`);
+    await page.goto(`${BASE}${NCE_REPORT}`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const submitBtn = page.getByRole('button', { name: /submit|save|report/i }).first();
@@ -486,7 +495,7 @@ test.describe('Suite NC-EXT — Non-Conforming Extended Tests (TC-NC-EXT)', () =
      * workflows. It must be accessible and load promptly.
      */
     const start = Date.now();
-    await page.goto(`${BASE}/NonConformingEvent`);
+    await page.goto(`${BASE}${NCE_REPORT}`);
     await page.waitForLoadState('domcontentloaded');
     const elapsed = Date.now() - start;
 
@@ -507,7 +516,7 @@ test.describe('Phase 5 — G-DEEP: NCE Interaction Tests', () => {
 
   test('TC-G-DEEP-01: Report NCE form loads with required fields', async ({ page }) => {
     // Navigate directly to the confirmed NC event reporting URL
-    await page.goto(`${BASE}/NonConformingEvent`);
+    await page.goto(`${BASE}${NCE_REPORT}`);
     await page.waitForLoadState('networkidle');
 
     const bodyText = await page.locator('body').innerText();
@@ -527,11 +536,13 @@ test.describe('Phase 5 — G-DEEP: NCE Interaction Tests', () => {
     expect(bodyText, 'Page must not have a server error').not.toMatch(/500|Internal Server Error/);
     expect(page.url(), 'Must not redirect to login').not.toMatch(/LoginPage|login/i);
 
-    // Search field must be present (Lab Number or accession)
-    const hasSearchField = await page.locator(
-      'input[placeholder*="lab" i], input[placeholder*="accession" i], input[id*="lab" i]'
-    ).first().isVisible({ timeout: 3000 }).catch(() => false);
-    expect(hasSearchField, 'View NC Events must have a Lab Number search field').toBe(true);
+    // Search field must be present (Lab Number or accession). REWORKED 2026-10-08: the page searches
+    // by a "Search By" choice (NCE Number or Lab Number) plus one "Text Value" field.
+    const searchBy = page.locator('main').getByRole('combobox', { name: 'Search By' });
+    await expect(searchBy).toBeVisible({ timeout: 15_000 });
+    const options = (await searchBy.locator('option').allInnerTexts()).map((t) => t.trim());
+    expect(options, 'View NC Events can search by Lab Number').toContain('Lab Number');
+    await expect(page.locator('main').getByRole('textbox', { name: 'Text Value' }), 'View NC Events must have a search value field').toBeVisible();
   });
 
   test('TC-G-DEEP-03: Corrective Actions search page loads', async ({ page }) => {

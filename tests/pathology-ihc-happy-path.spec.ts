@@ -22,6 +22,7 @@
  */
 import { test, expect, Page } from '@playwright/test';
 import { apiGet } from '../helpers/silentSave';
+import { setStage, expectStage, openSection } from '../helpers/pathology-case';
 import { createPatientViaAPI, ensureReferringClinic } from '../helpers/data-factory';
 import { orderThroughWizard } from '../helpers/order-wizard';
 
@@ -78,14 +79,23 @@ async function openCase(page: Page, kind: 'pathology' | 'immunohistochemistry', 
   await page.waitForLoadState('networkidle').catch(() => undefined);
 }
 
-/** Press the case-level Save and return the HTTP status of the case POST. */
+/**
+ * Press the case-level Save and return the HTTP status of the case POST. REWORKED 2026-10-08: the
+ * redesigned pathology case view saves with "Save draft" (no #pathology_save), and after a save its
+ * "Discard changes" goes disabled. The IHC case view keeps #pathology_save.
+ */
 async function saveCase(page: Page, kind: 'pathology' | 'immunohistochemistry', id: string): Promise<number> {
   const post = page.waitForResponse((r) => new URL(r.url()).pathname.endsWith(`/rest/${kind}/caseView/${id}`) && r.request().method() === 'POST', { timeout: 60_000 });
-  await page.locator('#pathology_save').click();
+  const legacy = (await page.locator('#pathology_save').count()) > 0;
+  if (legacy) await page.locator('#pathology_save').click();
+  else await page.getByRole('button', { name: 'Save draft', exact: true }).click();
   const res = await post;
   // On a 200 the case view disables both Save buttons and offers label printing; the
   // notification itself sits at the top of a long page.
-  if (res.status() === 200) await expect(page.locator('#pathology_save'), 'Save is disabled after a successful save').toBeDisabled({ timeout: 15_000 });
+  if (res.status() === 200) {
+    if (legacy) await expect(page.locator('#pathology_save'), 'Save is disabled after a successful save').toBeDisabled({ timeout: 15_000 });
+    else await expect(page.getByRole('button', { name: 'Discard changes', exact: true }), 'nothing left unsaved after a successful save').toBeDisabled({ timeout: 15_000 });
+  }
   return res.status();
 }
 
@@ -109,6 +119,7 @@ async function generateReport(page: Page) {
   await expect(page.getByRole('button', { name: /^View( File)?$/ }).first(), 'the generated report can be viewed').toBeVisible({ timeout: 30_000 });
   return out;
 }
+
 
 test.describe('Pathology and IHC happy path (TC-PATHHP, TC-IHCHP)', () => {
   test.beforeAll(async ({ browser }) => {
@@ -156,25 +167,30 @@ test.describe('Pathology and IHC happy path (TC-PATHHP, TC-IHCHP)', () => {
 
   test('TC-PATHHP-02: grossing with two blocks is saved and read back', async ({ page }) => {
     await openCase(page, 'pathology', state.caseId);
-    await page.locator('#status').selectOption('GROSSING');
+    await setStage(page, 'GROSSING');
+    await openSection(page, 'grossing');
     await page.locator('#blocksToAdd').fill('2');
     await page.getByRole('button', { name: /^Add Block\(s\)$/ }).click();
-    await expect(page.locator('[id="blockNumber"]'), 'two block rows on the form').toHaveCount(2);
+    // Block rows are now blockNumber0, blockNumber1, ... (they all had id "blockNumber").
+    await expect(page.locator('[id^="blockNumber"]'), 'two block rows on the form').toHaveCount(2);
     expect(await saveCase(page, 'pathology', state.caseId), 'case save').toBe(200);
     const c = await caseJson(page, 'pathology', state.caseId);
     expect(c.status, 'stage stored').toBe('GROSSING');
     expect((c.blocks ?? []).map((b: any) => Number(b.blockNumber)).sort(), 'blocks 1 and 2 stored').toEqual([1, 2]);
     await openCase(page, 'pathology', state.caseId);
-    await expect(page.locator('#status'), 'the stage survives a reload').toHaveValue('GROSSING');
-    await expect(page.locator('[id="blockNumber"]')).toHaveCount(2);
+    await expectStage(page, 'GROSSING', 'the stage survives a reload');
+    await openSection(page, 'grossing');
+    await expect(page.locator('[id^="blockNumber"]')).toHaveCount(2);
   });
 
   test('TC-PATHHP-03: staining with two slides is saved and read back', async ({ page }) => {
     await openCase(page, 'pathology', state.caseId);
-    await page.locator('#status').selectOption('STAINING');
+    await setStage(page, 'STAINING');
+    // Slides are cut in the Microtomy section now (it unlocks once the stage passes it).
+    await openSection(page, 'microtomy');
     await page.locator('#slidesToAdd').fill('2');
     await page.getByRole('button', { name: /^Add Slide\(s\)$/ }).click();
-    await expect(page.locator('[id="slideNumber"]'), 'two slide rows on the form').toHaveCount(2);
+    await expect(page.locator('[id^="slideNumber"]'), 'two slide rows on the form').toHaveCount(2);
     expect(await saveCase(page, 'pathology', state.caseId)).toBe(200);
     const c = await caseJson(page, 'pathology', state.caseId);
     expect(c.status).toBe('STAINING');
@@ -187,7 +203,8 @@ test.describe('Pathology and IHC happy path (TC-PATHHP, TC-IHCHP)', () => {
   test('TC-PATHHP-04: Ready for Pathologist with a pathologist assigned moves the case to Awaiting Review', async ({ page }) => {
     const mid = await counts(page, 'pathology');
     await openCase(page, 'pathology', state.caseId);
-    await page.locator('#status').selectOption('READY_PATHOLOGIST');
+    await setStage(page, 'READY_PATHOLOGIST');
+    await openSection(page, 'review');
     await page.locator('#assignedPathologist').selectOption('1');
     expect(await saveCase(page, 'pathology', state.caseId)).toBe(200);
     const c = await caseJson(page, 'pathology', state.caseId);
@@ -203,7 +220,8 @@ test.describe('Pathology and IHC happy path (TC-PATHHP, TC-IHCHP)', () => {
 
   test('TC-IHCHP-01: the pathologist refers the case to IHC with a marker and the IHC case appears', async ({ page }) => {
     await openCase(page, 'pathology', state.caseId);
-    await page.locator('#status').selectOption('UNDER_REVIEW');
+    await setStage(page, 'UNDER_REVIEW');
+    await openSection(page, 'findings');
     await page.locator('label[for="referToImmunoHistoChemistry"]').click();
     await page.locator('#ihctests').click();
     // Native <option>s of the status selects also have role option: scope to the open listbox.
@@ -241,7 +259,7 @@ test.describe('Pathology and IHC happy path (TC-PATHHP, TC-IHCHP)', () => {
     const pdf = await generateReport(page);
     expect(pdf.status, `IHC report PDF: ${pdf.body}`).toBe(200);
     expect(pdf.type).toContain('pdf');
-    await page.locator('#status').selectOption('COMPLETED');
+    await setStage(page, 'COMPLETED');
     expect(await saveCase(page, 'immunohistochemistry', state.ihcId)).toBe(200);
     const c = await caseJson(page, 'immunohistochemistry', state.ihcId);
     expect(c.status, 'IHC case Completed').toBe('COMPLETED');
@@ -250,12 +268,11 @@ test.describe('Pathology and IHC happy path (TC-PATHHP, TC-IHCHP)', () => {
     expect(now.complete, 'IHC Complete tile counts it').toBe(mid.complete + 1);
   });
 
-  test('TC-IHCHP-04: releasing the completed IHC case saves', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2 Oct 2026 on local develop: ticking "Release" and saving answers
+  test('TC-IHCHP-04: releasing the completed IHC case saves [FIXED]', async ({ page }) => {
+    // FIXED (never filed), flipped 2026-10-08 (passes on local develop 2026-10-06 and 2026-10-08); was FLIP-WHEN-FIXED. Observed 2 Oct 2026 on local develop: ticking "Release" and saving answers
     // 500 every time (UI and a direct POST, IN_PROGRESS or COMPLETED); the server log shows
     // "No row with the given identifier exists: [Analysis#<the IHC case's sample id>]", so the
     // release path looks the analysis up by the sample id. Not filed yet (Casey to decide).
-    test.fail();
     await openCase(page, 'immunohistochemistry', state.ihcId);
     await page.locator('label[for="release"]').click();
     expect(await saveCase(page, 'immunohistochemistry', state.ihcId), 'release save answers 200').toBe(200);
@@ -264,6 +281,7 @@ test.describe('Pathology and IHC happy path (TC-PATHHP, TC-IHCHP)', () => {
   test('TC-PATHHP-05: the pathologist reports and completes the pathology case', async ({ page }) => {
     const mid = await counts(page, 'pathology');
     await openCase(page, 'pathology', state.caseId);
+    for (const key of ['grossing', 'findings', 'reports']) await openSection(page, key);
     await area(page, /^Gross Exam/).fill(GROSS);
     await area(page, /^Microscopy Exam/).fill(MICRO);
     await area(page, /^Text Conclusion/).fill(CONCLUSION);
@@ -271,7 +289,7 @@ test.describe('Pathology and IHC happy path (TC-PATHHP, TC-IHCHP)', () => {
     const pdf = await generateReport(page);
     expect(pdf.status, `pathology report PDF: ${pdf.body}`).toBe(200);
     expect(pdf.type).toContain('pdf');
-    await page.locator('#status').selectOption('COMPLETED');
+    await setStage(page, 'COMPLETED');
     expect(await saveCase(page, 'pathology', state.caseId)).toBe(200);
     const c = await caseJson(page, 'pathology', state.caseId);
     expect(c.status).toBe('COMPLETED');
@@ -289,7 +307,8 @@ test.describe('Pathology and IHC happy path (TC-PATHHP, TC-IHCHP)', () => {
 
   test('TC-PATHHP-06: the completed case reads back on the case view and the dashboard', async ({ page }) => {
     await openCase(page, 'pathology', state.caseId);
-    await expect(page.locator('#status')).toHaveValue('COMPLETED');
+    await expectStage(page, 'COMPLETED');
+    for (const key of ['grossing', 'findings', 'reports']) await openSection(page, key);
     await expect(area(page, /^Gross Exam/), 'gross exam shown').toHaveValue(GROSS);
     await expect(area(page, /^Microscopy Exam/), 'microscopy shown').toHaveValue(MICRO);
     await expect(area(page, /^Text Conclusion/), 'conclusion shown').toHaveValue(CONCLUSION);
@@ -298,12 +317,12 @@ test.describe('Pathology and IHC happy path (TC-PATHHP, TC-IHCHP)', () => {
     await expect(row, 'listed under Completed').toContainText('Completed');
   });
 
-  test('TC-PATHHP-07: marking the completed pathology case "Ready For release" saves', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Same fault as TC-IHCHP-04, observed 2 Oct 2026: with "Ready For release"
+  test('TC-PATHHP-07: marking the completed pathology case "Ready For release" saves [FIXED]', async ({ page }) => {
+    // FIXED (never filed), flipped 2026-10-08 (passes on local develop 2026-10-06 and 2026-10-08); was FLIP-WHEN-FIXED. Same fault as TC-IHCHP-04, observed 2 Oct 2026: with "Ready For release"
     // ticked the case POST answers 500 and the log shows "No row with the given identifier exists:
     // [Analysis#<the order's sample id>]". Not filed yet (Casey to decide).
-    test.fail();
     await openCase(page, 'pathology', state.caseId);
+    await openSection(page, 'findings');
     await page.locator('label[for="release"]').click();
     expect(await saveCase(page, 'pathology', state.caseId), 'release save answers 200').toBe(200);
   });

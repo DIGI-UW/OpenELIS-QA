@@ -68,6 +68,25 @@ async function verifyPageLoad(page: Page, expectedTitle: string): Promise<void> 
  * `/rest/organization/list` answers 500 on this build; ACTIVE_ORG_LIST is the
  * working read path.
  */
+/**
+ * The Organization Management screen became "Organizations" under Locations & Organizations
+ * (OGC-1363, OpenELIS-Global-2 #4500). The old route still opens it. REWORKED 2026-10-08.
+ */
+const ORG_HEADING = /^Organi[sz]ations$|Organi[sz]ation Management/i;
+const ORG_SEARCH = 'Search by name, code or any identifier';
+
+/** An active organization name, read from the list the order screens use (no demo seed needed). */
+async function anActiveOrgName(page: Page): Promise<string> {
+  const names: string[] = await page.evaluate(async () => {
+    const r = await fetch('/api/OpenELIS-Global/rest/displayList/ACTIVE_ORG_LIST', { headers: { Accept: 'application/json' } });
+    const rows = r.ok ? await r.json() : [];
+    return (Array.isArray(rows) ? rows : []).map((o: any) => String(o.value ?? o.name ?? '')).filter(Boolean);
+  });
+  const qa = names.find((n) => /^QA[_ ]AUTO/i.test(n));
+  expect(names.length, 'ACTIVE_ORG_LIST lists at least one organization').toBeGreaterThan(0);
+  return qa ?? names[0];
+}
+
 const SEEDED_ORGS = {
   /** Reference laboratories — what TC-ADMIN-02 is really about. */
   referenceLabs: ['National Reference Laboratory', 'Regional Reference Laboratory'],
@@ -147,7 +166,7 @@ test.describe('Admin Configuration (TC-ADMIN)', () => {
     // catalogue decision — see open-questions.md.
     expect(page.url(), 'must not be bounced to login').not.toMatch(/login|signin/i);
     await expect(
-      page.getByText(/organi[sz]ation management/i).first(), // 3.2.3 renamed it "Organisation Management"
+      page.getByRole('heading', { name: ORG_HEADING }).first(), // 3.2.3 "Organisation Management"; develop "Organizations"
       'the Organization Management screen must load and name itself'
     ).toBeVisible({ timeout: 15_000 });
 
@@ -177,27 +196,16 @@ test.describe('Admin Configuration (TC-ADMIN)', () => {
     // the real screen is `organizationManagement` (lower-case o). This case has
     // been failing on the wrong route rather than on missing seed data — the
     // "Adiba SC not found" verdict was true but for the wrong reason.
-    await page.goto(`${BASE}${CONFIRMED_ADMIN_URLS['Organization Management']}`).catch(() =>
-      page.goto(`${BASE}/MasterListsPage`)
-    );
-    await page.waitForTimeout(2000);
-
-    // Search for a seeded site (was "Adiba", which this instance does not have)
-    const searchField = page.getByRole('textbox', { name: /search|filter/i }).first();
-    if (await searchField.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await searchField.fill(SEEDED_ORGS.clinicalSite);
-      await page.waitForTimeout(1000);
-    }
-
-    const hasSeededSite = await page
-      .getByText(new RegExp(SEEDED_ORGS.clinicalSite, 'i'))
-      .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
-    expect(
-      hasSeededSite,
-      `seeded organisation "${SEEDED_ORGS.clinicalSite}" was not found in the organisation list`
-    ).toBeTruthy();
+    // REWORKED 2026-10-08: "Mulago" came from the old demo seed and is not on a fresh or CI stack.
+    // Search the Organizations screen for an organization the instance really has instead.
+    await page.goto(`${BASE}${CONFIRMED_ADMIN_URLS['Organization Management']}`);
+    await expect(page.getByRole('heading', { name: ORG_HEADING }).first()).toBeVisible({ timeout: 30_000 });
+    const name = await anActiveOrgName(page);
+    await page.getByRole('searchbox', { name: ORG_SEARCH }).fill(name);
+    await expect(
+      page.locator('main').getByText(name, { exact: true }).first(),
+      `active organisation "${name}" is found by the organisation search`
+    ).toBeVisible({ timeout: 15_000 });
   });
 
   test('TC-ADMIN-04: Rejection reasons dictionary accessible', async ({ page }) => {
@@ -941,17 +949,14 @@ test.describe('Phase 4 — K-DEEP: Admin Interaction Tests', () => {
 
   test('TC-K-DEEP-02: Org Management search/pagination', async ({ page }) => {
     await page.goto(`${BASE}/MasterListsPage/organizationManagement`);
-    await page.getByRole('heading', { name: /Organi[sz]ation Management/i }).first().waitFor(); // 3.2.3: "Organisation"
-    // Search for known org "Adiba"
-    const searchInput = page.locator('input[type="search"], input[placeholder*="Search" i]');
-    if (await searchInput.isVisible()) {
-      await searchInput.fill(SEEDED_ORGS.clinicalSite);
-      await page.waitForTimeout(500);
-      await expect(page.locator(`text=${SEEDED_ORGS.clinicalSite}`).first()).toBeVisible();
-    }
-    // Verify pagination controls exist for 4,726 orgs
-    const pagination = page.locator('[class*="pagination" i], nav[aria-label="pagination"]');
-    await expect(pagination.first()).toBeVisible();
+    await page.getByRole('heading', { name: ORG_HEADING }).first().waitFor(); // 3.2.3 "Organisation Management"; develop "Organizations"
+    // Pagination is asserted before the search narrows the list. REWORKED 2026-10-08: the demo
+    // org "Adiba"/"Mulago" is not on a fresh stack, so search for one the instance has.
+    const pagination = page.locator('main .cds--pagination, main [class*="pagination" i], nav[aria-label="pagination"]');
+    await expect(pagination.first()).toBeVisible({ timeout: 15_000 });
+    const name = await anActiveOrgName(page);
+    await page.getByRole('searchbox', { name: ORG_SEARCH }).fill(name);
+    await expect(page.locator('main').getByText(name, { exact: true }).first()).toBeVisible({ timeout: 15_000 });
   });
 
   test('TC-K-DEEP-03: Provider Management search', async ({ page }) => {

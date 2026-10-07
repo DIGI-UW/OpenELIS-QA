@@ -12,7 +12,7 @@ import path from 'path';
 
 const ROOT = process.cwd();
 const SKIP = new Set(['node_modules', 'archive', '.git', 'test-results', 'playwright-report']);
-const LOGOUT = /(goto|fetch)\([^)\n]*logout|['"`]text=Logout['"`]|has-text\(\\?["']Logout|name:\s*\/[^/\n]*log\s?out|a\[href\*=["']?logout/i;
+const LOGOUT = /(goto|fetch)\([^)\n]*logout|['"`]text=Logout['"`]|has-text\(\\?["']Logout|name:\s*\/[^/\n]*log\s?out|a\[href\*=["']?logout|logoutViaUi\(/i;
 
 function* specs(dir) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {

@@ -5,7 +5,7 @@ import {
   TIMEOUT,
   login,
 } from '../helpers/test-helpers';
-import { withIsolatedSession, reloginIsolated } from '../helpers/isolated-session';
+import { withIsolatedSession, reloginIsolated, logoutViaUi } from '../helpers/isolated-session';
 
 /**
  * Session & Security Test Suite — Suite U (TC-SESS) + CG-DEEP (Rate Limiting)
@@ -244,8 +244,9 @@ test.describe('Suite U — Session Lifecycle (TC-SESS)', () => {
        * the dashboard and APIs again — session must be fully restored.
        */
       // (logged in by withIsolatedSession)
-      await page.goto(`${BASE}/logout`);
-      await page.waitForTimeout(1500);
+      // REWORKED 2026-10-08: /logout is not a page the SPA serves, so going there left the session
+      // alive and the re-login below waited for a login form that never came. Log out as a user does.
+      await logoutViaUi(page);
 
       // Re-login
       await reloginIsolated(page);

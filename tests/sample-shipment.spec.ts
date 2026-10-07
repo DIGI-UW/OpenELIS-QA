@@ -126,8 +126,9 @@ test.describe('Create Box Form (US-SHIP-1, US-SHIP-2)', () => {
     }
 
     // Summary panel gives real-time feedback — must be present
+    // REWORKED 2026-10-08: by heading; 'text=Summary' first matched a hidden element elsewhere.
     await expect(
-      page.locator('text=Summary').first(),
+      page.locator('main').getByRole('heading', { name: 'Summary' }).first(),
       'Summary sidebar must be present to give real-time box preview',
     ).toBeVisible({ timeout: TIMEOUT });
   });
@@ -135,20 +136,15 @@ test.describe('Create Box Form (US-SHIP-1, US-SHIP-2)', () => {
   test('TC-SHIP-06: Temperature Requirement covers full cold-chain spectrum', async ({ page }) => {
     // US-SHIP-1: temperature chain integrity — a lab technician must be able to mark
     // frozen (-80°C) specimens correctly so the receiving lab handles them properly
-    const tempBtn = page.locator('button[aria-haspopup="listbox"]')
-      .filter({ hasText: /temperature|select/i })
-      .first();
-
-    // Fallback: find by position (second listbox button after destination)
-    const allListboxBtns = page.locator('button[aria-haspopup="listbox"]');
-    const btnToClick = (await tempBtn.isVisible({ timeout: 1000 }).catch(() => false))
-      ? tempBtn
-      : allListboxBtns.nth(1);
-
+    // REWORKED 2026-10-08: the dropdown is found by its label. The text/position fallbacks opened
+    // the Destination dropdown (now first, and showing "Select"), whose options are facilities.
+    const btnToClick = page.locator('main').getByRole('combobox', { name: 'Temperature Requirement' });
+    await expect(btnToClick).toBeVisible({ timeout: TIMEOUT });
     await btnToClick.click();
-    await page.waitForTimeout(300);
+    const listbox = page.getByRole('listbox', { name: 'Temperature Requirement' });
+    await expect(listbox.getByRole('option').first()).toBeVisible({ timeout: TIMEOUT });
 
-    const options = await page.locator('[role="option"]').allInnerTexts();
+    const options = await listbox.getByRole('option').allInnerTexts();
     expect(options.length, 'Temperature options must cover at least 4 cold-chain tiers').toBeGreaterThanOrEqual(4);
 
     const expectedOptions = ['Ambient', 'Refrigerated', 'Frozen', 'Deep Frozen'];
