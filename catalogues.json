@@ -65,6 +65,11 @@
       "file": "order-entry-duplicate-patient-test-cases.md",
       "area": "Order entry creating duplicate patients (Enter Order v4, OGC-1407)",
       "note": "Feature suite, 2026-09-30. Spec: tests/order-entry-duplicate-patient.spec.ts."
+    },
+    {
+      "file": "order-entry-v4-test-cases.md",
+      "area": "Clinical Order Entry v4 acceptance (OGC-1419, 1422, 1423, 1424) and the 25 Sep handoff re-run",
+      "note": "Feature suite, 2026-10-08. Specs: tests/order-entry-v4-acceptance.spec.ts, tests/order-entry-v4-handoff.spec.ts."
     }
   ],
   "notCatalogues": [
