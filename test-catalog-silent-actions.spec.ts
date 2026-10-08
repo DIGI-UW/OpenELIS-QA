@@ -102,7 +102,11 @@ async function discoverSourceAndTargetOptions(page: Page): Promise<{ srcId: stri
   expect(list.ok && Array.isArray(list.json), 'GET /rest/test-list must return the catalog').toBe(true);
   let src: { id: string; label: string; names: Set<string> } | null = null;
   const pool = new Map<string, Opt>();
-  for (const t of (list.json as any[]).slice(0, 80)) {
+  // The CI fixture tests (helpers/ci-fixtures.ts: "QA CI Dict Result" / "QA CI Dict Other") go first:
+  // on a fresh stack the first 80 catalog tests hold no single-component dictionary test (run 128).
+  const all = list.json as any[];
+  const fixtures = all.filter((t) => /^QA CI Dict /.test(String(t.value ?? t.name ?? '')));
+  for (const t of [...fixtures, ...all.slice(0, 80)]) {
     const sr = await apiGet<any>(page, `/rest/test-catalog/tests/${t.id}/sample-results`);
     const comps: any[] = sr.json?.components ?? [];
     const primary = comps.find((c) => c.code === 'PRIMARY');

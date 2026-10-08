@@ -167,7 +167,13 @@ test.describe('Orderability semantics — active vs orderable', () => {
   test('TO-3: [positive control] orderable=true, active=true tests DO appear in the picker for their sample type', async ({ page }) => {
     // Without this, TO-2 would pass just as happily against an endpoint that returned nothing.
     const catalog = await catalogSample(page);
-    const ordinary = catalog.filter((t) => t.active && t.orderable && t.sampleTypeIds.length > 0);
+    // Tests that sit in an INACTIVE lab unit are left out on purpose: OGC-189 says a deactivated
+    // unit is "hidden from order entry", and develop does that (the picker only offers the user's
+    // active units). TO-3b pins that half; the CI fixture 'QA CI Inactive LU Test' exercises it.
+    const inactiveUnits = new Set((await labUnits(page)).filter((u) => !u.isActive).map((u) => String(u.id)));
+    const ordinary = catalog.filter(
+      (t) => t.active && t.orderable && t.sampleTypeIds.length > 0 && !inactiveUnits.has(t.labUnitId),
+    );
     test.skip(ordinary.length === 0, 'no sample-typed orderable tests in this catalog sample');
 
     const missing: string[] = [];
@@ -184,6 +190,29 @@ test.describe('Orderability semantics — active vs orderable', () => {
       'every active + orderable test with a sample type must be offerable somewhere — ' +
         'the picker is genuinely populated, so TO-2 is a real exclusion and not an empty set',
     ).toEqual([]);
+  });
+
+  test('TO-3b: [OGC-189] an active, orderable test in an INACTIVE lab unit is not offered in the manual picker', async ({ page }) => {
+    // OGC-189: "Soft deactivation: hidden from order entry, data preserved". The order half is
+    // pinned here; the "data preserved" half (results stay reachable) is G-4 in
+    // test-catalog-lab-unit-visibility.spec.ts. CI seeds 'QA CI Inactive LU Test' for this case.
+    const inactiveUnits = new Set((await labUnits(page)).filter((u) => !u.isActive).map((u) => String(u.id)));
+    const catalog = await catalogSample(page);
+    const parked = catalog.filter(
+      (t) => t.active && t.orderable && t.sampleTypeIds.length > 0 && inactiveUnits.has(t.labUnitId),
+    );
+    test.skip(parked.length === 0, 'no active, orderable test sits in an inactive lab unit (CI seeds one)');
+
+    const offered: string[] = [];
+    for (const t of parked) {
+      for (const st of t.sampleTypeIds) {
+        if ((await manualPicker(page, st)).has(t.testId)) {
+          offered.push(`${t.name} (id ${t.testId}) offered for sample type ${st}`);
+          break;
+        }
+      }
+    }
+    expect(offered, 'a test in a deactivated lab unit must be hidden from order entry (OGC-189)').toEqual([]);
   });
 
   test('TO-4: no reflex rule targets a test that cannot be created (target must be active)', async ({ page }) => {

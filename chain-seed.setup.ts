@@ -40,6 +40,7 @@
  * Everything is caught and logged; the chains then degrade honestly through their own
  * declared-gap register, which is the behaviour this file exists to make unnecessary.
  */
+import * as fs from 'fs';
 import { test as setup } from '@playwright/test';
 import { BASE } from './helpers/base-url';
 import { createPatientViaAPI, findPatientIdsByLastName, seedOrder } from './helpers/data-factory';
@@ -87,8 +88,14 @@ setup('seed the floor the regression chains need', async ({ page }) => {
     // enough for Chains S and U. seedOrder makes its own patient, which also tops up the
     // count Chain P reads.
     try {
-      const order = await seedOrder(page, 'CHAIN');
+      // A sample quantity, so Chain S can build a balanced aliquot from this order (2026-10-08).
+      const order = await seedOrder(page, 'CHAIN', { quantity: '4', uomId: process.env.QA_UOM_ML_ID || '47' });
       log.push(`seeded order ${order.accession}`);
+      // Chain S reads this to aliquot the one order it knows carries a quantity.
+      try {
+        fs.mkdirSync('.auth', { recursive: true });
+        fs.writeFileSync('.auth/chain-seed.json', JSON.stringify({ aliquotAccession: order.accession }, null, 1));
+      } catch { /* the chain falls back to scanning */ }
     } catch (e) {
       log.push(`order seed FAILED: ${(e as Error).message}`);
     }

@@ -1242,12 +1242,12 @@ test.describe('Phase 4 — Q-DEEP: EQA Interactions', () => {
   test('TC-Q-DEEP-02: Create New Shipment wizard', async ({ page }) => {
     // REWORKED 2026-10-08: "Create New Shipment" became "New cycle" on a provider scheme
     // (/qa/eqa/provider/schemes/{id}/cycles/new), a five-step wizard. Needs one provider scheme;
-    // the EQA seed (eqa-prereq / chain F) creates it.
+    // ci-fixtures.setup.ts creates "QA-EQA CI Regional" on every CI stack.
     await page.goto(`${BASE}/qa/eqa/distribution`);
     await expect(page.getByRole('heading', { name: 'EQA schemes we provide', exact: true })).toBeVisible();
     const newCycle = page.locator('main').getByRole('button', { name: 'New cycle' }).first();
     expect(await newCycle.isVisible({ timeout: 15_000 }).catch(() => false),
-      'precondition: this lab provides at least one EQA scheme (seed one with eqa-prereq)').toBe(true);
+      'precondition: this lab provides at least one EQA scheme (ci-fixtures.setup.ts seeds one)').toBe(true);
     await newCycle.click();
     await expect(page).toHaveURL(/\/qa\/eqa\/provider\/schemes\/\d+\/cycles\/new/);
     await expect(page.getByRole('heading', { name: /^New cycle/ })).toBeVisible();
