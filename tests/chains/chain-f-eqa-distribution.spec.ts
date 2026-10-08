@@ -115,7 +115,8 @@ test.describe.serial('Chain F — EQA Distribution', () => {
     // Create new
     const create = await apiCall<EqaProgram>(page, '/api/OpenELIS-Global/rest/eqa/programs', {
       method: 'POST',
-      body: { name: programName, active: true },
+      // A scheme type is required since the EQA rework ("Scheme type is required", 400 otherwise).
+      body: { name: programName, description: 'QA_AUTO chain F', schemeType: 'IN_HOUSE' },
     });
     if (!create.ok || typeof create.body !== 'object' || create.body === null) {
       markStep('F', 2, 'FAIL', `EQA program create HTTP ${create.status}`);

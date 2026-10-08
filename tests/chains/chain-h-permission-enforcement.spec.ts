@@ -314,6 +314,8 @@ test.describe.serial('Chain H — Permission Enforcement', () => {
       return; // unreachable: the markStep BLOCKED above skips (declared gap) or fails.
     }
     const page = await ctx.newPage();
+    // apiCall reads the CSRF token from localStorage, which about:blank refuses (SecurityError).
+    await page.goto(BASE);
     // Patient search is open to most roles including Receptionist
     const r = await apiCall<unknown>(
       page, '/api/OpenELIS-Global/rest/patient-search-results?lastName=A'

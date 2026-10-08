@@ -37,7 +37,9 @@
 import { test, expect } from '@playwright/test';
 
 const API = '/api/OpenELIS-Global/rest';
-const PANEL_NAME = 'QA Panel Test 20260811';
+// The original fixture on testing, then the CI fixture (helpers/ci-fixtures.ts, same two members),
+// unless PANEL_LEAK_NAME names another.
+const PANEL_NAMES = process.env.PANEL_LEAK_NAME ? [process.env.PANEL_LEAK_NAME] : ['QA Panel Test 20260811', 'QA CI Leak Panel'];
 const SERUM_MEMBER = 'Amylase';
 const FOREIGN_MEMBER = /Actin Smooth Muscle/i;
 
@@ -49,10 +51,11 @@ test('TC-PANEL-LEAK-0: the panel really does span two sample types', async ({ pa
   const res = await page.request.get(`${API}/PanelCreate`);
   expect(res.status()).toBe(200);
   const groups = ((await res.json()).existingPanelList ?? []) as Array<any>;
-  const spans = groups
-    .filter((g: any) => (g.panels ?? []).some((p: any) => p.panelName === PANEL_NAME))
+  const spansOf = (name: string) => groups
+    .filter((g: any) => (g.panels ?? []).some((p: any) => p.panelName === name))
     .map((g: any) => String(g.typeOfSampleName ?? ''));
-  expect(spans.length, `fixture panel ${PANEL_NAME} no longer spans multiple sample types`).toBeGreaterThan(1);
+  const name = PANEL_NAMES.find((n) => spansOf(n).length > 0) ?? PANEL_NAMES[0];
+  expect(spansOf(name).length, `fixture panel ${name} no longer spans multiple sample types`).toBeGreaterThan(1);
 });
 
 test('TC-PANEL-LEAK-1: the foreign member is genuinely foreign', async ({ page }) => {

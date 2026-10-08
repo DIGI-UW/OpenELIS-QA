@@ -259,7 +259,7 @@ jobs:
       # needs to exist once. Per-config dependencies would re-run the same setups up to
       # twenty-six times against an instance that already has them.
       #
-      # All three setups are idempotent and non-fatal by their own contract, and this step
+      # All of these setups are idempotent and non-fatal by their own contract, and this step
       # is `continue-on-error` on top of that: a seeding problem must degrade the suites
       # (which then say what is missing) rather than stop the run before it starts.
       - name: Seed the stack
@@ -276,6 +276,14 @@ jobs:
           # also runs as a suite on shard 4, but there it runs last, so nothing after it
           # benefits; seeding here puts the orders on every shard's stack before any suite.
           npx playwright test -c regression-seed.config.ts --project=seed-data --reporter=line
+          # Fixtures specs read but an empty stack lacks (helpers/ci-fixtures.ts): EQA schemes and
+          # eqaEnabled, a storage room, a notebook project, a ward, a sampling site, an inactive lab
+          # unit holding a test, dictionary and multi-component tests, a two-sample-type panel.
+          # Found missing in develop-stack run 128; each fixture is find-or-create.
+          npx playwright test -c regression-seed.config.ts --project=ci-fixtures --reporter=line
+          # The role users (qa_recept, qa_labtech, qa_valid and the unit-scoped ones). rbac and the
+          # role personas make them on shard 4 only, so Chain H on shard 2 found none (run 128).
+          npx playwright test -c rbac.config.ts --project=setup-roles --reporter=line
 
       # WHAT THIS RUN COVERS
       # Everything. ci-suites.json is the source of truth: it lists the configs CI runs

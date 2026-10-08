@@ -36,7 +36,16 @@ import { test, expect } from '@playwright/test';
  * ("1330"). Only assertions made through real input are recorded here. See HARNESS-FINDINGS.md.
  */
 
-const TEST_ID = process.env.MC_TEST_ID ?? '446';
+// MC_TEST_ID, else the CI fixture "QA CI MultiComp" (helpers/ci-fixtures.ts, seeded on every CI
+// stack), else 446, the original QA_AUTO_MC_188636 on testing.
+async function mcTestId(page: import('@playwright/test').Page): Promise<string> {
+  if (process.env.MC_TEST_ID) return process.env.MC_TEST_ID;
+  const res = await page.request.get('/api/OpenELIS-Global/rest/test-catalog/tests?search=QA%20CI%20MultiComp&page=1&pageSize=10');
+  const rows = res.ok() ? ((await res.json()).rows ?? []) : [];
+  // List names carry the sample type, e.g. "QA CI MultiComp(Serum)".
+  const fixture = rows.find((t: any) => String(t.name).replace(/\s*\([^)]*\)\s*$/, '') === 'QA CI MultiComp');
+  return fixture ? String(fixture.testId ?? fixture.id) : '446';
+}
 
 interface LogbookRow {
   testName?: string;
@@ -61,6 +70,7 @@ test.describe('TC-MC-ROUTE — multi-component result routing', () => {
   test('TC-MC-ROUTE-1: the catalog still defines the three components this test relies on', async ({
     page,
   }) => {
+    const TEST_ID = await mcTestId(page);
     const res = await page.request.get(
       `/api/OpenELIS-Global/rest/test-catalog/tests/${TEST_ID}/sample-results`,
     );

@@ -22,10 +22,37 @@
  */
 
 import { test, expect } from '@playwright/test';
+import * as fs from 'fs';
 import {
   BASE, apiCall, markStep, acquireAnyAccession,
   SAMPLE_ITEM, ALIQUOT_SAVE, getSampleItems, buildAliquotBody, type SampleItemRow,
 } from './_common';
+
+/**
+ * An accession whose sample item carries a quantity and analyses, which Step 3 needs to build a
+ * balanced aliquot. chain-seed.setup.ts seeds one (quantity 4); this looks for it among the open
+ * Logbook rows before falling back to any accession. Added 2026-10-08: on the CI stack the first
+ * Logbook row was a quantity-less order, so Step 3 recorded a GAP every run.
+ */
+async function acquireAccessionWithQuantity(page: import('@playwright/test').Page): Promise<string | null> {
+  // chain-seed.setup.ts records the order it seeded with a quantity.
+  try {
+    const seeded = JSON.parse(fs.readFileSync('.auth/chain-seed.json', 'utf8')).aliquotAccession as string | undefined;
+    if (seeded && (await getSampleItems(page, seeded)).some((i) => (i.analysis?.length || 0) > 0 && Number(i.quantity) > 0)) return seeded;
+  } catch { /* no record: scan */ }
+  const lb = await apiCall<{ testResult?: Array<{ accessionNumber?: string }> }>(page, '/api/OpenELIS-Global/rest/LogbookResults?doRange=false&finished=false');
+  const rows = (lb.ok && lb.body && typeof lb.body === 'object' ? (lb.body as any).testResult : []) || [];
+  const seen = new Set<string>();
+  for (const r of rows) {
+    const acc = r.accessionNumber;
+    if (!acc || seen.has(acc)) continue;
+    seen.add(acc);
+    if (seen.size > 25) break;
+    const items = await getSampleItems(page, acc);
+    if (items.some((i) => (i.analysis?.length || 0) > 0 && Number(i.quantity) > 0)) return acc;
+  }
+  return null;
+}
 
 test.describe.serial('Chain S — Aliquot lineage', () => {
   let accession: string | null = null;
@@ -37,7 +64,8 @@ test.describe.serial('Chain S — Aliquot lineage', () => {
   test('Step 1 — Sample read-back with items + analyses (ROUND-TRIP)', async ({ page }) => {
     await page.goto(BASE);
     await page.waitForLoadState('domcontentloaded');
-    const acq = await acquireAnyAccession(page);
+    const withQuantity = await acquireAccessionWithQuantity(page);
+    const acq = withQuantity ? { accession: withQuantity, detail: 'an open order with a sample quantity' } : await acquireAnyAccession(page);
     accession = acq.accession;
     if (!accession) {
       markStep('S', 1, 'GAP', `No accession available to aliquot (${acq.detail})`, 'Seed an order then re-run.');
@@ -45,7 +73,7 @@ test.describe.serial('Chain S — Aliquot lineage', () => {
       return;
     }
     const items = await getSampleItems(page, accession);
-    parent = items.find(i => (i.analysis?.length || 0) > 0) || items[0];
+    parent = items.find(i => (i.analysis?.length || 0) > 0 && Number(i.quantity) > 0) || items.find(i => (i.analysis?.length || 0) > 0) || items[0];
     if (parent && (parent.analysis?.length || 0) > 0) {
       markStep('S', 1, 'PASS', `Sample ${accession} read back: ${items.length} item(s), parent has ${parent.analysis!.length} analysis(es)`);
       expect(parent.analysis!.length).toBeGreaterThan(0);

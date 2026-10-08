@@ -166,8 +166,12 @@ test.describe('EQA participant happy path (TC-EQAHP)', () => {
   });
 
   test('TC-EQAHP-04: the result is entered and validated in the standard pipeline and the cycle is ready to submit', async ({ page }) => {
-    // Results Entry
-    await page.goto(`${BASE}/Results?testSectionId=${s.test!.labUnitId}`, { waitUntil: 'domcontentloaded' });
+    // Results Entry. REWORKED 2026-10-08: the unified Results page lists nothing until a lab unit
+    // is loaded or a lab number searched (the ?testSectionId= deep link no longer loads a worklist).
+    await page.goto(`${BASE}/Results`, { waitUntil: 'domcontentloaded' });
+    const search = page.locator('main').getByRole('searchbox', { name: /lab number/i });
+    await search.fill(s.labNo!);
+    await search.press('Enter');
     const row = page.locator('tr').filter({ hasText: s.labNo! }).first();
     await expect(row, 'the EQA sample is on the results worklist').toBeVisible({ timeout: 60_000 });
     const sel = row.locator('select[id^="unifiedResultValue-"]').first();
@@ -179,7 +183,10 @@ test.describe('EQA participant happy path (TC-EQAHP)', () => {
     await row.getByRole('button', { name: /^Save$/ }).click();
     expect((await save).status(), 'result saved').toBe(200);
     // Validation
-    await page.goto(`${BASE}/validation?type=routine&testSectionId=${s.test!.labUnitId}`, { waitUntil: 'domcontentloaded' });
+    // The one-page Validation: search the lab number, then load.
+    await page.goto(`${BASE}/validation`, { waitUntil: 'domcontentloaded' });
+    await page.locator('main').getByRole('searchbox', { name: 'Lab number' }).fill(s.labNo!);
+    await page.locator('main').getByRole('button', { name: 'Load results' }).click();
     const vrow = page.getByRole('row').filter({ hasText: s.labNo! }).first();
     await expect(vrow, 'the EQA result is in the validation queue').toBeVisible({ timeout: 60_000 });
     await vrow.getByRole('button', { name: /expand/i }).first().click();
