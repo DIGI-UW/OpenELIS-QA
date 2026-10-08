@@ -266,24 +266,30 @@ jobs:
         if: steps.seen.outputs.cache-hit != 'true' || inputs.force == true
         continue-on-error: true
         run: |
+          # Each command runs even when an earlier one fails: the default shell stops at the first
+          # error, so one flaky fixture on shard 3 of run 129 skipped setup-roles there. Failures
+          # still mark the step (continue-on-error keeps the job going) and name the command.
+          failed=0
+          seed() { "$@" || { echo "::warning::seed command failed: $*"; failed=1; }; }
           # data.setup comes along with the first two: Playwright runs a project's DEPENDENCIES, and both of
           # these declare data.setup.ts, so the baseline patient and its orders come along
           # with the first. data.setup is idempotent, so the second finding it already
           # there costs a lookup.
-          npx playwright test -c regression-chains.config.ts --project=chain-fixtures --reporter=line
-          npx playwright test -c modules.config.ts --project=referral-data --reporter=line
+          seed npx playwright test -c regression-chains.config.ts --project=chain-fixtures --reporter=line
+          seed npx playwright test -c modules.config.ts --project=referral-data --reporter=line
           # The bulk QA_AUTO_ orders that chains A, B and C pick up. regression-seed.config.ts
           # also runs as a suite on shard 4, but there it runs last, so nothing after it
           # benefits; seeding here puts the orders on every shard's stack before any suite.
-          npx playwright test -c regression-seed.config.ts --project=seed-data --reporter=line
+          seed npx playwright test -c regression-seed.config.ts --project=seed-data --reporter=line
           # Fixtures specs read but an empty stack lacks (helpers/ci-fixtures.ts): EQA schemes and
           # eqaEnabled, a storage room, a notebook project, a ward, a sampling site, an inactive lab
           # unit holding a test, dictionary and multi-component tests, a two-sample-type panel.
           # Found missing in develop-stack run 128; each fixture is find-or-create.
-          npx playwright test -c regression-seed.config.ts --project=ci-fixtures --reporter=line
+          seed npx playwright test -c regression-seed.config.ts --project=ci-fixtures --reporter=line
           # The role users (qa_recept, qa_labtech, qa_valid and the unit-scoped ones). rbac and the
           # role personas make them on shard 4 only, so Chain H on shard 2 found none (run 128).
-          npx playwright test -c rbac.config.ts --project=setup-roles --reporter=line
+          seed npx playwright test -c rbac.config.ts --project=setup-roles --reporter=line
+          exit $failed
 
       # WHAT THIS RUN COVERS
       # Everything. ci-suites.json is the source of truth: it lists the configs CI runs

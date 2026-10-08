@@ -371,10 +371,19 @@ export async function ensureEqaEnabled(page: Page, log: string[]): Promise<void>
   await page.goto('/MasterListsPage/SampleEntryConfigurationMenu', { waitUntil: 'domcontentloaded' });
   const row = page.locator('tr').filter({ hasText: 'eqaEnabled' }).first();
   await expect(row, 'the eqaEnabled row is listed').toBeVisible({ timeout: 30_000 });
-  await row.locator('input[type=radio]').first().check({ force: true });
-  await page.getByRole('button', { name: /Modify/i }).first().click();
+  // Two stages: select the row radio, then Modify (disabled until a row is selected) opens the
+  // value form. The row radio is Carbon's visually hidden input: a forced pointer click on it is
+  // sometimes lost ("Clicking the checkbox did not change its state", shard 3 of run 129; Modify
+  // left disabled locally), so the click is dispatched on the element itself, which React's
+  // onChange always sees. Retry the pair until Modify offers the value radios.
   const yes = page.locator('input[type=radio][value="true"]').first();
-  await expect(yes, 'the edit form offers true').toBeAttached({ timeout: 15_000 });
+  const modify = page.getByRole('button', { name: /Modify/i }).first();
+  await expect(async () => {
+    await row.locator('input[type=radio]').first().evaluate((el) => (el as HTMLInputElement).click());
+    await expect(modify).toBeEnabled({ timeout: 3_000 });
+    await modify.click({ timeout: 5_000 });
+    await expect(yes).toBeAttached({ timeout: 5_000 });
+  }, 'Modify on the eqaEnabled row offers true').toPass({ timeout: 45_000 });
   await yes.check({ force: true });
   const save = page.waitForResponse((r) => r.url().includes('SampleEntryConfig') && r.request().method() === 'POST', { timeout: 20_000 });
   await page.getByRole('button', { name: /^Save$/i }).first().click();
