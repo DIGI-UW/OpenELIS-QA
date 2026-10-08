@@ -70,6 +70,11 @@
       "file": "order-entry-v4-test-cases.md",
       "area": "Clinical Order Entry v4 acceptance (OGC-1419, 1422, 1423, 1424) and the 25 Sep handoff re-run",
       "note": "Feature suite, 2026-10-08. Specs: tests/order-entry-v4-acceptance.spec.ts, tests/order-entry-v4-handoff.spec.ts."
+    },
+    {
+      "file": "reports-openpdf-test-cases.md",
+      "area": "Reports after the JasperReports to OpenPDF port (OpenELIS-Global-2 #4531 to #4552, #4649)",
+      "note": "Feature suite, 2026-10-08. Spec: tests/reports-openpdf.spec.ts (helper helpers/report-pdf.ts)."
     }
   ],
   "notCatalogues": [
