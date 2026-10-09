@@ -15,6 +15,12 @@
   "include": [
     "helpers/isolated-session.ts",
     "helpers/catalogUi.ts",
+    "helpers/catalogChaos.ts",
+    "test-catalog-chaos-results.spec.ts",
+    "test-catalog-chaos-rules.spec.ts",
+    "test-catalog-chaos-links.spec.ts",
+    "test-catalog-chaos-admin.spec.ts",
+    "test-catalog-chaos-access.spec.ts",
     "test-catalog-section-depth.spec.ts",
     "test-catalog-silent-actions.spec.ts",
     "analyzer-guided-setup.spec.ts",
