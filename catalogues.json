@@ -70,6 +70,11 @@
       "file": "order-entry-v4-test-cases.md",
       "area": "Clinical Order Entry v4 acceptance (OGC-1419, 1422, 1423, 1424) and the 25 Sep handoff re-run",
       "note": "Feature suite, 2026-10-08. Specs: tests/order-entry-v4-acceptance.spec.ts, tests/order-entry-v4-handoff.spec.ts."
+    },
+    {
+      "file": "test-catalog-chaos-full.md",
+      "area": "Test Catalog: full chaos (non-happy path) across every editor section, panels, create/activate, sample types, lab units, CSV import, list, permissions and session",
+      "note": "Feature suite, 2026-10-08, local develop. Five spec files test-catalog-chaos-{results,rules,links,admin,access}.spec.ts; extends test-catalog-chaos.md (Basic Info, Ranges)."
     }
   ],
   "notCatalogues": [
