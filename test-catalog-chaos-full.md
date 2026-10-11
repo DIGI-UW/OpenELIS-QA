@@ -26,6 +26,8 @@ Every section gets the kinds that apply to it:
 
 Rulings respected (not cases): copy configuration **replaces** (2026-09-23). Clearing a terminology code and saving removes the mapping, which is **acceptable** (2026-09-24).
 
+**Rulings on the six product questions (Casey, 2026-10-11):** a test may have no result component only while inactive (SR-12, SR-12b); retire the copy-from API (SR-14); trim terminology codes on save (TM-03); the server enforces the result type list with 422 (SR-08); refuse an inactive accrediting body with 400 (AC-02); trim test names on save, then check duplicates, so a leading space is a 409 (CR-03). Filed with the findings: OGC-1458 (SR-08, SR-12b, SR-14), OGC-1465 (TM-03, AC-02), OGC-1464 (CR-03).
+
 ## Sample & Results
 
 | ID | Case | Expected |
@@ -41,9 +43,10 @@ Rulings respected (not cases): copy configuration **replaces** (2026-09-23). Cle
 | TC-CX-SR-09 | API: label 51 with blank code, label 256, default 81, interpretation 256, severity 21 | 4xx, never 500 |
 | TC-CX-SR-10 | API: uomId "abc" and 999999 | 4xx, never 500 |
 | TC-CX-SR-11 | API: components / options / interpretations null | Under 500 |
-| TC-CX-SR-12 | API: components [] | 422; the component stays |
+| TC-CX-SR-12 | API: components [] on an inactive test | 200 (allowed while the test is set up; Casey 2026-10-11) |
+| TC-CX-SR-12b | API: components [] on an active test | 422; the component stays |
 | TC-CX-SR-13 | Two editors: B removes a component, A saves its old copy | A refused, or the component stays removed |
-| TC-CX-SR-14 | API copy-from onto a configured target | Replaces (target-only component gone, primary takes the source type) |
+| TC-CX-SR-14 | API copy-from onto a configured target | Endpoint retired (404, 405 or 410); target unchanged (Casey 2026-10-11) |
 | TC-CX-SR-15 | Lifecycle: options applied, normal flag moved, option removed | Each step reads back |
 
 ## Terminology
