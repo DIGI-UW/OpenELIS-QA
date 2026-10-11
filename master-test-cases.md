@@ -14375,49 +14375,49 @@ own test and leave it INACTIVE, so no orderable QA row is left in Add Order.
 
 ## Phase 37A — Inventory Management CRUD
 
-### TC-INV-01: GET Inventory Endpoints (Baseline)
+### TC-INV-01: GET Inventory Endpoints (Baseline) (RETIRED 2026-10-11: covered by TC-INVB-01 and TC-INVB-02; see inventory-board.md)
 - **URL**: `GET /rest/inventory/items/all`, `GET /rest/inventory/lots`, `GET /rest/inventory/management/alerts`
 - **Steps**: Navigate to each API endpoint
 - **Expected**: HTTP 200 with empty arrays
 - **Result**: PASS — All return HTTP 200, empty data in fresh environment.
 
-### TC-INV-02: Create Catalog Item
+### TC-INV-02: Create Catalog Item (RETIRED 2026-10-11: covered by TC-INVB-30; see inventory-board.md)
 - **URL**: `POST /rest/inventory/items`
 - **Steps**: 1) POST with payload: `{name:"QA_AUTO_0403 Test Reagent", itemType:"REAGENT", category:"Hematology Reagents", manufacturer:"QA Manufacturer Inc", units:"mL", lowStockThreshold:10, stabilityAfterOpening:30, storageRequirements:"2-8C refrigerated"}`
 - **Expected**: HTTP 201 with created item including `id` and `isActive:"Y"`
 - **Result**: PASS — HTTP 201, id=1, fhirUuid assigned. WARNING: wrong field name `unitOfMeasure` (instead of `units`) causes HTTP 400.
 
-### TC-INV-03: Create Inventory Lot (Receive)
+### TC-INV-03: Create Inventory Lot (Receive) (RETIRED 2026-10-11: covered by TC-INVB-26; see inventory-board.md)
 - **URL**: `POST /rest/inventory/management/receive`
 - **Steps**: 1) POST with `{inventoryItem:{id:1}, lotNumber:"QA-LOT-0403-001", currentQuantity:500, initialQuantity:500, expirationDate:(+1yr ISO), receiptDate:(now ISO), storageLocation:null, qcStatus:"PENDING", status:"ACTIVE"}`
 - **Expected**: HTTP 201 with lot linked to catalog item
 - **Result**: PASS — HTTP 201, lot created with storageLocation=null accepted.
 
-### TC-INV-04: Verify Inventory Dashboard KPIs
+### TC-INV-04: Verify Inventory Dashboard KPIs (RETIRED 2026-10-11: the dashboard KPIs were removed by OGC-438 #4358; see inventory-board.md)
 - **URL**: `/Inventory` (browser), `GET /rest/inventory/management/alerts`
 - **Steps**: 1) Navigate to /Inventory 2) Read KPI cards 3) Check alerts API
 - **Expected**: Total Lots=1, Low Stock=0, Expiring Soon=0, Expired=0. Lot visible in table.
 - **Result**: PASS — All KPIs correct. Table shows: QA_AUTO_0403 Test Reagent | QA-LOT-0403-001 | REAGENT | 500 mL | 4/3/2027 | ACTIVE | In Stock.
 
-### TC-INV-05: Update Catalog Item (PUT)
+### TC-INV-05: Update Catalog Item (PUT) (RETIRED 2026-10-11: covered by TC-INVB-27; see inventory-board.md)
 - **URL**: `PUT /rest/inventory/items/1`
 - **Steps**: 1) PUT with updated `name` and `lowStockThreshold:20`
 - **Expected**: HTTP 200 with updated fields
 - **Result**: PASS — HTTP 200, name updated, lowStockThreshold=20, new lastupdated timestamp.
 
-### TC-INV-06: Deactivate Catalog Item
+### TC-INV-06: Deactivate Catalog Item (RETIRED 2026-10-11: covered by TC-INVB-34; see inventory-board.md)
 - **URL**: `PUT /rest/inventory/items/1/deactivate`
 - **Steps**: 1) PUT to deactivate endpoint
 - **Expected**: HTTP 200, item `isActive:"N"`
 - **Result**: PASS — HTTP 200 (empty body). Subsequent GET confirms `isActive:"N"`.
 
-### TC-INV-07: Create Storage Location (FAIL — BUG-40)
+### TC-INV-07: Create Storage Location (FAIL — BUG-40) (RETIRED 2026-10-11: storage is now the lot location picker, TC-INVB-26; see inventory-board.md)
 - **URL**: `POST /rest/inventory-storage-locations`
 - **Steps**: 1) POST with `{name:"QA_AUTO Refrigerator", locationType:"ROOM", isActive:true}` 2) Also try locationType:"REFRIGERATOR"
 - **Expected**: HTTP 201 with created location
 - **Result**: FAIL — HTTP 500 (empty body) for both locationType values. BUG-40 filed.
 
-### TC-INV-08: Active Items Filter (FAIL — BUG-41)
+### TC-INV-08: Active Items Filter (FAIL — BUG-41) (RETIRED 2026-10-11: covered by TC-INVB-01 and TC-INVB-34; see inventory-board.md)
 - **URL**: `GET /rest/inventory/items/all?isActive=true`
 - **Steps**: 1) Deactivate item 2) GET with isActive=true filter
 - **Expected**: Only active items returned (empty since item deactivated)

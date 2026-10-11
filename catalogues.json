@@ -90,6 +90,11 @@
       "file": "reports-openpdf-test-cases.md",
       "area": "Reports after the JasperReports to OpenPDF port (OpenELIS-Global-2 #4531 to #4552, #4649)",
       "note": "Feature suite, 2026-10-08. Spec: tests/reports-openpdf.spec.ts (helper helpers/report-pdf.ts)."
+    },
+    {
+      "file": "inventory-board.md",
+      "area": "Inventory items board and reports after the OGC-438 redesign (#4356 to #4365): projection, row actions, ordering, tags, count mode, receiving",
+      "note": "Feature suite, 2026-10-11 to 13, local develop. Spec: tests/inventory-board.spec.ts; replaces tests/inventory.spec.ts and tests/inventory-happy-path.spec.ts."
     }
   ],
   "notCatalogues": [
