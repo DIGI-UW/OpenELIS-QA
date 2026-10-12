@@ -9,7 +9,8 @@
  *
  * Written 2026-10-11 against local develop (images 2026-10-11 12:13 UTC, develop df503f65).
  * Scope (Casey, 2026-10-11): what is merged now, parts 1 to 3 of the 17-part OGC-438 stack.
- * Extend as later parts land.
+ * Extend as later parts land. Part 4 (#4359: reorder suggestions, mark as ordered, the critical
+ * banner) added 2026-10-12 against develop a4200e2d: TC-INVB-50 to 59.
  *
  * DATA. helpers/inventory-fixtures.ts. Read-only fixtures are found or made in beforeAll and never
  * changed here; every case that acts on a row makes its own throwaway item and deactivates it at
@@ -25,6 +26,7 @@ import * as fs from 'fs';
 import {
   INV, HISTORY, api, ready, board, boardRow, allItems, lotsOf, usageOf, transactionsOf, makeItem, receiveLot, createItem,
   deactivate, ensureInventoryFixtures, redateHistory, historySeeded, HISTORY_GAP, isoDay, type BoardRow,
+  markOrdered, clearOrdered, dbSql, INV_DB, normalizeBoard, consume,
 } from '../helpers/inventory-fixtures';
 import { NAMES } from '../helpers/ci-fixtures';
 
@@ -133,6 +135,64 @@ async function logUsage(page: Page, dlg: Locator, itemName: string | null, qty: 
 
 async function rowNames(panel: Locator): Promise<string[]> {
   return panel.locator('tr.cds--parent-row .board-item-name').allInnerTexts();
+}
+
+// ── ordering (#4359) ───────────────────────────────────────────────────────
+
+/**
+ * Open the board and return the rows the page itself loaded. The banner and the suggestions panel
+ * are computed from that one response, so comparing against it is exact even while other workers
+ * add items between two GETs.
+ */
+async function openBoardRows(page: Page): Promise<{ panel: Locator; rows: BoardRow[] }> {
+  const resp = page.waitForResponse((r) => /\/rest\/inventory\/board(\?|$)/.test(r.url()) && r.request().method() === 'GET', { timeout: 60_000 });
+  const panel = await openBoard(page);
+  const body = await (await resp).json();
+  return { panel, rows: normalizeBoard(Array.isArray(body) ? body : body?.data ?? []) };
+}
+
+const SUGGESTED: BoardRow['status'][] = ['REORDER_NOW', 'REORDER_SOON'];
+const isSuggested = (r: BoardRow) => SUGGESTED.includes(r.status);
+/** "Critical" in #4359 is the board's own Reorder now, not yet marked ordered (items have no criticality field). */
+const unaddressed = (rows: BoardRow[]) => rows.filter((r) => r.status === 'REORDER_NOW' && !r.orderedOn);
+const BANNER_NAMES = 5;
+
+/** The banner names the first five unaddressed Reorder now items in board order and counts the rest. */
+async function expectBanner(page: Page, rows: BoardRow[]): Promise<void> {
+  const crit = unaddressed(rows);
+  const banner = page.locator('.board-critical-banner');
+  if (!crit.length) { await expect(banner, 'no banner when nothing critical is unaddressed').toHaveCount(0); return; }
+  await expect(banner, 'the critical banner').toBeVisible();
+  const text = (await banner.innerText()).replace(/\s+/g, ' ');
+  expect(text, 'the banner names the first five, in board order').toContain(crit.slice(0, BANNER_NAMES).map((r) => r.name).join(' · '));
+  if (crit.length > BANNER_NAMES) expect(text, 'and counts the rest').toContain(`and ${crit.length - BANNER_NAMES} more`);
+  else expect(text).not.toMatch(/and \d+ more/);
+  for (const r of rows.filter((x) => x.orderedOn)) expect(text, `${r.name} is on order, so not in the banner`).not.toContain(r.name);
+}
+
+/** Open Reorder suggestions from the toolbar. */
+async function openSuggestions(page: Page): Promise<Locator> {
+  await itemsPanel(page).getByRole('button', { name: /^Reorder suggestions/ }).click();
+  const dlg = page.getByRole('dialog').filter({ hasText: 'Marking as ordered records that an order was placed' });
+  await expect(dlg, 'the suggestions panel opens').toBeVisible({ timeout: 15_000 });
+  return dlg;
+}
+
+function suggestionRow(dlg: Locator, name: string): Locator {
+  return dlg.locator('tbody tr').filter({ hasText: name });
+}
+
+/** Tick a row in the suggestions table (Carbon hides the input behind its label). */
+async function select(dlg: Locator, name: string): Promise<void> {
+  const row = suggestionRow(dlg, name);
+  await expect(row, `${name} is in the suggestions`).toHaveCount(1);
+  await row.locator('td').first().locator('label').click();
+  await expect(row.getByRole('checkbox')).toBeChecked();
+}
+
+/** Set a Carbon DatePicker (flatpickr ignores fill) the way a pick does. */
+async function pickDate(input: Locator, iso: string): Promise<void> {
+  await input.evaluate((el: any, d: string) => el._flatpickr?.setDate(new Date(`${d}T12:00:00`), true), iso);
 }
 
 // ── fixtures ───────────────────────────────────────────────────────────────
@@ -599,5 +659,270 @@ test.describe('Catalog and Reports tabs', () => {
       panel.getByRole('button', { name: /^Generate$/ }).click(),
     ]);
     expect(download.suggestedFilename(), 'the saved file name').toMatch(/\.pdf$/);
+  });
+});
+
+
+// ── ordering (throwaway items) ─────────────────────────────────────────────
+
+test.describe('Ordering (OGC-438 #4359)', () => {
+  test('TC-INVB-50: Reorder suggestions lists exactly the rows the board badges Reorder now or Reorder soon, and the button counts them', async ({ page }) => {
+    const { panel, rows } = await openBoardRows(page);
+    const want = rows.filter(isSuggested);
+    expect(want.length, 'the fixtures alone make suggestions (QA INV Low, Empty, PastDue)').toBeGreaterThan(0);
+    await expect(panel.getByRole('button', { name: /^Reorder suggestions/ }), 'the button carries the count').toHaveText(`Reorder suggestions (${want.length})`);
+    const dlg = await openSuggestions(page);
+    await expect(dlg.locator('tbody tr'), 'one row per suggestion').toHaveCount(want.length);
+    const listed = (await dlg.locator('tbody tr').allInnerTexts()).join('\n');
+    for (const r of want) expect(listed, `${r.name} (${r.status}) is suggested`).toContain(r.name);
+    for (const r of rows.filter((x) => !isSuggested(x))) expect(listed, `${r.name} (${r.status}) is not`).not.toContain(r.name);
+  });
+
+  test('TC-INVB-51: the critical banner names the first five unaddressed Reorder now items, counts the rest, and opens the suggestions', async ({ page }) => {
+    const { rows } = await openBoardRows(page);
+    expect(unaddressed(rows).length, 'the fixtures alone are critical (QA INV Low, Empty, PastDue)').toBeGreaterThan(0);
+    await expectBanner(page, rows);
+    await page.locator('.board-critical-banner').getByRole('button', { name: 'Review and mark as ordered' }).click();
+    await expect(page.getByRole('dialog').filter({ hasText: 'Marking as ordered records that an order was placed' })).toBeVisible();
+  });
+
+  test('TC-INVB-52: Mark as ordered with a note and expected date stamps the item, keeps its row and status, tags it On order and takes it out of the banner', async ({ page }) => {
+    await openBoard(page);
+    const it = await makeItem(page, 'Ord', { qty: 2, threshold: 10 });
+    cleanup.push(it.id);
+    const before = await openBoardRows(page);
+    expect(before.rows.find((r) => r.name === it.name)?.status, 'the new item is Reorder now').toBe('REORDER_NOW');
+    expect(unaddressed(before.rows).map((r) => r.name)).toContain(it.name);
+    const dlg = await openSuggestions(page);
+    await dlg.locator('#reorder-note').fill('QA PO-4471');
+    await pickDate(dlg.locator('#reorder-expected-date'), isoDay(14));
+    await select(dlg, it.name);
+    const [req] = await Promise.all([
+      page.waitForRequest((r) => /\/items\/mark-ordered$/.test(r.url())),
+      dlg.getByRole('button', { name: 'Mark as ordered' }).click(),
+    ]);
+    expect(req.postDataJSON(), 'one mark: this item, the note and the date').toEqual({ itemIds: [it.id], note: 'QA PO-4471', expectedDate: isoDay(14) });
+    await expect(dlg, 'the panel closes').toBeHidden({ timeout: 15_000 });
+    // The board and the Catalog tab each mount a notification area; read the Items tab's.
+    await expect(itemsPanel(page).getByText('1 item marked as ordered.'), 'and says so').toBeVisible();
+    const r = await boardRow(page, it.name);
+    expect({ orderedOn: r!.orderedOn, orderExpectedDate: r!.orderExpectedDate, orderNote: r!.orderNote }).toEqual({ orderedOn: isoDay(0), orderExpectedDate: isoDay(14), orderNote: 'QA PO-4471' });
+    expect(r!.status, 'stock is still short: the status is unchanged').toBe('REORDER_NOW');
+    const after = await openBoardRows(page);
+    const status = itemRow(after.panel, it.name);
+    await expect(status.getByText('Reorder now', { exact: true }), 'the row stays tagged').toBeVisible();
+    await expect(status.getByText(/^On order · /), 'On order with the expected date').toBeVisible();
+    expect(unaddressed(after.rows).map((x) => x.name), 'no longer critical-and-unaddressed').not.toContain(it.name);
+    await expectBanner(page, after.rows);
+    // Still a suggestion: the panel lists it again, tagged On order.
+    const dlg2 = await openSuggestions(page);
+    await expect(suggestionRow(dlg2, it.name).getByText('On order', { exact: true })).toBeVisible();
+  });
+
+  test('TC-INVB-53: Not ordered after all clears the mark and the item is critical again; it is disabled when nothing selected is on order', async ({ page }) => {
+    await openBoard(page);
+    const marked = await makeItem(page, 'Undo', { qty: 2, threshold: 10 });
+    const plain = await makeItem(page, 'Plain', { qty: 2, threshold: 10 });
+    cleanup.push(marked.id, plain.id);
+    const m = await markOrdered(page, [marked.id], { note: 'wrong row', expectedDate: isoDay(3) });
+    expect(m.status, m.text).toBe(200);
+    await openBoard(page);
+    let dlg = await openSuggestions(page);
+    await select(dlg, plain.name);
+    await expect(dlg.getByRole('button', { name: 'Not ordered after all' }), 'nothing selected is on order').toBeDisabled();
+    await page.keyboard.press('Escape');
+    await openBoard(page);
+    dlg = await openSuggestions(page);
+    await select(dlg, marked.name);
+    const [req] = await Promise.all([
+      page.waitForRequest((r) => /\/items\/clear-ordered$/.test(r.url())),
+      dlg.getByRole('button', { name: 'Not ordered after all' }).click(),
+    ]);
+    expect(req.postDataJSON()).toEqual({ itemIds: [marked.id] });
+    await expect(itemsPanel(page).getByText('1 item no longer marked as ordered.')).toBeVisible({ timeout: 15_000 });
+    const r = await boardRow(page, marked.name);
+    expect({ orderedOn: r!.orderedOn, orderExpectedDate: r!.orderExpectedDate, orderNote: r!.orderNote }, 'note and date go too').toEqual({ orderedOn: null, orderExpectedDate: null, orderNote: null });
+    const after = await openBoardRows(page);
+    expect(unaddressed(after.rows).map((x) => x.name), 'critical and unaddressed again').toContain(marked.name);
+    await expect(itemRow(after.panel, marked.name).getByText(/^On order/)).toHaveCount(0);
+  });
+
+  test('TC-INVB-54: marking a selection is one request for every selected item, and every one is stamped', async ({ page }) => {
+    await openBoard(page);
+    const a = await makeItem(page, 'BulkA', { qty: 1, threshold: 10 });
+    const b = await makeItem(page, 'BulkB', { qty: 1, threshold: 10 });
+    cleanup.push(a.id, b.id);
+    await openBoard(page);
+    const dlg = await openSuggestions(page);
+    await select(dlg, a.name);
+    await select(dlg, b.name);
+    const posts: string[] = [];
+    page.on('request', (r) => { if (/\/items\/mark-ordered$/.test(r.url())) posts.push(r.postData() ?? ''); });
+    const [resp] = await Promise.all([
+      page.waitForResponse((r) => /\/items\/mark-ordered$/.test(r.url())),
+      dlg.getByRole('button', { name: 'Mark as ordered' }).click(),
+    ]);
+    expect(await resp.json(), 'the server reports both').toEqual({ changed: 2 });
+    await expect(itemsPanel(page).getByText('2 items marked as ordered.')).toBeVisible({ timeout: 15_000 });
+    expect(posts.length, 'one request, not one per item').toBe(1);
+    expect(JSON.parse(posts[0]).itemIds.sort()).toEqual([a.id, b.id].sort());
+    for (const it of [a, b]) expect((await boardRow(page, it.name))!.orderedOn, `${it.name} stamped`).toBe(isoDay(0));
+  });
+
+  test('TC-INVB-55: re-marking an item keeps the first order stamp and replaces the note and date (the stamp anchors the learned lead time)', async ({ page }) => {
+    test.skip(!INV_DB, 'needs the database to age the first stamp: local develop or develop-stack CI only');
+    await openBoard(page);
+    const it = await makeItem(page, 'Remark', { qty: 1, threshold: 10 });
+    cleanup.push(it.id);
+    expect((await markOrdered(page, [it.id], { note: 'first', expectedDate: isoDay(10) })).status).toBe(200);
+    const aged = dbSql(`UPDATE clinlims.inventory_item SET ordered_at = now() - interval '3 days' WHERE id = ${it.id}`);
+    expect(aged, 'aged the first stamp in the DB').toBe('UPDATE 1');
+    expect((await boardRow(page, it.name))!.orderedOn).toBe(isoDay(-3));
+    const m = await markOrdered(page, [it.id], { note: 'second', expectedDate: isoDay(5) });
+    expect(m.body, m.text).toEqual({ changed: 1 });
+    const r = await boardRow(page, it.name);
+    expect(r!.orderedOn, 'the first stamp survives').toBe(isoDay(-3));
+    expect(r!.orderNote).toBe('second');
+    expect(r!.orderExpectedDate).toBe(isoDay(5));
+  });
+
+  test('TC-INVB-56: when the mark fails the panel stays open, says why, and nothing is stamped', async ({ page }) => {
+    await openBoard(page);
+    const it = await makeItem(page, 'Fail', { qty: 1, threshold: 10 });
+    cleanup.push(it.id);
+    // What the controller sends on an exception: a bare 500 with no body.
+    await page.route(/\/items\/mark-ordered$/, (r) => r.fulfill({ status: 500, body: '' }));
+    await openBoard(page);
+    const dlg = await openSuggestions(page);
+    await select(dlg, it.name);
+    await dlg.getByRole('button', { name: 'Mark as ordered' }).click();
+    await expect(dlg.locator('.cds--inline-notification--error'), 'the failure is shown in the panel').toBeVisible({ timeout: 15_000 });
+    await expect(dlg, 'the panel stays open').toBeVisible();
+    await expect(page.getByText(/marked as ordered\./), 'no success message').toHaveCount(0);
+    expect((await boardRow(page, it.name))!.orderedOn, 'nothing stamped').toBeNull();
+  });
+
+  test('TC-INVB-57: the mark endpoints refuse a malformed expected date, and clearing an item never marked changes nothing', async ({ page }) => {
+    await openBoard(page);
+    const it = await makeItem(page, 'Api', { qty: 1, threshold: 10 });
+    cleanup.push(it.id);
+    const bad = await markOrdered(page, [it.id], { note: 'x', expectedDate: '2026-13-40' });
+    expect(bad.status, bad.text).toBe(400);
+    expect(bad.text).toContain('expectedDate must be an ISO date');
+    expect((await boardRow(page, it.name))!.orderedOn, 'a refused mark stamps nothing').toBeNull();
+    const none = await clearOrdered(page, [it.id]);
+    expect(none.body, 'clearing an item that was never marked changes nothing').toEqual({ changed: 0 });
+  });
+
+  test('TC-INVB-58: Export CSV downloads the suggestions with ISO order-by dates', async ({ page }) => {
+    const { rows } = await openBoardRows(page);
+    const want = rows.filter(isSuggested);
+    const dlg = await openSuggestions(page);
+    const [download] = await Promise.all([
+      page.waitForEvent('download', { timeout: 30_000 }),
+      dlg.getByRole('button', { name: /Export CSV/i }).last().click(),
+    ]);
+    expect(download.suggestedFilename()).toBe('reorder-suggestions.csv');
+    const lines = fs.readFileSync((await download.path())!, 'utf8').split('\n').filter(Boolean);
+    expect(lines[0].split(',')[0], 'header').toBe('Item');
+    expect(lines.length - 1, 'one line per suggestion').toBe(want.length);
+    const body = lines.slice(1).join('\n');
+    for (const r of want) {
+      expect(body, `${r.name} exported`).toContain(r.name);
+      if (r.orderByDate) expect(body, `${r.name} order-by as ISO`).toContain(r.orderByDate);
+    }
+  });
+
+  test('TC-INVB-59: with nothing to order the panel says so, offers no mark, and there is no banner', async ({ page }) => {
+    // Every row adequate: served from a copy of the real board with the statuses rewritten.
+    await page.route(/\/rest\/inventory\/board(\?|$)/, async (route) => {
+      const real = await route.fetch();
+      const rows = ((await real.json()) as BoardRow[]).map((r) => ({ ...r, status: 'ADEQUATE', orderedOn: null }));
+      await route.fulfill({ response: real, json: rows });
+    });
+    const panel = await openBoard(page);
+    await expect(page.locator('.board-critical-banner')).toHaveCount(0);
+    await expect(panel.getByRole('button', { name: /^Reorder suggestions/ }), 'no count').toHaveText('Reorder suggestions');
+    await panel.getByRole('button', { name: /^Reorder suggestions/ }).click();
+    const dlg = page.getByRole('dialog').filter({ hasText: 'Nothing needs ordering right now.' });
+    await expect(dlg).toBeVisible();
+    await expect(dlg.getByRole('button', { name: 'Mark as ordered' })).toHaveCount(0);
+    await expect(dlg.locator('#reorder-note')).toHaveCount(0);
+  });
+
+  test('TC-INVB-60: an item restocked after its mark and short again is critical again [FLIP-WHEN-FIXED]', async ({ page }) => {
+    // FLIP-WHEN-FIXED (found 2026-10-12, not filed: Casey decides). Nothing closes the mark: a receipt
+    // leaves orderedOn, the note and the expected date in place. Once restocked the item leaves the
+    // suggestions panel, the only place "Not ordered after all" lives (the row menu has no such
+    // action), so the stale mark cannot be cleared from the screen; when the item runs short again
+    // it is Reorder now but still "On order", and the banner stays silent about the new shortage.
+    // The assertion is the user-visible harm; which event should close the mark (a receipt, as the
+    // #4359 notes on learning lead time from the next receipt suggest) is Casey's call.
+    test.fail();
+    await openBoard(page);
+    const it = await makeItem(page, 'Stale', { qty: 2, threshold: 10 });
+    cleanup.push(it.id);
+    expect((await markOrdered(page, [it.id], { note: 'PO-7' })).status).toBe(200);
+    await receiveLot(page, it.id, { number: `QAIS${it.id}`, qty: 30, expiresInDays: 200, qc: 'PASSED' });
+    expect((await boardRow(page, it.name))!.status, 'restocked: not a suggestion').not.toBe('REORDER_NOW');
+    expect((await consume(page, it.id, 29)).status).toBe(200);
+    const { rows } = await openBoardRows(page);
+    const r = rows.find((x) => x.name === it.name)!;
+    expect(r.status, 'short again').toBe('REORDER_NOW');
+    expect(unaddressed(rows).map((x) => x.name), 'the new shortage is critical, not hidden by the old mark').toContain(it.name);
+  });
+
+  test('TC-INVB-61: an id that is not an item is skipped, not a 500 that drops the whole selection [FLIP-WHEN-FIXED]', async ({ page }) => {
+    // FLIP-WHEN-FIXED (found 2026-10-12, not filed). InventoryItemServiceImpl.markOrdered and
+    // clearOrdered skip a null item ("if (item == null) continue"), but get() throws for an unknown
+    // id, so the controller answers a bare 500 and the transaction drops the valid items too. Only
+    // reachable by API today (the panel sends ids from the board).
+    test.fail();
+    await openBoard(page);
+    const it = await makeItem(page, 'Ghost', { qty: 1, threshold: 10 });
+    cleanup.push(it.id);
+    const r = await markOrdered(page, [it.id, 987654321], { note: 'with a ghost' });
+    expect(r.status, `mark with an unknown id: ${r.text}`).toBe(200);
+    expect((await boardRow(page, it.name))!.orderedOn, 'the real item is marked').toBe(isoDay(0));
+  });
+
+  test('TC-INVB-62: with the critical banner showing, the board still takes typed input: the banner neither takes nor traps the focus [FLIP-WHEN-FIXED]', async ({ page }) => {
+    // FLIP-WHEN-FIXED (found 2026-10-12, not filed: Casey decides). The banner is a Carbon
+    // ActionableNotification (role alertdialog, focus sentinels, hasFocus on by default). It takes
+    // the focus when the board opens and pulls it back from everywhere else: a click in Search
+    // leaves the focus on "Review and mark as ordered", typed text never arrives, Tab cycles inside
+    // the banner, and the Log usage, Receive stock and Edit item dialogs and the Catalog search take
+    // no typing either (the guards TC-INVB-05, 06, 20 to 27 and 32 go red for this reason alone:
+    // with the banner hidden they pass). Seen 3 of 3 on develop a4200e2d. The banner shows whenever
+    // any item is Reorder now and not marked ordered. inline with hasFocus={false}, or a plain
+    // InlineNotification, would leave the focus alone.
+    test.fail();
+    const { panel, rows } = await openBoardRows(page);
+    expect(unaddressed(rows).length, 'the fixtures make a banner').toBeGreaterThan(0);
+    await expect(page.locator('.board-critical-banner')).toBeVisible();
+    const box = panel.getByPlaceholder(SEARCH);
+    await box.click();
+    await page.keyboard.type(INV.fefo);
+    await expect(box, 'typed text reaches Search').toHaveValue(INV.fefo);
+    await expect(itemRow(panel, INV.building), 'and filters the board').toHaveCount(0);
+    expect(await page.evaluate(() => !!document.activeElement?.closest('.board-critical-banner')), 'the focus is not held in the banner').toBe(false);
+  });
+
+  test('TC-INVB-63: the note given with a mark (requisition or PO reference) can be read on the board [FLIP-WHEN-FIXED]', async ({ page }) => {
+    // FLIP-WHEN-FIXED (found 2026-10-12, not filed). The board passes the note as the On order
+    // Tag's title, but Carbon's Tag puts its own empty title on the label and drops the prop, so the
+    // note shows nowhere: not on the row, not in the suggestions panel, not in the CSV export. It is
+    // stored (GET /inventory/board returns orderNote) and only the API can read it back.
+    test.fail();
+    await openBoard(page);
+    const it = await makeItem(page, 'Note', { qty: 1, threshold: 10 });
+    cleanup.push(it.id);
+    expect((await markOrdered(page, [it.id], { note: 'QA PO-5512', expectedDate: isoDay(9) })).status).toBe(200);
+    expect((await boardRow(page, it.name))!.orderNote, 'the note is stored').toBe('QA PO-5512');
+    const panel = await openBoard(page);
+    const row = itemRow(panel, it.name);
+    await expect(row.getByText(/^On order/)).toBeVisible();
+    const shown = await row.evaluate((el, n) => el.outerHTML.includes(n), 'QA PO-5512');
+    expect(shown, 'the note is on the row (text, title or tooltip)').toBe(true);
   });
 });

@@ -409,7 +409,7 @@ For screens not in the confirmed URL table, try these patterns in order:
 **Pathology:** `/PathologyDashboard`, `/ImmunohistochemistryDashboard`, `/CytologyDashboard`
 **Analyzers:** `/analyzers`, `/analyzers/errors`, `/analyzers/types`
 **EQA:** `/EQADistribution`, `/EQAManagement`, `/EQAParticipants`, `/EQAResults`
-**Inventory:** `/inventory` (Items board + Catalog + Reports tabs; the Dashboard tab was removed by OGC-438 #4358, see `inventory-board.md`)
+**Inventory:** `/inventory` (Items board with reorder suggestions, mark as ordered and the critical banner, + Catalog + Reports tabs; the Dashboard tab was removed by OGC-438 #4358, see `inventory-board.md`)
 **Alerts:** `/Alerts`
 **Orders:** `/ElectronicOrders`, `/SampleBatchEntrySetup`, `/PrintBarcode`
 **Storage:** `/Storage`, `/Storage/samples`

@@ -1,8 +1,9 @@
 /**
  * helpers/inventory-fixtures.ts
  *
- * Data for the Inventory items board (OGC-438, OpenELIS-Global-2 #4356 to #4358) and the API
- * calls the board specs make. Written 2026-10-11 against local develop (images 2026-10-11 12:13 UTC).
+ * Data for the Inventory items board (OGC-438, OpenELIS-Global-2 #4356 to #4359) and the API
+ * calls the board specs make. Written 2026-10-11 against local develop (images 2026-10-11 12:13 UTC);
+ * ordering state (#4359, mark-ordered / clear-ordered) added 2026-10-12.
  *
  * TWO KINDS OF FIXTURE
  *
@@ -73,6 +74,8 @@ export interface BoardRow {
   basisDate: string | null; stale: boolean; runOutEarly: string | null; runOutLate: string | null;
   leadTimeDays: number; leadTimeTier: 'SET' | 'OBSERVED' | 'DEFAULT'; orderByDate: string | null;
   trendPercent: number | null; status: 'REORDER_NOW' | 'REORDER_SOON' | 'ADEQUATE' | 'BUILDING_DATA';
+  /** #4359: the day the item was first marked ordered, and the note and date given with the mark. */
+  orderedOn: string | null; orderExpectedDate: string | null; orderNote: string | null;
 }
 
 export interface Lot {
@@ -98,7 +101,12 @@ export function isoDay(days = 0): string {
 export async function board(page: Page): Promise<BoardRow[]> {
   const r = await api(page, 'GET', '/inventory/board');
   expect(r.status, `GET /inventory/board: ${r.text}`).toBe(200);
-  return list(r.body) as BoardRow[];
+  return normalizeBoard(list(r.body));
+}
+
+/** The board leaves null fields out of its JSON: give the ordering fields an explicit null. */
+export function normalizeBoard(rows: any[]): BoardRow[] {
+  return rows.map((r) => ({ orderedOn: null, orderExpectedDate: null, orderNote: null, ...r })) as BoardRow[];
 }
 
 export async function boardRow(page: Page, name: string): Promise<BoardRow | undefined> {
@@ -152,6 +160,19 @@ export async function receiveLot(page: Page, itemId: number, lot: { number: stri
 /** POST /inventory/management/consume: the Log usage path (FEFO over PASSED, unexpired lots). */
 export async function consume(page: Page, itemId: number, quantity: number): Promise<ApiResult> {
   return api(page, 'POST', '/inventory/management/consume', { itemId: String(itemId), quantity });
+}
+
+/**
+ * POST /inventory/items/mark-ordered (#4359). Records that an order was placed (OpenELIS places
+ * none). Re-marking keeps the first stamp and replaces the note and expected date.
+ */
+export async function markOrdered(page: Page, itemIds: number[], opts: { note?: string | null; expectedDate?: string | null } = {}): Promise<ApiResult> {
+  return api(page, 'POST', '/inventory/items/mark-ordered', { itemIds, note: opts.note ?? null, expectedDate: opts.expectedDate ?? null });
+}
+
+/** POST /inventory/items/clear-ordered (#4359): "Not ordered after all". */
+export async function clearOrdered(page: Page, itemIds: number[]): Promise<ApiResult> {
+  return api(page, 'POST', '/inventory/items/clear-ordered', { itemIds });
 }
 
 export async function deactivate(page: Page, itemId: number): Promise<void> {
@@ -245,15 +266,20 @@ r AS (SELECT u.id, row_number() OVER (PARTITION BY u.inventory_item_id ORDER BY 
 UPDATE clinlims.inventory_usage u SET usage_date = date_trunc('day', now()) - ((r.rn - 1) * interval '1 day') + interval '1 hour'
 FROM r WHERE u.id = r.id AND r.rn <= 30`;
 
-/** Re-date the history fixtures' usage. Returns what psql said, or null when no DB is reachable. */
-export function redateHistory(): string | null {
+/** Run one SQL statement in the stack's database. Returns what psql said, or null when no DB is reachable. */
+export function dbSql(sql: string): string | null {
   if (!INV_DB) return null;
   try {
-    return execFileSync('docker', ['exec', '-i', INV_DB, 'psql', '-U', 'clinlims', '-d', 'clinlims', '-At', '-c', REDATE_SQL],
+    return execFileSync('docker', ['exec', '-i', INV_DB, 'psql', '-U', 'clinlims', '-d', 'clinlims', '-At', '-c', sql],
       { encoding: 'utf8', env: { ...process.env, PATH: `/opt/homebrew/bin:/usr/local/bin:${process.env.PATH}` } }).trim();
   } catch (e) {
     return `DB-ERROR ${(e as Error).message.split('\n').slice(0, 2).join(' ')}`;
   }
+}
+
+/** Re-date the history fixtures' usage. Returns what psql said, or null when no DB is reachable. */
+export function redateHistory(): string | null {
+  return dbSql(REDATE_SQL);
 }
 
 /** True once redateHistory() / seed-inventory-history.sh has spread the usage over the window. */

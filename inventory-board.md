@@ -3,6 +3,7 @@
 **Spec:** `tests/inventory-board.spec.ts` (helper `helpers/inventory-fixtures.ts`, SQL in `scripts/seed-inventory-history.sh`)
 **Written:** 2026-10-11 against local develop df503f65 (images 2026-10-11 12:13 UTC).
 **Scope (Casey, 2026-10-11):** what is merged now, parts 1 to 3 of the 17-part OGC-438 stack: the run-out projection endpoint (OpenELIS-Global-2 #4356), the Items board (#4357), and the board's row actions with the dashboard removed (#4358). Extend as later parts land.
+**Part 4 added 2026-10-12** against develop a4200e2d (images 2026-10-12 06:09 UTC): #4359, reorder suggestions, mark as ordered, the critical banner (TC-INVB-50 to 62).
 **Replaces:** `tests/inventory.spec.ts` (TC-INV-*) and `tests/inventory-happy-path.spec.ts` (TC-INVHP-*), which tested the retired dashboard. Catalog and report cases were carried over under new ids; dashboard-only cases are retired (see the end of this file).
 
 Kind: **Guard** passes today and protects it. **Tripwire** asserts the intended behaviour, carries `test.fail()` while the product differs, and goes red the day it is fixed (remove the marker then).
@@ -72,6 +73,27 @@ Every case that acts on a row makes its own throwaway item `QA INV <tag> <stamp>
 | TC-INVB-40 | The Reports tab offers the stock-levels and low-stock reports and an enabled Generate (was TC-INV-08) | Guard | carried over |
 | TC-INVB-41 | Generate on the Stock Levels report downloads a non-empty PDF and says so | Guard | Reports tab |
 | TC-INVB-42 | The downloaded report keeps its file extension (today it saves as `stock-levels.pdf_`) | Tripwire | found 2026-10-11 |
+
+## Ordering (#4359)
+
+"Critical" in #4359 is the board's own Reorder now, not yet marked ordered: items have no criticality field. A suggestion is a row the board badges Reorder now or Reorder soon. Marking records that an order was placed; OpenELIS places none. Every case uses its own throwaway items; the banner and panel are compared with the board response the page itself loaded.
+
+| ID | Case | Kind | Source |
+| --- | --- | --- | --- |
+| TC-INVB-50 | Reorder suggestions lists exactly the rows badged Reorder now or Reorder soon, and the toolbar button counts them | Guard | #4359 |
+| TC-INVB-51 | The critical banner names the first five unaddressed Reorder now items in board order, counts the rest ("and N more"), and its action opens the suggestions | Guard | #4359 |
+| TC-INVB-52 | Mark as ordered with a note and expected date: one request with the item, note and date; "1 item marked as ordered."; the row keeps Reorder now and gains "On order · date"; the item leaves the banner and stays in the suggestions, tagged On order | Guard | #4359 |
+| TC-INVB-53 | Not ordered after all clears the mark, note and date, and the item is critical again; it is disabled when nothing selected is on order | Guard | #4359 |
+| TC-INVB-54 | Marking a selection is one request for every selected item, and each is stamped | Guard | #4359 |
+| TC-INVB-55 | Re-marking keeps the first order stamp and replaces the note and date (needs the DB to age the stamp; skips on testing) | Guard | #4359 |
+| TC-INVB-56 | When the mark fails (a bare 500, what the controller sends) the panel stays open with the error, no success message, nothing stamped | Guard | #4359 |
+| TC-INVB-57 | A malformed expected date is refused with 400 and stamps nothing; clearing an item never marked changes nothing | Guard | #4359 |
+| TC-INVB-58 | Export CSV downloads reorder-suggestions.csv, one line per suggestion, order-by as an ISO date | Guard | #4359 |
+| TC-INVB-59 | With nothing to order (board response rewritten to all Adequate) the panel says "Nothing needs ordering right now.", offers no mark, and there is no banner or count | Guard | #4359 |
+| TC-INVB-60 | An item restocked after its mark and short again is critical again (today the mark is never closed, cannot be cleared once the item leaves the suggestions, and hides the new shortage) | Tripwire | found 2026-10-12, Casey to rule which event closes a mark |
+| TC-INVB-61 | An id that is not an item is skipped, not a 500 that drops the whole selection (the service means to skip; get() throws) | Tripwire | found 2026-10-12 |
+| TC-INVB-62 | With the critical banner showing, the board still takes typed input. Today the banner (Carbon ActionableNotification, role alertdialog) takes the focus on load and traps it: Search, the Log usage, Receive stock and Edit item dialogs and the Catalog search take no typing, which is why TC-INVB-05, 06, 20 to 27 and 32 are red on a4200e2d (they pass with the banner hidden) | Tripwire | found 2026-10-12 |
+| TC-INVB-63 | The note given with a mark (requisition or PO reference) can be read on the board. Today it shows nowhere: Carbon's Tag drops the title it is passed, and the panel and CSV leave it out; only the API returns it | Tripwire | found 2026-10-12 |
 
 ## Retired 2026-10-11
 
