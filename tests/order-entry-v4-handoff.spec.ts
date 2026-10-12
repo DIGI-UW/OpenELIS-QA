@@ -16,6 +16,7 @@ import { test, expect, Page } from '@playwright/test';
 import {
   API, ENTRY_POST, ENTER, apiJson, footer, newOrderToPrepare, openEnter, openPrepare, orderSearch,
   pickPatient, pickSampleAndTest, pickSite, rawKeysOnScreen, saveStep, seedPatient, toContinue, fillCollection, currentLocale, setLocale,
+  sampleType,
 } from '../helpers/order-entry-v4';
 
 test.setTimeout(240_000);
@@ -334,7 +335,7 @@ test.describe('R-FLOW and R-UX', () => {
     const r = page.waitForResponse((x) => /\/rest\/qa-checklist$/.test(new URL(x.url()).pathname) && x.request().method() === 'POST');
     await release.click();
     expect(await (await r).text(), 'the server refuses the release without a reason').toContain('reasonRequired');
-    await expect(page.locator('label[for="release-note"]'), 'a reason field appears').toHaveText(/Reason for releasing with unanswered items/, { timeout: 15_000 });
+    await expect(page.locator('label[for="release-note"]'), 'a reason field appears').toHaveText(/^Reason for releasing (with unanswered items|before every sample is accepted)$/, { timeout: 15_000 }); // reworded by OGC-1443 item 6
     expect((await dashRow(page, o.lab)).complete, 'not released without the reason').toBe(false);
   });
 
@@ -406,7 +407,8 @@ test.describe('Regression gate (acceptance script G1 to G11)', () => {
     expect(id, 'the order has an id').toBeTruthy();
     const requests = await apiJson<any[]>(page, `/rest/sample-type-requests/sample/${id}`);
     const got = requests.map((r: any) => `${r.typeOfSampleName}:${r.requestedTests}`).sort();
-    const want = [`Serum:${o.testIds[0]}`, `Urine:${o.testIds[1]}`].sort();
+    const urine = (await sampleType(page, 'Urine')).value; // "Urines" on stock demo data
+    const want = [`Serum:${o.testIds[0]}`, `${urine}:${o.testIds[1]}`].sort();
     expect(got, 'one request per sample, each with exactly the test ticked for it').toEqual(want);
   });
 

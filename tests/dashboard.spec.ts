@@ -88,10 +88,10 @@ test.describe('Dashboard KPIs (TC-DASH)', () => {
     expect(bodyLen, 'Dashboard must render content (not blank)').toBeGreaterThan(500);
 
     // At least one KPI metric must be visible
-    // REWORKED 2026-10-08: the KPI tiles are plain divs (label h5, value h2); the class-name guess
+    // REWORKED 2026-10-08: the KPI tiles are plain divs (label h5, value h2 until #4681, now a paragraph); the class-name guess
     // landed on hidden header elements first, so a visible dashboard read as none.
-    const hasKPI = await page.locator('main h2').filter({ hasText: /^\d+$/ }).first()
-      .isVisible({ timeout: 15000 }).catch(() => false); // each KPI tile shows its value as an h2
+    const hasKPI = await page.locator('main .dashboard-tile__value').filter({ hasText: /^\d+$/ }).first()
+      .isVisible({ timeout: 15000 }).catch(() => false); // each KPI tile shows its value in .dashboard-tile__value (a paragraph since OGC-1448, #4681)
     expect(hasKPI, 'Dashboard must show at least one KPI or stat card').toBe(true);
   });
 });
