@@ -70,11 +70,25 @@ export async function pickPatient(page: Page, p: SeededPatient) {
   await expect(page.getByRole('link', { name: 'Select or create the patient' }), 'the patient is on the order').toHaveCount(0, { timeout: 15_000 });
 }
 
-export async function sampleTypeId(page: Page, name: string): Promise<string> {
+/**
+ * Other names a sample type goes by on the test servers. The stock demo data calls urine
+ * "Urines"; a seeded "Urine" exists on some stacks but is only offered when a lab unit holding
+ * its tests is in the user's list (on local develop 2026-10-12 it was not). The case only
+ * needs a second primary sample type, so either name will do.
+ */
+const SAMPLE_TYPE_FALLBACKS: Record<string, string[]> = { urine: ['Urines'] };
+
+/** The sample type offered to this user under name, or under one of its fallback names. */
+export async function sampleType(page: Page, name: string): Promise<{ id: string; value: string }> {
   const types = await apiJson<{ id: string; value: string }[]>(page, '/rest/user-sample-types');
-  const t = types.find((x) => x.value.toLowerCase() === name.toLowerCase());
-  expect(t, `sample type ${name} exists`).toBeTruthy();
-  return String(t!.id);
+  const names = [name, ...(SAMPLE_TYPE_FALLBACKS[name.toLowerCase()] ?? [])];
+  const t = names.map((n) => types.find((x) => x.value.toLowerCase() === n.toLowerCase())).find(Boolean);
+  expect(t, `sample type ${names.join(' or ')} is offered to this user`).toBeTruthy();
+  return { id: String(t!.id), value: t!.value };
+}
+
+export async function sampleTypeId(page: Page, name: string): Promise<string> {
+  return (await sampleType(page, name)).id;
 }
 
 /** Chooses the sample type on sample card n and ticks the test whose label starts with testName (or the first test). */

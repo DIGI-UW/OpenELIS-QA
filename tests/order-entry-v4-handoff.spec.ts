@@ -16,6 +16,7 @@ import { test, expect, Page } from '@playwright/test';
 import {
   API, ENTRY_POST, ENTER, apiJson, footer, newOrderToPrepare, openEnter, openPrepare, orderSearch,
   pickPatient, pickSampleAndTest, pickSite, rawKeysOnScreen, saveStep, seedPatient, toContinue, fillCollection, currentLocale, setLocale,
+  sampleType,
 } from '../helpers/order-entry-v4';
 
 test.setTimeout(240_000);
@@ -406,7 +407,8 @@ test.describe('Regression gate (acceptance script G1 to G11)', () => {
     expect(id, 'the order has an id').toBeTruthy();
     const requests = await apiJson<any[]>(page, `/rest/sample-type-requests/sample/${id}`);
     const got = requests.map((r: any) => `${r.typeOfSampleName}:${r.requestedTests}`).sort();
-    const want = [`Serum:${o.testIds[0]}`, `Urine:${o.testIds[1]}`].sort();
+    const urine = (await sampleType(page, 'Urine')).value; // "Urines" on stock demo data
+    const want = [`Serum:${o.testIds[0]}`, `${urine}:${o.testIds[1]}`].sort();
     expect(got, 'one request per sample, each with exactly the test ticked for it').toEqual(want);
   });
 
