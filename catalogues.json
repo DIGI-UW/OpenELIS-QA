@@ -75,6 +75,11 @@
       "file": "test-catalog-chaos-full.md",
       "area": "Test Catalog: full chaos (non-happy path) across every editor section, panels, create/activate, sample types, lab units, CSV import, list, permissions and session",
       "note": "Feature suite, 2026-10-08, local develop. Five spec files test-catalog-chaos-{results,rules,links,admin,access}.spec.ts; extends test-catalog-chaos.md (Basic Info, Ranges)."
+    },
+    {
+      "file": "app-shell.md",
+      "area": "App shell after OGC-1448 (#4681): Logout behind a proxy, sortable column names, one h1 per screen",
+      "note": "Feature suite, 2026-10-12, local develop. Spec: tests/app-shell.spec.ts."
     }
   ],
   "notCatalogues": [
