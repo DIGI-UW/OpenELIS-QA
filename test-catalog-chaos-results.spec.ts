@@ -191,12 +191,19 @@ test.describe('Test Catalog chaos: Sample & Results (TC-CX-SR)', () => {
     }
   });
 
-  test('TC-CX-SR-12: a save with no components at all is refused (a test needs something to result)', async ({ page }) => {
-
-    test.fail(true, 'TRIPWIRE Q: components [] is accepted (200) and leaves the test with nothing to result; Casey to rule');
+  test('TC-CX-SR-12: an inactive test may be saved with no components while it is being set up (Casey 2026-10-11)', async ({ page }) => {
     const t = await seedTest(page, 'SR12');
     const w = await putSampleResults(page, t.id, []);
-    observe('PUT sample-results with components []', w);
+    observe('PUT sample-results with components [] on an inactive test', w);
+    expect(w.status, w.text.slice(0, 160)).toBe(200);
+  });
+
+  test('TC-CX-SR-12b: an active test cannot be saved with no components (Casey 2026-10-11: refuse only when active)', async ({ page }) => {
+
+    test.fail(true, 'TRIPWIRE Q (ruled 2026-10-11, OGC-1458): components [] is accepted (200) on an active test, which is then left with nothing to result');
+    const t = await seedTest(page, 'SR12b', { activate: true });
+    const w = await putSampleResults(page, t.id, []);
+    observe('PUT sample-results with components [] on an active test', w);
     expect(w.status, 'refused').toBe(422);
     expect((await sampleResultsOf(page, t.id)).components.length, 'the component is still there').toBeGreaterThan(0);
   });
@@ -216,9 +223,9 @@ test.describe('Test Catalog chaos: Sample & Results (TC-CX-SR)', () => {
     expect(a.status === 409 || !after.includes('QAX13'), `A was refused as stale, or B's removal stands (codes now ${after})`).toBe(true);
   });
 
-  test('TC-CX-SR-14: the copy-from API replaces the target configuration (Casey 2026-09-23: copy replaces)', async ({ page }) => {
+  test('TC-CX-SR-14: the copy-from API is retired, so an API client cannot merge one configuration into another (Casey 2026-10-11)', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE Q: POST copy-from merges (target-only component kept); the UI no longer calls it. Retire or make it replace');
+    test.fail(true, 'TRIPWIRE Q (ruled 2026-10-11, OGC-1458): POST copy-from still answers 200 and merges (the target-only component is kept); the UI no longer calls it, so it is to be retired');
     const src = await seedTest(page, 'SR14src');
     await makeCoded(page, src.id);
     const tgt = await seedTest(page, 'SR14tgt');
@@ -226,11 +233,11 @@ test.describe('Test Catalog chaos: Sample & Results (TC-CX-SR)', () => {
     expect((await putSampleResults(page, tgt.id, [component({ id: p.id, label: p.label }),
       component({ code: 'QAX14', label: 'QA only on target', isPrimary: false, displayOrder: 2 })])).status).toBe(200);
     const w = await apiWrite(page, 'POST', `${TC}/tests/${tgt.id}/sample-results/copy-from/${src.id}`);
-    expect(w.status, w.text.slice(0, 160)).toBe(200);
+    observe('POST copy-from', w);
     const after = (await sampleResultsOf(page, tgt.id)).components;
     test.info().annotations.push({ type: 'observed', description: `target after copy: ${after.map((c: any) => `${c.code}:${c.resultType}`).join(', ')}` });
-    expect(after.map((c: any) => c.code), 'the target-only component is gone').not.toContain('QAX14');
-    expect(after.find((c: any) => c.isPrimary)?.resultType, "the primary now has the source's result type").toBe('D');
+    expect([404, 405, 410], `the endpoint is gone (got ${w.status} ${w.text.slice(0, 120)})`).toContain(w.status);
+    expect(after.map((c: any) => c.code), 'the target is unchanged').toContain('QAX14');
   });
 
   test('TC-CX-SR-15: lifecycle: add an option, rename its normal flag, remove it; each step reads back', async ({ page }) => {
@@ -278,7 +285,7 @@ test.describe('Test Catalog chaos: Terminology (TC-CX-TM)', () => {
 
   test('TC-CX-TM-03: a LOINC code typed with stray spaces is stored trimmed, so routing and the duplicate check see it', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE Q: LOINC codes are stored with surrounding spaces (exact-match routing and the duplicate check miss them)');
+    test.fail(true, 'TRIPWIRE Q (ruled 2026-10-11, OGC-1465: trim on save): LOINC codes are stored with surrounding spaces (exact-match routing and the duplicate check miss them)');
     const t = await seedTest(page, 'TM3');
     const w = await putTerm(page, t.id, [{ source: 'LOINC', code: ' 2345-7 ', relationship: 'SAME_AS' }]);
     expect(w.status, w.text.slice(0, 160)).toBe(200);
@@ -519,7 +526,7 @@ test.describe('Test Catalog chaos: Accreditation (TC-CX-AC)', () => {
 
   test('TC-CX-AC-02: an inactive accrediting body cannot be used to enroll a test through the API', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE Q: an inactive accrediting body can be used through the API (201)');
+    test.fail(true, 'TRIPWIRE Q (ruled 2026-10-11, OGC-1465: refuse with 400): an inactive accrediting body can be used through the API (201)');
     const t = await seedTest(page, 'AC2');
     const body = await qaBody(page, 'A2', false);
     const e = await apiWrite(page, 'POST', '/rest/accreditation/enrollments', { testId: t.id, accreditingBodyId: body.id });
