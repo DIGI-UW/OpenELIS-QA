@@ -334,7 +334,7 @@ test.describe('R-FLOW and R-UX', () => {
     const r = page.waitForResponse((x) => /\/rest\/qa-checklist$/.test(new URL(x.url()).pathname) && x.request().method() === 'POST');
     await release.click();
     expect(await (await r).text(), 'the server refuses the release without a reason').toContain('reasonRequired');
-    await expect(page.locator('label[for="release-note"]'), 'a reason field appears').toHaveText(/Reason for releasing with unanswered items/, { timeout: 15_000 });
+    await expect(page.locator('label[for="release-note"]'), 'a reason field appears').toHaveText(/^Reason for releasing (with unanswered items|before every sample is accepted)$/, { timeout: 15_000 }); // reworded by OGC-1443 item 6
     expect((await dashRow(page, o.lab)).complete, 'not released without the reason').toBe(false);
   });
 

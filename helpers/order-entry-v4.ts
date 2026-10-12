@@ -201,9 +201,12 @@ export function pdfPageCount(buf: Buffer): number {
   return (text.match(/\/Type\s*\/Page(?![s\w])/g) || []).length;
 }
 
-/** Picks the first option in the Refer Out "Referring Lab" combobox inside scope; returns its name. */
+/**
+ * Picks the first option in the Refer Out reference lab combobox inside scope; returns its name.
+ * The label was "Referring Lab" until OGC-1443 item 4 renamed it "Reference lab" (seen 2026-10-12).
+ */
 export async function pickReferenceLab(page: Page, scope = page.locator('main')): Promise<string> {
-  const lab = scope.getByRole('combobox', { name: 'Referring Lab' });
+  const lab = scope.getByRole('combobox', { name: /^(Reference lab|Referring Lab)$/i });
   await lab.click();
   const opt = page.getByRole('listbox').getByRole('option').first();
   await expect(opt, 'reference laboratories are offered').toBeVisible({ timeout: 15_000 });
