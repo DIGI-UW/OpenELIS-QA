@@ -1,6 +1,6 @@
 {
-  "recorded": "2026-10-12",
-  "total": 1556,
+  "recorded": "2026-10-13",
+  "total": 1610,
   "hollowTotal": 179,
   "files": {
     "tests/a11y-axe-scan.spec.ts": 0,
@@ -142,8 +142,11 @@
     "tests/electronic-orders.spec.ts": 6,
     "tests/electronic-signature.spec.ts": 3,
     "tests/envseed.spec.ts": 0,
+    "tests/eqa-inhouse-deep.spec.ts": 0,
+    "tests/eqa-participant-deep.spec.ts": 0,
     "tests/eqa-participant-happy-path.spec.ts": 0,
     "tests/eqa-prereq.spec.ts": 1,
+    "tests/eqa-provider-deep.spec.ts": 0,
     "tests/eqa-workflow.spec.ts": 4,
     "tests/eqaflip.spec.ts": 1,
     "tests/esignature-workflow.spec.ts": 0,

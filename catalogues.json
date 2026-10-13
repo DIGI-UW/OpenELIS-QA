@@ -80,6 +80,11 @@
       "file": "app-shell.md",
       "area": "App shell after OGC-1448 (#4681): Logout behind a proxy, sortable column names, one h1 per screen",
       "note": "Feature suite, 2026-10-12, local develop. Spec: tests/app-shell.spec.ts."
+    },
+    {
+      "file": "eqa-deep.md",
+      "area": "EQA, deep: provider rounds and scoring, participant enrollment to follow-up, in-house blinding and analyst competency, against ISO/IEC 17043, ISO 13528, CLIA 493 and SLIPTA 8.21",
+      "note": "Feature suite, 2026-10-12, local develop. Specs: tests/eqa-provider-deep.spec.ts, tests/eqa-participant-deep.spec.ts, tests/eqa-inhouse-deep.spec.ts."
     }
   ],
   "notCatalogues": [
