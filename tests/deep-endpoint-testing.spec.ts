@@ -984,8 +984,10 @@ test.describe('Panel creation write path (2026-09-22)', () => {
       const B = '/api/OpenELIS-Global/rest/test-catalog';
       // Seed a panel that HAS a clinical member test, so the guard has something
       // to refuse. Nothing here depends on the instance's existing panels.
-      const tests = await (await fetch(`${B}/tests?domain=CLINICAL&pageSize=1`, { headers: H })).json();
-      const member = tests?.rows?.[0] ?? null;
+      // An active one: since OGC-1456 a panel refuses inactive members (422 tests.inactive), and QA
+      // runs leave inactive clinical tests near the top of the list.
+      const tests = await (await fetch(`${B}/tests?domain=CLINICAL&pageSize=100`, { headers: H })).json();
+      const member = (tests?.rows ?? []).find((t: { active?: boolean }) => t?.active === true) ?? null;
       const testId = member?.testId ?? null;
       // Both names stay inside PANEL_NAME_MAX_LENGTH (20), so the refusal under
       // test is the domain guard and not name.tooLong.
@@ -1022,8 +1024,10 @@ test.describe('Panel creation write path (2026-09-22)', () => {
         moveStatus: move?.status ?? 0,
         refusal: moveBody?.refusal ?? null,
         conflictDomain: moveBody?.domainConflict?.domain ?? null,
-        conflictPanelId: moveBody?.domainConflict?.panelId == null
-          ? null : String(moveBody.domainConflict.panelId),
+        // The basic-info refusal is the panel itself (PanelOption, its id on top) with the conflict;
+        // the test-side refusal (PUT test panels) names the panel inside domainConflict instead.
+        conflictPanelId: (moveBody?.domainConflict?.panelId ?? moveBody?.id) == null
+          ? null : String(moveBody?.domainConflict?.panelId ?? moveBody.id),
         offenderIds: offenders.map((t) => String(t.testId)),
         offendersNamed: offenders.every((t) => typeof t.name === 'string' && t.name.length > 0),
         offenderDomains: offenders.map((t) => t.domain),
