@@ -1,6 +1,6 @@
 {
   "recorded": "2026-10-13",
-  "total": 1610,
+  "total": 1630,
   "hollowTotal": 179,
   "files": {
     "tests/a11y-axe-scan.spec.ts": 0,
@@ -220,6 +220,7 @@
     "tests/referral-workflow.spec.ts": 3,
     "tests/reflex-testing-ui.spec.ts": 0,
     "tests/reflex-testing.spec.ts": 1,
+    "tests/reports-openpdf.spec.ts": 0,
     "tests/reports-output-correctness.spec.ts": 0,
     "tests/reports.spec.ts": 16,
     "tests/result-type-coverage.spec.ts": 0,

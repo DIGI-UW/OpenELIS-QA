@@ -85,6 +85,11 @@
       "file": "eqa-deep.md",
       "area": "EQA, deep: provider rounds and scoring, participant enrollment to follow-up, in-house blinding and analyst competency, against ISO/IEC 17043, ISO 13528, CLIA 493 and SLIPTA 8.21",
       "note": "Feature suite, 2026-10-12, local develop. Specs: tests/eqa-provider-deep.spec.ts, tests/eqa-participant-deep.spec.ts, tests/eqa-inhouse-deep.spec.ts."
+    },
+    {
+      "file": "reports-openpdf-test-cases.md",
+      "area": "Reports after the JasperReports to OpenPDF port (OpenELIS-Global-2 #4531 to #4552, #4649)",
+      "note": "Feature suite, 2026-10-08. Spec: tests/reports-openpdf.spec.ts (helper helpers/report-pdf.ts)."
     }
   ],
   "notCatalogues": [
