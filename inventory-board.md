@@ -3,7 +3,8 @@
 **Spec:** `tests/inventory-board.spec.ts` (helper `helpers/inventory-fixtures.ts`, SQL in `scripts/seed-inventory-history.sh`)
 **Written:** 2026-10-11 against local develop df503f65 (images 2026-10-11 12:13 UTC).
 **Scope (Casey, 2026-10-11):** what is merged now, parts 1 to 3 of the 17-part OGC-438 stack: the run-out projection endpoint (OpenELIS-Global-2 #4356), the Items board (#4357), and the board's row actions with the dashboard removed (#4358). Extend as later parts land.
-**Part 4 added 2026-10-12** against develop a4200e2d (images 2026-10-12 06:09 UTC): #4359, reorder suggestions, mark as ordered, the critical banner (TC-INVB-50 to 62).
+**Part 4 added 2026-10-12** against develop a4200e2d (images 2026-10-12 06:09 UTC): #4359, reorder suggestions, mark as ordered, the critical banner (TC-INVB-50 to 63).
+**Parts 5 to 10 taken in 2026-10-13** against develop b5943f5a (images 2026-10-13 14:33 UTC): #4360 learned lead time, #4361 tags instead of item type, #4362 tag directory and filter, #4363 items defined on the board and the Catalog tab retired, #4364 count mode, #4365 receive from a row and the product barcode. TC-INVB-30 to 32 rewritten on the board, TC-INVB-33 retired, TC-INVB-35 to 37 new, TC-INVB-60 and 62 flipped to guards.
 **Replaces:** `tests/inventory.spec.ts` (TC-INV-*) and `tests/inventory-happy-path.spec.ts` (TC-INVHP-*), which tested the retired dashboard. Catalog and report cases were carried over under new ids; dashboard-only cases are retired (see the end of this file).
 
 Kind: **Guard** passes today and protects it. **Tripwire** asserts the intended behaviour, carries `test.fail()` while the product differs, and goes red the day it is fixed (remove the marker then).
@@ -30,7 +31,7 @@ Every case that acts on a row makes its own throwaway item `QA INV <tag> <stamp>
 
 | ID | Case | Kind | Source |
 | --- | --- | --- | --- |
-| TC-INVB-00 | Canary: Inventory Management opens on the Items tab (heading Inventory Items, tabs Items / Catalog / Reports) with columns Item, On hand, Usage trend, Runs out, Order by, Status, Actions; GET /inventory/board serves every fixture | Guard | #4357 |
+| TC-INVB-00 | Canary: Inventory Management opens on the Items tab (heading Inventory Items, tabs Items / Reports, no Catalog tab since #4363) with columns Item, On hand, Usage trend, Runs out, Order by, Status, Last count, Actions; GET /inventory/board serves every read-only fixture | Canary | #4357, #4363, #4364 |
 | TC-INVB-01 | One row per active item and none for an inactive item; the screen lists exactly what the endpoint serves, in its order | Guard | #4357 |
 | TC-INVB-02 | On hand counts usable and awaiting-QC stock only, never an expired or failed-QC lot (QA INV FEFO = 30) | Guard | #4356 countsAsAvailableStock |
 | TC-INVB-03 | Without usage history the status follows the threshold: Out of stock, at or below threshold (Reorder now), above it (Building data), with "Too few days of use to project a run-out date" | Guard | #4356 |
@@ -58,21 +59,23 @@ Every case that acts on a row makes its own throwaway item `QA INV <tag> <stamp>
 | TC-INVB-23 | Adjust Quantity corrects a count as an ADJUSTMENT and writes no usage, so the projection ignores it | Guard | #4358 |
 | TC-INVB-24 | Update QC Status to Failed (with the required note) takes the lot out of on hand and out of use-first and flags it for disposal | Guard | #4358 |
 | TC-INVB-25 | Dispose Lot sets DISPOSED, logs DISPOSAL, drops the lot from on hand; the item turns Reorder now | Guard | #4358 |
-| TC-INVB-26 | Receive stock from a row: lot number, quantity, expiry (as the day picked) and storage location are stored, QC waits as Pending, on hand rises | Guard | #4358 |
+| TC-INVB-26 | Receive stock from a row: the row's item is preselected; quantity, lot number and expiry (shown because the item tracks lots; stored as the day picked) and storage location are stored, QC waits as Pending, on hand rises | Guard | #4358, #4365 |
 | TC-INVB-27 | Edit item details saves a new threshold and the row's status follows it | Guard | #4358 |
 
 ## Catalog and Reports tabs
 
 | ID | Case | Kind | Source |
 | --- | --- | --- | --- |
-| TC-INVB-30 | Add Catalog Item creates an active item listed in the catalog and on the board (was TC-INV-04, TC-INV-06) | Guard | carried over |
-| TC-INVB-31 | A Reagent cannot be saved without its stability after opening; nothing is sent (was TC-INV-05) | Guard | carried over |
-| TC-INVB-32 | The catalog Item Type filter lists only items of that type (was TC-INV-07) | Guard | carried over |
-| TC-INVB-33 | The catalog Action column is labelled, not a raw i18n key (was TC-INV-03, BUG-61 fixed) | Guard | carried over |
+| TC-INVB-30 | New item on the board defines an active item; a typed tag is folded to the directory's spelling (reagent -> Reagent); the board says it was defined and lists it (was the Catalog tab's Add Catalog Item, TC-INV-04/06) | Guard | #4361, #4363 |
+| TC-INVB-31 | New item refuses a blank name and sends nothing (the stability-after-opening rule went with item types in #4361) | Guard | #4363 |
+| TC-INVB-32 | The board's tag filter shows only items carrying the chosen tag (was the catalog Item Type filter, TC-INV-07) | Guard | #4362 |
 | TC-INVB-34 | A deactivated item leaves the board; activating it brings it back with its stock | Guard | #4357 (active items only) |
+| TC-INVB-35 | Count mode: a counted quantity that differs corrects the lot as one adjustment (no usage), on hand follows, and the row's last count is today | Guard | #4364 |
+| TC-INVB-36 | Receive stock finds the item from its product barcode; the scanner's Enter does not submit; an unknown code is named and offered as a new item | Guard | #4365 |
+| TC-INVB-37 | A lead time set after the item exists is kept and the board shows it as set (it used to stick only at create) | Guard | #4360 |
 | TC-INVB-40 | The Reports tab offers the stock-levels and low-stock reports and an enabled Generate (was TC-INV-08) | Guard | carried over |
 | TC-INVB-41 | Generate on the Stock Levels report downloads a non-empty PDF and says so | Guard | Reports tab |
-| TC-INVB-42 | The downloaded report keeps its file extension (today it saves as `stock-levels.pdf_`) | Tripwire | found 2026-10-11 |
+| TC-INVB-42 | The downloaded report keeps its file extension (today it saves as `stock-levels.pdf_`) | Tripwire | OGC-1489 |
 
 ## Ordering (#4359)
 
@@ -90,10 +93,10 @@ Every case that acts on a row makes its own throwaway item `QA INV <tag> <stamp>
 | TC-INVB-57 | A malformed expected date is refused with 400 and stamps nothing; clearing an item never marked changes nothing | Guard | #4359 |
 | TC-INVB-58 | Export CSV downloads reorder-suggestions.csv, one line per suggestion, order-by as an ISO date | Guard | #4359 |
 | TC-INVB-59 | With nothing to order (board response rewritten to all Adequate) the panel says "Nothing needs ordering right now.", offers no mark, and there is no banner or count | Guard | #4359 |
-| TC-INVB-60 | An item restocked after its mark and short again is critical again (today the mark is never closed, cannot be cleared once the item leaves the suggestions, and hides the new shortage) | Tripwire | found 2026-10-12, Casey to rule which event closes a mark |
-| TC-INVB-61 | An id that is not an item is skipped, not a 500 that drops the whole selection (the service means to skip; get() throws) | Tripwire | found 2026-10-12 |
-| TC-INVB-62 | With the critical banner showing, the board still takes typed input. Today the banner (Carbon ActionableNotification, role alertdialog) takes the focus on load and traps it: Search, the Log usage, Receive stock and Edit item dialogs and the Catalog search take no typing, which is why TC-INVB-05, 06, 20 to 27 and 32 are red on a4200e2d (they pass with the banner hidden) | Tripwire | found 2026-10-12 |
-| TC-INVB-63 | The note given with a mark (requisition or PO reference) can be read on the board. Today it shows nowhere: Carbon's Tag drops the title it is passed, and the panel and CSV leave it out; only the API returns it | Tripwire | found 2026-10-12 |
+| TC-INVB-60 | A receipt closes the On order mark (orderedOn and note cleared), so an item restocked and short again is critical again. Ruled 13 Oct (Casey: the next receipt closes the mark); fixed by #4365 | Guard (flipped 13 Oct) | found 2026-10-12 |
+| TC-INVB-61 | An id that is not an item is skipped, not a 500 that drops the whole selection (the service means to skip; get() throws) | Tripwire | OGC-1489 |
+| TC-INVB-62 | With the critical banner showing, the board still takes typed input and the focus is not held in the banner. Fixed 13 Oct (banner role status); on 12 Oct it trapped the focus 3 of 3 | Guard (flipped 13 Oct) | found 2026-10-12 |
+| TC-INVB-63 | The note given with a mark (requisition or PO reference) can be read on the board. Today it shows nowhere: Carbon's Tag drops the title it is passed, and the panel and CSV leave it out; only the API returns it | Tripwire | OGC-1489 |
 
 ## Retired 2026-10-11
 
@@ -102,6 +105,14 @@ The dashboard (metric tiles, lot-status filter, pagination) was removed by OpenE
 | Old id (TC- prefix dropped so the gate does not count it twice) | What it checked | Now |
 | --- | --- | --- |
 | INV-01 (spec) | Dashboard tab shows 4 KPI cards | retired, no dashboard |
-| INV-02 (spec) | Catalog tab reachable with headers | folded into TC-INVB-33 |
+| INV-02 (spec) | Catalog tab reachable with headers | folded into INVB-33, itself retired 13 Oct (see below) |
 | INV-EXT-01..06 (spec) | API probes (catalog list, dashboard KPIs, write-then-verify, active filter, rapid tab switching, concurrent reads) | KPI probe retired; the rest are covered by TC-INVB-01, 30, 34 |
 | INVHP-01..07 | Happy path through the dashboard tiles, ending with the INV-D1 tripwire (OGC-1421, Done) | replaced by TC-INVB-20 to 26 |
+
+## Retired 2026-10-13
+
+#4363 removed the Catalog tab; items are defined from the board.
+
+| Old id (TC- prefix dropped) | What it checked | Now |
+| --- | --- | --- |
+| INVB-33 | The catalog Action column is labelled, not a raw i18n key | retired with the Catalog tab; the board's column names are checked by TC-INVB-00 |

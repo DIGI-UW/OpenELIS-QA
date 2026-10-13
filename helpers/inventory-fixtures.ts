@@ -69,7 +69,7 @@ export const HISTORY = [
 export const HISTORY_DAYS = 30;
 
 export interface BoardRow {
-  itemId: number; code: string; name: string; itemType: string; units: string;
+  itemId: number; code: string; name: string; itemType: string; tags?: string[]; units: string; trackLots?: boolean; upc?: string; lastCountedOn?: string | null;
   onHand: number; lowStockThreshold: number | null; medianDailyUse: number;
   basisDate: string | null; stale: boolean; runOutEarly: string | null; runOutLate: string | null;
   leadTimeDays: number; leadTimeTier: 'SET' | 'OBSERVED' | 'DEFAULT'; orderByDate: string | null;
@@ -131,12 +131,17 @@ export async function transactionsOf(page: Page, lotId: number): Promise<any[]> 
   return list((await api(page, 'GET', `/inventory/transactions/lot/${lotId}`)).body);
 }
 
-/** POST /inventory/items. leadTimeDays only sticks here (see the header). */
-export async function createItem(page: Page, name: string, opts: { threshold?: number; lead?: number; units?: string; itemType?: string } = {}): Promise<number> {
+/**
+ * POST /inventory/items. Since #4361 (13 Oct) an item carries free-form tags instead of an item
+ * type (the server folds a tag to the spelling it already knows: "REAGENT" -> "Reagent"), and
+ * individualTracking became trackLots ("Y" shows the lot number and expiry on Receive stock).
+ */
+export async function createItem(page: Page, name: string, opts: { threshold?: number; lead?: number; units?: string; tags?: string[]; trackLots?: boolean; upc?: string } = {}): Promise<number> {
   const r = await api(page, 'POST', '/inventory/items', {
-    name, itemType: opts.itemType ?? 'REAGENT', units: opts.units ?? 'tests', category: 'QA',
+    name, tags: opts.tags ?? ['Reagent'], units: opts.units ?? 'tests', category: 'QA',
     lowStockThreshold: opts.threshold ?? 5, leadTimeDays: opts.lead, stabilityAfterOpening: 30,
-    storageRequirements: 'QA fixture', calibrationRequired: 'N', individualTracking: 'N', isActive: 'Y',
+    storageRequirements: 'QA fixture', calibrationRequired: 'N', trackLots: opts.trackLots === false ? 'N' : 'Y', isActive: 'Y',
+    ...(opts.upc ? { upc: opts.upc } : {}),
   });
   expect(r.status, `create item ${name}: ${r.text}`).toBeLessThan(300);
   return Number(r.body?.id);
@@ -184,10 +189,10 @@ async function findItem(page: Page, name: string): Promise<any | undefined> {
 }
 
 /** A throwaway item for one case, with an optional QC-passed lot. */
-export async function makeItem(page: Page, tag: string, opts: { threshold?: number; qty?: number; expiresInDays?: number; lead?: number } = {}): Promise<{ id: number; name: string; lotId?: number; lotNumber?: string }> {
+export async function makeItem(page: Page, tag: string, opts: { threshold?: number; qty?: number; expiresInDays?: number; lead?: number; tags?: string[]; upc?: string } = {}): Promise<{ id: number; name: string; lotId?: number; lotNumber?: string }> {
   const stamp = `${Date.now()}`.slice(-7);
   const name = `QA INV ${tag} ${stamp}`;
-  const id = await createItem(page, name, { threshold: opts.threshold ?? 5, lead: opts.lead });
+  const id = await createItem(page, name, { threshold: opts.threshold ?? 5, lead: opts.lead, tags: opts.tags, upc: opts.upc });
   if (!opts.qty) return { id, name };
   const lotNumber = `QAI${tag.replace(/\W/g, '').slice(0, 6).toUpperCase()}${stamp}`;
   const lotId = await receiveLot(page, id, { number: lotNumber, qty: opts.qty, expiresInDays: opts.expiresInDays ?? 180, qc: 'PASSED' });

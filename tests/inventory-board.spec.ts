@@ -3,14 +3,18 @@
  *
  * Inventory > Inventory Management after the OGC-438 decision-support redesign: the Items board
  * (OpenELIS-Global-2 #4356 projection endpoint, #4357 board, #4358 row actions and dashboard
- * removal), the Catalog tab and the Reports tab. Replaces tests/inventory.spec.ts and
+ * removal) and the Reports tab. Replaces tests/inventory.spec.ts and
  * tests/inventory-happy-path.spec.ts, which tested the retired dashboard (tiles, lot-status filter).
  * Catalogue: inventory-board.md (TC-INVB-*).
  *
  * Written 2026-10-11 against local develop (images 2026-10-11 12:13 UTC, develop df503f65).
  * Scope (Casey, 2026-10-11): what is merged now, parts 1 to 3 of the 17-part OGC-438 stack.
  * Extend as later parts land. Part 4 (#4359: reorder suggestions, mark as ordered, the critical
- * banner) added 2026-10-12 against develop a4200e2d: TC-INVB-50 to 59.
+ * banner) added 2026-10-12 against develop a4200e2d: TC-INVB-50 to 59. Parts 5 to 10 (#4360 to
+ * #4365: learned lead time, tags instead of item type, tag directory and filter, items defined on
+ * the board and the Catalog tab retired, count mode, receive from a row and the product barcode)
+ * taken in 2026-10-13 against develop b5943f5a: TC-INVB-30 to 32 rewritten on the board, 33
+ * retired, 35 to 37 new, 60 and 62 flipped (fixed).
  *
  * DATA. helpers/inventory-fixtures.ts. Read-only fixtures are found or made in beforeAll and never
  * changed here; every case that acts on a row makes its own throwaway item and deactivates it at
@@ -37,11 +41,12 @@ const ROOM = NAMES.room;
 test.setTimeout(180_000);
 
 const ROUTE = '/inventory';
-const SEARCH = 'Search by item name, lot number or barcode';
+const SEARCH = 'Search by item name, code, tag or lot number';
 const STATUS_LABEL: Record<BoardRow['status'], string> = {
   REORDER_NOW: 'Reorder now', REORDER_SOON: 'Reorder soon', ADEQUATE: 'Adequate', BUILDING_DATA: 'Building data',
 };
-const RANK: Record<BoardRow['status'], number> = { REORDER_NOW: 0, REORDER_SOON: 1, ADEQUATE: 2, BUILDING_DATA: 2 };
+// Since #4360 Building data sorts after Adequate.
+const RANK: Record<BoardRow['status'], number> = { REORDER_NOW: 0, REORDER_SOON: 1, ADEQUATE: 2, BUILDING_DATA: 3 };
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const cleanup: number[] = [];
@@ -60,7 +65,7 @@ async function openBoard(page: Page): Promise<Locator> {
   return panel;
 }
 
-async function openTab(page: Page, name: 'Catalog' | 'Reports'): Promise<Locator> {
+async function openTab(page: Page, name: 'Reports'): Promise<Locator> {
   await page.goto(ROUTE, { waitUntil: 'domcontentloaded' });
   await ready(page);
   await page.getByRole('tab', { name }).click();
@@ -222,10 +227,12 @@ test.describe('Items board (OGC-438 #4357)', () => {
   test('TC-INVB-00 [canary]: Inventory Management opens on the Items board with its columns, and the board endpoint serves the fixtures', async ({ page }) => {
     const panel = await openBoard(page);
     await expect(page.getByRole('heading', { name: 'Inventory Items' })).toBeVisible();
-    for (const t of ['Items', 'Catalog', 'Reports']) await expect(page.getByRole('tab', { name: t })).toBeVisible();
+    // #4363 retired the Catalog tab: items are defined from the board (New item).
+    for (const t of ['Items', 'Reports']) await expect(page.getByRole('tab', { name: t })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Catalog' })).toHaveCount(0);
     await expect(page.getByRole('tab', { name: 'Items' })).toHaveAttribute('aria-selected', 'true');
     const headers = (await panel.locator('thead').first().locator('.cds--table-header-label').allInnerTexts()).map((h) => h.trim()).filter(Boolean);
-    expect(headers, 'board columns').toEqual(['Item', 'On hand', 'Usage trend', 'Runs out', 'Order by', 'Status', 'Actions']);
+    expect(headers, 'board columns').toEqual(['Item', 'On hand', 'Usage trend', 'Runs out', 'Order by', 'Status', 'Last count', 'Actions']);
     const names = (await board(page)).map((r) => r.name);
     for (const n of Object.values(INV)) expect(names, `${n} is served by GET /inventory/board`).toContain(n);
   });
@@ -488,14 +495,12 @@ test.describe('Row actions (OGC-438 #4358)', () => {
     const lotNumber = `QAIR${it.id}`;
     const panel = await openBoard(page);
     const dlg = await itemAction(panel, it.name, /^Receive stock$/);
-    await expect(dlg.getByText(it.name).first(), 'the row\'s item is preselected').toBeVisible();
-    await dlg.locator('#lotNumber').fill(lotNumber);
-    await dlg.locator('#currentQuantity').fill('12');
-    // Carbon's DatePicker (flatpickr) ignores a plain fill: set the date the way a pick does.
-    const exp = new Date(Date.now() + 90 * 86_400_000);
-    await dlg.locator('#expirationDate').evaluate((el: any, iso: string) => el._flatpickr?.setDate(new Date(iso), true), exp.toISOString());
-    const us = `${String(exp.getMonth() + 1).padStart(2, '0')}/${String(exp.getDate()).padStart(2, '0')}/${exp.getFullYear()}`;
-    await expect(dlg.locator('#expirationDate'), 'the expiration date is set').toHaveValue(us);
+    await expect(dlg.locator('#quick-receive-item'), 'the row\'s item is preselected').toHaveValue(new RegExp(`^${esc(it.name)}`));
+    await dlg.locator('#quick-receive-quantity').fill('12');
+    // Lot number and expiry show because the item tracks lots (#4365).
+    await dlg.locator('#quick-receive-lot').fill(lotNumber);
+    await pickDate(dlg.locator('#quick-receive-expiry'), isoDay(90));
+    await expect(dlg.locator('#quick-receive-expiry'), 'the expiration date is set').toHaveValue(isoDay(90));
     await dlg.getByRole('button', { name: /Assign storage location/ }).click();
     const picker = page.getByRole('dialog').filter({ has: page.getByText('Search for a storage location') });
     await expect(picker).toBeVisible();
@@ -503,8 +508,8 @@ test.describe('Row actions (OGC-438 #4358)', () => {
     await picker.getByRole('option', { name: ROOM }).first().click();
     await picker.getByRole('button', { name: /^Confirm$/ }).click();
     await expect(picker).toBeHidden();
-    await expect(dlg.getByText('Not assigned'), 'a location is chosen').toHaveCount(0);
-    const resp = await submit(dlg, /^Save$/, /\/rest\/inventory\/management\/receive/);
+    await expect(dlg.getByText(/^Not assigned/), 'a location is chosen').toHaveCount(0);
+    const resp = await submit(dlg, /^Receive$/, /\/rest\/inventory\/management\/receive/);
     expect(resp.status(), `receive: ${await resp.text()}`).toBe(201);
     await expect(dlg).toBeHidden({ timeout: 20_000 });
     const lots = await lotsOf(page, it.id);
@@ -535,78 +540,128 @@ test.describe('Row actions (OGC-438 #4358)', () => {
   });
 });
 
-// ── catalog and reports (carried over from tests/inventory.spec.ts) ─────────
+// ── defining items, tags, count mode, receiving, reports ───────────────────
 
-test.describe('Catalog and Reports tabs', () => {
-  test('TC-INVB-30: Add Catalog Item creates an active item that is listed in the catalog and on the board (was TC-INV-04/06)', async ({ page }) => {
-    const panel = await openTab(page, 'Catalog');
-    const name = `QA INV Cat ${Date.now().toString().slice(-7)}`;
-    await panel.getByRole('button', { name: /^Add Catalog Item$/i }).click();
-    const dlg = page.getByRole('dialog').last();
-    await expect(dlg).toBeVisible();
+test.describe('Defining items, tags, count mode and Reports (#4361 to #4365)', () => {
+  test('TC-INVB-30: New item on the board defines an active item with its tags, and it is listed on the board (was the Catalog tab\'s Add Catalog Item)', async ({ page }) => {
+    const panel = await openBoard(page);
+    const name = `QA INV New ${Date.now().toString().slice(-7)}`;
+    await panel.getByRole('button', { name: /^New item$/ }).click();
+    const dlg = page.getByRole('dialog').filter({ has: page.locator('#itemTags') });
+    await expect(dlg).toBeVisible({ timeout: 15_000 });
     await dlg.locator('#name').fill(name);
-    await dlg.getByRole('combobox', { name: /Item Type/i }).click();
-    await page.getByRole('option', { name: /^Reagent$/ }).click();
+    // A tag the directory already knows, typed in another case, is folded to its spelling.
+    await dlg.locator('#itemTags').fill('reagent');
+    await dlg.locator('#itemTags').press('Enter');
     await dlg.locator('#units').fill('tests');
     await dlg.locator('#lowStockThreshold').fill('5');
-    await dlg.locator('#stabilityAfterOpening').fill('30');
     const resp = await submit(dlg, /^Save$/, /\/rest\/inventory\/items$/);
     expect(resp.status(), `create: ${await resp.text()}`).toBe(201);
-    cleanup.push(Number((await resp.json()).id));
+    const created = await resp.json();
+    cleanup.push(Number(created.id));
+    expect(created.tags, 'the tag is stored in the directory\'s spelling').toEqual(['Reagent']);
     await expect(dlg).toBeHidden({ timeout: 15_000 });
+    // The board lists it without a reload. (The "Item defined." notice did not show in the 13 Oct
+    // run although onActionSaved sends it; recorded, not asserted, until it is looked at.)
+    await expect(itemRow(panel, name), 'the board lists the new item').toHaveCount(1, { timeout: 20_000 });
+    console.log(`[inventory-board] TC-INVB-30 notice shown: ${await page.getByText(/Item defined\./).count()}`);
     const r = await boardRow(page, name);
     expect(r, 'the new item is on the board').toBeTruthy();
     expect(r!.status, 'no stock: at or below threshold').toBe('REORDER_NOW');
-    const cat = await openTab(page, 'Catalog');
-    await cat.getByPlaceholder(/search/i).first().fill(name).catch(() => undefined);
-    await expect(cat.locator('tr').filter({ hasText: name }).getByText('Active', { exact: true })).toBeVisible({ timeout: 15_000 });
+    expect((await allItems(page)).find((i) => i.name === name)?.isActive, 'active').toBe('Y');
   });
 
-  test('TC-INVB-31: a Reagent cannot be saved without its stability after opening (was TC-INV-05)', async ({ page }) => {
-    const panel = await openTab(page, 'Catalog');
-    await panel.getByRole('button', { name: /^Add Catalog Item$/i }).click();
-    const dlg = page.getByRole('dialog').last();
-    await dlg.locator('#name').fill(`QA INV NoStab ${Date.now().toString().slice(-7)}`);
-    await dlg.getByRole('combobox', { name: /Item Type/i }).click();
-    await page.getByRole('option', { name: /^Reagent$/ }).click();
+  test('TC-INVB-31: New item refuses a blank name and sends nothing (was: a Reagent needs its stability after opening, retired with item types in #4361)', async ({ page }) => {
+    const panel = await openBoard(page);
+    await panel.getByRole('button', { name: /^New item$/ }).click();
+    const dlg = page.getByRole('dialog').filter({ has: page.locator('#itemTags') });
+    await expect(dlg).toBeVisible({ timeout: 15_000 });
     await dlg.locator('#units').fill('tests');
-    await dlg.locator('#stabilityAfterOpening').fill('');
     let posted = false;
     page.on('request', (r) => { if (r.method() === 'POST' && /\/rest\/inventory\/items$/.test(r.url())) posted = true; });
     await dlg.getByRole('button', { name: /^Save$/ }).click();
-    await expect(dlg.getByText(/stability/i).filter({ hasText: /required|must|enter/i }).first()).toBeVisible();
+    await expect(dlg.getByText('Item name is required'), 'the dialog says why').toBeVisible();
     await expect(dlg).toBeVisible();
     expect(posted, 'nothing is sent').toBe(false);
   });
 
-  test('TC-INVB-32: the catalog Item Type filter lists only items of that type (was TC-INV-07)', async ({ page }) => {
+  test('TC-INVB-32: the tag filter shows only items carrying a chosen tag (was the catalog Item Type filter)', async ({ page }) => {
     await openBoard(page);
-    // A non-reagent the filter must hide.
-    const rdt = `QA INV RDT ${Date.now().toString().slice(-7)}`;
-    const rdtId = await createItem(page, rdt, { itemType: 'RDT', threshold: 2 });
-    cleanup.push(rdtId);
-    const panel = await openTab(page, 'Catalog');
-    const search = panel.getByRole('searchbox').or(panel.locator('input[id^="table-toolbar-search"]')).first();
-    await search.fill(rdt);
-    await expect(panel.locator('tbody tr').filter({ hasText: rdt }), 'the RDT is listed before filtering').toHaveCount(1);
-    await search.fill('');
-    // The first of the two "All" dropdowns in the toolbar is Item Type, the second Status.
-    await panel.getByRole('combobox').first().click();
-    const opts = await panel.getByRole('option').allInnerTexts();
-    expect(opts.some((o) => /reagent/i.test(o)), `type options: ${opts.join(', ')}`).toBe(true);
-    await panel.getByRole('option', { name: /reagent/i }).first().click();
-    await expect(panel.locator('tbody tr').first()).toBeVisible();
-    const rows = (await panel.locator('tbody tr').allInnerTexts()).map((r) => r.replace(/\s+/g, ' '));
-    expect(rows.length).toBeGreaterThan(0);
-    for (const r of rows) expect(r, 'every listed item is a reagent').toMatch(/reagent/i);
-    await search.fill(rdt);
-    await expect(panel.locator('tbody tr').filter({ hasText: rdt }), 'the RDT is filtered out').toHaveCount(0);
+    const rdt = await makeItem(page, 'RDT', { tags: ['RDT'], threshold: 2 });
+    const reagent = await makeItem(page, 'TagR', { tags: ['Reagent'], threshold: 2 });
+    cleanup.push(rdt.id, reagent.id);
+    const panel = await openBoard(page);
+    await expect(itemRow(panel, rdt.name), 'the RDT is listed before filtering').toHaveCount(1);
+    const filter = panel.locator('#inventory-board-tag-filter');
+    await filter.click();
+    await page.getByRole('option', { name: /^Reagent$/ }).first().click();
+    await page.keyboard.press('Escape');
+    await expect(itemRow(panel, rdt.name), 'the RDT is filtered out').toHaveCount(0);
+    await expect(itemRow(panel, reagent.name), 'the reagent stays').toHaveCount(1);
+    const served = new Map((await board(page)).map((r) => [r.name, r]));
+    for (const n of await rowNames(panel)) {
+      expect(served.get(n)?.tags ?? [], `${n} carries the Reagent tag`).toContain('Reagent');
+    }
   });
 
-  test('TC-INVB-33: the catalog Action column is labelled, not a raw i18n key (was TC-INV-03, BUG-61 fixed)', async ({ page }) => {
-    const panel = await openTab(page, 'Catalog');
-    await expect(panel.getByRole('columnheader', { name: /^Actions?$/ }).first()).toBeVisible();
-    expect(await panel.innerText()).not.toContain('label.button.action');
+  test('TC-INVB-35: Count mode: a counted quantity that differs corrects the lot as a physical count and stamps the last count (#4364)', async ({ page }) => {
+    await openBoard(page);
+    const it = await makeItem(page, 'Count', { qty: 20, threshold: 5 });
+    cleanup.push(it.id);
+    const panel = await openBoard(page);
+    await panel.getByRole('button', { name: /^Count mode$/ }).click();
+    const entry = panel.locator(`#count-item-${it.id}`);
+    await expect(entry, 'a single-lot item is counted on its own row').toBeVisible({ timeout: 15_000 });
+    await entry.fill('17');
+    await expect(itemRow(panel, it.name).locator('.cds--tag', { hasText: /^-3$/ }), 'the difference is shown').toBeVisible();
+    const [resp] = await Promise.all([
+      page.waitForResponse((r) => /\/rest\/inventory\/count$/.test(r.url()) && r.request().method() === 'POST'),
+      panel.getByRole('button', { name: /^Confirm count$/ }).click(),
+    ]);
+    expect(resp.status(), await resp.text()).toBeLessThan(300);
+    const body = await resp.json();
+    expect(body.adjusted, 'one correction').toBe(1);
+    const lot = (await lotsOf(page, it.id))[0];
+    expect(Number(lot.currentQuantity), 'the lot holds what was counted').toBe(17);
+    const tx = await transactionsOf(page, lot.id);
+    const adj = tx.filter((t: any) => /ADJUST/i.test(t.transactionType ?? t.type ?? ''));
+    expect(adj.length, `a count writes an adjustment: ${JSON.stringify(tx).slice(0, 300)}`).toBe(1);
+    expect(await usageOf(page, it.id), 'a count is not usage').toHaveLength(0);
+    const row = await boardRow(page, it.name);
+    expect(row!.onHand).toBe(17);
+    expect(row!.lastCountedOn, 'the last count is today').toBe(isoDay(0));
+  });
+
+  test('TC-INVB-36: Receive stock finds the item from its product barcode (#4365)', async ({ page }) => {
+    await openBoard(page);
+    const upc = `QAUPC${Date.now().toString().slice(-8)}`;
+    const target = await makeItem(page, 'Scan', { upc, threshold: 5 });
+    const other = await makeItem(page, 'ScanFrom', { threshold: 5 });
+    cleanup.push(target.id, other.id);
+    const panel = await openBoard(page);
+    const dlg = await itemAction(panel, other.name, /^Receive stock$/);
+    await dlg.locator('#quick-receive-scan').fill(upc);
+    await dlg.locator('#quick-receive-scan').press('Enter');
+    await expect(dlg.locator('#quick-receive-item'), 'the scanned product is selected').toHaveValue(new RegExp(`^${esc(target.name)}`));
+    await expect(dlg, 'Enter from the scanner does not submit the dialog').toBeVisible();
+    await dlg.locator('#quick-receive-scan').fill('QA-NO-SUCH-UPC');
+    await dlg.locator('#quick-receive-scan').press('Enter');
+    await expect(dlg.getByText('QA-NO-SUCH-UPC'), 'an unknown code is named').toBeVisible();
+    await expect(dlg.getByRole('button', { name: /^New item$/ }), 'and offered as a new item').toBeVisible();
+  });
+
+  test('TC-INVB-37: a lead time set after the item exists is kept and shown as set (was: only at create)', async ({ page }) => {
+    await openBoard(page);
+    const it = await makeItem(page, 'Lead', { qty: 20, threshold: 5 });
+    cleanup.push(it.id);
+    const panel = await openBoard(page);
+    const dlg = await itemAction(panel, it.name, /^Edit item details$/);
+    await dlg.locator('#leadTimeDays').fill('12');
+    const resp = await submit(dlg, /^Save$/, /\/rest\/inventory\/items\/\d+$/);
+    expect(resp.status(), `update item: ${await resp.text()}`).toBe(200);
+    const r = await boardRow(page, it.name);
+    expect(r!.leadTimeDays, 'the new lead time').toBe(12);
+    expect(r!.leadTimeTier, 'entered, not learned or default').toBe('SET');
   });
 
   test('TC-INVB-34: a deactivated item leaves the board; activating it brings it back with its stock', async ({ page }) => {
@@ -647,7 +702,7 @@ test.describe('Catalog and Reports tabs', () => {
   });
 
   test('TC-INVB-42: the downloaded report keeps its file extension [FLIP-WHEN-FIXED]', async ({ page }) => {
-    // FLIP-WHEN-FIXED (found 2026-10-11, no ticket yet: Casey decides). ReportsAPI.generate in
+    // FLIP-WHEN-FIXED (found 2026-10-11, OGC-1489 item 1). ReportsAPI.generate in
     // frontend/src/components/inventory/InventoryService.js reads the name with the greedy
     // /filename="?(.+)"?/i, so the closing quote of `filename="stock-levels.pdf"` is captured and
     // the browser saves "stock-levels.pdf_". Every format is affected (.pdf_, .csv_, .xlsx_).
@@ -703,7 +758,7 @@ test.describe('Ordering (OGC-438 #4359)', () => {
     ]);
     expect(req.postDataJSON(), 'one mark: this item, the note and the date').toEqual({ itemIds: [it.id], note: 'QA PO-4471', expectedDate: isoDay(14) });
     await expect(dlg, 'the panel closes').toBeHidden({ timeout: 15_000 });
-    // The board and the Catalog tab each mount a notification area; read the Items tab's.
+    // Read the Items tab's notification area.
     await expect(itemsPanel(page).getByText('1 item marked as ordered.'), 'and says so').toBeVisible();
     const r = await boardRow(page, it.name);
     expect({ orderedOn: r!.orderedOn, orderExpectedDate: r!.orderExpectedDate, orderNote: r!.orderNote }).toEqual({ orderedOn: isoDay(0), orderExpectedDate: isoDay(14), orderNote: 'QA PO-4471' });
@@ -850,21 +905,20 @@ test.describe('Ordering (OGC-438 #4359)', () => {
     await expect(dlg.locator('#reorder-note')).toHaveCount(0);
   });
 
-  test('TC-INVB-60: an item restocked after its mark and short again is critical again [FLIP-WHEN-FIXED]', async ({ page }) => {
-    // FLIP-WHEN-FIXED (found 2026-10-12, not filed: Casey decides). Nothing closes the mark: a receipt
-    // leaves orderedOn, the note and the expected date in place. Once restocked the item leaves the
-    // suggestions panel, the only place "Not ordered after all" lives (the row menu has no such
-    // action), so the stale mark cannot be cleared from the screen; when the item runs short again
-    // it is Reorder now but still "On order", and the banner stays silent about the new shortage.
-    // The assertion is the user-visible harm; which event should close the mark (a receipt, as the
-    // #4359 notes on learning lead time from the next receipt suggest) is Casey's call.
-    test.fail();
+  test('TC-INVB-60: a receipt closes the On order mark, so an item restocked and short again is critical again', async ({ page }) => {
+    // FIXED 2026-10-13 (#4365 on develop b5943f5a), was FLIP-WHEN-FIXED since 2026-10-12. Ruled the
+    // same day by Casey: the next receipt closes the mark. The receipt clears orderedOn, the note and
+    // the expected date and records an order cycle (which feeds the learned lead time, #4360).
     await openBoard(page);
     const it = await makeItem(page, 'Stale', { qty: 2, threshold: 10 });
     cleanup.push(it.id);
     expect((await markOrdered(page, [it.id], { note: 'PO-7' })).status).toBe(200);
+    expect((await boardRow(page, it.name))!.orderedOn, 'marked').toBe(isoDay(0));
     await receiveLot(page, it.id, { number: `QAIS${it.id}`, qty: 30, expiresInDays: 200, qc: 'PASSED' });
-    expect((await boardRow(page, it.name))!.status, 'restocked: not a suggestion').not.toBe('REORDER_NOW');
+    const after = (await boardRow(page, it.name))!;
+    expect(after.orderedOn ?? null, 'the receipt closes the mark').toBeNull();
+    expect(after.orderNote ?? null, 'and its note').toBeNull();
+    expect(after.status, 'restocked: not a suggestion').not.toBe('REORDER_NOW');
     expect((await consume(page, it.id, 29)).status).toBe(200);
     const { rows } = await openBoardRows(page);
     const r = rows.find((x) => x.name === it.name)!;
@@ -873,7 +927,7 @@ test.describe('Ordering (OGC-438 #4359)', () => {
   });
 
   test('TC-INVB-61: an id that is not an item is skipped, not a 500 that drops the whole selection [FLIP-WHEN-FIXED]', async ({ page }) => {
-    // FLIP-WHEN-FIXED (found 2026-10-12, not filed). InventoryItemServiceImpl.markOrdered and
+    // FLIP-WHEN-FIXED (found 2026-10-12, OGC-1489 item 5). InventoryItemServiceImpl.markOrdered and
     // clearOrdered skip a null item ("if (item == null) continue"), but get() throws for an unknown
     // id, so the controller answers a bare 500 and the transaction drops the valid items too. Only
     // reachable by API today (the panel sends ids from the board).
@@ -886,17 +940,11 @@ test.describe('Ordering (OGC-438 #4359)', () => {
     expect((await boardRow(page, it.name))!.orderedOn, 'the real item is marked').toBe(isoDay(0));
   });
 
-  test('TC-INVB-62: with the critical banner showing, the board still takes typed input: the banner neither takes nor traps the focus [FLIP-WHEN-FIXED]', async ({ page }) => {
-    // FLIP-WHEN-FIXED (found 2026-10-12, not filed: Casey decides). The banner is a Carbon
-    // ActionableNotification (role alertdialog, focus sentinels, hasFocus on by default). It takes
-    // the focus when the board opens and pulls it back from everywhere else: a click in Search
-    // leaves the focus on "Review and mark as ordered", typed text never arrives, Tab cycles inside
-    // the banner, and the Log usage, Receive stock and Edit item dialogs and the Catalog search take
-    // no typing either (the guards TC-INVB-05, 06, 20 to 27 and 32 go red for this reason alone:
-    // with the banner hidden they pass). Seen 3 of 3 on develop a4200e2d. The banner shows whenever
-    // any item is Reorder now and not marked ordered. inline with hasFocus={false}, or a plain
-    // InlineNotification, would leave the focus alone.
-    test.fail();
+  test('TC-INVB-62: with the critical banner showing, the board still takes typed input: the banner neither takes nor traps the focus', async ({ page }) => {
+    // FIXED 2026-10-13 (develop b5943f5a: the banner is role="status", not Carbon's default
+    // alertdialog; a separate probe passed 3 of 3), was FLIP-WHEN-FIXED since 2026-10-12, when the
+    // banner held the focus and the Search, Log usage, Receive stock and Edit item fields took no
+    // typing (3 of 3 on develop a4200e2d).
     const { panel, rows } = await openBoardRows(page);
     expect(unaddressed(rows).length, 'the fixtures make a banner').toBeGreaterThan(0);
     await expect(page.locator('.board-critical-banner')).toBeVisible();
@@ -909,7 +957,7 @@ test.describe('Ordering (OGC-438 #4359)', () => {
   });
 
   test('TC-INVB-63: the note given with a mark (requisition or PO reference) can be read on the board [FLIP-WHEN-FIXED]', async ({ page }) => {
-    // FLIP-WHEN-FIXED (found 2026-10-12, not filed). The board passes the note as the On order
+    // FLIP-WHEN-FIXED (found 2026-10-12, OGC-1489 item 4). The board passes the note as the On order
     // Tag's title, but Carbon's Tag puts its own empty title on the label and drops the prop, so the
     // note shows nowhere: not on the row, not in the suggestions panel, not in the CSV export. It is
     // stored (GET /inventory/board returns orderNote) and only the API can read it back.
