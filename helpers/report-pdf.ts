@@ -94,8 +94,11 @@ export async function fetchReport(page: Page, url: string): Promise<{ status: nu
  * reliable than waiting for the popup to finish loading a PDF in a headless browser.
  */
 export async function generateUrl(page: Page, button: RegExp = /Generate Printable Version/i): Promise<string> {
+  const btn = page.getByRole('button', { name: button }).first();
+  // The button stays disabled until the screen has taken its inputs (seen flaky on 13 Oct).
+  await expect(btn, 'Generate is enabled').toBeEnabled({ timeout: 30_000 });
   const req = page.context().waitForEvent('request', { predicate: (r) => r.url().includes('/ReportPrint'), timeout: 60_000 });
-  await page.getByRole('button', { name: button }).first().click();
+  await btn.click();
   const url = (await req).url();
   for (const p of page.context().pages()) if (p !== page) await p.close().catch(() => {});
   return url;
@@ -104,10 +107,14 @@ export async function generateUrl(page: Page, button: RegExp = /Generate Printab
 /** Type a date into one of the report screens' Carbon date inputs (dd/mm/yyyy). */
 export async function setDate(page: Page, id: string, value: string): Promise<void> {
   const el = page.locator(`#${id}`);
-  await el.click();
-  await el.fill(value);
-  await el.press('Enter').catch(() => {});
-  await page.keyboard.press('Escape').catch(() => {});
+  // A fill made while the screen is still mounting can be dropped: type again until it holds.
+  await expect(async () => {
+    await el.click();
+    await el.fill(value);
+    await el.press('Enter').catch(() => {});
+    await page.keyboard.press('Escape').catch(() => {});
+    await expect(el).toHaveValue(value, { timeout: 2_000 });
+  }, `the ${id} field holds ${value}`).toPass({ timeout: 30_000 });
 }
 
 async function j(page: Page, url: string, init?: { method?: string; body?: unknown }): Promise<{ status: number; body: any }> {
