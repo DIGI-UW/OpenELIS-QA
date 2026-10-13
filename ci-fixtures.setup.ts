@@ -18,6 +18,7 @@ import {
   ensureRoom, ensureNotebookProject, ensureSamplingSite, ensureWard, ensureEqaSchemes, ensureEqaEnabled, NAMES,
 } from './helpers/ci-fixtures';
 import { ensureReferringClinic } from './helpers/data-factory';
+import { ensureInventoryFixtures, redateHistory } from './helpers/inventory-fixtures';
 
 const OUT = path.join(process.cwd(), '.auth', 'ci-fixtures.json');
 const record = (key: string, value: unknown) => {
@@ -68,7 +69,7 @@ setup('ci-fixture: panel across two sample types (TC-PANEL-LEAK)', async ({ page
   record('leakPanel', id);
 });
 
-setup('ci-fixture: storage room (TC-INVHP-02)', async ({ page }) => {
+setup('ci-fixture: storage room (TC-INVB-26)', async ({ page }) => {
   const log: string[] = [];
   record('room', await ensureRoom(page, log));
   console.log(`[ci-fixtures] room ${log.join('; ')}`);
@@ -110,4 +111,13 @@ setup('ci-fixture: EQA scheme provided and enrolled (TC-EQAHP-00, TC-EQA-02/03, 
   expect((board?.schemes ?? []).some((s: any) => s.name === NAMES.eqaScheme), 'the scheme is listed as provided').toBe(true);
   console.log(`[ci-fixtures] EQA ${JSON.stringify(ids)} ${log.join('; ')}`);
   record('eqa', ids);
+});
+
+setup('ci-fixture: inventory board items and usage history (TC-INVB)', async ({ page }) => {
+  const log: string[] = [];
+  const ids = await ensureInventoryFixtures(page, log);
+  // The run-out projection needs usage spread over 30 days; only the database can date it (BASE localhost:10443).
+  const redate = redateHistory();
+  console.log(`[ci-fixtures] inventory ${JSON.stringify(ids)} ${log.join('; ')}; history ${redate ?? 'not re-dated (no DB)'}`);
+  record('inventory', { ids, redate });
 });

@@ -1,7 +1,7 @@
 {
   "recorded": "2026-10-13",
-  "total": 1630,
-  "hollowTotal": 179,
+  "total": 1651,
+  "hollowTotal": 177,
   "files": {
     "tests/a11y-axe-scan.spec.ts": 0,
     "tests/a11y-control-names.spec.ts": 0,
@@ -156,8 +156,7 @@
     "tests/generic-sample.spec.ts": 2,
     "tests/home-dashboard-counts.spec.ts": 0,
     "tests/i18n.spec.ts": 3,
-    "tests/inventory-happy-path.spec.ts": 0,
-    "tests/inventory.spec.ts": 2,
+    "tests/inventory-board.spec.ts": 0,
     "tests/locations-organizations.spec.ts": 0,
     "tests/loinc-dictionary.spec.ts": 2,
     "tests/modify-order-field-binding.spec.ts": 0,

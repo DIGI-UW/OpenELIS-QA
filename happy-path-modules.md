@@ -1,7 +1,7 @@
 # Module happy paths: pathology, IHC, EQA, inventory, accessibility
 
 **Spec files** (all under `tests/`, collected by `modules-utc.config.ts`):
-`pathology-ihc-happy-path.spec.ts`, `eqa-participant-happy-path.spec.ts`, `inventory-happy-path.spec.ts`, `a11y-axe-scan.spec.ts` (baseline `tests/a11y-axe-baseline.json`).
+`pathology-ihc-happy-path.spec.ts`, `eqa-participant-happy-path.spec.ts`, `a11y-axe-scan.spec.ts` (baseline `tests/a11y-axe-baseline.json`).
 **Target:** local develop, images 2026-10-01 17:48 UTC. **Written:** 2026-10-02.
 **Why:** the five "thin" happy-path areas in `claude/coverage-thin-3.2.3.md`. Each flow is driven through the UI, checked against the dashboard tiles the user sees, and read back through REST.
 
@@ -42,7 +42,9 @@ Tripwires (`test.fail`, flip when fixed) hold confirmed defects so the run stays
 | EQAHP-05 | A scores CSV imports; the cycle is Scored |
 | EQAHP-06 | The performance report downloads as a PDF |
 
-## Inventory: lot receive and tiles (TC-INVHP)
+## Inventory: lot receive and tiles (TC-INVHP) (RETIRED 2026-10-11)
+
+The dashboard tiles this path counted were removed by OGC-438 (OpenELIS-Global-2 #4358). `tests/inventory-happy-path.spec.ts` is gone; the same walk on the items board is TC-INVB-20 to 26 in [inventory-board.md](inventory-board.md). The rows below are kept as the record.
 
 | ID | What it proves |
 | --- | --- |

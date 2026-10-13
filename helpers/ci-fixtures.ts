@@ -256,7 +256,7 @@ export async function ensureLeakPanel(page: Page, log: string[]): Promise<string
   return id;
 }
 
-/** TC-INVHP-02: the storage location dialog needs at least one room. */
+/** TC-INVB-26: the lot storage location picker needs at least one room. */
 export async function ensureRoom(page: Page, log: string[]): Promise<string> {
   const rooms = list((await api(page, 'GET', '/storage/rooms')).body);
   const found = rooms.find((r) => String(r.name) === NAMES.room);
