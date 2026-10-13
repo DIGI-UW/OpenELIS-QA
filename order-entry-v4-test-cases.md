@@ -46,8 +46,8 @@ Kind: **Guard** passes today and protects it. **Tripwire** asserts the spec, car
 | ID | Case | Kind | Requirement (was) |
 | --- | --- | --- | --- |
 | TC-OEV4-NET-01 | A 5 s session outage during load recovers unnoticed | Guard | R-NET-1, G11 (TC-NET-01) |
-| TC-OEV4-NET-02 | A 60 s outage shows Reconnecting, no dead-end modal, and recovers | Tripwire | R-NET-1, M12 (TC-NET-02) |
-| TC-OEV4-NET-03 | One failed test-list load says so and offers Retry | Tripwire | R-NET-2, M12 (TC-NET-03) |
+| TC-OEV4-NET-02 | A 60 s outage shows Reconnecting, no dead-end modal, and recovers | Guard (was tripwire; fixed 13 Oct, OGC-1442) | R-NET-1, M12 (TC-NET-02) |
+| TC-OEV4-NET-03 | One failed test-list load says so and offers Retry | Guard (was tripwire; fixed 13 Oct) | R-NET-2, M12 (TC-NET-03) |
 | TC-OEV4-NET-04 | A save that never reaches the server keeps the form and says not saved | Guard | R-NET-7, G8 (TC-NET-04) |
 | TC-OEV4-NET-05 | A save whose response is lost can be retried: 200, no "in use" | Guard | R-NET-4 (TC-NET-05) |
 | TC-OEV4-NET-06 | A slow save disables the button; a double click sends one request | Guard | R-NET-6, G9 (TC-NET-06) |
@@ -66,7 +66,7 @@ Kind: **Guard** passes today and protects it. **Tripwire** asserts the spec, car
 | TC-OEV4-FLOW-02 | Counter reads 1/3 and Enter Order shows done after its save | Guard | R-FLOW-2 (TC-ODB-02) |
 | TC-OEV4-FLOW-03 | Pass, Accept sample, Release for testing: complete, Ready for testing, step done | Guard | R-FLOW-1, M6, G5 (TC-OEW-11) |
 | TC-OEV4-FLOW-04 | Optional checklist: Release with items unanswered asks for a reason | Guard | M6 step 4 |
-| TC-OEV4-FLOW-05 | Items answered Pass but not accepted are not called "unanswered" | Tripwire | R-UX-1, M6 |
+| TC-OEV4-FLOW-05 | Items answered Pass but not accepted are not called "unanswered" | Guard (was tripwire; fixed 13 Oct, OGC-1443 item 6) | R-UX-1, M6 |
 | TC-OEV4-UX-01 | No raw i18n keys on Enter Order or Prepare Samples (English) | Guard | R-UX-1 |
 | TC-OEV4-UX-02 | A disabled Save and next counts and lists what is missing; nothing is sent | Guard | R-UX-2, G1 (TC-OEW-01) |
 | TC-OEV4-UX-03 | A duplicate lab number is refused in plain language; the other order is untouched | Guard | R-UX-1, G4 (TC-OEW-13) |
