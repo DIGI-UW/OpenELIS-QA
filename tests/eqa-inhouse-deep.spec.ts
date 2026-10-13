@@ -11,8 +11,9 @@
  * final; each result counts for the analyst it was assigned to; a transcription slip is a failure,
  * an equipment fault is not. What each case holds the system to:
  *   - the wizard seals and distributes, and says who must run what (OGC-1245) (01);
- *   - blinded orders look like any other order: no EQA tag on Results, no clinician callback
- *     (OGC-1249) (02, 03); targets hidden from the bench until unblinding (04);
+ *   - the target is blinded, not the sample (ruled 13 Oct): Results shows no sealed target or
+ *     range and asks for no analyst (OGC-1249, OGC-1245) (02, 03); targets hidden from the bench
+ *     until unblinding (04);
  *   - unblinding scores against the sealed ranges; a sample nobody ran is a missed deadline (05);
  *   - competency is credited to the sealed analyst, not to whoever typed the result (OGC-1245) (06);
  *   - the failure count equals the evidence rows marked Failure after triage (OGC-1252) (07).
@@ -128,11 +129,10 @@ test.describe('In-house blinded EQA, deep (TC-EQAIH)', () => {
     expect(F.analystOf, 'round-robin deal: S01 and S03 to qa_labtech, S02 to qa_validator').toEqual({ S01: LABTECH, S02: VALIDATOR, S03: LABTECH });
   });
 
-  test('TC-EQAIH-02: a blinded order shows no EQA tag on Results (OGC-1249) [FLIP-WHEN-FIXED]', async ({ page }) => {
-    // FLIP-WHEN-FIXED (found 2026-10-12). #4457 hides the tag on the legacy Results page; the unified
-    // Results page shows "EQA · <priority>" for every EQA row (orderContextSections.tsx) and never
-    // reads the eqaInHouse flag the server now sends. A visible EQA tag unblinds the sample.
-    test.fail();
+  test('TC-EQAIH-02: Results shows a blinded sample without its sealed target or range (OGC-1249)', async ({ page }) => {
+    // Ruled 2026-10-13 (Casey): in-house panels blind the target, not the sample. The analyst knows
+    // the sample is EQA (the "EQA" tag and the IH-nn-nn lab number are fine); what must not show
+    // before unblinding is the expected value. S01 is sealed at 5.0, range 4.5 to 5.5.
     await page.goto('/Results', { waitUntil: 'domcontentloaded' });
     const search = page.locator('main').getByRole('searchbox', { name: /lab number/i });
     await search.fill(F.codes.S01);
@@ -141,23 +141,22 @@ test.describe('In-house blinded EQA, deep (TC-EQAIH)', () => {
     await expect(row).toBeVisible({ timeout: 60_000 });
     await row.getByRole('button', { name: /expand/i }).first().click().catch(() => undefined);
     await page.waitForTimeout(1500);
-    const shown = await page.locator('main').innerText();
-    note('EQAIH-02', { eqaWord: /\bEQA\b/.test(shown), excerpt: (shown.match(/[^\n]*\bEQA\b[^\n]*/) || [''])[0].slice(0, 120) });
-    expect(shown, 'the blinded row gives itself away').not.toMatch(/\bEQA\b/);
+    const shown = (await page.locator('main').innerText()).replace(/\s+/g, ' ');
+    note('EQAIH-02', { eqaWord: /\bEQA\b/.test(shown), sealedRange: /4\.5\s*[-\u2013]\s*5\.5/.test(shown) });
+    expect(shown, 'the sealed range is not on the bench').not.toMatch(/4\.5\s*[-\u2013]\s*5\.5/);
+    expect(shown, 'no target is shown').not.toMatch(/\b(target|assigned value)\b/i);
   });
 
-  test('TC-EQAIH-03: Results offers the sealed analyst for each blinded sample (OGC-1245) [FLIP-WHEN-FIXED]', async ({ page }) => {
-    // FLIP-WHEN-FIXED (found 2026-10-12). #4458 opens the "Analyst (EQA)" picker on the sealed
-    // analyst on the legacy Results page. The unified Results page has no analyst control at all
-    // (no component uses eqa.result.analyst), so the bench cannot see or correct who ran the
-    // sample; the sealed assignment stands whoever actually ran it.
-    test.fail();
+  test('TC-EQAIH-03: Results asks no one to pick an analyst for a blinded sample (OGC-1245)', async ({ page }) => {
+    // Ruled 2026-10-13 (Casey): the sealed analyst is the analyst responsible, whoever enters the
+    // result, so the unified Results page needs no "Analyst (EQA)" picker; competency credits the
+    // sealed analyst (TC-EQAIH-06).
     await page.goto('/Results', { waitUntil: 'domcontentloaded' });
     const search = page.locator('main').getByRole('searchbox', { name: /lab number/i });
     await search.fill(F.codes.S02);
     await search.press('Enter');
     await expect(page.locator('tr').filter({ hasText: F.codes.S02 }).first()).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByText(/Analyst \(EQA\)/i).first(), 'an analyst field for the EQA row').toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/Analyst \(EQA\)/i), 'no analyst picker').toHaveCount(0);
   });
 
   test('TC-EQAIH-04: the sealed targets are hidden from the bench until the panel is unblinded', async ({ page, browser }) => {

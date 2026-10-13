@@ -43,7 +43,8 @@ const GLUCOSE = '3';
 const CREATININE = '4';
 // Two levels of one test (peer statistics per level) and one sealed-target sample.
 const L1 = [100, 101, 99, 100, 102, 1000]; // labs A..F; F reports ten times the others
-const L2 = [50, 52, 48, 51, 49, 56];
+// L2: mean 50, SD 10 exactly (n-1), so lab F sits at z = 2.00 exactly (the ISO boundary, TC-EQAP-21).
+const L2 = [45, 45, 45, 45, 50, 70];
 const S3: Record<string, number> = { A: 80, B: 120, C: 79.99, D: 120.01, E: 100, F: 100 }; // range 80..120
 
 function wizardBody(over: Record<string, unknown> = {}) {
@@ -255,9 +256,10 @@ test.describe('EQA provider lane, deep (TC-EQAP)', () => {
         const row = by[code];
         expect(row, `${l} has a score for ${code}`).toBeTruthy();
         expect(Number(row.z_score), `${l} ${code} z`).toBeCloseTo(z, 3);
-        // The code's bands: >= 3 unacceptable, >= 2 questionable. Identical to ISO except at exactly 2.
-        const code_ = Math.abs(z) >= 3 ? 'UNACCEPTABLE' : Math.abs(z) >= 2 ? 'QUESTIONABLE' : 'ACCEPTABLE';
-        expect(row.performance_status, `${l} ${code} verdict for z ${z.toFixed(3)}`).toBe(code_);
+        // ISO 13528 9.4 bands (Casey, 13 Oct: follow the ISO standard). abs(z) = 2 exactly is TC-EQAP-21.
+        // When robust statistics land (TC-EQAP-20), recompute z here the same way.
+        if (Math.abs(Math.abs(z) - 2) < 1e-9) continue;
+        expect(row.performance_status, `${l} ${code} verdict for z ${z.toFixed(3)}`).toBe(isoVerdict(z));
       }
     }
     note('EQAP-07.z', { L1: zL1.map((z) => z.toFixed(4)), L2: zL2.map((z) => z.toFixed(4)) });
@@ -277,13 +279,17 @@ test.describe('EQA provider lane, deep (TC-EQAP)', () => {
     expect(row.performance_status, `lab F reported 1000 where five labs reported 99 to 102 (z ${row.z_score})`).toBe('UNACCEPTABLE');
   });
 
-  test('TC-EQAP-21: |z| = 2.00 exactly is satisfactory [RULING]', async () => {
-    // Not a defect until Casey rules: classifyPerformance treats |z| >= 2.0 as Questionable;
-    // ISO 13528 9.4 and the Eurachem PT leaflet call |z| <= 2.0 satisfactory. A z of exactly 2 is
-    // rare with real data; the boundary is pinned here from EQAStatisticsServiceImpl so the call
-    // is visible. EQAStatisticsServiceTest asserts the code's current choice.
-    test.skip(true, 'ruling pending (Casey): |z| = 2.0 Questionable (code) or satisfactory (ISO 13528 9.4)');
-    expect(isoVerdict(2)).toBe('ACCEPTABLE');
+  test('TC-EQAP-21: abs(z) = 2.00 exactly is satisfactory [FLIP-WHEN-FIXED]', async ({ page }) => {
+    // FLIP-WHEN-FIXED (ruled 2026-10-13, Casey: follow the ISO standard for the scoring). ISO 13528
+    // 9.4: abs(z) <= 2.0 satisfactory. classifyPerformance treats abs(z) >= 2.0 as Questionable.
+    // GLU-L2 is built so lab F's z is exactly 2.00 (mean 50, SD 10).
+    expect(zScores(L2)[5], 'the data puts lab F on the boundary').toBeCloseTo(2, 9);
+    test.fail();
+    const csv = await getText(page, `/eqa/cycles/${F.cycleId}/scores/${F.orgs.F}/csv`);
+    const row = parseCsv(csv.text).find((r) => r.sample_code === 'GLU-L2');
+    note('EQAP-21', row ?? null);
+    expect(Number(row?.z_score), 'the server agrees z is 2.00').toBeCloseTo(2, 6);
+    expect(row?.performance_status, 'z = 2.00 is satisfactory').toBe('ACCEPTABLE');
   });
 
   test('TC-EQAP-08: a sealed acceptance range is inclusive: 80 and 120 pass, 79.99 and 120.01 fail', async ({ page }) => {

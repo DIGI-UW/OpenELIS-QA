@@ -150,12 +150,14 @@ test.describe('EQA participant lane, deep (TC-EQAPT)', () => {
     // is filled from /rest/eqa/programs (every scheme on the instance, provider-run and in-house)
     // and its value is stored as sample_eqa.eqa_enrollment_id, which is a lab enrollment id. There
     // is no cycle field, so an EQA order placed here never reaches a cycle ("Uncycled EQA orders").
-    test.fail();
     await page.goto('/order/clinical/enter', { waitUntil: 'domcontentloaded' });
     const box = page.locator('label[for="isEQASample"]');
     await expect(box).toBeVisible({ timeout: 30_000 });
     await box.click();
     await expect(page.locator('#eqaProgramId')).toBeVisible({ timeout: 15_000 });
+    // The list loads after the box opens; an empty list would pass the loop below vacuously (seen once).
+    await expect.poll(async () => page.locator('#eqaProgramId option:not([value=""])').count(), { timeout: 30_000, message: 'the EQA Scheme list has loaded' }).toBeGreaterThan(0);
+    test.fail();
     const offered = await page.locator('#eqaProgramId option').evaluateAll((os) => os.map((o: any) => ({ v: o.value, t: o.textContent?.trim() })).filter((o) => o.v));
     const mine = (await api(page, 'GET', '/eqa/my-programs')).json ?? [];
     note('EQAPT-04', { offered: offered.slice(0, 12), myEnrollments: mine.map((m: any) => `${m.id}:${m.programName}`).slice(0, 12) });
@@ -221,7 +223,7 @@ test.describe('EQA participant lane, deep (TC-EQAPT)', () => {
 
   test('TC-EQAPT-16: Submit by hand is refused while nothing on the cycle is validated', async ({ page }) => {
     // Code review (2026-10-12) suspected submit-manual had no status check; it refuses a cycle with
-    // no validated result (400). Submitting part of a panel by hand is still possible: see eqa-deep.md.
+    // no validated result (400). Part of a panel by hand is allowed (ruled 13 Oct).
     let id = (F as any).cycle4 as string | undefined;
     if (!id) {
       const r = await api(page, 'POST', '/eqa/cycles/mine', { schemeName: F.schemeName, cycleName: `QA-EQA-DEEP Cycle E ${F.S}`, distributionDate: day(0), submissionDeadline: day(14) });
