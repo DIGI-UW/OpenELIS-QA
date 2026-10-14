@@ -255,11 +255,11 @@ test.describe('Localization', () => {
     expect((await successToasts(page)).length, 'the UI confirmed the save').toBeGreaterThan(0);
   });
 
-  test('TC-SD-21: FLIP-WHEN-FIXED - a renamed test shows its new name in the test pickers', async ({ page }) => {
+  test('TC-SD-21: a renamed test shows its new name in the test pickers', async ({ page }) => {
     // SD-L1. The Localization save never refreshes the cached test-name list behind
     // /rest/test-list, which feeds the Copy pickers, Results search, Reports-by-date and
     // notification config. Basic Info save does refresh it. Confirmed 2026-09-23 in the Copy picker.
-    test.fail(true, 'SD-L1: Localization save leaves /rest/test-list stale; flips when it refreshes names');
+    // GUARD since 2026-10-14: passes on local develop (images 2026-10-14 17:22 UTC). Was a tripwire: SD-L1, a Localization save left /rest/test-list stale (OGC-1238).
     await open(page, `/MasterListsPage/TestCatalogEditor/${other}/sample-results`);
     await expect.poll(async () => (await apiGet<any>(page, `${TC}/tests/${T}/basic-info`)).json?.name,
       { message: 'precondition: TC-SD-20 renamed the test', timeout: 20_000 }).toBe(NEW);

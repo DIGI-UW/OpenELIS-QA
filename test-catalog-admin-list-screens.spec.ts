@@ -98,6 +98,11 @@ async function readHeaders(page: any): Promise<string[]> {
   return page.$$eval('table th', (ths: any[]) =>
     ths.map(th => (th.innerText || '').replace(/\s+/g, ' ').trim()).filter(Boolean));
 }
+// The list takes over 6 s to load once a few hundred sample types exist (14 Oct 2026: 177 types,
+// "Loading sample types..." still on screen at 6 s), so wait for its total line, not a fixed time.
+async function stypeListLoaded(page: any) {
+  await page.getByText(/Total:\s*\d+\s+sample types/i).first().waitFor({ state: 'visible', timeout: 60_000 });
+}
 async function searchFor(page: any, placeholder: RegExp, term: string) {
   const box = page.getByPlaceholder(placeholder).first();
   await box.click();
@@ -109,7 +114,7 @@ async function searchFor(page: any, placeholder: RegExp, term: string) {
 test.describe('Sample Type Editor list', () => {
   test('TC-STYPE-01 — the list renders its documented columns and at least one row', async ({ page }) => {
     await page.goto(STYPE_ROUTE, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(6000);
+    await stypeListLoaded(page);
     const headers = await readHeaders(page);
     const rows = await readRows(page);
     console.log('TC-STYPE-01 headers=' + JSON.stringify(headers) + ' rows=' + rows.length);
@@ -121,7 +126,7 @@ test.describe('Sample Type Editor list', () => {
 
   test('TC-STYPE-02 — search narrows the list, and non-matching rows are removed', async ({ page }) => {
     await page.goto(STYPE_ROUTE, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(6000);
+    await stypeListLoaded(page);
     const before = await readRows(page);
     expect(before.length, 'no baseline rows to filter').toBeGreaterThan(1);
     const target = before[0][0];
@@ -140,7 +145,7 @@ test.describe('Sample Type Editor list', () => {
 
   test('TC-STYPE-03 — a search that matches nothing empties the table rather than showing everything', async ({ page }) => {
     await page.goto(STYPE_ROUTE, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(6000);
+    await stypeListLoaded(page);
     const before = await readRows(page);
     await searchFor(page, /search sample types/i, 'zzzz-no-such-sample-type-zzzz');
     const after = await readRows(page);
@@ -153,7 +158,7 @@ test.describe('Sample Type Editor list', () => {
 
   test('TC-STYPE-04 — the domain filter narrows to the chosen domain only', async ({ page }) => {
     await page.goto(STYPE_ROUTE, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(6000);
+    await stypeListLoaded(page);
     const sel = page.locator('#domain-filter');
     const opts = await sel.locator('option').evaluateAll((os: any[]) =>
       os.map(o => ({ v: o.value, t: (o.text || '').trim() })).filter(o => o.v && o.v.trim()));
@@ -194,7 +199,7 @@ test.describe('Sample Type Editor list', () => {
 
   test('TC-STYPE-05 — Edit opens an editor bound to the row that was clicked', async ({ page }) => {
     await page.goto(STYPE_ROUTE, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(6000);
+    await stypeListLoaded(page);
     const rows = await readRows(page);
     expect(rows.length, 'no rows to edit').toBeGreaterThan(0);
     const name = rows[0][0];

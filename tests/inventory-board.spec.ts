@@ -678,21 +678,37 @@ test.describe('Defining items, tags, count mode and Reports (#4361 to #4365)', (
     expect((await boardRow(page, it.name))?.onHand, 'back with its stock').toBe(3);
   });
 
-  test('TC-INVB-40: the Reports tab offers the stock-levels and low-stock reports and a Generate button (was TC-INV-08)', async ({ page }) => {
+  // TC-INVB-40 to 43 rewritten 2026-10-14 for the reports recut (OGC-438 #4367): six reports became
+  // Received, Consumed, Stock on hand and Expiring, viewable on screen (Run report) and exportable
+  // (Export, CSV by default). Stock levels and Low stock are gone by design (the board answers those).
+  async function pickReport(panel: Locator, name: RegExp) {
+    await panel.getByRole('combobox', { name: /Report Type/i }).click();
+    await panel.page().getByRole('option', { name }).click();
+  }
+  async function pickFormat(panel: Locator, name: RegExp) {
+    await panel.getByRole('combobox', { name: /Export Format/i }).click();
+    await panel.page().getByRole('option', { name }).click();
+  }
+
+  test('TC-INVB-40: the Reports tab offers Received, Consumed, Stock on hand and Expiring, with Run report and Export (was TC-INV-08)', async ({ page }) => {
     const panel = await openTab(page, 'Reports');
     await panel.getByRole('combobox', { name: /Report Type/i }).click();
-    const options = await page.getByRole('option').allInnerTexts();
-    expect(options.some((o) => /stock levels/i.test(o)), `report types: ${options.join(' | ')}`).toBe(true);
-    expect(options.some((o) => /low stock/i.test(o)), 'low stock report').toBe(true);
+    const options = (await page.getByRole('option').allInnerTexts()).map((o) => o.trim());
+    for (const want of [/^Received/, /^Consumed/, /^Stock on hand/, /^Expiring/]) {
+      expect(options.some((o) => want.test(o)), `report types offered: ${options.join(' | ')}`).toBe(true);
+    }
     await page.keyboard.press('Escape');
-    await expect(panel.getByRole('button', { name: /^Generate$/ })).toBeEnabled();
+    await expect(panel.getByRole('button', { name: /^Run report$/ })).toBeEnabled();
+    await expect(panel.getByRole('button', { name: /^Export$/ })).toBeEnabled();
   });
 
-  test('TC-INVB-41: Generate on the Stock Levels report downloads a non-empty PDF and says so', async ({ page }) => {
+  test('TC-INVB-41: exporting Stock on hand as PDF downloads a non-empty PDF and says so', async ({ page }) => {
     const panel = await openTab(page, 'Reports');
+    await pickReport(panel, /^Stock on hand/);
+    await pickFormat(panel, /^PDF$/);
     const [download] = await Promise.all([
       page.waitForEvent('download', { timeout: 60_000 }),
-      panel.getByRole('button', { name: /^Generate$/ }).click(),
+      panel.getByRole('button', { name: /^Export$/ }).click(),
     ]);
     const file = await download.path();
     const head = fs.readFileSync(file!).subarray(0, 4).toString();
@@ -701,19 +717,37 @@ test.describe('Defining items, tags, count mode and Reports (#4361 to #4365)', (
     await expect(panel.getByText(/Report generated and downloaded successfully/)).toBeVisible();
   });
 
-  test('TC-INVB-42: the downloaded report keeps its file extension [FLIP-WHEN-FIXED]', async ({ page }) => {
-    // FLIP-WHEN-FIXED (found 2026-10-11, OGC-1489 item 1). ReportsAPI.generate in
-    // frontend/src/components/inventory/InventoryService.js reads the name with the greedy
-    // /filename="?(.+)"?/i, so the closing quote of `filename="stock-levels.pdf"` is captured and
-    // the browser saves "stock-levels.pdf_". Every format is affected (.pdf_, .csv_, .xlsx_).
-    // printLabel in the same file uses the lazy (.+?) and is fine.
-    test.fail();
+  test('TC-INVB-42: the downloaded report keeps its file extension (OGC-1489 item 1)', async ({ page }) => {
+    // GUARD since 2026-10-14. Was a tripwire: the greedy /filename="?(.+)"?/i in ReportsAPI kept the
+    // closing quote, so files saved as "stock-levels.pdf_" (.csv_, .xlsx_). Fixed in #4367.
     const panel = await openTab(page, 'Reports');
-    const [download] = await Promise.all([
-      page.waitForEvent('download', { timeout: 60_000 }),
-      panel.getByRole('button', { name: /^Generate$/ }).click(),
-    ]);
-    expect(download.suggestedFilename(), 'the saved file name').toMatch(/\.pdf$/);
+    await pickReport(panel, /^Stock on hand/);
+    for (const [fmt, ext] of [[/^CSV$/, /\.csv$/], [/^PDF$/, /\.pdf$/]] as const) {
+      await pickFormat(panel, fmt);
+      const [download] = await Promise.all([
+        page.waitForEvent('download', { timeout: 60_000 }),
+        panel.getByRole('button', { name: /^Export$/ }).click(),
+      ]);
+      expect(download.suggestedFilename(), 'the saved file name').toMatch(ext);
+    }
+  });
+
+  test('TC-INVB-43: Run report shows Stock on hand on screen, and an item is reported by its tags, not as REAGENT (OGC-1489 item 3)', async ({ page }) => {
+    const panel = await openTab(page, 'Reports'); // the API helper needs the app open (CSRF token)
+    const it = await makeItem(page, 'RptTag', { qty: 7, tags: ['RDT'] });
+    cleanup.push(it.id);
+    const preview = await api(page, 'POST', '/inventory/reports/preview?reportType=STOCK_ON_HAND&includeInactive=false&includeExpired=true');
+    expect(preview.status, preview.text).toBe(200);
+    const table = preview.body as { headers: string[]; rows: string[][] };
+    const tagCol = table.headers.indexOf('Tags');
+    expect(tagCol, `the report has a Tags column (${table.headers.join(', ')})`).toBeGreaterThanOrEqual(0);
+    const row = table.rows.find((r) => r.includes(it.name));
+    expect(row, `${it.name} is in Stock on hand`).toBeTruthy();
+    expect(row![tagCol], 'reported by its tag').toBe('RDT');
+    expect(row!.map((c) => String(c).toUpperCase()), 'not the superseded item type').not.toContain('REAGENT');
+    await pickReport(panel, /^Stock on hand/);
+    await panel.getByRole('button', { name: /^Run report$/ }).click();
+    await expect(panel.getByRole('cell', { name: it.name, exact: true }), 'the item row is shown on screen').toBeVisible({ timeout: 30_000 });
   });
 });
 

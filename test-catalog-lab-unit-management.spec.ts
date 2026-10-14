@@ -131,7 +131,8 @@ test.describe('Lab Unit Management — first-increment CRUD contract (OGC-189, P
       expect.objectContaining({ en: expect.any(String) }),
     );
     expect(Object.keys(biochem).sort()).toEqual(
-      ['description', 'domain', 'id', 'isActive', 'isExternal', 'name', 'names', 'sortOrder', 'testCount'],
+      // lastupdated: the version token every save sends back since OGC-1463 (14 Oct 2026).
+      ['description', 'domain', 'id', 'isActive', 'isExternal', 'lastupdated', 'name', 'names', 'sortOrder', 'testCount'],
     );
   });
 

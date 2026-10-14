@@ -41,7 +41,7 @@ const retireSt = async (page: Page, id: string) => { await putSt(page, id, { isA
 
 test.describe('Test Catalog chaos: Sample Types (TC-CX-STY)', () => {
   test('TC-CX-STY-01: names and descriptions longer than their columns are 4xx with a field, never 500', async ({ page }) => {
-    test.fail(true, 'TRIPWIRE F19: name 49 and description 41 answer 500; the update 500 returns the Hibernate message');
+    // GUARD since 2026-10-14 (OGC-1467; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F19: name 49 and description 41 answer 500; the update 500 returns the Hibernate message
     await open(page, '/');
     const long49 = `QACX ${RUN} ${'n'.repeat(49)}`.slice(0, 49);
     const c = await apiWrite(page, 'POST', '/rest/SampleTypeCreate', { sampleTypeEnglishName: long49, sampleTypeFrenchName: long49, description: `QACX d ${RUN}`, domain: 'CLINICAL', active: false });
@@ -56,7 +56,7 @@ test.describe('Test Catalog chaos: Sample Types (TC-CX-STY)', () => {
 
   test('TC-CX-STY-02: lifecycle: a Display Order move survives the next Basic Info save', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F17: the editor re-sends the sortOrder it loaded, so Basic Info Save undoes a Display Order move');
+    // GUARD since 2026-10-14 (OGC-1465; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F17: the editor re-sends the sortOrder it loaded, so Basic Info Save undoes a Display Order move
     const a = await newSampleType(page);
     const b = await newSampleType(page);
     const loaded = await stOf(page, b.id); // the editor loads B
@@ -72,7 +72,7 @@ test.describe('Test Catalog chaos: Sample Types (TC-CX-STY)', () => {
   });
 
   test('TC-CX-STY-03: the domain rule holds from the sample type side: a vector test cannot be linked to a clinical sample type', async ({ page }) => {
-    test.fail(true, 'TRIPWIRE F17: the Sample Type side links a VECTOR test to a CLINICAL sample type (200); the domain rule is only checked on test create');
+    // GUARD since 2026-10-14 (OGC-1465; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F17: the Sample Type side links a VECTOR test to a CLINICAL sample type (200); the domain rule is only checked on test create
     const st = await newSampleType(page);
     const vname = `QA CX STY3 vector ${RUN}`;
     const vc = await apiWrite<any>(page, 'POST', `${TC}/tests`, { name: vname, reportingName: vname, code: `QV3${RUN}`, domain: 'VECTOR',
@@ -92,7 +92,7 @@ test.describe('Test Catalog chaos: Sample Types (TC-CX-STY)', () => {
 
   test('TC-CX-STY-04: unlinking the only sample type of an active test is refused', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F7: unlinking from the sample type side leaves an active test with no sample type (200)');
+    // GUARD since 2026-10-14 (OGC-1460; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F7: unlinking from the sample type side leaves an active test with no sample type (200)
     const st = await newSampleType(page);
     const t = await seedTest(page, 'STY4', { sampleTypeId: st.id, activate: true });
     const w = await apiWrite(page, 'DELETE', `/rest/sample-types/${st.id}/tests/${t.id}`);
@@ -107,11 +107,12 @@ test.describe('Test Catalog chaos: Sample Types (TC-CX-STY)', () => {
 
   test('TC-CX-STY-05: two editors: saving a name from an old page does not switch back on a sample type another admin switched off', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F11: no stale check; an old page switches a deactivated sample type back on');
+    // GUARD since 2026-10-14 (OGC-1463; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F11: no stale check; an old page switches a deactivated sample type back on
     const st = await newSampleType(page);
     const loaded = await stOf(page, st.id); // A
     expect((await putSt(page, st.id, { isActive: false })).status, 'B deactivates').toBe(200);
-    const w = await putSt(page, st.id, { name: `${loaded.name} A`, description: loaded.description, domain: loaded.domain, abbreviation: '', isActive: loaded.isActive, sortOrder: loaded.sortOrder });
+    // A saves as the screen does since OGC-1463: with the lastUpdated token its load returned.
+    const w = await putSt(page, st.id, { name: `${loaded.name} A`, description: loaded.description, domain: loaded.domain, abbreviation: '', isActive: loaded.isActive, sortOrder: loaded.sortOrder, lastUpdated: loaded.lastUpdated });
     observe('A saves its old copy', w);
     const now = await stOf(page, st.id);
     await retireSt(page, st.id);
@@ -152,7 +153,7 @@ const deactivateKeep = (page: Page, id: string) => apiWrite<any>(page, 'POST', `
 
 test.describe('Test Catalog chaos: Lab Units (TC-CX-LU)', () => {
   test('TC-CX-LU-01: saving Basic Info on a test whose lab unit was deactivated does not switch the unit back on', async ({ page }) => {
-    test.fail(true, 'TRIPWIRE F6: Basic Info re-sends the old labUnitId and the server reactivates the inactive unit');
+    // GUARD since 2026-10-14 (OGC-1459; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F6: Basic Info re-sends the old labUnitId and the server reactivates the inactive unit
     const u = await newLabUnit(page);
     const t = await seedTest(page, 'LU1', { labUnitId: u.id });
     expect((await deactivateKeep(page, u.id)).status, 'deactivate the unit, keep its tests').toBe(200);
@@ -168,11 +169,12 @@ test.describe('Test Catalog chaos: Lab Units (TC-CX-LU)', () => {
 
   test('TC-CX-LU-02: two editors: a description save from an old page does not switch back on a unit another admin deactivated', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F11: no stale check; an old page re-sends isActive:true and undoes the guarded deactivation');
+    // GUARD since 2026-10-14 (OGC-1463; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F11: no stale check; an old page re-sends isActive:true and undoes the guarded deactivation
     const u = await newLabUnit(page);
     const loaded = await luOf(page, u.id); // A
     expect((await deactivateKeep(page, u.id)).status, 'B deactivates through the guarded dialog').toBe(200);
-    const w = await apiWrite(page, 'PUT', `${LU}/${u.id}`, { id: u.id, names: loaded.names, description: `QA CX A ${RUN}`, domain: loaded.domain, isActive: loaded.isActive });
+    // A saves as the screen does since OGC-1463: with the lastupdated token its load returned.
+    const w = await apiWrite(page, 'PUT', `${LU}/${u.id}`, { id: u.id, names: loaded.names, description: `QA CX A ${RUN}`, domain: loaded.domain, isActive: loaded.isActive, lastupdated: loaded.lastupdated });
     observe('A saves its old copy', w);
     const now = await luOf(page, u.id);
     if (now.isActive) await deactivateKeep(page, u.id);
@@ -181,7 +183,7 @@ test.describe('Test Catalog chaos: Lab Units (TC-CX-LU)', () => {
 
   test('TC-CX-LU-03: a unit cannot be renamed to another unit\'s name', async ({ page }) => {
 
-    test.fail(true, "TRIPWIRE F17: a unit can be renamed to another unit's name (200)");
+    // GUARD since 2026-10-14 (OGC-1465; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F17: a unit can be renamed to another unit's name (200)
     const a = await newLabUnit(page);
     const b = await newLabUnit(page);
     const w = await apiWrite(page, 'PUT', `${LU}/${b.id}`, { id: b.id, names: { en: a.name }, description: `QA CX unit ${RUN}`, domain: 'CLINICAL', isActive: true });
@@ -193,7 +195,7 @@ test.describe('Test Catalog chaos: Lab Units (TC-CX-LU)', () => {
 
   test('TC-CX-LU-04: deactivating with "move tests to" an inactive unit is refused, not a silent reactivation', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F6: "move tests to" an inactive unit is accepted and reactivates that unit');
+    // GUARD since 2026-10-14 (OGC-1459; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F6: "move tests to" an inactive unit is accepted and reactivates that unit
     const src = await newLabUnit(page);
     const dst = await newLabUnit(page);
     await seedTest(page, 'LU4', { labUnitId: src.id });
@@ -209,7 +211,7 @@ test.describe('Test Catalog chaos: Lab Units (TC-CX-LU)', () => {
 
   test('TC-CX-LU-05: a deactivation the server refuses shows an error in the dialog', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F15: a refused deactivation shows nothing (confirmDeactivation handles success only)');
+    // GUARD since 2026-10-14 (OGC-1461; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F15: a refused deactivation shows nothing (confirmDeactivation handles success only)
     const u = await newLabUnit(page);
     await open(page, `/MasterListsPage/LabUnitManagement/${u.id}/basic-info`);
     const toggle = page.locator('label[for="lu-active"]');
@@ -278,7 +280,7 @@ const testsCsv = (rows: string[], prefix = '') => `${prefix}${HEAD}\n${rows.join
 
 test.describe('Test Catalog chaos: Catalog CSV import (TC-CX-IM)', () => {
   test('TC-CX-IM-01: a tests.csv saved by Excel as "CSV UTF-8" (with a byte-order mark) is read', async ({ page }) => {
-    test.fail(true, 'TRIPWIRE F18: the tests loader does not strip a UTF-8 BOM, so the first header is not found');
+    // GUARD since 2026-10-14 (OGC-1466; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F18: the tests loader does not strip a UTF-8 BOM, so the first header is not found
     await open(page, '/');
     const name = `QA CX IM1 ${RUN}`;
     const r = await importCall(page, 'preview', [{ name: `tests-qa-im1-${RUN}.csv`, domain: 'tests', bytes: utf8(testsCsv([row(name, `QI1${RUN}`)], '﻿')) }]);
@@ -290,7 +292,7 @@ test.describe('Test Catalog chaos: Catalog CSV import (TC-CX-IM)', () => {
 
   test('TC-CX-IM-02: a Latin-1 (Windows) tests.csv keeps its accents', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F18: the tests loader reads UTF-8 only; a Latin-1 "é" is stored as U+FFFD');
+    // GUARD since 2026-10-14 (OGC-1466; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F18: the tests loader reads UTF-8 only; a Latin-1 "é" is stored as U+FFFD
     await open(page, '/');
     const name = `QA CX IM2 Hématie ${RUN}`;
     const code = `QI2${RUN}`;
@@ -304,7 +306,7 @@ test.describe('Test Catalog chaos: Catalog CSV import (TC-CX-IM)', () => {
 
   test('TC-CX-IM-03: preview has no side effects: previewing twice does not double the unresolved-reference count', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F18: each preview writes unresolved-reference rows; a second preview doubles the count');
+    // GUARD since 2026-10-14 (OGC-1466; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F18: each preview writes unresolved-reference rows; a second preview doubles the count
     await open(page, '/');
     const bogus = `QACX NoSuchSection ${RUN}`;
     const csv = `${HEAD}\nQA CX IM3 ${RUN},${bogus},Serum,N,N,QI3${RUN},QA CX IM3 ${RUN}\n`;
@@ -323,7 +325,7 @@ test.describe('Test Catalog chaos: Catalog CSV import (TC-CX-IM)', () => {
 
   test('TC-CX-IM-04: preview promises what apply does, even when one file lists the same test twice', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F18: preview says 2 created, apply does 1 created + 1 updated for a repeated row');
+    // GUARD since 2026-10-14 (OGC-1466; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F18: preview says 2 created, apply does 1 created + 1 updated for a repeated row
     await open(page, '/');
     const name = `QA CX IM4 ${RUN}`;
     const f: CsvFile = { name: `tests-qa-im4-${RUN}.csv`, domain: 'tests', bytes: utf8(testsCsv([row(name, `QI4${RUN}`), row(name, `QI4${RUN}`)])) };
@@ -336,7 +338,7 @@ test.describe('Test Catalog chaos: Catalog CSV import (TC-CX-IM)', () => {
 
   test('TC-CX-IM-05: two files with the same name in one batch are refused, not silently merged', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F18: two files with the same name are both loaded, the second over the first, with no warning');
+    // GUARD since 2026-10-14 (OGC-1466; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F18: two files with the same name are both loaded, the second over the first, with no warning
     await open(page, '/');
     const n = `tests-qa-im5-${RUN}.csv`;
     const r = await importCall(page, 'preview', [
@@ -365,7 +367,7 @@ test.describe('Test Catalog chaos: Catalog CSV import (TC-CX-IM)', () => {
 
   test('TC-CX-IM-07: after a preview, changing a file\'s type in the screen turns Apply off until a new preview', async ({ page }) => {
 
-    test.fail(true, "TRIPWIRE F18: changing a file's type after preview leaves Apply on (setDomainOf keeps the plan)");
+    // GUARD since 2026-10-14 (OGC-1466; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F18: changing a file's type after preview leaves Apply on (setDomainOf keeps the plan)
     await open(page, '/MasterListsPage/CatalogImport');
     const fname = `tests-qa-im7-${RUN}.csv`;
     await page.locator('input[type="file"]').first().setInputFiles({ name: fname, mimeType: 'text/csv', buffer: Buffer.from(testsCsv([row(`QA CX IM7 ${RUN}`, `QI7${RUN}`)])) });
@@ -385,7 +387,7 @@ test.describe('Test Catalog chaos: Catalog CSV import (TC-CX-IM)', () => {
 // ---------------------------------------------------------------------------------------------
 test.describe('Test Catalog chaos: the test list (TC-CX-LS)', () => {
   test('TC-CX-LS-01: absurd paging and filters are answered cleanly (no 500)', async ({ page }) => {
-    test.fail(true, 'TRIPWIRE F19: page overflow (1073741825) and sampleType=abc answer 500');
+    // GUARD since 2026-10-14 (OGC-1467; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F19: page overflow (1073741825) and sampleType=abc answer 500
     await open(page, '/');
     for (const q of ['page=1073741825&pageSize=2', 'page=2147483647&pageSize=2147483647', 'page=-5&pageSize=0', 'page=abc',
       `search=${encodeURIComponent("%_'\"<>")}`, `search=${'x'.repeat(5000)}`, 'sampleType=abc', 'labUnit=abc', 'domain=clinical']) {
@@ -396,7 +398,7 @@ test.describe('Test Catalog chaos: the test list (TC-CX-LS)', () => {
 
   test('TC-CX-LS-02: ids that are not numbers are 400 or 404 on every catalog admin path', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F19: non-numeric ids outside /rest/test-catalog answer 500 (sample-types, lab-units-management, test methods, group summary)');
+    // GUARD since 2026-10-14 (OGC-1467; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F19: non-numeric ids outside /rest/test-catalog answer 500 (sample-types, lab-units-management, test methods, group summary)
     await open(page, '/');
     for (const p of ['/rest/sample-types/abc', `${LU}/abc`, `${TC}/tests/abc/basic-info`, '/rest/test/abc/methods', '/rest/localizations/abc', `${TC}/group/summary?ids=1,abc`]) {
       const r = await apiGet(page, p);

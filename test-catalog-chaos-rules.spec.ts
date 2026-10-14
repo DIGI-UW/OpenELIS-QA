@@ -28,7 +28,7 @@ const qRow = (over: Record<string, unknown>) => ({ id: null, componentId: null, 
 
 test.describe('Test Catalog chaos: QC Targets (TC-CX-QC)', () => {
   test('TC-CX-QC-01: a QC Targets save that fails with a 500 tells the user in words, not raw JSON', async ({ page }) => {
-    test.fail(true, 'TRIPWIRE F15: the error toast shows the server JSON {"status":500,...}');
+    // GUARD since 2026-10-14 (OGC-1461; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F15: the error toast shows the server JSON {"status":500,...}
     const t = await seedTest(page, 'QC1');
     await open(page, `/MasterListsPage/TestCatalogEditor/${t.id}/qc-targets`);
     await page.getByTestId('qc-target-add-LOW').waitFor({ state: 'visible', timeout: 60_000 });
@@ -49,7 +49,7 @@ test.describe('Test Catalog chaos: QC Targets (TC-CX-QC)', () => {
 
   test('TC-CX-QC-02: lifecycle: after the result type changes from numeric to coded, QC targets can still be saved', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F10: after the result type changes, every save is 422 ("expectedDictResultId is required") because old rows are re-sent in the new shape');
+    // GUARD since 2026-10-14 (OGC-1462; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F10: after the result type changes, every save is 422 ("expectedDictResultId is required") because old rows are re-sent in the new shape
     const t = await seedTest(page, 'QC2');
     expect((await putQc(page, t.id, [qRow({})])).status, 'apply a numeric LOW target').toBe(200);
     const { neg } = await makeCoded(page, t.id); // edit the test: now a coded result
@@ -65,7 +65,7 @@ test.describe('Test Catalog chaos: QC Targets (TC-CX-QC)', () => {
 
   test('TC-CX-QC-03: a target added and deactivated before it was filled does not block Save', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F10: a blank row deactivated before it was filled makes Save 422 (UI skips it, server validates it)');
+    // GUARD since 2026-10-14 (OGC-1462; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F10: a blank row deactivated before it was filled makes Save 422 (UI skips it, server validates it)
     const t = await seedTest(page, 'QC3');
     await open(page, `/MasterListsPage/TestCatalogEditor/${t.id}/qc-targets`);
     await page.getByTestId('qc-target-add-HIGH').waitFor({ state: 'visible', timeout: 60_000 });
@@ -81,7 +81,7 @@ test.describe('Test Catalog chaos: QC Targets (TC-CX-QC)', () => {
 
   test('TC-CX-QC-04: out-of-range or wrong-type values are 4xx, never 500', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F19: expected 12345678901 (numeric overflow), unknown and non-numeric dictionary answers answer 500');
+    // GUARD since 2026-10-14 (OGC-1467; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F19: expected 12345678901 (numeric overflow), unknown and non-numeric dictionary answers answer 500
     const t = await seedTest(page, 'QC4');
     const cases: [string, Record<string, unknown>][] = [
       ['expected value 12345678901 (column holds 10 digits before the point)', { expectedValue: 12345678901 }],
@@ -145,7 +145,7 @@ test.describe('Test Catalog chaos: Alerts (TC-CX-AL)', () => {
 
   test('TC-CX-AL-02: over-long or malformed recipient fields are 4xx, never 500', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F19: phone 21, name 101, e-mail 101, role id "abc" and 999999 answer 500');
+    // GUARD since 2026-10-14 (OGC-1467; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F19: phone 21, name 101, e-mail 101, role id "abc" and 999999 answer 500
     const t = await seedTest(page, 'AL2');
     const cases: [string, Record<string, unknown>][] = [
       ['a 21-character phone (+675 7123 4567 ext 12)', { notifySms: true, notifyCustomPhone: '+675 7123 4567 ext 12' }],
@@ -164,7 +164,7 @@ test.describe('Test Catalog chaos: Alerts (TC-CX-AL)', () => {
 
   test('TC-CX-AL-03: lifecycle: a rule scoped to a component that is later removed can still be switched off', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F12: a rule scoped to a removed component cannot be switched off (400); only Delete works');
+    // GUARD since 2026-10-14 (OGC-1458; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F12: a rule scoped to a removed component cannot be switched off (400); only Delete works
     const t = await seedTest(page, 'AL3');
     const p = (await sampleResultsOf(page, t.id)).components[0];
     expect((await putSampleResults(page, t.id, [component({ id: p.id, label: p.label }),
@@ -184,13 +184,14 @@ test.describe('Test Catalog chaos: Alerts (TC-CX-AL)', () => {
 
   test('TC-CX-AL-04: two editors: renaming from an old page does not switch back on a rule another admin switched off', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F11: alert PUT ignores lastupdated; renaming from an old page switches a disabled rule back on');
+    // GUARD since 2026-10-14 (OGC-1463; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F11: alert PUT ignores lastupdated; renaming from an old page switches a disabled rule back on
     const t = await seedTest(page, 'AL4');
     const c = await apiWrite<any>(page, 'POST', AL(t.id), rule());
     const stale = (await rulesOf(page, t.id)).find((r: any) => r.id === c.json.id); // A loads (enabled)
     expect((await apiWrite(page, 'PUT', `${AL(t.id)}/${c.json.id}`, rule({ enabled: false }))).status, 'B switches it off').toBe(200);
     const body = Object.fromEntries(Object.entries(rule()).map(([k]) => [k, stale[k]]));
-    const w = await apiWrite(page, 'PUT', `${AL(t.id)}/${c.json.id}`, { ...body, name: `QA CX A rename ${RUN}` });
+    // A saves as the screen does since OGC-1463: with the rule version its load returned.
+    const w = await apiWrite(page, 'PUT', `${AL(t.id)}/${c.json.id}`, { ...body, name: `QA CX A rename ${RUN}`, version: stale.version });
     observe('A renames on its old copy', w);
     const now = (await rulesOf(page, t.id)).find((r: any) => r.id === c.json.id);
     await apiWrite(page, 'DELETE', `${AL(t.id)}/${c.json.id}`);
@@ -230,7 +231,7 @@ const putStorage = (page: Page, id: string, over: Record<string, unknown> = {}) 
 
 test.describe('Test Catalog chaos: Storage (TC-CX-ST)', () => {
   test('TC-CX-ST-01: the server refuses a storage condition the product does not know', async ({ page }) => {
-    test.fail(true, 'TRIPWIRE F17: unknown storage condition codes ("BOGUS", "frozen") are stored (200)');
+    // GUARD since 2026-10-14 (OGC-1465; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F17: unknown storage condition codes ("BOGUS", "frozen") are stored (200)
     const t = await seedTest(page, 'ST1');
     for (const cond of ['BOGUS', 'frozen']) {
       const w = await putStorage(page, t.id, { storageCondition: cond });
@@ -242,7 +243,7 @@ test.describe('Test Catalog chaos: Storage (TC-CX-ST)', () => {
 
   test('TC-CX-ST-02: over-long text and negative durations are 4xx, never 500', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F19/F17: custom 201, unit 21, disposal 101 answer 500; a negative duration is stored');
+    // GUARD since 2026-10-14 (OGC-1467; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F19/F17: custom 201, unit 21, disposal 101 answer 500; a negative duration is stored
     const t = await seedTest(page, 'ST2');
     const cases: [string, Record<string, unknown>][] = [
       ['a 201-character custom condition', { storageCondition: 'OTHER', storageConditionCustom: 'c'.repeat(201) }],
@@ -259,7 +260,7 @@ test.describe('Test Catalog chaos: Storage (TC-CX-ST)', () => {
 
   test('TC-CX-ST-03: two first saves of storage at the same moment both answer cleanly (no 500)', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F19: two first saves at once: one 500 (uq_test_sample_handling_test)');
+    // GUARD since 2026-10-14 (OGC-1467; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F19: two first saves at once: one 500 (uq_test_sample_handling_test)
     const t = await seedTest(page, 'ST3');
     const [a, b] = await Promise.all([putStorage(page, t.id, { storageDuration: 3 }), putStorage(page, t.id, { storageDuration: 4 })]);
     observe('parallel first saves', a.status * 1000 + b.status);
@@ -268,7 +269,7 @@ test.describe('Test Catalog chaos: Storage (TC-CX-ST)', () => {
 
   (['dropped connection', 'login page with a 200'] as const).forEach((what, i) => {
     test(`TC-CX-ST-0${i + 4}: a Storage save that meets ${what} is not shown as saved and keeps the form`, async ({ page }) => {
-      test.fail(what === 'login page with a 200', 'TRIPWIRE F8: a login page answered with 200 is shown as "Sample storage saved"');
+      // GUARD since 2026-10-14 (OGC-1461; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F8: a login page answered with 200 is shown as "Sample storage saved"
       const t = await seedTest(page, `ST${i + 4}`);
       await open(page, `/MasterListsPage/TestCatalogEditor/${t.id}/storage`);
       const notes = page.locator('#storage-stability-notes');
@@ -308,7 +309,7 @@ const rng = (componentId: string, over: Record<string, unknown> = {}) => ({ comp
 
 test.describe('Test Catalog chaos: group editor (TC-CX-GR)', () => {
   test('TC-CX-GR-01: if one test\'s ranges fail to load, "Set all to these values" does not wipe the ranges of every test', async ({ page }) => {
-    test.fail(true, 'TRIPWIRE F2: the failed load seeds an empty table; "Set all" sends ranges [] and deletes every range on every selected test');
+    // GUARD since 2026-10-14 (OGC-1455; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F2: the failed load seeds an empty table; "Set all" sends ranges [] and deletes every range on every selected test
     const a = await seedTest(page, 'GR1a');
     const b = await seedTest(page, 'GR1b');
     for (const t of [a, b]) expect((await apiWrite(page, 'PUT', `${TC}/tests/${t.id}/ranges`, { testId: t.id, ranges: [rng(t.componentId)] })).status).toBe(200);
@@ -330,7 +331,7 @@ test.describe('Test Catalog chaos: group editor (TC-CX-GR)', () => {
 
   test('TC-CX-GR-02: tests that differ only in their reporting range are flagged as different before "Set all"', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F13: the differs check ignores reporting bounds, so tests that differ only there show as identical');
+    // GUARD since 2026-10-14 (OGC-1455; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F13: the differs check ignores reporting bounds, so tests that differ only there show as identical
     const a = await seedTest(page, 'GR2a');
     const b = await seedTest(page, 'GR2b');
     expect((await apiWrite(page, 'PUT', `${TC}/tests/${a.id}/ranges`, { testId: a.id, ranges: [rng(a.componentId, { lowReporting: 0, highReporting: 40 })] })).status).toBe(200);
@@ -354,7 +355,7 @@ test.describe('Test Catalog chaos: group editor (TC-CX-GR)', () => {
 
   test('TC-CX-GR-04: a bad group body is refused before anything is written (no partial save, no 500)', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F13/F19: null ranges and a non-numeric id answer 500, and the request writes both tests before failing');
+    // GUARD since 2026-10-14 (OGC-1455; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F13/F19: null ranges and a non-numeric id answer 500, and the request writes both tests before failing
     const a = await seedTest(page, 'GR4a');
     const b = await seedTest(page, 'GR4b');
     const cases: [string, unknown][] = [

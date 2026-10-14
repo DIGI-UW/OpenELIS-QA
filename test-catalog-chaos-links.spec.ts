@@ -44,7 +44,7 @@ test.describe('Test Catalog chaos: Methods (TC-CX-ME)', () => {
 
   test('TC-CX-ME-02: a duplicate method NAME with a new code is reported as a duplicate name, not a duplicate code', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F14: a duplicate method name is answered "Method code already exists"');
+    // GUARD since 2026-10-14 (OGC-1464; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F14: a duplicate method name is answered "Method code already exists"
     const t = await seedTest(page, 'ME2');
     const m = await newMethod(page, t.id);
     const w = await apiWrite(page, 'POST', `${ME(t.id)}/inline-create`, { nameEnglish: m.methodName, nameFrench: m.methodName, code: `QZ${RUN}`, isDefault: false, effectiveDate: today });
@@ -54,7 +54,7 @@ test.describe('Test Catalog chaos: Methods (TC-CX-ME)', () => {
 
   test('TC-CX-ME-03: setting a removed method as default (from an old page) does not clear the real default', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F17: PATCH isDefault on a removed link clears the real default (methods-for-test has none)');
+    // GUARD since 2026-10-14 (OGC-1465; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F17: PATCH isDefault on a removed link clears the real default (methods-for-test has none)
     const t = await seedTest(page, 'ME3');
     const m1 = await newMethod(page, t.id, true);
     const m2 = await newMethod(page, t.id, false);
@@ -67,7 +67,7 @@ test.describe('Test Catalog chaos: Methods (TC-CX-ME)', () => {
   });
 
   test('TC-CX-ME-04: removing a method link that fails on the server is reported, and the link stays listed', async ({ page }) => {
-    test.fail(true, 'TRIPWIRE F15: a failed method unlink is silent (handleRemove ignores the status and just reloads)');
+    // GUARD since 2026-10-14 (OGC-1461; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F15: a failed method unlink is silent (handleRemove ignores the status and just reloads)
     const t = await seedTest(page, 'ME4');
     await newMethod(page, t.id, true);
     await open(page, `/MasterListsPage/TestCatalogEditor/${t.id}/methods`);
@@ -110,7 +110,7 @@ const reagentLinks = async (page: Page, id: string) => (await apiGet<any[]>(page
 
 test.describe('Test Catalog chaos: Reagents (TC-CX-RE)', () => {
   test('TC-CX-RE-01: a reagent save that fails keeps the quantity the admin typed, so a retry can send it', async ({ page }) => {
-    test.fail(true, 'TRIPWIRE F15: a failed reagent save rolls the row back to the server value; the typed quantity is lost');
+    // GUARD since 2026-10-14 (OGC-1461; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F15: a failed reagent save rolls the row back to the server value; the typed quantity is lost
     const t = await seedTest(page, 'RE1');
     const [r1] = await reagents(page, 1);
     expect((await apiWrite(page, 'POST', RE(t.id), { reagentId: r1.id, usageType: 'PRIMARY', quantityPerTest: 1, quantityUnit: 'mL' })).status).toBe(201);
@@ -129,7 +129,7 @@ test.describe('Test Catalog chaos: Reagents (TC-CX-RE)', () => {
 
   test('TC-CX-RE-02: impossible quantities and over-long units are 4xx, never 500', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F19/F17: a negative quantity is stored; 10^10 and a 51-character unit answer 500');
+    // GUARD since 2026-10-14 (OGC-1465; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F19/F17: a negative quantity is stored; 10^10 and a 51-character unit answer 500
     const t = await seedTest(page, 'RE2');
     const [r1, r2] = await reagents(page, 2);
     const cases: [string, unknown][] = [
@@ -160,7 +160,7 @@ test.describe('Test Catalog chaos: Reagents (TC-CX-RE)', () => {
 
   test('TC-CX-RE-04: linking two reagents where one link fails: the list shows the one that worked and a retry finishes the job', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F15: the retry re-posts every selected reagent; the one already linked answers 409 and the error never clears');
+    // GUARD since 2026-10-14 (OGC-1461; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F15: the retry re-posts every selected reagent; the one already linked answers 409 and the error never clears
     const t = await seedTest(page, 'RE4');
     const [r1, r2] = await reagents(page, 2);
     await open(page, `/MasterListsPage/TestCatalogEditor/${t.id}/reagents`);
@@ -231,7 +231,7 @@ test.describe('Test Catalog chaos: Panels (TC-CX-PN)', () => {
 
   test('TC-CX-PN-02: if the member list fails to load, saving one added test does not replace every existing member', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F3: a failed member load shows an empty list with Save enabled; saving replaces every member with the one added');
+    // GUARD since 2026-10-14 (OGC-1456; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F3: a failed member load shows an empty list with Save enabled; saving replaces every member with the one added
     const [a, b, c] = [await seedTest(page, 'PN2a', { activate: true }), await seedTest(page, 'PN2b', { activate: true }), await seedTest(page, 'PN2c', { activate: true })];
     const p = await newPanel(page, [a.id, b.id], true);
     const failLoad = (u: URL) => new RegExp(`/panels/${p.id}/test-order$`).test(u.pathname);
@@ -257,7 +257,7 @@ test.describe('Test Catalog chaos: Panels (TC-CX-PN)', () => {
 
   test('TC-CX-PN-03: removing the last test from an active panel does not leave an active empty panel', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F16: removing the last test leaves an active panel with zero tests (200)');
+    // GUARD since 2026-10-14 (OGC-1456; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F16: removing the last test leaves an active panel with zero tests (200)
     const t = await seedTest(page, 'PN3', { activate: true });
     const p = await newPanel(page, [t.id], true);
     const w = await apiWrite(page, 'PUT', `${TC}/panels/${p.id}/tests`, { tests: [] });
@@ -269,7 +269,7 @@ test.describe('Test Catalog chaos: Panels (TC-CX-PN)', () => {
 
   test('TC-CX-PN-04: bad panel bodies are 4xx, never 500, and the 20-character name rule holds on create', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F19/F16: null lists, a non-numeric member id and an 81-character code answer 500; a 21-character name is created (201)');
+    // GUARD since 2026-10-14 (OGC-1456; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F19/F16: null lists, a non-numeric member id and an 81-character code answer 500; a 21-character name is created (201)
     const t = await seedTest(page, 'PN4');
     const p = await newPanel(page, [], false);
     const cases: [string, string, string, unknown][] = [
@@ -289,7 +289,7 @@ test.describe('Test Catalog chaos: Panels (TC-CX-PN)', () => {
 
   test('TC-CX-PN-05: an inactive test cannot be added to a panel through the API', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F16: an inactive test is added to a panel through the API (200)');
+    // GUARD since 2026-10-14 (OGC-1456; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F16: an inactive test is added to a panel through the API (200)
     const t = await seedTest(page, 'PN5'); // inactive
     const p = await newPanel(page, [], false);
     const w = await apiWrite(page, 'PUT', `${TC}/panels/${p.id}/tests`, { tests: [{ testId: t.id, position: 1 }] });
@@ -299,7 +299,7 @@ test.describe('Test Catalog chaos: Panels (TC-CX-PN)', () => {
 
   test('TC-CX-PN-06: a panel LOINC longer than the column is refused, and the old LOINC does not keep routing', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F16: an 11-character LOINC is stored in the mapping but panel.loinc keeps the old code that routes e-orders');
+    // GUARD since 2026-10-14 (OGC-1456; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F16: an 11-character LOINC is stored in the mapping but panel.loinc keeps the old code that routes e-orders
     const t = await seedTest(page, 'PN6', { activate: true });
     const p = await newPanel(page, [t.id], true);
     expect((await apiWrite(page, 'PUT', `${TC}/panels/${p.id}/terminology`, { mappings: [{ source: 'LOINC', code: '12345-6', relationship: 'SAME_AS' }] })).status).toBe(200);
@@ -312,12 +312,14 @@ test.describe('Test Catalog chaos: Panels (TC-CX-PN)', () => {
 
   test('TC-CX-PN-07: two editors: a stale member list does not drop the test another admin just added', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F11: no stale check; an old member list drops the test another editor added');
+    // GUARD since 2026-10-14 (OGC-1463; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F11: no stale check; an old member list drops the test another editor added
     const [a, b, c] = [await seedTest(page, 'PN7a', { activate: true }), await seedTest(page, 'PN7b', { activate: true }), await seedTest(page, 'PN7c', { activate: true })];
     const p = await newPanel(page, [a.id], true);
-    const stale = await membersOf(page, p.id); // A loads [a]
+    const staleLoad = (await apiGet<any>(page, `${TC}/panels/${p.id}/test-order`)).json; // A loads [a]
+    const stale: any[] = staleLoad?.tests ?? [];
     expect((await apiWrite(page, 'PUT', `${TC}/panels/${p.id}/tests`, { tests: [{ testId: a.id, position: 1 }, { testId: b.id, position: 2 }] })).status, 'B adds b').toBe(200);
-    const w = await apiWrite(page, 'PUT', `${TC}/panels/${p.id}/tests`, { tests: [...stale.map((m: any, i: number) => ({ testId: String(m.testId ?? m.id), position: i + 1 })), { testId: c.id, position: 2 }] });
+    // A saves as the screen does since OGC-1463: its old list plus the member-list version it loaded.
+    const w = await apiWrite(page, 'PUT', `${TC}/panels/${p.id}/tests`, { tests: [...stale.map((m: any, i: number) => ({ testId: String(m.testId ?? m.id), position: i + 1 })), { testId: c.id, position: 2 }], version: staleLoad?.version });
     observe('A saves its old list plus c', w);
     const ids = (await membersOf(page, p.id)).map((m: any) => String(m.testId ?? m.id));
     expect(w.status === 409 || ids.includes(b.id), `A refused as stale, or b kept (members ${ids})`).toBe(true);
@@ -343,7 +345,7 @@ test.describe('Test Catalog chaos: Panels (TC-CX-PN)', () => {
 // ---------------------------------------------------------------------------------------------
 test.describe('Test Catalog chaos: Display Order (TC-CX-DO)', () => {
   test('TC-CX-DO-01: bad display-order bodies are 4xx, never 500', async ({ page }) => {
-    test.fail(true, 'TRIPWIRE F19: items null answers 500');
+    // GUARD since 2026-10-14 (OGC-1467; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F19: items null answers 500
     await open(page, '/');
     const nul = await apiWrite(page, 'PUT', `${TC}/sample-types/2/test-order`, { items: null });
     expect.soft(nul.status, `items null: ${nul.text.slice(0, 120)}`).toBeLessThan(500);
@@ -377,7 +379,7 @@ const listByCode = async (page: Page, q: string) => ((await apiGet<any>(page, `$
 
 test.describe('Test Catalog chaos: creating a test (TC-CX-CR)', () => {
   test('TC-CX-CR-01: a create with an unknown sample type, lab unit or copy source is a 4xx and creates nothing', async ({ page }) => {
-    test.fail(true, 'TRIPWIRE F19: unknown or non-numeric sample type, unknown lab unit and a non-numeric copy source answer 500; the last one has already created the test');
+    // GUARD since 2026-10-14 (OGC-1467; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F19: unknown or non-numeric sample type, unknown lab unit and a non-numeric copy source answer 500; the last one has already created the test
     await open(page, '/');
     const cases: [string, Record<string, unknown>][] = [
       ['unknown sample type', { sampleTypeIds: ['99999999'] }],
@@ -398,7 +400,7 @@ test.describe('Test Catalog chaos: creating a test (TC-CX-CR)', () => {
 
   test('TC-CX-CR-02: a code that differs only by spaces or case from an existing code is refused', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F14: a code with surrounding spaces is a second test with the same code (201)');
+    // GUARD since 2026-10-14 (OGC-1464; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F14: a code with surrounding spaces is a second test with the same code (201)
     await open(page, '/');
     const code = `QCR2${RUN}`;
     expect((await apiWrite(page, 'POST', `${TC}/tests`, createBody({ code, name: `QA CX CR2 ${RUN}`, reportingName: `QA CX CR2 ${RUN}`, description: `QA CX CR2 ${RUN}` }))).status).toBe(201);
@@ -410,7 +412,7 @@ test.describe('Test Catalog chaos: creating a test (TC-CX-CR)', () => {
 
   test('TC-CX-CR-03: a test name that differs only by case or spaces from an existing test is refused', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F14/Q: a name with a leading space is a second test with the same name (201); upper case is refused');
+    // GUARD since 2026-10-14 (OGC-1464; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F14/Q: a name with a leading space is a second test with the same name (201); upper case is refused
     await open(page, '/');
     const name = `QA CX CR3 ${RUN}`;
     expect((await apiWrite(page, 'POST', `${TC}/tests`, createBody({ name, reportingName: name, description: name, code: `QC3${RUN}` }))).status).toBe(201);
@@ -422,7 +424,7 @@ test.describe('Test Catalog chaos: creating a test (TC-CX-CR)', () => {
 
   test('TC-CX-CR-04: Basic Info cannot give a test another test\'s code', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F14: Basic Info gives B the code of A (200); no uniqueness check on edit');
+    // GUARD since 2026-10-14 (OGC-1464; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F14: Basic Info gives B the code of A (200); no uniqueness check on edit
     const a = await seedTest(page, 'CR4a');
     const b = await seedTest(page, 'CR4b');
     const ba = (await apiGet<any>(page, `${TC}/tests/${a.id}/basic-info`)).json;
@@ -434,7 +436,7 @@ test.describe('Test Catalog chaos: creating a test (TC-CX-CR)', () => {
 
   test('TC-CX-CR-05: two creates with the same code at the same moment make one test, not two', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F14: two creates with one code at the same moment both answer 201 (no unique index on local_code)');
+    // GUARD since 2026-10-14 (OGC-1464; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F14: two creates with one code at the same moment both answer 201 (no unique index on local_code)
     await open(page, '/');
     const code = `QCR5${RUN}`;
     const mk = (n: string) => apiWrite(page, 'POST', `${TC}/tests`, createBody({ code, name: `QA CX CR5${n} ${RUN}`, reportingName: `QA CX CR5${n} ${RUN}`, description: `QA CX CR5${n} ${RUN}` }));
@@ -452,7 +454,7 @@ const orderable = async (page: Page, testId: string, sampleType = '2') =>
 
 test.describe('Test Catalog chaos: activation (TC-CX-AV)', () => {
   test('TC-CX-AV-01: a test with every sample type removed cannot be activated', async ({ page }) => {
-    test.fail(true, 'TRIPWIRE F7: activation does not require a sample type; the test becomes active and orderable with none');
+    // GUARD since 2026-10-14 (OGC-1460; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F7: activation does not require a sample type; the test becomes active and orderable with none
     const t = await seedTest(page, 'AV1');
     const b = (await apiGet<any>(page, `${TC}/tests/${t.id}/basic-info`)).json;
     const strip = await apiWrite(page, 'PUT', `${TC}/tests/${t.id}/basic-info`, { ...b, sampleTypeId: null, sampleTypeIds: [] });

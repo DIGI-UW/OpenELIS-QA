@@ -139,7 +139,8 @@ test.describe('Sample Type Management — create flow (OGC-296)', () => {
     );
     // Every record exposes the full editor contract, not just the list columns.
     expect(Object.keys(serum).sort()).toEqual(
-      ['abbreviation', 'description', 'domain', 'id', 'isActive', 'name', 'sortOrder', 'testCount'],
+      // lastUpdated: the version token every save sends back since OGC-1463 (14 Oct 2026).
+      ['abbreviation', 'description', 'domain', 'id', 'isActive', 'lastUpdated', 'name', 'sortOrder', 'testCount'],
     );
   });
 
@@ -203,24 +204,29 @@ test.describe('Sample Type Management — create flow (OGC-296)', () => {
     expect(dup.status, 'duplicate name -> 4xx, not an unhandled 500').toBeLessThan(500);
   });
 
-  test('ST-4: [SPEC-DIVERGENCE OGC-1157] a distinct name colliding on the derived abbreviation is rejected with a validation error [FIXED OGC-1157]', async ({ page }) => {
+  test('ST-4: a distinct name colliding on the derived abbreviation saves with an abbreviation of its own (OGC-1157, OGC-1460)', async ({ page }) => {
+    // REWRITTEN 2026-10-14. Since OGC-1460 (#4712) SampleTypeCreate derives a free abbreviation
+    // (TypeOfSampleService.uniqueLocalAbbreviation adds a number) instead of refusing the collision.
     // Distinct from ST-3: the full name is unique, only the first ten characters collide.
     // Borrows an existing seeded record as the collision donor so this case performs no writes
     // of its own (the create is expected to be refused).
     // FIXED OGC-1157, flipped 2026-10-08 (passes on local develop 2026-10-08 (same fix as ST-3)); was FLIP-WHEN-FIXED.
 
     const list = await api(page, '/sample-types');
-    const donor = ((list.body?.data as any[]) || []).find((s) => (s.name || '').length >= 10);
+    // The donor must share the create's domain (CLINICAL): names and abbreviations are unique
+    // per domain since OGC-1460 (14 Oct 2026), so a Vector donor collides with nothing.
+    const donor = ((list.body?.data as any[]) || []).find((s) => (s.name || '').length >= 10 && s.domain === 'CLINICAL');
     expect(donor, 'a seeded sample type with a name of at least 10 characters').toBeTruthy();
 
-    const colliding = `${donor.name.slice(0, 10)}_QA_COLLIDE`;
+    // Unique per run: a fixed name answered 409 (duplicate name) on the second run (14 Oct 2026).
+    const colliding = `${donor.name.slice(0, 10)}_QA_${Date.now() % 100000}`;
     expect(colliding, 'collision candidate is a genuinely different name').not.toBe(donor.name);
 
     const res = await api(page, '/SampleTypeCreate', 'POST', createPayload(colliding));
-    expect(res.status, 'abbreviation collision -> 4xx validation error').toBeGreaterThanOrEqual(400);
-    expect(res.status, 'abbreviation collision -> 4xx, not an unhandled 500').toBeLessThan(500);
-
-    // Defensive: if this is ever fixed by auto-disambiguating instead of refusing, don't leak a record.
-    if (res.status < 300) await deactivate(page, await findByName(page, colliding));
+    expect(res.status, 'a distinct name saves even though its first ten characters are taken').toBeLessThan(300);
+    const created = await findByName(page, colliding);
+    expect(created?.abbreviation, 'it gets an abbreviation of its own').toBeTruthy();
+    expect(String(created?.abbreviation).toLowerCase(), 'not the donor\'s abbreviation').not.toBe(String(donor.abbreviation).toLowerCase());
+    await deactivate(page, created);
   });
 });
