@@ -53,8 +53,12 @@ const cleanup: number[] = [];
 
 // ── page helpers ───────────────────────────────────────────────────────────
 
+/**
+ * Since #4368 (15 Oct) Items, Receive and Reports are three pages (/inventory, /inventory/receive,
+ * /inventory/reports) with a menu row each, not tabs on one page, so a page's content is <main>.
+ */
 function itemsPanel(page: Page): Locator {
-  return page.getByRole('tabpanel', { name: 'Items' });
+  return page.locator('main');
 }
 
 async function openBoard(page: Page): Promise<Locator> {
@@ -66,11 +70,10 @@ async function openBoard(page: Page): Promise<Locator> {
 }
 
 async function openTab(page: Page, name: 'Reports'): Promise<Locator> {
-  await page.goto(ROUTE, { waitUntil: 'domcontentloaded' });
+  await page.goto(`${ROUTE}/${name.toLowerCase()}`, { waitUntil: 'domcontentloaded' });
   await ready(page);
-  await page.getByRole('tab', { name }).click();
-  const panel = page.getByRole('tabpanel', { name });
-  await expect(panel).toBeVisible({ timeout: 30_000 });
+  const panel = page.locator('main');
+  await expect(panel.getByRole('heading', { level: 1, name }), `the ${name} page`).toBeVisible({ timeout: 30_000 });
   return panel;
 }
 
@@ -224,13 +227,13 @@ test.afterAll(async ({ browser }) => {
 // ── the board ──────────────────────────────────────────────────────────────
 
 test.describe('Items board (OGC-438 #4357)', () => {
-  test('TC-INVB-00 [canary]: Inventory Management opens on the Items board with its columns, and the board endpoint serves the fixtures', async ({ page }) => {
+  test('TC-INVB-00 [canary]: Inventory > Items opens the board with its columns (heading Items, crumbs Home / Inventory / Items, no tabs since #4368), and the board endpoint serves the fixtures', async ({ page }) => {
     const panel = await openBoard(page);
-    await expect(page.getByRole('heading', { name: 'Inventory Items' })).toBeVisible();
-    // #4363 retired the Catalog tab: items are defined from the board (New item).
-    for (const t of ['Items', 'Reports']) await expect(page.getByRole('tab', { name: t })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Catalog' })).toHaveCount(0);
-    await expect(page.getByRole('tab', { name: 'Items' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^Items$/);
+    const crumbs = (await page.locator('.cds--breadcrumb-item').allInnerTexts()).map((t) => t.replace(/\/\s*$/, '').trim());
+    expect(crumbs, 'the breadcrumb').toEqual(['Home', 'Inventory', 'Items']);
+    // #4363 retired the Catalog tab and #4368 the tab strip: Items, Receive and Reports are pages.
+    await expect(page.getByRole('tab'), 'no tabs').toHaveCount(0);
     const headers = (await panel.locator('thead').first().locator('.cds--table-header-label').allInnerTexts()).map((h) => h.trim()).filter(Boolean);
     expect(headers, 'board columns').toEqual(['Item', 'On hand', 'Usage trend', 'Runs out', 'Order by', 'Status', 'Last count', 'Actions']);
     const names = (await board(page)).map((r) => r.name);
@@ -740,7 +743,7 @@ test.describe('Defining items, tags, count mode and Reports (#4361 to #4365)', (
     expect(preview.status, preview.text).toBe(200);
     const table = preview.body as { headers: string[]; rows: string[][] };
     const tagCol = table.headers.indexOf('Tags');
-    expect(tagCol, `the report has a Tags column (${table.headers.join(', ')})`).toBeGreaterThanOrEqual(0);
+    expect(tagCol, `the report has a Tags column (${table.headers.join(', ')})`).not.toBe(-1);
     const row = table.rows.find((r) => r.includes(it.name));
     expect(row, `${it.name} is in Stock on hand`).toBeTruthy();
     expect(row![tagCol], 'reported by its tag').toBe('RDT');
