@@ -110,17 +110,15 @@ test.describe.serial('Chain J — Audit Trail Coverage', () => {
     }
     baselineCount = auditEntriesOf(r.body).length;
     // patientProperties is a READ-ONLY display projection: it carries subjectNumber,
-    // nationalId, names and demographics, but no primary key. So the patient is identified
-    // the way the Patient screen itself does it -- search by subject number, take the PK
-    // off the search result.
+    // nationalId, names and demographics, but no primary key. The patient search takes the lab
+    // number directly (it returns the sample's own patient), so search by the accession and take
+    // the PK off the result. Until 13 Oct 2026 this searched by subject number, which comes back
+    // empty when the accession's patient has none, and Step 3 then failed with no product fault.
     const pp = (r.body as { patientProperties?: Record<string, unknown> } | null)?.patientProperties;
     if (pp) accessionPatientProps = { ...pp };
-    const subject = String(pp?.subjectNumber ?? '');
-    if (subject) {
-      const found = await apiCall<{ patientSearchResults?: Array<{ patientID?: string }> }>(
-        page, `${API}/patient-search-results?subjectNumber=${encodeURIComponent(subject)}`);
-      accessionPatientPK = String(found.body?.patientSearchResults?.[0]?.patientID ?? '');
-    }
+    const found = await apiCall<{ patientSearchResults?: Array<{ patientID?: string }> }>(
+      page, `${API}/patient-search-results?labNumber=${encodeURIComponent(auditAccession)}`);
+    accessionPatientPK = String(found.body?.patientSearchResults?.[0]?.patientID ?? '');
     markStep('J', 1, 'PASS', `Baseline audit rows for ${auditAccession} = ${baselineCount}` + (accessionPatientPK ? `; patient ${accessionPatientPK}` : '; no patientPK in the report'));
   });
 
@@ -184,7 +182,7 @@ test.describe.serial('Chain J — Audit Trail Coverage', () => {
     // product surface. And the patient has to be the one ON the baselined accession: any other
     // patient's edit is invisible to an accession-scoped audit report by construction.
     if (!accessionPatientPK) {
-      markStep('J', 3, 'FAIL', 'Could not resolve a patient PK for the baselined accession via subjectNumber search',
+      markStep('J', 3, 'FAIL', 'Could not resolve a patient PK for the baselined accession via a lab-number search',
         'Every accession has a patient and patient-search-results is a shipped surface; failing to find it is a failure, not a gap.');
       expect(accessionPatientPK, 'patientPK from the audit report').toBeTruthy();
       return;

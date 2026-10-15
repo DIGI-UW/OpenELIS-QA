@@ -27,7 +27,6 @@
     "TC-IO-04  [tests/electronic-orders.spec.ts,tests/order-entry.spec.ts]",
     "TC-IO-05  [tests/electronic-orders.spec.ts,tests/order-entry.spec.ts]",
     "TC-LOINC-01  [tests/loinc-dictionary.spec.ts,tests/system-misc.spec.ts]",
-    "TC-LOINC-02  [tests/loinc-dictionary.spec.ts,tests/system-misc.spec.ts]",
     "TC-LOINC-03  [tests/loinc-dictionary.spec.ts,tests/system-misc.spec.ts]",
     "TC-LOINC-04  [tests/loinc-dictionary.spec.ts,tests/system-misc.spec.ts]",
     "TC-LOINC-05  [tests/loinc-dictionary.spec.ts,tests/system-misc.spec.ts]",

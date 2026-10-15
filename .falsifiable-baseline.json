@@ -1,6 +1,6 @@
 {
   "recorded": "2026-10-13",
-  "total": 1651,
+  "total": 1650,
   "hollowTotal": 177,
   "files": {
     "tests/a11y-axe-scan.spec.ts": 0,

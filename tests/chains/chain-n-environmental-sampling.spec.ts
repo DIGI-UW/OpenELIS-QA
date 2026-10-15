@@ -11,7 +11,7 @@
  *
  * Captured endpoints (see _common.ts VE_* + vector-env-api-captures.md):
  *   - CREATE   POST /rest/SamplePatientEntry  (shared w/ clinical+vector; then GET /rest/order/search)
- *   - READBACK GET  /rest/SampleEdit?labNumber=<acc>   (legacy edit model, carries sampleXML)
+ *   - READBACK GET  /rest/SampleEdit?labNumber=<acc>   (legacy edit model, carries existingTests)
  *   - DICTS    GET  /rest/admin/vector/sampling-sites/active
  *              GET  /rest/vector/dictionary/env-collection-methods
  *              GET  /rest/vector/dictionary/env-weather
@@ -252,7 +252,7 @@ test.describe.serial('Chain N — Environmental Sampling (deep round-trip)', () 
     // Landing check: the sample must be readable back. NOTE: SampleEdit is the
     // endpoint that 500s on patientless samples (OGC-1192 §2), so this leg
     // doubles as the regression watch for that bug.
-    const readback = await apiCall<{ sampleXML?: string; noSampleFound?: boolean }>(
+    const readback = await apiCall<{ existingTests?: unknown[]; noSampleFound?: boolean }>(
       page, `/api/OpenELIS-Global/rest/SampleEdit?accessionNumber=${encodeURIComponent(labNo)}`);
 
     if (readback.status >= 500) {
@@ -270,11 +270,16 @@ test.describe.serial('Chain N — Environmental Sampling (deep round-trip)', () 
       return;
     }
 
-    const hasSamples = typeof body.sampleXML === 'string' && (body.sampleXML as string).length > 0;
+    // The GET answers the order's tests as `existingTests`. It never carries `sampleXML` (that is
+    // the POST field), so once OGC-1192 (Done) stopped the read-back 500 the old check failed on
+    // every run. Corrected 13 Oct 2026.
+    const tests = Array.isArray(body.existingTests) ? body.existingTests : [];
+    const hasSamples = tests.length > 0;
     if (!hasSamples) {
       markStep('N', 4, 'FAIL',
-        `Env order ${labNo} read back without a sampleXML payload (HTTP ${readback.status})`,
+        `Env order ${labNo} read back with no tests (HTTP ${readback.status})`,
         'Order did not land with its manifest.');
+      expect(hasSamples, 'the env order reads back with its tests').toBeTruthy();
       return;
     }
 
@@ -315,8 +320,13 @@ test.describe.serial('Chain N — Environmental Sampling (deep round-trip)', () 
     }
     await page.goto(BASE);
 
-    const envList = await apiCall<DashboardPage>(page, `${ORDER_DASHBOARD}?page=1&pageSize=100&workflowType=environmental`);
-    const allList = await apiCall<DashboardPage>(page, `${ORDER_DASHBOARD}?page=1&pageSize=100`);
+    // No `page` parameter: with one, the endpoint returns a page of the list it cached in the
+    // session on an earlier call and ignores every filter (OrderSearchRestController.getDashboard),
+    // which is why envTotal always equalled the unfiltered total. Without it the filters run, newest
+    // first, and `search` narrows to this accession. Corrected 13 Oct 2026.
+    const q = `search=${encodeURIComponent(createdAccession)}`;
+    const envList = await apiCall<DashboardPage>(page, `${ORDER_DASHBOARD}?${q}&workflowType=environmental`);
+    const allList = await apiCall<DashboardPage>(page, `${ORDER_DASHBOARD}?${q}`);
 
     const envBody = (envList.body && typeof envList.body === 'object') ? envList.body as DashboardPage : { orders: [], totalCount: 0 };
     const allBody = (allList.body && typeof allList.body === 'object') ? allList.body as DashboardPage : { orders: [], totalCount: 0 };
