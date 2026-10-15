@@ -1167,7 +1167,7 @@ Mark each as **PASS**, **FAIL**, **SKIP** (with reason), or **GAP** (feature not
 | TC-WP-05 | N — Workplan | Sample reception / barcode entry | — | |
 | TC-WP-06 | N — Workplan | Workplan count matches dashboard KPI | — | Depends on TC-DASH-02 |
 | TC-LOINC-01 | O — LOINC/Dict | LOINC management screen accessible | — | |
-| TC-LOINC-02 | O — LOINC/Dict | Search for HGB LOINC (718-7) | — | |
+| TC-LOINC-02 | O — LOINC/Dict | Search for HGB LOINC (718-7). Search by LOINC code retired 2026-10-13: the Test Catalog search matches names only, by design | — | |
 | TC-LOINC-03 | O — LOINC/Dict | LOINC mapping on test record | — | |
 | TC-LOINC-04 | O — LOINC/Dict | Add a LOINC code (CRUD) | — | Possible BUG-8 class |
 | TC-LOINC-05 | O — LOINC/Dict | Dictionary category list accessible | — | |
@@ -1988,6 +1988,8 @@ Mark each as **PASS**, **FAIL**, **SKIP** (with reason), or **GAP** (feature not
 ---
 
 ### TC-LOINC-02 — Search for HGB LOINC Code
+
+> **Search by code retired 2026-10-13 (Casey).** The Test Catalog search matches test names only, by design (its box reads "Search by test name"). The automated case in `tests/system-misc.spec.ts` was removed; `tests/loinc-dictionary.spec.ts` keeps a TC-LOINC-02 that checks LOINC codes are shown.
 
 **Navigation:** LOINC management screen
 

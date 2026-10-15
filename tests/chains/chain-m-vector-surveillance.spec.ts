@@ -79,9 +79,12 @@ test.describe.serial('Chain M — Vector Surveillance (deep round-trip)', () => 
     }
 
     worklist = Array.isArray(r.body) ? (r.body as VectorWorklistRow[]) : [];
+    // identificationStatus is the root pool's status, which is set the first time a specimen in
+    // the lot is identified; a lot no one has touched comes back without it (seen 13 Oct 2026,
+    // ruled not a defect by Casey). So it is required only once something is identified.
     const requiredKeys = [
       'sampleId', 'vectorPoolId', 'lotExternalId', 'accessionNumber',
-      'totalSpecimens', 'identifiedSpecimens', 'identificationStatus', 'deconvolutionStatus',
+      'totalSpecimens', 'identifiedSpecimens', 'deconvolutionStatus',
     ];
     if (worklist.length === 0) {
       markStep('M', 1, 'GAP',
@@ -92,6 +95,7 @@ test.describe.serial('Chain M — Vector Surveillance (deep round-trip)', () => 
     }
     const row = worklist[0] as unknown as Record<string, unknown>;
     const missing = requiredKeys.filter(k => !(k in row));
+    if (Number(row.identifiedSpecimens) > 0 && !('identificationStatus' in row)) missing.push('identificationStatus');
     if (missing.length === 0) {
       markStep('M', 1, 'PASS',
         `Worklist read-back OK: ${worklist.length} lot(s), full row contract`,
