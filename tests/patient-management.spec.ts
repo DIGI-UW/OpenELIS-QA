@@ -51,13 +51,11 @@ test.describe('Patient Management (TC-PAT)', () => {
   test('TC-PAT-01: Patient search page loads', async ({ page }) => {
     const url = await goToPatientSearch(page);
     console.log(`TC-PAT-01: Patient search URL = ${url}`);
-    // Should have some form element for searching
-    const hasSearchForm = await page.getByRole('textbox').count() > 0;
-    if (!hasSearchForm) {
-      console.log('TC-PAT-01: GAP — no search form detected on patient screen');
-    }
+    // Should have some form element for searching. Wait for it: on 13 Oct 2026 the count was
+    // read while the page still showed its loading image, and the case failed with a form that
+    // arrived a moment later.
     expect(page.url()).not.toContain('LoginPage');
-    expect(hasSearchForm).toBe(true);
+    await expect(page.getByRole('textbox').first(), 'the patient screen offers a search field').toBeVisible({ timeout: 30_000 });
   });
 
   test('TC-PAT-02: Search by national ID returns Abby Sebby', async ({ page }) => {
@@ -685,6 +683,8 @@ test.describe('Suite AC — Merge Patient', () => {
         'assertion correct. This marker is a bet on that intent, not a claim it exists. If it goes ' +
         'red, check what actually shipped before deleting anything.'
     );
+    // 13 Oct 2026: this went green on develop, but only because the merged record had fallen onto
+    // page 2 of the results, which the helper did not read. The helper now reads every page.
     const pair = await seedMergedPair(page);
     expect(
       await findPatientIdsByLastName(page, pair.lastName),
@@ -719,8 +719,21 @@ test.describe('Suite AC — Merge Patient', () => {
     const searched = await clickFormSearch(page, '#lastName');
     expect(searched, 'order entry must have a patient Search button').toBe(true);
 
-    // The merged-away record must still be offered — that is the point.
+    // The merged-away record must still be offered — that is the point. The results are paged
+    // and every run's seeds share this last name, so the record may be on a later page (13 Oct
+    // 2026: three pages). Step through the pages until it shows.
     const mergedRow = page.locator(`[data-cy="patient-result-row-${pair.ids[1]}"]`);
+    // The pager reads "n / m"; step until the row shows or the last page is reached, waiting
+    // for the counter to move after each click (a bare isEnabled check raced the re-render).
+    const nextPage = page.locator('main').getByRole('button', { name: 'next', exact: true });
+    const counter = page.locator('main').getByText(/^\s*\d+ \/ \d+\s*$/).first();
+    await expect(page.locator('main table tbody tr').first()).toBeVisible({ timeout: 15_000 });
+    for (let i = 0; i < 20 && (await mergedRow.count()) === 0; i++) {
+      const m = ((await counter.textContent().catch(() => '')) ?? '').match(/(\d+) \/ (\d+)/);
+      if (!m || Number(m[1]) >= Number(m[2])) break;
+      await nextPage.click();
+      await expect(counter).toHaveText(new RegExp(`^\\s*${Number(m[1]) + 1} / ${m[2]}\\s*$`), { timeout: 15_000 });
+    }
     await expect(
       mergedRow,
       `order entry must still offer merged-away record ${pair.ids[1]} (url=${page.url()})`
@@ -857,10 +870,10 @@ test.describe('Phase 4 — H-DEEP: Patient Interaction Tests', () => {
     }
     if (!found) { console.log('TC-H-DEEP-03: GAP — merge URL not found'); return; }
 
-    const bodyText = await page.locator('body').innerText();
-    // Merge wizard must have selection step
-    const hasSelectionStep = /Select.*Patient|First Patient|Step 1|Search/i.test(bodyText);
-    expect(hasSelectionStep, 'Merge Patient must show a patient selection step').toBe(true);
+    // Merge wizard must have selection step. Wait for it rather than reading the body once: on
+    // 13 Oct 2026 the read came while the page still showed its loading image.
+    await expect(page.locator('main'), 'Merge Patient must show a patient selection step')
+      .toContainText(/Select.*Patient|First Patient|Step 1|Search/i, { timeout: 30_000 });
   });
 });
 

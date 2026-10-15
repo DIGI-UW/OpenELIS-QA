@@ -231,30 +231,21 @@ test.describe('Suite O — LOINC Mapping Core (TC-LOINC)', () => {
      */
     await page.goto(`${BASE}`);
 
-    const result = await page.evaluate(async () => {
-      const csrf = localStorage.getItem('CSRF') || '';
-      const candidates = [
-        '/api/OpenELIS-Global/rest/dictionary',
-        '/api/OpenELIS-Global/rest/Dictionary',
-        '/api/OpenELIS-Global/rest/dictionaryEntries',
-      ];
-      for (const url of candidates) {
-        const res = await fetch(url, { headers: { 'X-CSRF-Token': csrf } });
-        if (res.status !== 404) {
-          try {
-            const data = await res.json();
-            const list = Array.isArray(data) ? data : (data.entries ?? data.dictionaryEntries ?? []);
-            return { status: res.status, count: list.length, url };
-          } catch {
-            return { status: res.status, count: -1, url };
-          }
-        }
-      }
-      return { status: 404, count: -1, url: 'none' };
-    });
+    // The dictionary list is /rest/DictionaryMenu (DictionaryMenuRestController), the call the
+    // Dictionary admin page makes; it answers a menu form whose `menuList` holds the entries. Until
+    // 13 Oct 2026 this probed /rest/dictionary and friends, which are not endpoints (they answer
+    // 500 rather than 404, which made the case red with no product fault).
+    const url = '/api/OpenELIS-Global/rest/DictionaryMenu';
+    const result = await page.evaluate(async (u) => {
+      const res = await fetch(u, { headers: { Accept: 'application/json' } });
+      const data = await res.json().catch(() => null);
+      const list = Array.isArray(data?.menuList) ? data.menuList : [];
+      return { status: res.status, count: list.length };
+    }, url);
 
-    console.log(`TC-LOINC-08: Dictionary API → ${result.url} HTTP ${result.status}, entries=${result.count}`);
-    expect(result.status, 'Dictionary API must not 5xx').not.toBeGreaterThanOrEqual(500);
+    console.log(`TC-LOINC-08: Dictionary API → ${url} HTTP ${result.status}, entries=${result.count}`);
+    expect(result.status, 'the dictionary list answers 200').toBe(200);
+    expect(result.count, 'the dictionary list has entries').toBeGreaterThan(0);
   });
 });
 

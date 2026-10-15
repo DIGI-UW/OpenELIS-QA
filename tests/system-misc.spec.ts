@@ -129,22 +129,9 @@ test.describe('LOINC and Dictionary CRUD (TC-LOINC)', () => {
     expect(url).toBeTruthy();
   });
 
-  test('TC-LOINC-02: Test Catalog search finds a test by its LOINC code', async ({ page }) => {
-    // Re-pointed 2026-09-25. LOINC lives on each test in the Test Catalog (there is no standalone LOINC
-    // screen), and the old premise, HGB mapped to 718-7, does not hold on every instance: on testing
-    // 3.2.3.0 Hemoglobin shows "No LOINC". So take a code from whichever listed test carries one and
-    // search the catalog by it.
-    await page.goto(`${BASE}/MasterListsPage/TestCatalogList`);
-    const search = page.locator('#test-search');
-    await expect(search).toBeVisible();
-    const rows = page.locator('main tbody tr');
-    await expect(rows.first()).toBeVisible({ timeout: 15000 });
-    const texts = await rows.allInnerTexts();
-    const code = texts.map(t => t.match(/\b\d{3,6}-\d\b/)?.[0]).find(Boolean);
-    test.skip(!code, 'no listed test carries a LOINC code on this instance');
-    await search.fill(code!);
-    await expect(rows.first()).toContainText(code!, { timeout: 10000 });
-  });
+  // TC-LOINC-02 (Test Catalog search by LOINC code) retired 2026-10-13 on Casey's call: the
+  // catalog search matches test names only by design (its box reads "Search by test name"). The
+  // other TC-LOINC-02 in tests/loinc-dictionary.spec.ts is a different case and stays.
   test('TC-LOINC-03: LOINC mapping visible on HGB test record', async ({ page }) => {
     await page.goto(`${BASE}/MasterListsPage/TestModifyEntry`);
     await page.waitForTimeout(2000);

@@ -44,10 +44,9 @@ test.describe('R-NET network resilience', () => {
   });
 
   test('TC-OEV4-NET-02 a 60 s outage shows Reconnecting and recovers, with no dead-end modal (R-NET-1, M12, was TC-NET-02)', async ({ page }) => {
-    // FLIP-WHEN-FIXED (R-NET-1, M12). Observed 2026-10-08 on 76c6d625a: the
-    // "System Error / Failed to fetch" modal is on screen 20 s into a 60 s session outage,
-    // as on 25 Sep (TC-NET-02). M12 (app shell reconnect) is not built yet.
-    test.fail();
+    // GUARD since 2026-10-13. Was a tripwire: on 76c6d625a (8 Oct) the "System Error /
+    // Failed to fetch" modal was on screen 20 s into a 60 s outage. OGC-1442 (Done) fixed it;
+    // passing on develop b5943f5a (images 2026-10-13 14:33 UTC).
     test.setTimeout(300_000);
     let first = 0;
     await page.route(/\/api\/OpenELIS-Global\/session(\?|$)/, (route) => {
@@ -61,10 +60,9 @@ test.describe('R-NET network resilience', () => {
   });
 
   test('TC-OEV4-NET-03 one failed test-list load says so and offers Retry (R-NET-2, M12 step 2, was TC-NET-03)', async ({ page }) => {
-    // FLIP-WHEN-FIXED (R-NET-2). Observed 2026-10-08 on 76c6d625a: after one failed
-    // /rest/sample-type-tests the sample shows "Loading panels..." and "Loading tests..."
-    // with no error and no Retry, as on 25 Sep (TC-NET-03).
-    test.fail();
+    // GUARD since 2026-10-13. Was a tripwire: on 76c6d625a (8 Oct) one failed
+    // /rest/sample-type-tests left "Loading tests..." with no error and no Retry.
+    // Passing on develop b5943f5a (images 2026-10-13 14:33 UTC).
     const p = await seedPatient(page);
     await openEnter(page);
     await pickPatient(page, p);
@@ -340,12 +338,9 @@ test.describe('R-FLOW and R-UX', () => {
   });
 
   test('TC-OEV4-FLOW-05 answers chosen but not yet accepted are not called "unanswered" (R-UX-1, M6)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-08 on 76c6d625a: every checklist item set to Pass,
-    // then Release for testing: the server answers order.release.reasonRequired and the page
-    // asks for a "Reason for releasing with unanswered items". The answers are only stored by
-    // the separate "Accept sample" button, which nothing points to. Spec: Release either
-    // records the answers shown, or says plainly to accept the sample first.
-    test.fail();
+    // GUARD since 2026-10-13. Was a tripwire: on 76c6d625a (8 Oct) Release with every
+    // checklist item set to Pass asked for a "Reason for releasing with unanswered items"
+    // (OGC-1443 item 6). Passing on develop b5943f5a (images 2026-10-13 14:33 UTC).
     const { release } = await toSampleCheck(page);
     const passes = page.locator('label[for^="sac-"][for$="-pass"]');
     await expect(passes.first()).toBeVisible({ timeout: 30_000 });

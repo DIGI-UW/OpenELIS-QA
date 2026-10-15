@@ -1175,14 +1175,25 @@ export async function findPatientIdsByNationalId(page: Page, nationalId: string)
 
 /** Patient ids the search endpoint returns for a last name. */
 export async function findPatientIdsByLastName(page: Page, lastName: string): Promise<string[]> {
+  // The search answers one page at a time (the patients page size) and keeps the rest in the
+  // session; `paging.totalPages` says how many there are and `page=N` on the same URL returns
+  // page N. QA seeds share last names, so by 13 Oct 2026 a QA last name filled three pages and a
+  // first-page-only read lost the record a case was looking for. Read every page.
   return page.evaluate(async (ln) => {
-    const r = await fetch(
-      `/api/OpenELIS-Global/rest/patient-search-results?lastName=${encodeURIComponent(ln)}&firstName=`,
-      { headers: { Accept: 'application/json' } }
-    );
-    if (!r.ok) return [];
-    const d = await r.json().catch(() => null);
-    return ((d && d.patientSearchResults) || []).map((p: any) => String(p.patientID ?? p.patientId));
+    const url = `/api/OpenELIS-Global/rest/patient-search-results?lastName=${encodeURIComponent(ln)}&firstName=`;
+    const ids: string[] = [];
+    const take = (d: any) => ((d && d.patientSearchResults) || []).forEach((p: any) => ids.push(String(p.patientID ?? p.patientId)));
+    const r = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!r.ok) return ids;
+    const first = await r.json().catch(() => null);
+    take(first);
+    const pages = Math.min(Number(first?.paging?.totalPages) || 1, 50);
+    for (let n = 2; n <= pages; n++) {
+      const rn = await fetch(`${url}&page=${n}`, { headers: { Accept: 'application/json' } });
+      if (!rn.ok) break;
+      take(await rn.json().catch(() => null));
+    }
+    return ids;
   }, lastName);
 }
 

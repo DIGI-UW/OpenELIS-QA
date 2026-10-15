@@ -73,9 +73,15 @@ async function probeStatus(
   init: Record<string, unknown> = {},
 ): Promise<number> {
   await page.goto(`${BASE}`);
+  // redirect: 'manual'. Until 13 Oct 2026 the login redirect dropped the port, so a followed
+  // redirect went cross-origin and the fetch rejected (status 0). Develop now keeps the port, so
+  // a followed redirect lands on the login page and answers 200, which read as "open access".
+  // A manual redirect comes back as an opaque response (type 'opaqueredirect', status 0) and is
+  // reported here as 302.
   return page.evaluate(async (args: { url: string; init: any }) => {
-    const res = await fetch(args.url, args.init).catch(() => null);
-    return res ? res.status : 0;
+    const res = await fetch(args.url, { redirect: 'manual', ...args.init }).catch(() => null);
+    if (!res) return 0;
+    return res.type === 'opaqueredirect' ? 302 : res.status;
   }, { url, init });
 }
 
