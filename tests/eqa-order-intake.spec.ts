@@ -88,6 +88,16 @@ function sampleRow(labNo: string): { sampleId: string; eqa: string; human: strin
 test.describe('EQA order intake on the v4 order flow (TC-EQAOI)', () => {
   test.beforeEach(async ({ page }) => { await ready(page); });
 
+  // The checklist item added in TC-EQAOI-00 is deactivated once the suite ends.
+  test.afterAll(async ({ browser }) => {
+    if (!F.checklistItemId) return;
+    const ctx = await browser.newContext({ storageState: '.auth/user.json', ignoreHTTPSErrors: true });
+    const page = await ctx.newPage();
+    await ready(page);
+    await api(page, 'PUT', `/sample-acceptance-checklist/admin/items/${F.checklistItemId}`, { label: F.checklistLabel, active: false });
+    await ctx.close();
+  });
+
   test('TC-EQAOI-00 [setup]: an active enrollment with an open cycle, a second scheme with its own cycle, a withdrawn enrollment, and a CLINICAL intake checklist item', async ({ page }) => {
     const s = F.S;
     if (!F.enrollmentId) {
@@ -296,12 +306,4 @@ test.describe('EQA order intake on the v4 order flow (TC-EQAOI)', () => {
     expect(db(`select count(*) from clinlims.sample_human where samp_id=${newId} and patient_id is not null`), 'no patient on it').toBe('0');
   });
 
-  test.afterAll(async ({ browser }) => {
-    if (!F.checklistItemId) return;
-    const ctx = await browser.newContext({ storageState: '.auth/user.json', ignoreHTTPSErrors: true });
-    const page = await ctx.newPage();
-    await ready(page);
-    await api(page, 'PUT', `/sample-acceptance-checklist/admin/items/${F.checklistItemId}`, { label: F.checklistLabel, active: false });
-    await ctx.close();
-  });
 });
