@@ -5,6 +5,8 @@
 **Scope (Casey, 2026-10-11):** what is merged now, parts 1 to 3 of the 17-part OGC-438 stack: the run-out projection endpoint (OpenELIS-Global-2 #4356), the Items board (#4357), and the board's row actions with the dashboard removed (#4358). Extend as later parts land.
 **Part 4 added 2026-10-12** against develop a4200e2d (images 2026-10-12 06:09 UTC): #4359, reorder suggestions, mark as ordered, the critical banner (TC-INVB-50 to 63).
 **Parts 5 to 10 taken in 2026-10-13** against develop b5943f5a (images 2026-10-13 14:33 UTC): #4360 learned lead time, #4361 tags instead of item type, #4362 tag directory and filter, #4363 items defined on the board and the Catalog tab retired, #4364 count mode, #4365 receive from a row and the product barcode. TC-INVB-30 to 32 rewritten on the board, TC-INVB-33 retired, TC-INVB-35 to 37 new, TC-INVB-60 and 62 flipped to guards.
+**Reports recut 2026-10-14** (#4367, images 2026-10-14 17:22 UTC): six reports became four (Received, Consumed, Stock on hand, Expiring) with Run report on screen; TC-INVB-40 to 42 rewritten, TC-INVB-42 flipped to a guard (OGC-1489 item 1), TC-INVB-43 new (OGC-1489 item 3). #4366 scan-first receive is covered in `inventory-receive.md`.
+**Pages 2026-10-15** (#4368, backend image 2026-10-15 13:33 UTC): Items, Receive and Reports became three pages (`/inventory`, `/inventory/receive`, `/inventory/reports`) with a menu row each; the spec opens them by address. TC-INVB-43's Tags check now fails when the column is missing (it asserted an index was >= 0).
 **Replaces:** `tests/inventory.spec.ts` (TC-INV-*) and `tests/inventory-happy-path.spec.ts` (TC-INVHP-*), which tested the retired dashboard. Catalog and report cases were carried over under new ids; dashboard-only cases are retired (see the end of this file).
 
 Kind: **Guard** passes today and protects it. **Tripwire** asserts the intended behaviour, carries `test.fail()` while the product differs, and goes red the day it is fixed (remove the marker then).
@@ -31,7 +33,7 @@ Every case that acts on a row makes its own throwaway item `QA INV <tag> <stamp>
 
 | ID | Case | Kind | Source |
 | --- | --- | --- | --- |
-| TC-INVB-00 | Canary: Inventory Management opens on the Items tab (heading Inventory Items, tabs Items / Reports, no Catalog tab since #4363) with columns Item, On hand, Usage trend, Runs out, Order by, Status, Last count, Actions; GET /inventory/board serves every read-only fixture | Canary | #4357, #4363, #4364 |
+| TC-INVB-00 | Canary: Inventory > Items (`/inventory`) opens the board: heading Items, crumbs Home / Inventory / Items, no tabs (#4363 retired the Catalog tab, #4368 the tab strip), columns Item, On hand, Usage trend, Runs out, Order by, Status, Last count, Actions; GET /inventory/board serves every read-only fixture | Canary | #4357, #4363, #4364, #4368 |
 | TC-INVB-01 | One row per active item and none for an inactive item; the screen lists exactly what the endpoint serves, in its order | Guard | #4357 |
 | TC-INVB-02 | On hand counts usable and awaiting-QC stock only, never an expired or failed-QC lot (QA INV FEFO = 30) | Guard | #4356 countsAsAvailableStock |
 | TC-INVB-03 | Without usage history the status follows the threshold: Out of stock, at or below threshold (Reorder now), above it (Building data), with "Too few days of use to project a run-out date" | Guard | #4356 |
@@ -73,9 +75,10 @@ Every case that acts on a row makes its own throwaway item `QA INV <tag> <stamp>
 | TC-INVB-35 | Count mode: a counted quantity that differs corrects the lot as one adjustment (no usage), on hand follows, and the row's last count is today | Guard | #4364 |
 | TC-INVB-36 | Receive stock finds the item from its product barcode; the scanner's Enter does not submit; an unknown code is named and offered as a new item | Guard | #4365 |
 | TC-INVB-37 | A lead time set after the item exists is kept and the board shows it as set (it used to stick only at create) | Guard | #4360 |
-| TC-INVB-40 | The Reports tab offers the stock-levels and low-stock reports and an enabled Generate (was TC-INV-08) | Guard | carried over |
-| TC-INVB-41 | Generate on the Stock Levels report downloads a non-empty PDF and says so | Guard | Reports tab |
-| TC-INVB-42 | The downloaded report keeps its file extension (today it saves as `stock-levels.pdf_`) | Tripwire | OGC-1489 |
+| TC-INVB-40 | The Reports tab offers Received, Consumed, Stock on hand and Expiring, with Run report and Export (rewritten 14 Oct for the #4367 recut; was TC-INV-08) | Guard | carried over |
+| TC-INVB-41 | Exporting Stock on hand as PDF downloads a non-empty PDF and says so | Guard | Reports tab |
+| TC-INVB-42 | The downloaded report keeps its file extension (CSV and PDF) | Guard (was a tripwire; fixed 14 Oct, #4367) | OGC-1489 item 1 |
+| TC-INVB-43 | Run report shows Stock on hand on screen; an item tagged RDT is reported by its tag, not as REAGENT | Guard (new 14 Oct) | OGC-1489 item 3 |
 
 ## Ordering (#4359)
 

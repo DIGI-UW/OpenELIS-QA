@@ -60,7 +60,8 @@ test.describe.configure({ mode: 'serial' });
 test.describe('Sample Type Editor — create', () => {
   test('STW-1: "Create Sample Type" is disabled until the required fields are filled', async ({ page }) => {
     await page.goto('/MasterListsPage/SampleTypeEditor', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(6000);
+    // The list can take over 6 s to load (14 Oct 2026); wait for it rather than a fixed time.
+    await page.getByText(/Total:\s*\d+\s+sample types/i).first().waitFor({ state: 'visible', timeout: 60_000 });
     await page.getByRole('button', { name: /add sample type/i }).click({ timeout: 10000 });
     await page.waitForTimeout(2500);
 
@@ -82,14 +83,19 @@ test.describe('Sample Type Editor — create', () => {
     page.on('response', r => { if (r.request().method() === 'POST' && /SampleTypeCreate/.test(r.url())) createStatus.push(r.status()); });
 
     await page.goto('/MasterListsPage/SampleTypeEditor', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(6000);
+    // The list can take over 6 s to load (14 Oct 2026); wait for it rather than a fixed time.
+    await page.getByText(/Total:\s*\d+\s+sample types/i).first().waitFor({ state: 'visible', timeout: 60_000 });
     await page.getByRole('button', { name: /add sample type/i }).click({ timeout: 10000 });
     await page.waitForTimeout(2500);
     await page.locator('#st-name').fill(STYPE_NAME);
     await page.locator('#st-domain').selectOption({ label: 'Clinical' });
     await page.locator('#st-description').fill(`QA description ${STAMP}`);
+    // Create reloads the whole list before it posts (SampleTypeManagement.saveEditor), so the POST
+    // can come well after 6 s; wait for it.
+    const created = page.waitForResponse((r) => r.request().method() === 'POST' && /SampleTypeCreate/.test(r.url()), { timeout: 60_000 }).catch(() => null);
     await page.getByRole('button', { name: /^create sample type$/i }).click({ timeout: 10000 });
-    await page.waitForTimeout(6000);
+    await created;
+    await page.waitForTimeout(1500);
 
     expect(posts.length, 'the UI never posted to SampleTypeCreate').toBeGreaterThan(0);
     console.log('STW-2 payload=' + posts[0].slice(0, 300));
@@ -135,7 +141,10 @@ test.describe('Sample Type Editor — create', () => {
       .toBe(`QA description ${STAMP}`);
   });
 
-  test('STW-6: [SPEC-DIVERGENCE OGC-1157] an abbreviation collision is refused with a validation error, not a 500 [FIXED OGC-1157]', async ({ page }) => {
+  test('STW-6: two names sharing their first ten characters both save, each with its own abbreviation (OGC-1157, OGC-1460)', async ({ page }) => {
+    // REWRITTEN 2026-10-14. Since OGC-1460 (#4712) the create derives a free abbreviation instead of
+    // refusing a collision: "QA123456-S" taken gives "QA123456-2". The old expectation (a 4xx) is
+    // history, kept below for the record.
     // `abbreviation` is derived as name.slice(0,10) and is unique in the database. Two DISTINCT
     // names sharing their first ten characters therefore collide on a field the user never sees
     // and cannot edit. The product answers that collision with an unhandled HTTP 500 from
@@ -154,26 +163,34 @@ test.describe('Sample Type Editor — create', () => {
 
     const collide = `${STYPE_NAME.slice(0, 10)}ZZ-COLLIDE`;
     await page.goto('/MasterListsPage/SampleTypeEditor', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(6000);
+    // The list can take over 6 s to load (14 Oct 2026); wait for it rather than a fixed time.
+    await page.getByText(/Total:\s*\d+\s+sample types/i).first().waitFor({ state: 'visible', timeout: 60_000 });
     await page.getByRole('button', { name: /add sample type/i }).click({ timeout: 10000 });
     await page.waitForTimeout(2500);
     await page.locator('#st-name').fill(collide);
     await page.locator('#st-domain').selectOption({ label: 'Clinical' });
-    await page.locator('#st-description').fill('collision probe');
+    // Unique description: a description another sample type holds is refused (409) since OGC-1460.
+    await page.locator('#st-description').fill(`collision probe ${STAMP}`);
+    // Create reloads the whole list before it posts, so wait for the POST rather than a fixed time.
+    const posted = page.waitForResponse((r) => r.request().method() === 'POST' && /SampleTypeCreate/.test(r.url()), { timeout: 60_000 }).catch(() => null);
     await page.getByRole('button', { name: /^create sample type$/i }).click({ timeout: 10000 });
-    await page.waitForTimeout(5000);
+    await posted;
 
     console.log(`STW-6 name="${collide}" sharesAbbrevWith="${STYPE_NAME}" statuses=${JSON.stringify(statuses)}`);
-    expect(statuses.length, 'the collision attempt never reached the server').toBeGreaterThan(0);
-    expect(statuses[0],
-      `an abbreviation collision answered ${statuses[0]}; a validation error (4xx) is expected`)
-      .toBeGreaterThanOrEqual(400);
-    expect(statuses[0], 'a collision must not surface as a server error').toBeLessThan(500);
+    expect(statuses.length, 'the create reached the server').toBeGreaterThan(0);
+    expect(statuses[0], `a distinct name whose first ten characters are taken saves (answered ${statuses[0]})`).toBeLessThan(300);
+    const list = await api(page, '/sample-types');
+    const rows: any[] = list.body?.data || list.body || [];
+    const mine = rows.find((r) => r.name === collide);
+    const first = rows.find((r) => r.name === STYPE_NAME);
+    expect(mine, 'the new sample type is listed').toBeTruthy();
+    expect(mine?.abbreviation, 'it got its own abbreviation, not the one the first type holds').not.toBe(first?.abbreviation);
   });
 
   test('STW-5: the created sample type is findable through the list search', async ({ page }) => {
     await page.goto('/MasterListsPage/SampleTypeEditor', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(6000);
+    // The list can take over 6 s to load (14 Oct 2026); wait for it rather than a fixed time.
+    await page.getByText(/Total:\s*\d+\s+sample types/i).first().waitFor({ state: 'visible', timeout: 60_000 });
     const box = page.getByPlaceholder(/search sample types/i).first();
     await box.click(); await box.fill('');
     await box.type(STYPE_NAME, { delay: 25 });

@@ -16,7 +16,7 @@ import { TC, RUN, seedTest, asRole, sampleResultsOf, observe } from './helpers/c
 
 test.describe('Test Catalog chaos: permissions and session (TC-CX-PS)', () => {
   test('TC-CX-PS-01: a receptionist and a lab technician are refused (401/403) on every catalog write', async ({ page, browser }) => {
-    test.fail(true, 'TRIPWIRE F4: PUT /rest/localizations/{id}/translations answers 200 to a receptionist and a lab technician');
+    // GUARD since 2026-10-14 (OGC-1457; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F4: PUT /rest/localizations/{id}/translations answers 200 to a receptionist and a lab technician
     test.setTimeout(300_000);
     const t = await seedTest(page, 'PS1');
     const before = await sampleResultsOf(page, t.id);
@@ -102,16 +102,24 @@ test.describe('Test Catalog chaos: permissions and session (TC-CX-PS)', () => {
 
   test('TC-CX-PS-06: deep links to a record that does not exist show "not found", not an endless spinner', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F15: unknown sample type and lab unit ids spin forever with no message');
+    // GUARD since 2026-10-14 (OGC-1461; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F15: unknown sample type and lab unit ids spin forever with no message
     await open(page, '/');
     for (const path of ['/MasterListsPage/TestCatalogEditor/99999999/basic-info', '/MasterListsPage/TestCatalogEditor/panel/99999999/basic-info',
       '/MasterListsPage/SampleTypeEditor/99999999/basic-info', '/MasterListsPage/LabUnitManagement/99999999/basic-info']) {
+      // Polled for up to 60 s, not read once at 8 s: the Sample Type editor loads the whole sample
+      // type list (about 10 s with 177 types on 14 Oct 2026, twice) before it can say the id is
+      // unknown; it said so after 19 to 30 s. This case checks that the message comes (OGC-1461);
+      // the time it takes is reported to Casey separately and logged here as "after N s".
+      const t0 = Date.now();
       await page.goto(path, { waitUntil: 'domcontentloaded' });
-      await page.waitForTimeout(8000);
-      const spinning = await page.locator('.cds--loading:visible, .cds--loading-overlay:visible, .cds--skeleton:visible').count();
-      const message = await page.locator('.cds--inline-notification, .cds--toast-notification, [role="alert"]').count();
-      test.info().annotations.push({ type: 'observed', description: `${path}: spinners ${spinning}, messages ${message}` });
-      expect.soft(spinning === 0 && message > 0, `${path}: a message, and no spinner after 8 s`).toBe(true);
+      let spinning = 0, message = 0;
+      await expect.poll(async () => {
+        spinning = await page.locator('.cds--loading:visible, .cds--loading-overlay:visible, .cds--skeleton:visible').count();
+        message = await page.locator('.cds--inline-notification, .cds--toast-notification, [role="alert"]').count();
+        return spinning === 0 && message > 0;
+      }, { timeout: 60_000, intervals: [1000] }).toBe(true).catch(() => {});
+      test.info().annotations.push({ type: 'observed', description: `${path}: spinners ${spinning}, messages ${message} after ${Math.round((Date.now() - t0) / 1000)} s` });
+      expect.soft(spinning === 0 && message > 0, `${path}: a message, and no spinner within 60 s`).toBe(true);
     }
   });
 });

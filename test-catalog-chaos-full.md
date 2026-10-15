@@ -14,13 +14,21 @@ Shared drivers: `helpers/catalogChaos.ts`. **Target:** local develop, images 202
 
 This suite extends `test-catalog-chaos.md` (2026-10-02: Basic Info and Ranges, CHAOS-BI/RG) and `test-catalog-silent-actions.md`. They are not repeated here.
 
+## Status, 14 Oct 2026
+
+On local develop (images 2026-10-14 17:22 UTC, after OGC-1455 to 1467 merged) 78 tripwires pass and are now guards. The two-editor cases (TM-07, LO-04, AL-04, PN-07, STY-05, LU-02) send the version their load returned, as the screens do since OGC-1463; a save with no version is still accepted by design. PS-06 polls up to 60 s, because the Sample Type editor loads the whole list (about 10 s with 177 types, twice) before it can say an id is unknown; it took 19 to 30 s on 14 Oct.
+
+LO-01 and PS-01 (OGC-1457) pass with the role users from roles.setup.ts.
+
+Still tripwires: ME-01 (OGC-1467: a padded method name still answers 500), PN-01 (OGC-1122), GR-03 (OGC-1238).
+
 ## The five kinds of non-happy path
 
 Every section gets the kinds that apply to it:
 
 1. **Bad input, through the UI and straight at the API.** The API cases ask whether the server checks, or only the UI does. Values: too long for the column, wrong type, out of range, unknown ids, null lists, duplicates, spaces and case.
 2. **Save faults.** The fault is injected with `page.route` on the one request under test, so the server is never broken for anyone else. The faults are a 500 with JSON, a 500 with HTML, a dropped connection, a login page answered with 200, and a 422 with an empty body. Each asks four questions: was the user told, is the typing kept, is the server unchanged, and does a retry work?
-3. **Two editors.** Editor A loads a record, B changes it, then A saves its old copy. The expectation is that A is refused as stale or B's change stands. Today only Basic Info has stale protection.
+3. **Two editors.** Editor A loads a record, B changes it, then A saves its old copy. The expectation is that A is refused as stale or B's change stands. Since OGC-1463 (14 Oct 2026) every section is refused as stale when it sends the version its load returned.
 4. **Permissions and session.** A non-admin session (roles.setup.ts) calls the API, and an admin's session ends mid-edit.
 5. **Apply, then edit, then remove** (Casey, 2026-10-08). Each step is read back, on a second surface where one exists (order entry, methods-for-test, the test-side panels list, the list filter).
 

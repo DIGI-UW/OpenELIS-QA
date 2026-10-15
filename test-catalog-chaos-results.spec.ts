@@ -32,7 +32,7 @@ const TERM = /\/rest\/test-catalog\/tests\/\d+\/terminology$/;
 test.describe('Test Catalog chaos: Sample & Results (TC-CX-SR)', () => {
   (['500 JSON', 'dropped connection', 'login page with a 200'] as const).forEach((what, i) => {
     test(`TC-CX-SR-0${i + 1}: a Sample & Results save that meets ${what} says so, keeps the typing and changes nothing`, async ({ page }) => {
-      test.fail(what === 'login page with a 200', 'TRIPWIRE F8: a login page answered with 200 is shown as "Sample & results saved" (status-only putToOpenElisServer)');
+      // GUARD since 2026-10-14 (OGC-1461; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F8: a login page answered with 200 is shown as "Sample & results saved" (status-only putToOpenElisServer)
       const t = await seedTest(page, `SR${i + 1}`);
       const before = await sampleResultsOf(page, t.id);
       await open(page, `/MasterListsPage/TestCatalogEditor/${t.id}/sample-results`);
@@ -54,7 +54,7 @@ test.describe('Test Catalog chaos: Sample & Results (TC-CX-SR)', () => {
 
   test('TC-CX-SR-04: removing the Primary component while another saved component exists saves (the next one becomes Primary)', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F9: removing Primary while a second saved component exists answers 500 (uq_test_result_component_test_code: the removed row keeps PRIMARY)');
+    // GUARD since 2026-10-14 (OGC-1458; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F9: removing Primary while a second saved component exists answers 500 (uq_test_result_component_test_code: the removed row keeps PRIMARY)
     const t = await seedTest(page, 'SR4');
     const sr = await sampleResultsOf(page, t.id);
     const p = sr.components[0];
@@ -74,7 +74,7 @@ test.describe('Test Catalog chaos: Sample & Results (TC-CX-SR)', () => {
 
   test('TC-CX-SR-05: a free-text option typed as a number stays that number, not an unrelated dictionary entry', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F5: free-text options "1" and "2" are stored as dictionary ids 1 and 2 (INFLUENZA VIRUS A RNA DETECTED ...)');
+    // GUARD since 2026-10-14 (OGC-1458; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F5: free-text options "1" and "2" are stored as dictionary ids 1 and 2 (INFLUENZA VIRUS A RNA DETECTED ...)
     const t = await seedTest(page, 'SR5');
     const c = (await sampleResultsOf(page, t.id)).components[0];
     const w = await putSampleResults(page, t.id, [component({ id: c.id, label: c.label, resultType: 'D', options: [
@@ -91,7 +91,7 @@ test.describe('Test Catalog chaos: Sample & Results (TC-CX-SR)', () => {
 
   test('TC-CX-SR-06: an interpretation on a new free-text option still points at that option after save', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F5: the option is stored as a dictionary id but the interpretation keeps the typed text, so it never matches');
+    // GUARD since 2026-10-14 (OGC-1458; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F5: the option is stored as a dictionary id but the interpretation keeps the typed text, so it never matches
     const t = await seedTest(page, 'SR6');
     const c = (await sampleResultsOf(page, t.id)).components[0];
     const word = `QAReactive${RUN}`;
@@ -107,7 +107,7 @@ test.describe('Test Catalog chaos: Sample & Results (TC-CX-SR)', () => {
 
   test('TC-CX-SR-07: removing a component then adding one with the same code starts clean (no old ranges come back)', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F9: a removed component is revived with its old id and old ranges when the same code is added again');
+    // GUARD since 2026-10-14 (OGC-1458; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F9: a removed component is revived with its old id and old ranges when the same code is added again
     const t = await seedTest(page, 'SR7');
     const p = (await sampleResultsOf(page, t.id)).components[0];
     expect((await putSampleResults(page, t.id, [component({ id: p.id, label: p.label }),
@@ -132,7 +132,7 @@ test.describe('Test Catalog chaos: Sample & Results (TC-CX-SR)', () => {
 
   test('TC-CX-SR-08: the server refuses a component with no result type or an unknown one', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F19/Q: result type null and "Z" are stored (200); "NN" answers 500');
+    // GUARD since 2026-10-14 (OGC-1467; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F19/Q: result type null and "Z" are stored (200); "NN" answers 500
     const t = await seedTest(page, 'SR8');
     const c = (await sampleResultsOf(page, t.id)).components[0];
     for (const rt of [null, 'Z', 'NN']) {
@@ -144,7 +144,7 @@ test.describe('Test Catalog chaos: Sample & Results (TC-CX-SR)', () => {
 
   test('TC-CX-SR-09: over-long text is refused with a 4xx, never a 500', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F19: label 256, default 81, interpretation 256, severity 21 answer 500 (no length checks)');
+    // GUARD since 2026-10-14 (OGC-1467; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F19: label 256, default 81, interpretation 256, severity 21 answer 500 (no length checks)
     const t = await seedTest(page, 'SR9');
     const c = (await sampleResultsOf(page, t.id)).components[0];
     const cases: [string, Record<string, unknown>][] = [
@@ -165,7 +165,7 @@ test.describe('Test Catalog chaos: Sample & Results (TC-CX-SR)', () => {
 
   test('TC-CX-SR-10: a unit id that is not a number, or does not exist, is refused with a 4xx', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F19: uomId "abc" and 999999 answer 500');
+    // GUARD since 2026-10-14 (OGC-1467; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F19: uomId "abc" and 999999 answer 500
     const t = await seedTest(page, 'SR10');
     const c = (await sampleResultsOf(page, t.id)).components[0];
     for (const uomId of ['abc', '999999']) {
@@ -177,7 +177,7 @@ test.describe('Test Catalog chaos: Sample & Results (TC-CX-SR)', () => {
 
   test('TC-CX-SR-11: missing lists in the body are a 400, not a 500', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F19: null components/options/interpretations answer 500 (NPE)');
+    // GUARD since 2026-10-14 (OGC-1467; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F19: null components/options/interpretations answer 500 (NPE)
     const t = await seedTest(page, 'SR11');
     const c = (await sampleResultsOf(page, t.id)).components[0];
     const bodies: [string, unknown][] = [
@@ -200,7 +200,7 @@ test.describe('Test Catalog chaos: Sample & Results (TC-CX-SR)', () => {
 
   test('TC-CX-SR-12b: an active test cannot be saved with no components (Casey 2026-10-11: refuse only when active)', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE Q (ruled 2026-10-11, OGC-1458): components [] is accepted (200) on an active test, which is then left with nothing to result');
+    // GUARD since 2026-10-14 (OGC-1458 ruling; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: Q (ruled 2026-10-11, OGC-1458): components [] is accepted (200) on an active test, which is then left with nothing to result
     const t = await seedTest(page, 'SR12b', { activate: true });
     const w = await putSampleResults(page, t.id, []);
     observe('PUT sample-results with components [] on an active test', w);
@@ -210,7 +210,7 @@ test.describe('Test Catalog chaos: Sample & Results (TC-CX-SR)', () => {
 
   test('TC-CX-SR-13: two editors: a stale save does not bring back a component the other editor removed', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F11: no stale check; an old copy brings back a component another editor removed');
+    // GUARD since 2026-10-14 (OGC-1463; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F11: no stale check; an old copy brings back a component another editor removed
     const t = await seedTest(page, 'SR13');
     const p = (await sampleResultsOf(page, t.id)).components[0];
     expect((await putSampleResults(page, t.id, [component({ id: p.id, label: p.label }),
@@ -225,7 +225,7 @@ test.describe('Test Catalog chaos: Sample & Results (TC-CX-SR)', () => {
 
   test('TC-CX-SR-14: the copy-from API is retired, so an API client cannot merge one configuration into another (Casey 2026-10-11)', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE Q (ruled 2026-10-11, OGC-1458): POST copy-from still answers 200 and merges (the target-only component is kept); the UI no longer calls it, so it is to be retired');
+    // GUARD since 2026-10-14 (OGC-1458 ruling; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: Q (ruled 2026-10-11, OGC-1458): POST copy-from still answers 200 and merges (the target-only component is kept); the UI no longer calls it, so it is to be retired
     const src = await seedTest(page, 'SR14src');
     await makeCoded(page, src.id);
     const tgt = await seedTest(page, 'SR14tgt');
@@ -266,7 +266,7 @@ const putTerm = (page: any, id: string, mappings: unknown[]) => apiWrite<any>(pa
 test.describe('Test Catalog chaos: Terminology (TC-CX-TM)', () => {
   (['500 JSON', 'login page with a 200'] as const).forEach((what, i) => {
     test(`TC-CX-TM-0${i + 1}: a Terminology save that meets ${what} is reported as failed and stores nothing`, async ({ page }) => {
-      test.fail(what === 'login page with a 200', 'TRIPWIRE F8: a login page answered with 200 is shown as "Terminology mappings saved"');
+      // GUARD since 2026-10-14 (OGC-1461; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F8: a login page answered with 200 is shown as "Terminology mappings saved"
       const t = await seedTest(page, `TM${i + 1}`);
       await open(page, `/MasterListsPage/TestCatalogEditor/${t.id}/terminology`);
       await page.locator('#terminology-code').waitFor({ state: 'visible', timeout: 60_000 });
@@ -285,7 +285,7 @@ test.describe('Test Catalog chaos: Terminology (TC-CX-TM)', () => {
 
   test('TC-CX-TM-03: a LOINC code typed with stray spaces is stored trimmed, so routing and the duplicate check see it', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE Q (ruled 2026-10-11, OGC-1465: trim on save): LOINC codes are stored with surrounding spaces (exact-match routing and the duplicate check miss them)');
+    // GUARD since 2026-10-14 (OGC-1465 ruling; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: Q (ruled 2026-10-11, OGC-1465: trim on save): LOINC codes are stored with surrounding spaces (exact-match routing and the duplicate check miss them)
     const t = await seedTest(page, 'TM3');
     const w = await putTerm(page, t.id, [{ source: 'LOINC', code: ' 2345-7 ', relationship: 'SAME_AS' }]);
     expect(w.status, w.text.slice(0, 160)).toBe(200);
@@ -295,7 +295,7 @@ test.describe('Test Catalog chaos: Terminology (TC-CX-TM)', () => {
 
   test('TC-CX-TM-04: an over-long code or display name is a 4xx, not a 500', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F19: code 81, display name 256 and mappings null answer 500');
+    // GUARD since 2026-10-14 (OGC-1467; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F19: code 81, display name 256 and mappings null answer 500
     const t = await seedTest(page, 'TM4');
     for (const [what, m] of [
       ['81-character code', { source: 'LOINC', code: '1'.repeat(81), relationship: 'SAME_AS' }],
@@ -311,7 +311,7 @@ test.describe('Test Catalog chaos: Terminology (TC-CX-TM)', () => {
 
   test('TC-CX-TM-05: lifecycle: a mapping scoped to a component that is later removed does not block the next save', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F12: a mapping scoped to a removed component is still returned and makes every later save 422');
+    // GUARD since 2026-10-14 (OGC-1458; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F12: a mapping scoped to a removed component is still returned and makes every later save 422
     const t = await seedTest(page, 'TM5');
     const p = (await sampleResultsOf(page, t.id)).components[0];
     expect((await putSampleResults(page, t.id, [component({ id: p.id, label: p.label }),
@@ -340,11 +340,14 @@ test.describe('Test Catalog chaos: Terminology (TC-CX-TM)', () => {
 
   test('TC-CX-TM-07: two editors: a stale terminology save does not drop the mapping the other editor added', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F11: no stale check; an old list drops the mapping another editor added');
+    // GUARD since 2026-10-14 (OGC-1463; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F11: no stale check; an old list drops the mapping another editor added
     const t = await seedTest(page, 'TM7');
-    const a = (await termOf(page, t.id)).mappings; // A loads (empty)
+    const loadedA = await termOf(page, t.id); // A loads (empty), with the list version the screen keeps
+    const a = loadedA.mappings;
     expect((await putTerm(page, t.id, [{ source: 'LOINC', code: '3333-3', relationship: 'SAME_AS' }])).status, 'B adds').toBe(200);
-    const w = await putTerm(page, t.id, [...a, { source: 'SNOMED', code: `QA7${RUN}`, relationship: 'SAME_AS' }]);
+    // A saves as the screen does since OGC-1463: its old list plus the version its load returned.
+    const w = await apiWrite<any>(page, 'PUT', `${TC}/tests/${t.id}/terminology`,
+      { testId: t.id, mappings: [...a, { source: 'SNOMED', code: `QA7${RUN}`, relationship: 'SAME_AS' }], version: loadedA.version });
     observe('A saves on its old copy', w);
     const codes = (await termOf(page, t.id)).mappings.map((m: any) => m.code);
     expect(w.status === 409 || codes.includes('3333-3'), `A refused as stale, or B's mapping kept (now ${codes})`).toBe(true);
@@ -364,7 +367,7 @@ async function nameLocalization(page: any, testId: string) {
 
 test.describe('Test Catalog chaos: Localization (TC-CX-LO)', () => {
   test('TC-CX-LO-01: a non-admin cannot rename a test through the translations API', async ({ page, browser }) => {
-    test.fail(true, 'TRIPWIRE F4: /rest/localizations has no admin check; a receptionist renames a test (200)');
+    // GUARD since 2026-10-14 (OGC-1457; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F4: /rest/localizations has no admin check; a receptionist renames a test (200)
     const t = await seedTest(page, 'LO1');
     const { id, translations } = await nameLocalization(page, t.id);
     const recept = await asRole(browser, 'receptionist');
@@ -380,7 +383,7 @@ test.describe('Test Catalog chaos: Localization (TC-CX-LO)', () => {
 
   test('TC-CX-LO-02: a blank English name is refused, so the test never shows with no name', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F17: a blank English name is stored (200); the test then shows with no name');
+    // GUARD since 2026-10-14 (OGC-1465; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F17: a blank English name is stored (200); the test then shows with no name
     const t = await seedTest(page, 'LO2');
     const { id, translations } = await nameLocalization(page, t.id);
     const w = await apiWrite(page, 'PUT', `/rest/localizations/${id}/translations`, { ...translations, en: '' });
@@ -393,7 +396,7 @@ test.describe('Test Catalog chaos: Localization (TC-CX-LO)', () => {
 
   test('TC-CX-LO-03: a locale code that is too long, or a null value, is a 4xx not a 500', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F19: an 11-character locale, a null value and an unknown id answer 500 with the raw exception text');
+    // GUARD since 2026-10-14 (OGC-1467; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F19: an 11-character locale, a null value and an unknown id answer 500 with the raw exception text
     const t = await seedTest(page, 'LO3');
     const { id, translations } = await nameLocalization(page, t.id);
     const long = await apiWrite(page, 'PUT', `/rest/localizations/${id}/translations`, { ...translations, abcdefghijk: 'x' });
@@ -406,13 +409,13 @@ test.describe('Test Catalog chaos: Localization (TC-CX-LO)', () => {
 
   test('TC-CX-LO-04: two editors: saving English from an old page does not revert the French another admin just saved', async ({ page }) => {
 
-    test.fail(true, "TRIPWIRE F11: the PUT carries every locale loaded at page open, so an old page reverts another admin's French");
+    // GUARD since 2026-10-14 (OGC-1463; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F11: the PUT carries every locale loaded at page open, so an old page reverts another admin's French
     const t = await seedTest(page, 'LO4');
     const { id, translations: loaded } = await nameLocalization(page, t.id); // A loads every locale
     const fr = `QA CX LO4 fr ${RUN}`;
     expect((await apiWrite(page, 'PUT', `/rest/localizations/${id}/translations`, { ...loaded, fr })).status, 'B saves French').toBe(200);
-    // What LocalizationSection sends: every locale it loaded, with the edited one changed.
-    const w = await apiWrite(page, 'PUT', `/rest/localizations/${id}/translations`, { ...loaded, en: `QA CX LO4 en ${RUN}` });
+    // What LocalizationSection sends since OGC-1463: only the locale the admin changed.
+    const w = await apiWrite(page, 'PUT', `/rest/localizations/${id}/translations`, { en: `QA CX LO4 en ${RUN}` });
     observe('A saves English on its old copy', w);
     const after = (await nameLocalization(page, t.id)).translations;
     expect(w.status === 409 || after.fr === fr, `A refused as stale, or B's French kept (fr now "${after.fr}")`).toBe(true);
@@ -450,7 +453,7 @@ async function aSamplePreset(page: any) {
 
 test.describe('Test Catalog chaos: Labels (TC-CX-LB)', () => {
   test('TC-CX-LB-01: a Labels save that fails keeps what the admin typed', async ({ page }) => {
-    test.fail(true, 'TRIPWIRE F15: a failed Labels save reloads from the server and throws away the typed maximum');
+    // GUARD since 2026-10-14 (OGC-1461; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F15: a failed Labels save reloads from the server and throws away the typed maximum
     const t = await seedTest(page, 'LB1');
     const preset = await aSamplePreset(page);
     expect((await putLabels(page, t.id, [{ presetId: preset.id, defaultQty: 1, maxQty: 3, allowOverride: false }])).status).toBe(200);
@@ -468,7 +471,7 @@ test.describe('Test Catalog chaos: Labels (TC-CX-LB)', () => {
 
   test('TC-CX-LB-02: bad label config bodies are 4xx, not 500', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F19: links null answers 500');
+    // GUARD since 2026-10-14 (OGC-1467; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F19: links null answers 500
     const t = await seedTest(page, 'LB2');
     const preset = await aSamplePreset(page);
     const nul = await putLabels(page, t.id, null);
@@ -526,7 +529,7 @@ test.describe('Test Catalog chaos: Accreditation (TC-CX-AC)', () => {
 
   test('TC-CX-AC-02: an inactive accrediting body cannot be used to enroll a test through the API', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE Q (ruled 2026-10-11, OGC-1465: refuse with 400): an inactive accrediting body can be used through the API (201)');
+    // GUARD since 2026-10-14 (OGC-1465 ruling; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: Q (ruled 2026-10-11, OGC-1465: refuse with 400): an inactive accrediting body can be used through the API (201)
     const t = await seedTest(page, 'AC2');
     const body = await qaBody(page, 'A2', false);
     const e = await apiWrite(page, 'POST', '/rest/accreditation/enrollments', { testId: t.id, accreditingBodyId: body.id });
@@ -540,7 +543,7 @@ test.describe('Test Catalog chaos: Accreditation (TC-CX-AC)', () => {
 
   test('TC-CX-AC-03: the editor shows why an enrollment failed (a duplicate made in another tab)', async ({ page }) => {
 
-    test.fail(true, 'TRIPWIRE F15: the duplicate reason is dropped; the editor says only "The accreditation could not be added."');
+    // GUARD since 2026-10-14 (OGC-1461; passes on local develop, images 2026-10-14 17:22 UTC). Was a tripwire: F15: the duplicate reason is dropped; the editor says only "The accreditation could not be added."
     const t = await seedTest(page, 'AC3');
     const body = await qaBody(page, 'A3');
     await open(page, `/MasterListsPage/TestCatalogEditor/${t.id}/accreditation`);
