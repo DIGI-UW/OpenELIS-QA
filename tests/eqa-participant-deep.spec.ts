@@ -145,11 +145,10 @@ test.describe('EQA participant lane, deep (TC-EQAPT)', () => {
     note('EQAPT-03.receipt', receipt.json);
   });
 
-  test('TC-EQAPT-04: Enter Order (v4) offers this lab\'s enrollments as the EQA scheme [FLIP-WHEN-FIXED]', async ({ page }) => {
-    // FLIP-WHEN-FIXED (found 2026-10-12 in code, checked here). The v4 order form's EQA Scheme list
-    // is filled from /rest/eqa/programs (every scheme on the instance, provider-run and in-house)
-    // and its value is stored as sample_eqa.eqa_enrollment_id, which is a lab enrollment id. There
-    // is no cycle field, so an EQA order placed here never reaches a cycle ("Uncycled EQA orders").
+  test('TC-EQAPT-04: Enter Order (v4) offers exactly this lab\'s active enrollments as the EQA scheme (OGC-1483)', async ({ page }) => {
+    // GUARD since 2026-10-15 (OGC-1483, OpenELIS-Global-2 #4731). Was a tripwire: the list came from
+    // /rest/eqa/programs (every scheme on the instance) and its value was stored as the enrollment id.
+    // The list is now GET /rest/eqa/my-programs?active=true. Storage, cycle and patient: eqa-order-intake.spec.ts.
     await page.goto('/order/clinical/enter', { waitUntil: 'domcontentloaded' });
     const box = page.locator('label[for="isEQASample"]');
     await expect(box).toBeVisible({ timeout: 30_000 });
@@ -157,12 +156,11 @@ test.describe('EQA participant lane, deep (TC-EQAPT)', () => {
     await expect(page.locator('#eqaProgramId')).toBeVisible({ timeout: 15_000 });
     // The list loads after the box opens; an empty list would pass the loop below vacuously (seen once).
     await expect.poll(async () => page.locator('#eqaProgramId option:not([value=""])').count(), { timeout: 30_000, message: 'the EQA Scheme list has loaded' }).toBeGreaterThan(0);
-    test.fail();
     const offered = await page.locator('#eqaProgramId option').evaluateAll((os) => os.map((o: any) => ({ v: o.value, t: o.textContent?.trim() })).filter((o) => o.v));
-    const mine = (await api(page, 'GET', '/eqa/my-programs')).json ?? [];
-    note('EQAPT-04', { offered: offered.slice(0, 12), myEnrollments: mine.map((m: any) => `${m.id}:${m.programName}`).slice(0, 12) });
-    const mineIds = new Set(mine.filter((m: any) => m.isActive !== false).map((m: any) => String(m.id)));
-    for (const o of offered) expect(mineIds.has(o.v), `"${o.t}" (value ${o.v}) is one of this lab's enrollments`).toBe(true);
+    const mine = (await api(page, 'GET', '/eqa/my-programs?active=true')).json ?? [];
+    note('EQAPT-04', { offered: offered.slice(0, 12), activeEnrollments: mine.map((m: any) => `${m.id}:${m.programName}`).slice(0, 12) });
+    expect(offered.map((o) => o.v).sort(), 'offered = the lab\'s active enrollments').toEqual(mine.map((m: any) => String(m.id)).sort());
+    expect(offered.map((o) => o.v), 'this suite\'s enrollment is offered').toContain(String(F.enrollmentId));
   });
 
   test('TC-EQAPT-05: once both results are validated the cycle is ready to submit within seconds (OGC-1257)', async ({ page }) => {

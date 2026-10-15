@@ -1,6 +1,6 @@
 {
   "recorded": "2026-10-15",
-  "total": 1651,
+  "total": 1687,
   "hollowTotal": 177,
   "files": {
     "tests/a11y-axe-scan.spec.ts": 0,
@@ -143,6 +143,7 @@
     "tests/electronic-signature.spec.ts": 3,
     "tests/envseed.spec.ts": 0,
     "tests/eqa-inhouse-deep.spec.ts": 0,
+    "tests/eqa-order-intake.spec.ts": 0,
     "tests/eqa-participant-deep.spec.ts": 0,
     "tests/eqa-participant-happy-path.spec.ts": 0,
     "tests/eqa-prereq.spec.ts": 1,
@@ -157,6 +158,7 @@
     "tests/home-dashboard-counts.spec.ts": 0,
     "tests/i18n.spec.ts": 3,
     "tests/inventory-board.spec.ts": 0,
+    "tests/inventory-receive.spec.ts": 0,
     "tests/locations-organizations.spec.ts": 0,
     "tests/loinc-dictionary.spec.ts": 2,
     "tests/modify-order-field-binding.spec.ts": 0,
@@ -190,6 +192,7 @@
     "tests/pathology.spec.ts": 0,
     "tests/patient-concurrent-edit.spec.ts": 0,
     "tests/patient-config-stale.spec.ts": 0,
+    "tests/patient-form-messages.spec.ts": 0,
     "tests/patient-history.spec.ts": 0,
     "tests/patient-management.spec.ts": 6,
     "tests/patient-merge.spec.ts": 1,
