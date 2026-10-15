@@ -1,0 +1,16 @@
+{
+ "$comment": [
+  "Failures develop-stack expects on develop today, each with the ticket or ruling that explains it.",
+  "The develop-stack Verdict fails only on a failure NOT listed here, so a red run means something new broke.",
+  "",
+  "Keys: <config>|<project>|<spec file>|<describe > ... > test title> (no line numbers, so editing a spec does not unlist a test).",
+  "Values: ticket (an OGC key, 'harness' for a test fault, 'ci-env' for a CI-only seeding or environment gap, or 'untriaged'), note, since.",
+  "",
+  "When a listed test passes, the run reports it under 'Known reds now passing': take it out of this file and check its ticket.",
+  "To accept a batch after triage: node scripts/ci-known-reds.mjs seed --from <downloaded shard artifacts>, then set the tickets.",
+  "",
+  "bootstrap: true means new failures are reported but do not fail the run. It is on only until the first seeded run; turn it off in the same PR that seeds the list."
+ ],
+ "bootstrap": true,
+ "reds": {}
+}

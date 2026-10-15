@@ -32,6 +32,13 @@ on:
     # server behind a UTC+10 browser. This run sets TZ for the whole job (compose passes it to
     # the webapp and FHIR containers, Node and Chromium read it too).
     - cron: '30 2 * * 3'
+    # Weekly full run whether or not develop moved (Casey 2026-10-15: "schedule the full
+    # run once a week"). Sunday 09:17 UTC is Sunday early morning in Seattle and the
+    # afternoon in Kampala and Port Moresby, so the report is on the ci-reports branch
+    # before Monday. The 3-hourly poll above only runs when develop changed; this one
+    # gives a dated full result every week even on a quiet week, against the QA main
+    # of that day, so spec changes are measured too.
+    - cron: '17 9 * * 0'
   workflow_dispatch:
     inputs:
       force:
@@ -124,7 +131,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .last-tested-sha
-          key: develop-tested-${{ steps.head.outputs.sha }}-${{ env.TZ }}
+          # The weekly schedule adds the run id, so it never hits the cache and always runs.
+          key: develop-tested-${{ steps.head.outputs.sha }}-${{ env.TZ }}${{ github.event.schedule == '17 9 * * 0' && format('-weekly-{0}', github.run_id) || '' }}
 
       - name: Skip if develop has not moved
         if: steps.seen.outputs.cache-hit == 'true' && inputs.force != true
@@ -357,13 +365,27 @@ jobs:
             allow_zero=$(jq -r --arg c "$cfg" '(.suites[] | select(.config==$c) | .allowZero) // false' ci-suites.json)
             env_pairs=$(jq -r --arg c "$cfg" '(.suites[] | select(.config==$c) | .env // {}) | to_entries[] | "\(.key)=\(.value)"' ci-suites.json)
             # shellcheck disable=SC2086
-            env $env_pairs npx playwright test -c "$cfg" --reporter=line 2>&1 | tee "out/$name.txt"
+            # JSON beside the line output: ci-known-reds.mjs reads it to tell known reds from new.
+            env $env_pairs PLAYWRIGHT_JSON_OUTPUT_NAME="out/$name.json" npx playwright test -c "$cfg" --reporter=line,json 2>&1 | tee "out/$name.txt"
             code=${PIPESTATUS[0]}
             printf '%s\n' "$code" > "out/$name.exit"
             printf '%s\n' "$allow_zero" > "out/$name.allowzero"
             echo "$name exit=$code"
             echo "::endgroup::"
           done
+
+      # Known reds are failures already ticketed or ruled, listed in ci-known-reds.json.
+      # This step writes out/reds.json; Verdict fails only on failures NOT in that list.
+      # The commit and subject go in out/ too, for the report job.
+      - name: Sort failures into known and new
+        if: always() && (steps.seen.outputs.cache-hit != 'true' || inputs.force == true)
+        run: |
+          mkdir -p out
+          echo "${{ steps.head.outputs.sha }}" > out/.sha
+          gh api "repos/$APP_REPO/commits/${{ steps.head.outputs.sha }}" --jq '.commit.message' | head -1 > out/.subject || true
+          node scripts/ci-known-reds.mjs check --out out
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Summarise
         if: always() && (steps.seen.outputs.cache-hit != 'true' || inputs.force == true)
@@ -528,11 +550,38 @@ jobs:
               echo "::error::$n ran ZERO tests - no passes and no failures. A suite that asserts nothing is not a pass; check its testMatch and testDir before trusting any result from this run."
               bad=1
             fi
-            if [ "$code" != "0" ] || [ "$failed" -gt 0 ]; then
-              echo "::error::$n failed ($failed failing, exit=$code). See the job summary and the uploaded playwright-report."
+            # KNOWN vs NEW (2026-10-15). Every run used to be red, because about 200 tests
+            # fail for reasons already ticketed, so a regression looked exactly like the
+            # standing list. A failure listed in ci-known-reds.json no longer fails the run;
+            # one that is not listed does. A suite with no JSON report keeps the old rule.
+            # A non-zero exit with no failing test (crash, global setup, timeout) still fails.
+            new='?'; known=0; fixed=0; boot=true
+            if [ -f out/reds.json ] && [ -f "out/$n.json" ]; then
+              new=$(jq -r --arg n "$n" '(.suites[$n].newReds // []) | length' out/reds.json 2>/dev/null)
+              known=$(jq -r --arg n "$n" '(.suites[$n].known // []) | length' out/reds.json 2>/dev/null)
+              fixed=$(jq -r --arg n "$n" '(.suites[$n].fixed // []) | length' out/reds.json 2>/dev/null)
+              boot=$(jq -r '.bootstrap' out/reds.json 2>/dev/null)
+            fi
+            if ! [[ "$new" =~ ^[0-9]+$ ]]; then
+              if [ "$code" != "0" ] || [ "$failed" -gt 0 ]; then
+                echo "::error::$n failed ($failed failing, exit=$code) and has no JSON report to sort known from new."
+                bad=1
+              fi
+            elif [ "$new" -gt 0 ]; then
+              if [ "$boot" = "true" ]; then
+                echo "::warning::$n: $new failure(s) not in ci-known-reds.json ($known known). Baseline is in bootstrap mode, so this does not fail the run."
+              else
+                echo "::error::$n: $new NEW failure(s) not in ci-known-reds.json ($known known). The list is in out/reds.json and the report."
+                bad=1
+              fi
+            elif [ "$code" != "0" ] && [ "$failed" -eq 0 ]; then
+              echo "::error::$n exited $code with no failing test: a crash, a setup failure or a timeout."
               bad=1
             fi
-            echo "$n: exit=$code passed=$passed failed=$failed"
+            if [[ "$fixed" =~ ^[0-9]+$ ]] && [ "$fixed" -gt 0 ]; then
+              echo "::notice::$n: $fixed known red(s) now pass. Take them out of ci-known-reds.json and check their tickets."
+            fi
+            echo "$n: exit=$code passed=$passed failed=$failed known=$known new=$new fixed=$fixed"
           done
 
           if [ "$ran" -eq 0 ]; then
@@ -564,3 +613,60 @@ jobs:
         if: always()
         run: |
           docker compose -p oedevqa -f "$APP_DIR/docker-compose.develop.yml" down -v || true
+
+  # ---------------------------------------------------------------------------
+  # One report per run, on the ci-reports branch (develop-stack/latest.md and .json, plus
+  # a dated copy under history/). WHY A BRANCH: artifacts expire in 14 days and need an
+  # Actions API to read; a file on a branch can be read by anyone, by the GitHub connector
+  # Claude uses for the weekly tracker update, and by `git log` a year from now.
+  # Nothing is written when develop had not moved (no shard ran).
+  # ---------------------------------------------------------------------------
+  report:
+    name: report
+    needs: test-against-develop
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    env:
+      TZ: ${{ inputs.lab_tz || (github.event.schedule == '30 2 * * 3' && 'Pacific/Port_Moresby') || 'UTC' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the shard results
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: develop-*-${{ github.run_number }}-shard*
+          path: shards
+      - name: Merge the shards
+        run: |
+          SHA=$(cat shards/*/out/.sha 2>/dev/null | head -1)
+          SUBJ=$(cat shards/*/out/.subject 2>/dev/null | head -1)
+          node scripts/ci-known-reds.mjs report --shards shards --out report \
+            --sha "$SHA" --subject "$SUBJ" \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          [ -f report/latest.md ] && cat report/latest.md >> "$GITHUB_STEP_SUMMARY" || true
+      - name: Publish to the ci-reports branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -f report/latest.json ] || { echo "nothing to publish"; exit 0; }
+          SHORT=$(jq -r '.sha[0:8]' report/latest.json)
+          STAMP=$(date -u +%Y-%m-%dT%H%MZ)
+          for i in 1 2 3; do
+            rm -rf pub && mkdir pub && cd pub
+            git init -q
+            git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+            if git fetch -q --depth 1 origin ci-reports; then git checkout -q -b ci-reports FETCH_HEAD; else git checkout -q --orphan ci-reports; fi
+            mkdir -p develop-stack/history
+            cp ../report/latest.json ../report/latest.md develop-stack/
+            cp ../report/latest.json "develop-stack/history/$STAMP-$SHORT-run${{ github.run_number }}.json"
+            git add -A
+            git -c user.name='github-actions[bot]' -c user.email='41898283+github-actions[bot]@users.noreply.github.com' \
+              commit -qm "develop-stack: develop $SHORT, run ${{ github.run_number }}"
+            if git push -q origin HEAD:ci-reports; then cd ..; exit 0; fi
+            cd ..; sleep $((i * 5))
+          done
+          echo "::error::could not push the report to ci-reports after three tries"
+          exit 1
