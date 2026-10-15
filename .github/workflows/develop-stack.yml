@@ -381,8 +381,8 @@ jobs:
         if: always() && (steps.seen.outputs.cache-hit != 'true' || inputs.force == true)
         run: |
           mkdir -p out
-          echo "${{ steps.head.outputs.sha }}" > out/.sha
-          gh api "repos/$APP_REPO/commits/${{ steps.head.outputs.sha }}" --jq '.commit.message' | head -1 > out/.subject || true
+          echo "${{ steps.head.outputs.sha }}" > out/sha.txt
+          gh api "repos/$APP_REPO/commits/${{ steps.head.outputs.sha }}" --jq '.commit.message' | head -1 > out/subject.txt || true
           node scripts/ci-known-reds.mjs check --out out
         env:
           GH_TOKEN: ${{ github.token }}
@@ -641,8 +641,8 @@ jobs:
           path: shards
       - name: Merge the shards
         run: |
-          SHA=$(cat shards/*/out/.sha 2>/dev/null | head -1)
-          SUBJ=$(cat shards/*/out/.subject 2>/dev/null | head -1)
+          SHA=$(cat shards/*/out/sha.txt 2>/dev/null | head -1)
+          SUBJ=$(cat shards/*/out/subject.txt 2>/dev/null | head -1)
           node scripts/ci-known-reds.mjs report --shards shards --out report \
             --sha "$SHA" --subject "$SUBJ" \
             --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
