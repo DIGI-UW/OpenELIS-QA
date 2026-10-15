@@ -95,6 +95,21 @@
       "file": "inventory-board.md",
       "area": "Inventory items board and reports after the OGC-438 redesign (#4356 to #4365): projection, row actions, ordering, tags, count mode, receiving",
       "note": "Feature suite, 2026-10-11 to 13, local develop. Spec: tests/inventory-board.spec.ts; replaces tests/inventory.spec.ts and tests/inventory-happy-path.spec.ts."
+    },
+    {
+      "file": "inventory-receive.md",
+      "area": "Inventory Receive: scan-first receiving of a whole delivery with GS1 labels and the batch receive endpoint (OGC-438 part 11, #4366)",
+      "note": "Feature suite, 2026-10-15, local develop. Spec: tests/inventory-receive.spec.ts."
+    },
+    {
+      "file": "eqa-order-intake.md",
+      "area": "EQA sample through the v4 order flow: the Enter Order EQA box and Sample Check reject (OGC-1483, OGC-1488, #4731)",
+      "note": "Feature suite, 2026-10-15, local develop, with database read-back. Spec: tests/eqa-order-intake.spec.ts."
+    },
+    {
+      "file": "patient-form-messages.md",
+      "area": "Add Patient validation messages (OGC-1497, #4731)",
+      "note": "Feature suite, 2026-10-15, local develop. Spec: tests/patient-form-messages.spec.ts."
     }
   ],
   "notCatalogues": [

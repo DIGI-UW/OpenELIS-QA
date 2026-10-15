@@ -62,7 +62,7 @@ This laboratory enrolled in a regional scheme on Glucose that asks for a cycle-l
 | TC-EQAPT-13 | Picking the scheme before the test list has loaded still fills its tests (today the enrollment saves with no tests) | Tripwire | OGC-1476 |
 | TC-EQAPT-02 | A cycle is opened; a damaged panel cannot be received without a note | Guard | 493.901(c)(6) |
 | TC-EQAPT-03 | Two panel items are received through Add Order and linked to the cycle | Guard | 493.801(b) |
-| TC-EQAPT-04 | Enter Order (v4) offers this lab's enrollments as the EQA scheme (today every scheme on the instance, by scheme id) | Tripwire | |
+| TC-EQAPT-04 | Enter Order (v4) offers exactly this lab's active enrollments (`/rest/eqa/my-programs?active=true`) as the EQA scheme | Guard (was a tripwire; fixed 15 Oct, OGC-1483, #4731) | |
 | TC-EQAPT-05 | Once both results are validated the cycle is Ready to submit within 30 seconds | Guard | OGC-1257 |
 | TC-EQAPT-06 | Review & submit double-clicked sends one request, no 500, and the screen says it went | Guard | OGC-1255 |
 | TC-EQAPT-14 | Two Review & submit calls at once: one 200, one 409, no 500 | Guard | OGC-1255 |
