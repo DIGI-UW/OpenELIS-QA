@@ -2,16 +2,16 @@
 
 feat(reports): redesigned V1 patient report (OGC-932) (#4747)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38842977909 · TZ UTC · 2026-10-16T06:12:14.510Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38870228191 · TZ UTC · 2026-10-16T10:55:15.732Z
 
-**13 NEW FAILURE(S)**: 143 failing = 130 known + 13 new; 3 known reds now pass.
+**11 NEW FAILURE(S)**: 140 failing = 129 known + 11 new; 3 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
 | all-tc | 349 | 11 | 4 | 1 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
-| deep | 0 | 2 | 0 | 0 |
+| deep | 0 | 1 | 0 | 0 |
 | disc | 1 | 0 | 0 | 0 |
 | e2e | 15 | 3 | 0 | 0 |
 | envseed | 3 | 0 | 0 | 0 |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38842977909 · TZ UTC �
 | guards | 17 | 2 | 0 | 0 |
 | lp | 7 | 3 | 0 | 0 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1168 | 94 | 8 | 2 |
+| modules | 1171 | 92 | 6 | 2 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -38,11 +38,9 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38842977909 · TZ UTC �
 | rtype | 2 | 2 | 0 | 0 |
 | workplan | 4 | 0 | 0 | 0 |
 
-## New failures (13)
+## New failures (11)
 
-- `modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept`
 - `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys`
-- `modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)`
 - `modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-01 by lab number range: one OpenPDF document on the site paper, the patient, every order`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-03 unvalidated results are not printed; a rejected sample says so`
@@ -62,7 +60,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38842977909 · TZ UTC �
 
 ## Known reds by ticket
 
-- untriaged: 108
+- untriaged: 107
 - OGC-730: 13
 - harness: 2
 - OGC-1448: 2
