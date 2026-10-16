@@ -2,16 +2,16 @@
 
 
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38791266222 · TZ UTC · 2026-10-15T21:36:57.731Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38824085729 · TZ UTC · 2026-10-16T02:34:02.643Z
 
-**134 NEW FAILURE(S)**: 134 failing = 0 known + 134 new; 0 known reds now pass. (Baseline is in bootstrap mode: new failures are reported, not gated.)
+**130 NEW FAILURE(S)**: 130 failing = 0 known + 130 new; 0 known reds now pass. (Baseline is in bootstrap mode: new failures are reported, not gated.)
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
-| all-tc | 351 | 8 | 8 | 0 |
+| all-tc | 352 | 8 | 8 | 0 |
 | census | 126 | 3 | 3 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
-| deep | 0 | 3 | 3 | 0 |
+| deep | 0 | 1 | 1 | 0 |
 | disc | 1 | 0 | 0 | 0 |
 | e2e | 15 | 3 | 3 | 0 |
 | envseed | 3 | 0 | 0 | 0 |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38791266222 · TZ UTC �
 | guards | 17 | 2 | 2 | 0 |
 | lp | 7 | 3 | 3 | 0 |
 | modify-order | 7 | 1 | 1 | 0 |
-| modules | 1171 | 88 | 88 | 0 |
+| modules | 1176 | 86 | 86 | 0 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -38,7 +38,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38791266222 · TZ UTC �
 | rtype | 2 | 2 | 2 | 0 |
 | workplan | 4 | 0 | 0 | 0 |
 
-## New failures (134)
+## New failures (130)
 
 - `modules|modules|tests/a11y-axe-scan.spec.ts|Accessibility scan, WCAG 2.1 A/AA (TC-AXE) > TC-AXE-home: Home dashboard has no new serious or critical WCAG violations`
 - `modules|modules|tests/a11y-axe-scan.spec.ts|Accessibility scan, WCAG 2.1 A/AA (TC-AXE) > TC-AXE-add-order: Add Order (legacy wizard) has no new serious or critical WCAG violations`
@@ -65,7 +65,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38791266222 · TZ UTC �
 - `modules|modules|tests/locations-organizations.spec.ts|Locations & Organizations (OGC-1363) > TC-LORG-18: edits keep the FHIR UUID; Shipment Settings still points at its organization; FHIR and legacy reads still answer (FR-A5)`
 - `modules|modules|tests/order-creation-e2e.spec.ts|Phase 32 — Order Creation E2E via UI > TC-ORD-13: Submit order and verify success message`
 - `modules|modules|tests/order-creation-e2e.spec.ts|Phase 32 — Order Creation E2E via UI > TC-ORD-14: Print labels and Done buttons appear after submission`
-- `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered`
+- `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys`
 - `modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-02: legacy Add Order: Next then Back keeps an unticked test unticked (OGC-1388) [FIXED OGC-1388]`
 - `modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-11: Enter Order: a late response for the previous sample type does not replace the list (OGC-1266)`
 - `modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-12: Enter Order: a failed tests request does not leave "Loading" forever (OGC-1266)`
@@ -122,9 +122,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38791266222 · TZ UTC �
 - `modules|modules|tests/reflex-testing.spec.ts|Reflex Extended — Condition Logic & Integration (TC-REFLEX-EXT) > TC-REFLEX-EXT-06: Multiple active rules coexist without interference`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-02 results, flags, ranges and units print as stored; Complete vs Partial per order`
 - `modules|modules|tests/reports-output-correctness.spec.ts|Routine Reports: output matches the request > TC-RPTOUT-04: Activity report by test type returns a PDF`
-- `modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January`
 - `modules|modules|tests/sample-shipment.spec.ts|Shipment API Extended (TC-SHIP-EXT) > TC-SHIP-EXT-02: Facilities API returns destination labs list`
-- `modules|modules|tests/session-security.spec.ts|Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–16) > TC-SESS-16: Session expiry returns 401/302, not 500`
 - `modules|modules|tests/table-labels.spec.ts|Tables > TC-TBL-00: CANARY the Inventory table offers several page sizes`
 - `modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-01: no page in the menu shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading`
 - `modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-02: no Admin page shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading`
@@ -151,8 +149,6 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38791266222 · TZ UTC �
 - `all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers`
 - `all-tc|test-catalog|tests/reference-lab-results-fhir-contract.spec.ts|Reference Lab Results — FHIR contract (OGC-802 / 805 / 809) > RLR-FHIR-04 [OGC-802/805]: a returned referral carries the peer result card, or says why none exists`
 - `deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-DOMAIN: domain change is guarded by sample-type consistency (422) [CONTRACT]`
-- `deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-METHOD-LINK: link a method reads back via REST [ROUND-TRIP]`
-- `deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-PANEL-ASSIGN: assign test to a panel reads back via REST [ROUND-TRIP]`
 - `e2e|e2e|test-catalog-critical-indicator.spec.ts|OGC-1121 — critical vs abnormal result indicator (patient safety) [GUARD] > TCG-02: a CRITICAL value is styled identically to an ABNORMAL value at result entry (bug present → PASS; flips when a distinct critical marker ships)`
 - `e2e|e2e|test-catalog-sections-roundtrip.spec.ts|Test Catalog editor — section round-trips (A–G) > TCF-03 Methods: Link Method persists`
 - `e2e|e2e|test-catalog-titer-runtime.spec.ts|Test Catalog editor — Titer result type at runtime > TCC-T: Titer test → order → renders an interactive result-entry control → save → validate`
