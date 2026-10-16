@@ -1,14 +1,14 @@
-# develop-stack: develop `d0e115d1`
+# develop-stack: develop `5da78cf7`
 
-feat(reports): redesigned V1 patient report (OGC-932) (#4747)
+feat(inventory): page the items board 25 rows at a time (OGC-438) (#4595)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38870228191 · TZ UTC · 2026-10-16T10:55:15.732Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38909962693 · TZ UTC · 2026-10-16T16:58:35.017Z
 
-**11 NEW FAILURE(S)**: 140 failing = 129 known + 11 new; 3 known reds now pass.
+**10 NEW FAILURE(S)**: 141 failing = 131 known + 10 new; 1 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
-| all-tc | 349 | 11 | 4 | 1 |
+| all-tc | 348 | 11 | 4 | 1 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
 | deep | 0 | 1 | 0 | 0 |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38870228191 · TZ UTC �
 | guards | 17 | 2 | 0 | 0 |
 | lp | 7 | 3 | 0 | 0 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1171 | 92 | 6 | 2 |
+| modules | 1166 | 93 | 5 | 0 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -38,10 +38,9 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38870228191 · TZ UTC �
 | rtype | 2 | 2 | 0 | 0 |
 | workplan | 4 | 0 | 0 | 0 |
 
-## New failures (11)
+## New failures (10)
 
-- `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys`
-- `modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient`
+- `modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-01 by lab number range: one OpenPDF document on the site paper, the patient, every order`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-03 unvalidated results are not printed; a rejected sample says so`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-04 every continuation page names the patient and order it belongs to`
@@ -52,15 +51,13 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38870228191 · TZ UTC �
 - `all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-03: lifecycle: link a reagent, change quantity and unit, unlink; a second unlink is a 404`
 - `all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-04: linking two reagents where one link fails: the list shows the one that worked and a retry finishes the job`
 
-## Known reds now passing (remove from ci-known-reds.json, check the ticket) (3)
+## Known reds now passing (remove from ci-known-reds.json, check the ticket) (1)
 
-- `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered`
-- `modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January`
 - `all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers`
 
 ## Known reds by ticket
 
-- untriaged: 107
+- untriaged: 109
 - OGC-730: 13
 - harness: 2
 - OGC-1448: 2
