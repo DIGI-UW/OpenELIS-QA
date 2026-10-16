@@ -1,14 +1,14 @@
-# develop-stack: develop `5da78cf7`
+# develop-stack: develop `80d042c4`
 
-feat(inventory): page the items board 25 rows at a time (OGC-438) (#4595)
+Update OpenELIS translations from Transifex (#4750)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38909962693 · TZ UTC · 2026-10-16T16:58:35.017Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38948456995 · TZ UTC · 2026-10-16T21:05:04.448Z
 
-**10 NEW FAILURE(S)**: 141 failing = 131 known + 10 new; 1 known reds now pass.
+**11 NEW FAILURE(S)**: 142 failing = 131 known + 11 new; 1 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
-| all-tc | 348 | 11 | 4 | 1 |
+| all-tc | 349 | 11 | 4 | 1 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
 | deep | 0 | 1 | 0 | 0 |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38909962693 · TZ UTC �
 | guards | 17 | 2 | 0 | 0 |
 | lp | 7 | 3 | 0 | 0 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1166 | 93 | 5 | 0 |
+| modules | 1164 | 94 | 6 | 0 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -38,8 +38,9 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38909962693 · TZ UTC �
 | rtype | 2 | 2 | 0 | 0 |
 | workplan | 4 | 0 | 0 | 0 |
 
-## New failures (10)
+## New failures (11)
 
+- `modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept`
 - `modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-01 by lab number range: one OpenPDF document on the site paper, the patient, every order`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-03 unvalidated results are not printed; a rejected sample says so`

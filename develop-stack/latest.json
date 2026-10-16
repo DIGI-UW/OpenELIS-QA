@@ -1,14 +1,14 @@
 {
- "when": "2026-10-16T16:58:35.017Z",
- "sha": "5da78cf7a17c3fa62dee53c34ea539b76fc9be19",
- "subject": "feat(inventory): page the items board 25 rows at a time (OGC-438) (#4595)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38909962693",
+ "when": "2026-10-16T21:05:04.448Z",
+ "sha": "80d042c43020807951c613a322357175670186c3",
+ "subject": "Update OpenELIS translations from Transifex (#4750)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38948456995",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
-  "failing": 141,
+  "failing": 142,
   "known": 131,
-  "new": 10,
+  "new": 11,
   "fixed": 1
  },
  "knownByTicket": {
@@ -24,12 +24,13 @@
  "suites": {
   "modules": {
    "counts": {
-    "expected": 1166,
-    "unexpected": 93,
+    "expected": 1164,
+    "unexpected": 94,
     "flaky": 0,
-    "skipped": 64
+    "skipped": 65
    },
    "new": [
+    "modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept",
     "modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-01 by lab number range: one OpenPDF document on the site paper, the patient, every order",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-03 unvalidated results are not printed; a rejected sample says so",
@@ -65,9 +66,9 @@
   },
   "all-tc": {
    "counts": {
-    "expected": 348,
+    "expected": 349,
     "unexpected": 11,
-    "flaky": 2,
+    "flaky": 1,
     "skipped": 38
    },
    "new": [
