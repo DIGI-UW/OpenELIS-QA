@@ -1,18 +1,18 @@
 {
- "when": "2026-10-17T02:27:06.014Z",
- "sha": "5f48f7029b898b0c2923246711c8403f464ee86b",
- "subject": "feat(notifications): Result Delivery foundation (OGC-439) (#4755)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38980249078",
+ "when": "2026-10-17T06:06:35.016Z",
+ "sha": "e3b312b529833fa36aad63eeb4c2aaa8c1aa4133",
+ "subject": "Update OpenELIS translations from Transifex (#4756)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38996293731",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
-  "failing": 142,
-  "known": 130,
-  "new": 12,
-  "fixed": 2
+  "failing": 141,
+  "known": 131,
+  "new": 10,
+  "fixed": 3
  },
  "knownByTicket": {
-  "untriaged": 108,
+  "untriaged": 109,
   "OGC-730": 13,
   "OGC-1240": 1,
   "harness": 2,
@@ -24,15 +24,13 @@
  "suites": {
   "modules": {
    "counts": {
-    "expected": 1170,
-    "unexpected": 93,
+    "expected": 1172,
+    "unexpected": 91,
     "flaky": 0,
     "skipped": 60
    },
    "new": [
     "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys",
-    "modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)",
-    "modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-01 by lab number range: one OpenPDF document on the site paper, the patient, every order",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-03 unvalidated results are not printed; a rejected sample says so",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-04 every continuation page names the patient and order it belongs to",
@@ -70,10 +68,10 @@
   },
   "all-tc": {
    "counts": {
-    "expected": 348,
+    "expected": 347,
     "unexpected": 12,
-    "flaky": 1,
-    "skipped": 38
+    "flaky": 3,
+    "skipped": 37
    },
    "new": [
     "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-01: a reagent save that fails keeps the quantity the admin typed, so a retry can send it",
@@ -86,14 +84,16 @@
   },
   "deep": {
    "counts": {
-    "expected": 0,
-    "unexpected": 1,
+    "expected": 1,
+    "unexpected": 2,
     "flaky": 0,
-    "skipped": 6
+    "skipped": 4
    },
    "new": [],
-   "fixed": [],
-   "known": 1
+   "fixed": [
+    "deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-DOMAIN: domain change is guarded by sample-type consistency (422) [CONTRACT]"
+   ],
+   "known": 2
   },
   "e2e": {
    "counts": {
