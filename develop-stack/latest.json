@@ -1,18 +1,18 @@
 {
- "when": "2026-10-17T06:06:35.016Z",
+ "when": "2026-10-17T10:43:56.259Z",
  "sha": "e3b312b529833fa36aad63eeb4c2aaa8c1aa4133",
  "subject": "Update OpenELIS translations from Transifex (#4756)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/38996293731",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39013776336",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
-  "failing": 141,
-  "known": 131,
-  "new": 10,
-  "fixed": 3
+  "failing": 139,
+  "known": 128,
+  "new": 11,
+  "fixed": 4
  },
  "knownByTicket": {
-  "untriaged": 109,
+  "untriaged": 106,
   "OGC-730": 13,
   "OGC-1240": 1,
   "harness": 2,
@@ -31,6 +31,7 @@
    },
    "new": [
     "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys",
+    "modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-01 by lab number range: one OpenPDF document on the site paper, the patient, every order",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-03 unvalidated results are not printed; a rejected sample says so",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-04 every continuation page names the patient and order it belongs to",
@@ -38,9 +39,10 @@
    ],
    "fixed": [
     "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered",
-    "modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January"
+    "modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January",
+    "modules|modules|tests/session-security.spec.ts|Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–16) > TC-SESS-16: Session expiry returns 401/302, not 500"
    ],
-   "known": 86
+   "known": 85
   },
   "qa": {
    "counts": {
@@ -68,9 +70,9 @@
   },
   "all-tc": {
    "counts": {
-    "expected": 347,
-    "unexpected": 12,
-    "flaky": 3,
+    "expected": 349,
+    "unexpected": 11,
+    "flaky": 2,
     "skipped": 37
    },
    "new": [
@@ -79,21 +81,21 @@
     "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-03: lifecycle: link a reagent, change quantity and unit, unlink; a second unlink is a 404",
     "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-04: linking two reagents where one link fails: the list shows the one that worked and a retry finishes the job"
    ],
-   "fixed": [],
-   "known": 8
+   "fixed": [
+    "all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers"
+   ],
+   "known": 7
   },
   "deep": {
    "counts": {
-    "expected": 1,
-    "unexpected": 2,
+    "expected": 0,
+    "unexpected": 1,
     "flaky": 0,
-    "skipped": 4
+    "skipped": 6
    },
    "new": [],
-   "fixed": [
-    "deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-DOMAIN: domain change is guarded by sample-type consistency (422) [CONTRACT]"
-   ],
-   "known": 2
+   "fixed": [],
+   "known": 1
   },
   "e2e": {
    "counts": {
