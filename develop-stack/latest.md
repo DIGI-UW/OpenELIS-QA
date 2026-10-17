@@ -2,16 +2,16 @@
 
 Update OpenELIS translations from Transifex (#4756)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39033390696 · TZ UTC · 2026-10-17T15:35:51.210Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39055013577 · TZ UTC · 2026-10-17T20:37:04.120Z
 
-**10 NEW FAILURE(S)**: 142 failing = 132 known + 10 new; 2 known reds now pass.
+**10 NEW FAILURE(S)**: 141 failing = 131 known + 10 new; 1 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
-| all-tc | 348 | 12 | 4 | 0 |
+| all-tc | 349 | 11 | 4 | 1 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
-| deep | 1 | 2 | 0 | 1 |
+| deep | 0 | 1 | 0 | 0 |
 | disc | 1 | 0 | 0 | 0 |
 | e2e | 15 | 3 | 0 | 0 |
 | envseed | 3 | 0 | 0 | 0 |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39033390696 · TZ UTC �
 | guards | 17 | 2 | 0 | 0 |
 | lp | 7 | 3 | 0 | 0 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1166 | 92 | 5 | 1 |
+| modules | 1166 | 93 | 5 | 0 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -40,7 +40,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39033390696 · TZ UTC �
 
 ## New failures (10)
 
-- `modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept`
+- `modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-01 by lab number range: one OpenPDF document on the site paper, the patient, every order`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-03 unvalidated results are not printed; a rejected sample says so`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-04 every continuation page names the patient and order it belongs to`
@@ -51,14 +51,13 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39033390696 · TZ UTC �
 - `all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-03: lifecycle: link a reagent, change quantity and unit, unlink; a second unlink is a 404`
 - `all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-04: linking two reagents where one link fails: the list shows the one that worked and a retry finishes the job`
 
-## Known reds now passing (remove from ci-known-reds.json, check the ticket) (2)
+## Known reds now passing (remove from ci-known-reds.json, check the ticket) (1)
 
-- `modules|modules|tests/session-security.spec.ts|Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–16) > TC-SESS-16: Session expiry returns 401/302, not 500`
-- `deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-DOMAIN: domain change is guarded by sample-type consistency (422) [CONTRACT]`
+- `all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers`
 
 ## Known reds by ticket
 
-- untriaged: 110
+- untriaged: 109
 - OGC-730: 13
 - harness: 2
 - OGC-1448: 2
