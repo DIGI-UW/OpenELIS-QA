@@ -2,9 +2,9 @@
 
 Update OpenELIS translations from Transifex (#4756)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39055013577 · TZ UTC · 2026-10-17T20:37:04.120Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39064960652 · TZ UTC · 2026-10-17T23:51:33.815Z
 
-**10 NEW FAILURE(S)**: 141 failing = 131 known + 10 new; 1 known reds now pass.
+**12 NEW FAILURE(S)**: 143 failing = 131 known + 12 new; 1 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39055013577 · TZ UTC �
 | guards | 17 | 2 | 0 | 0 |
 | lp | 7 | 3 | 0 | 0 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1166 | 93 | 5 | 0 |
+| modules | 1163 | 95 | 7 | 0 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -38,9 +38,11 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39055013577 · TZ UTC �
 | rtype | 2 | 2 | 0 | 0 |
 | workplan | 4 | 0 | 0 | 0 |
 
-## New failures (10)
+## New failures (12)
 
+- `modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept`
 - `modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)`
+- `modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-01 by lab number range: one OpenPDF document on the site paper, the patient, every order`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-03 unvalidated results are not printed; a rejected sample says so`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-04 every continuation page names the patient and order it belongs to`
