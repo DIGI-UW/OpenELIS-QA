@@ -1,18 +1,18 @@
 {
- "when": "2026-10-18T19:30:26.039Z",
+ "when": "2026-10-18T22:25:45.638Z",
  "sha": "e3b312b529833fa36aad63eeb4c2aaa8c1aa4133",
  "subject": "Update OpenELIS translations from Transifex (#4756)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39131142855",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39151054997",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
-  "failing": 140,
-  "known": 130,
-  "new": 10,
+  "failing": 143,
+  "known": 132,
+  "new": 11,
   "fixed": 2
  },
  "knownByTicket": {
-  "untriaged": 108,
+  "untriaged": 110,
   "OGC-730": 13,
   "OGC-1240": 1,
   "harness": 2,
@@ -24,8 +24,8 @@
  "suites": {
   "modules": {
    "counts": {
-    "expected": 1167,
-    "unexpected": 92,
+    "expected": 1166,
+    "unexpected": 93,
     "flaky": 0,
     "skipped": 64
    },
@@ -36,10 +36,8 @@
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-04 every continuation page names the patient and order it belongs to",
     "modules|modules|tests/reports-openpdf.spec.ts|Printed Reports Configuration: paper size and page numbers > TC-RPTPDF-50 Letter with page numbers: the reports follow the setting, then the saved settings come back"
    ],
-   "fixed": [
-    "modules|modules|tests/session-security.spec.ts|Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–16) > TC-SESS-16: Session expiry returns 401/302, not 500"
-   ],
-   "known": 87
+   "fixed": [],
+   "known": 88
   },
   "qa": {
    "counts": {
@@ -67,10 +65,10 @@
   },
   "all-tc": {
    "counts": {
-    "expected": 349,
+    "expected": 350,
     "unexpected": 11,
-    "flaky": 2,
-    "skipped": 37
+    "flaky": 0,
+    "skipped": 38
    },
    "new": [
     "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-01: a reagent save that fails keeps the quantity the admin typed, so a retry can send it",
@@ -85,14 +83,18 @@
   },
   "deep": {
    "counts": {
-    "expected": 0,
-    "unexpected": 1,
+    "expected": 4,
+    "unexpected": 3,
     "flaky": 0,
-    "skipped": 6
+    "skipped": 0
    },
-   "new": [],
-   "fixed": [],
-   "known": 1
+   "new": [
+    "deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-STORAGE: set storage condition reads back via REST [ROUND-TRIP]"
+   ],
+   "fixed": [
+    "deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-METHOD-LINK: link a method reads back via REST [ROUND-TRIP]"
+   ],
+   "known": 2
   },
   "e2e": {
    "counts": {
