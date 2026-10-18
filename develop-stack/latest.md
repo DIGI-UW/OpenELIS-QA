@@ -2,13 +2,13 @@
 
 Update OpenELIS translations from Transifex (#4756)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39129406529 · TZ UTC · 2026-10-18T16:13:31.781Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39131142855 · TZ UTC · 2026-10-18T19:30:26.039Z
 
-**10 NEW FAILURE(S)**: 141 failing = 131 known + 10 new; 1 known reds now pass.
+**10 NEW FAILURE(S)**: 140 failing = 130 known + 10 new; 2 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
-| all-tc | 348 | 11 | 4 | 1 |
+| all-tc | 349 | 11 | 4 | 1 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
 | deep | 0 | 1 | 0 | 0 |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39129406529 · TZ UTC �
 | guards | 17 | 2 | 0 | 0 |
 | lp | 7 | 3 | 0 | 0 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1166 | 93 | 5 | 0 |
+| modules | 1167 | 92 | 5 | 1 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -51,13 +51,14 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39129406529 · TZ UTC �
 - `all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-03: lifecycle: link a reagent, change quantity and unit, unlink; a second unlink is a 404`
 - `all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-04: linking two reagents where one link fails: the list shows the one that worked and a retry finishes the job`
 
-## Known reds now passing (remove from ci-known-reds.json, check the ticket) (1)
+## Known reds now passing (remove from ci-known-reds.json, check the ticket) (2)
 
+- `modules|modules|tests/session-security.spec.ts|Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–16) > TC-SESS-16: Session expiry returns 401/302, not 500`
 - `all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers`
 
 ## Known reds by ticket
 
-- untriaged: 109
+- untriaged: 108
 - OGC-730: 13
 - harness: 2
 - OGC-1448: 2
