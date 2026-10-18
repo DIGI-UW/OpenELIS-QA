@@ -1,18 +1,18 @@
 {
- "when": "2026-10-18T03:07:35.150Z",
+ "when": "2026-10-18T05:51:57.268Z",
  "sha": "e3b312b529833fa36aad63eeb4c2aaa8c1aa4133",
  "subject": "Update OpenELIS translations from Transifex (#4756)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39076691810",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39091430210",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
-  "failing": 140,
-  "known": 129,
+  "failing": 142,
+  "known": 131,
   "new": 11,
-  "fixed": 3
+  "fixed": 2
  },
  "knownByTicket": {
-  "untriaged": 107,
+  "untriaged": 109,
   "OGC-730": 13,
   "OGC-1240": 1,
   "harness": 2,
@@ -24,14 +24,14 @@
  "suites": {
   "modules": {
    "counts": {
-    "expected": 1171,
+    "expected": 1170,
     "unexpected": 92,
     "flaky": 0,
-    "skipped": 60
+    "skipped": 61
    },
    "new": [
+    "modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept",
     "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys",
-    "modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-01 by lab number range: one OpenPDF document on the site paper, the patient, every order",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-03 unvalidated results are not printed; a rejected sample says so",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-04 every continuation page names the patient and order it belongs to",
@@ -69,9 +69,9 @@
   },
   "all-tc": {
    "counts": {
-    "expected": 350,
-    "unexpected": 11,
-    "flaky": 1,
+    "expected": 347,
+    "unexpected": 12,
+    "flaky": 3,
     "skipped": 37
    },
    "new": [
@@ -80,21 +80,19 @@
     "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-03: lifecycle: link a reagent, change quantity and unit, unlink; a second unlink is a 404",
     "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-04: linking two reagents where one link fails: the list shows the one that worked and a retry finishes the job"
    ],
-   "fixed": [
-    "all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers"
-   ],
-   "known": 7
+   "fixed": [],
+   "known": 8
   },
   "deep": {
    "counts": {
     "expected": 0,
-    "unexpected": 1,
+    "unexpected": 2,
     "flaky": 0,
-    "skipped": 6
+    "skipped": 5
    },
    "new": [],
    "fixed": [],
-   "known": 1
+   "known": 2
   },
   "e2e": {
    "counts": {
