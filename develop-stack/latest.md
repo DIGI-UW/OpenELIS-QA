@@ -2,13 +2,13 @@
 
 Update OpenELIS translations from Transifex (#4756)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39091430210 · TZ UTC · 2026-10-18T05:51:57.268Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39108758958 · TZ UTC · 2026-10-18T10:54:34.470Z
 
 **11 NEW FAILURE(S)**: 142 failing = 131 known + 11 new; 2 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
-| all-tc | 347 | 12 | 4 | 0 |
+| all-tc | 348 | 12 | 4 | 0 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
 | deep | 0 | 2 | 0 | 0 |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39091430210 · TZ UTC �
 | guards | 17 | 2 | 0 | 0 |
 | lp | 7 | 3 | 0 | 0 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1170 | 92 | 6 | 2 |
+| modules | 1171 | 92 | 6 | 2 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -40,8 +40,8 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39091430210 · TZ UTC �
 
 ## New failures (11)
 
-- `modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept`
 - `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys`
+- `modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-01 by lab number range: one OpenPDF document on the site paper, the patient, every order`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-03 unvalidated results are not printed; a rejected sample says so`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-04 every continuation page names the patient and order it belongs to`

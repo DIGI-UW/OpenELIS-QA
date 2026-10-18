@@ -1,8 +1,8 @@
 {
- "when": "2026-10-18T05:51:57.268Z",
+ "when": "2026-10-18T10:54:34.470Z",
  "sha": "e3b312b529833fa36aad63eeb4c2aaa8c1aa4133",
  "subject": "Update OpenELIS translations from Transifex (#4756)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39091430210",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39108758958",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
@@ -24,14 +24,14 @@
  "suites": {
   "modules": {
    "counts": {
-    "expected": 1170,
+    "expected": 1171,
     "unexpected": 92,
     "flaky": 0,
-    "skipped": 61
+    "skipped": 60
    },
    "new": [
-    "modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept",
     "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys",
+    "modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-01 by lab number range: one OpenPDF document on the site paper, the patient, every order",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-03 unvalidated results are not printed; a rejected sample says so",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-04 every continuation page names the patient and order it belongs to",
@@ -69,9 +69,9 @@
   },
   "all-tc": {
    "counts": {
-    "expected": 347,
+    "expected": 348,
     "unexpected": 12,
-    "flaky": 3,
+    "flaky": 2,
     "skipped": 37
    },
    "new": [
