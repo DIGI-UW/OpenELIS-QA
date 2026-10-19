@@ -1,18 +1,18 @@
 {
- "when": "2026-10-19T15:32:14.157Z",
- "sha": "50b256aedaa8a7a60f6baefd4231485f59c92003",
- "subject": "ci(e2e): run the Playwright jobs on ubuntu-24.04 (#4764)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39248491747",
+ "when": "2026-10-19T22:10:10.571Z",
+ "sha": "09462c0c63e0f48fe2d8b6e3f01cd0f198231ecb",
+ "subject": "fix(inventory): keep lot dates on edit, save adjustment notes, queue concurrent consumption (#4591)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39303634378",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
-  "failing": 142,
-  "known": 132,
+  "failing": 141,
+  "known": 131,
   "new": 10,
   "fixed": 2
  },
  "knownByTicket": {
-  "untriaged": 110,
+  "untriaged": 109,
   "OGC-730": 13,
   "OGC-1240": 1,
   "harness": 2,
@@ -24,23 +24,22 @@
  "suites": {
   "modules": {
    "counts": {
-    "expected": 1172,
-    "unexpected": 91,
+    "expected": 1167,
+    "unexpected": 92,
     "flaky": 0,
-    "skipped": 60
+    "skipped": 64
    },
    "new": [
-    "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys",
+    "modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-01 by lab number range: one OpenPDF document on the site paper, the patient, every order",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-03 unvalidated results are not printed; a rejected sample says so",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-04 every continuation page names the patient and order it belongs to",
     "modules|modules|tests/reports-openpdf.spec.ts|Printed Reports Configuration: paper size and page numbers > TC-RPTPDF-50 Letter with page numbers: the reports follow the setting, then the saved settings come back"
    ],
    "fixed": [
-    "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered",
     "modules|modules|tests/session-security.spec.ts|Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–16) > TC-SESS-16: Session expiry returns 401/302, not 500"
    ],
-   "known": 86
+   "known": 87
   },
   "qa": {
    "counts": {
@@ -68,9 +67,9 @@
   },
   "all-tc": {
    "counts": {
-    "expected": 348,
-    "unexpected": 12,
-    "flaky": 1,
+    "expected": 350,
+    "unexpected": 11,
+    "flaky": 0,
     "skipped": 38
    },
    "new": [
@@ -79,19 +78,21 @@
     "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-03: lifecycle: link a reagent, change quantity and unit, unlink; a second unlink is a 404",
     "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-04: linking two reagents where one link fails: the list shows the one that worked and a retry finishes the job"
    ],
-   "fixed": [],
-   "known": 8
+   "fixed": [
+    "all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers"
+   ],
+   "known": 7
   },
   "deep": {
    "counts": {
     "expected": 0,
-    "unexpected": 3,
+    "unexpected": 2,
     "flaky": 0,
-    "skipped": 4
+    "skipped": 5
    },
    "new": [],
    "fixed": [],
-   "known": 3
+   "known": 2
   },
   "e2e": {
    "counts": {

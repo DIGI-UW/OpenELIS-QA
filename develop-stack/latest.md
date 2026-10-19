@@ -1,17 +1,17 @@
-# develop-stack: develop `50b256ae`
+# develop-stack: develop `09462c0c`
 
-ci(e2e): run the Playwright jobs on ubuntu-24.04 (#4764)
+fix(inventory): keep lot dates on edit, save adjustment notes, queue concurrent consumption (#4591)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39248491747 · TZ UTC · 2026-10-19T15:32:14.157Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39303634378 · TZ UTC · 2026-10-19T22:10:10.571Z
 
-**10 NEW FAILURE(S)**: 142 failing = 132 known + 10 new; 2 known reds now pass.
+**10 NEW FAILURE(S)**: 141 failing = 131 known + 10 new; 2 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
-| all-tc | 348 | 12 | 4 | 0 |
+| all-tc | 350 | 11 | 4 | 1 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
-| deep | 0 | 3 | 0 | 0 |
+| deep | 0 | 2 | 0 | 0 |
 | disc | 1 | 0 | 0 | 0 |
 | e2e | 15 | 3 | 0 | 0 |
 | envseed | 3 | 0 | 0 | 0 |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39248491747 · TZ UTC �
 | guards | 17 | 2 | 0 | 0 |
 | lp | 7 | 3 | 0 | 0 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1172 | 91 | 5 | 2 |
+| modules | 1167 | 92 | 5 | 1 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -40,7 +40,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39248491747 · TZ UTC �
 
 ## New failures (10)
 
-- `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys`
+- `modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-01 by lab number range: one OpenPDF document on the site paper, the patient, every order`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-03 unvalidated results are not printed; a rejected sample says so`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-04 every continuation page names the patient and order it belongs to`
@@ -53,12 +53,12 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39248491747 · TZ UTC �
 
 ## Known reds now passing (remove from ci-known-reds.json, check the ticket) (2)
 
-- `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered`
 - `modules|modules|tests/session-security.spec.ts|Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–16) > TC-SESS-16: Session expiry returns 401/302, not 500`
+- `all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers`
 
 ## Known reds by ticket
 
-- untriaged: 110
+- untriaged: 109
 - OGC-730: 13
 - harness: 2
 - OGC-1448: 2
