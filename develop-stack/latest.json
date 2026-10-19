@@ -1,18 +1,18 @@
 {
- "when": "2026-10-19T06:47:45.543Z",
- "sha": "5f89e0da8f44d413e6c953ab7dec8c05c7d6a4b3",
- "subject": "Update OpenELIS translations from Transifex (#4758)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39192754780",
+ "when": "2026-10-19T15:32:14.157Z",
+ "sha": "50b256aedaa8a7a60f6baefd4231485f59c92003",
+ "subject": "ci(e2e): run the Playwright jobs on ubuntu-24.04 (#4764)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39248491747",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
   "failing": 142,
-  "known": 130,
-  "new": 12,
-  "fixed": 4
+  "known": 132,
+  "new": 10,
+  "fixed": 2
  },
  "knownByTicket": {
-  "untriaged": 108,
+  "untriaged": 110,
   "OGC-730": 13,
   "OGC-1240": 1,
   "harness": 2,
@@ -38,7 +38,7 @@
    ],
    "fixed": [
     "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered",
-    "modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January"
+    "modules|modules|tests/session-security.spec.ts|Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–16) > TC-SESS-16: Session expiry returns 401/302, not 500"
    ],
    "known": 86
   },
@@ -68,9 +68,9 @@
   },
   "all-tc": {
    "counts": {
-    "expected": 350,
-    "unexpected": 11,
-    "flaky": 0,
+    "expected": 348,
+    "unexpected": 12,
+    "flaky": 1,
     "skipped": 38
    },
    "new": [
@@ -79,26 +79,19 @@
     "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-03: lifecycle: link a reagent, change quantity and unit, unlink; a second unlink is a 404",
     "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-04: linking two reagents where one link fails: the list shows the one that worked and a retry finishes the job"
    ],
-   "fixed": [
-    "all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers"
-   ],
-   "known": 7
+   "fixed": [],
+   "known": 8
   },
   "deep": {
    "counts": {
-    "expected": 3,
-    "unexpected": 4,
+    "expected": 0,
+    "unexpected": 3,
     "flaky": 0,
-    "skipped": 0
+    "skipped": 4
    },
-   "new": [
-    "deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-FILTER: Domain filter (Filters flyout) narrows results [FUNCTION]",
-    "deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-DUP: \"Save as new test…\" header CTA is gone (OGC-1142 redesign)"
-   ],
-   "fixed": [
-    "deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-METHOD-LINK: link a method reads back via REST [ROUND-TRIP]"
-   ],
-   "known": 2
+   "new": [],
+   "fixed": [],
+   "known": 3
   },
   "e2e": {
    "counts": {

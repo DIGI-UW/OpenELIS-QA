@@ -1,17 +1,17 @@
-# develop-stack: develop `5f89e0da`
+# develop-stack: develop `50b256ae`
 
-Update OpenELIS translations from Transifex (#4758)
+ci(e2e): run the Playwright jobs on ubuntu-24.04 (#4764)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39192754780 · TZ UTC · 2026-10-19T06:47:45.543Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39248491747 · TZ UTC · 2026-10-19T15:32:14.157Z
 
-**12 NEW FAILURE(S)**: 142 failing = 130 known + 12 new; 4 known reds now pass.
+**10 NEW FAILURE(S)**: 142 failing = 132 known + 10 new; 2 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
-| all-tc | 350 | 11 | 4 | 1 |
+| all-tc | 348 | 12 | 4 | 0 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
-| deep | 3 | 4 | 2 | 1 |
+| deep | 0 | 3 | 0 | 0 |
 | disc | 1 | 0 | 0 | 0 |
 | e2e | 15 | 3 | 0 | 0 |
 | envseed | 3 | 0 | 0 | 0 |
@@ -38,7 +38,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39192754780 · TZ UTC �
 | rtype | 2 | 2 | 0 | 0 |
 | workplan | 4 | 0 | 0 | 0 |
 
-## New failures (12)
+## New failures (10)
 
 - `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-01 by lab number range: one OpenPDF document on the site paper, the patient, every order`
@@ -50,19 +50,15 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39192754780 · TZ UTC �
 - `all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-02: impossible quantities and over-long units are 4xx, never 500`
 - `all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-03: lifecycle: link a reagent, change quantity and unit, unlink; a second unlink is a 404`
 - `all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-04: linking two reagents where one link fails: the list shows the one that worked and a retry finishes the job`
-- `deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-FILTER: Domain filter (Filters flyout) narrows results [FUNCTION]`
-- `deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-DUP: "Save as new test…" header CTA is gone (OGC-1142 redesign)`
 
-## Known reds now passing (remove from ci-known-reds.json, check the ticket) (4)
+## Known reds now passing (remove from ci-known-reds.json, check the ticket) (2)
 
 - `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered`
-- `modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January`
-- `all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers`
-- `deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-METHOD-LINK: link a method reads back via REST [ROUND-TRIP]`
+- `modules|modules|tests/session-security.spec.ts|Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–16) > TC-SESS-16: Session expiry returns 401/302, not 500`
 
 ## Known reds by ticket
 
-- untriaged: 108
+- untriaged: 110
 - OGC-730: 13
 - harness: 2
 - OGC-1448: 2
