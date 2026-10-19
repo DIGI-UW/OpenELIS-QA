@@ -1,18 +1,18 @@
 {
- "when": "2026-10-18T22:25:45.638Z",
+ "when": "2026-10-19T01:40:37.469Z",
  "sha": "e3b312b529833fa36aad63eeb4c2aaa8c1aa4133",
  "subject": "Update OpenELIS translations from Transifex (#4756)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39151054997",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39161306858",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
-  "failing": 143,
-  "known": 132,
-  "new": 11,
-  "fixed": 2
+  "failing": 141,
+  "known": 131,
+  "new": 10,
+  "fixed": 1
  },
  "knownByTicket": {
-  "untriaged": 110,
+  "untriaged": 109,
   "OGC-730": 13,
   "OGC-1240": 1,
   "harness": 2,
@@ -24,8 +24,8 @@
  "suites": {
   "modules": {
    "counts": {
-    "expected": 1166,
-    "unexpected": 93,
+    "expected": 1167,
+    "unexpected": 92,
     "flaky": 0,
     "skipped": 64
    },
@@ -36,8 +36,10 @@
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-04 every continuation page names the patient and order it belongs to",
     "modules|modules|tests/reports-openpdf.spec.ts|Printed Reports Configuration: paper size and page numbers > TC-RPTPDF-50 Letter with page numbers: the reports follow the setting, then the saved settings come back"
    ],
-   "fixed": [],
-   "known": 88
+   "fixed": [
+    "modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January"
+   ],
+   "known": 87
   },
   "qa": {
    "counts": {
@@ -65,10 +67,10 @@
   },
   "all-tc": {
    "counts": {
-    "expected": 350,
-    "unexpected": 11,
-    "flaky": 0,
-    "skipped": 38
+    "expected": 349,
+    "unexpected": 12,
+    "flaky": 1,
+    "skipped": 37
    },
    "new": [
     "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-01: a reagent save that fails keeps the quantity the admin typed, so a retry can send it",
@@ -76,25 +78,19 @@
     "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-03: lifecycle: link a reagent, change quantity and unit, unlink; a second unlink is a 404",
     "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-04: linking two reagents where one link fails: the list shows the one that worked and a retry finishes the job"
    ],
-   "fixed": [
-    "all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers"
-   ],
-   "known": 7
+   "fixed": [],
+   "known": 8
   },
   "deep": {
    "counts": {
-    "expected": 4,
-    "unexpected": 3,
+    "expected": 0,
+    "unexpected": 1,
     "flaky": 0,
-    "skipped": 0
+    "skipped": 6
    },
-   "new": [
-    "deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-STORAGE: set storage condition reads back via REST [ROUND-TRIP]"
-   ],
-   "fixed": [
-    "deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-METHOD-LINK: link a method reads back via REST [ROUND-TRIP]"
-   ],
-   "known": 2
+   "new": [],
+   "fixed": [],
+   "known": 1
   },
   "e2e": {
    "counts": {
