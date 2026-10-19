@@ -1,0 +1,364 @@
+{
+ "when": "2026-10-19T04:14:19.768Z",
+ "sha": "5f89e0da8f44d413e6c953ab7dec8c05c7d6a4b3",
+ "subject": "Update OpenELIS translations from Transifex (#4758)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39173434695",
+ "tz": "UTC",
+ "bootstrap": false,
+ "totals": {
+  "failing": 140,
+  "known": 129,
+  "new": 11,
+  "fixed": 3
+ },
+ "knownByTicket": {
+  "untriaged": 107,
+  "OGC-730": 13,
+  "OGC-1240": 1,
+  "harness": 2,
+  "OGC-1446": 1,
+  "OGC-1367": 1,
+  "OGC-1448": 2,
+  "OGC-189": 2
+ },
+ "suites": {
+  "modules": {
+   "counts": {
+    "expected": 1171,
+    "unexpected": 92,
+    "flaky": 0,
+    "skipped": 60
+   },
+   "new": [
+    "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys",
+    "modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)",
+    "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-01 by lab number range: one OpenPDF document on the site paper, the patient, every order",
+    "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-03 unvalidated results are not printed; a rejected sample says so",
+    "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-04 every continuation page names the patient and order it belongs to",
+    "modules|modules|tests/reports-openpdf.spec.ts|Printed Reports Configuration: paper size and page numbers > TC-RPTPDF-50 Letter with page numbers: the reports follow the setting, then the saved settings come back"
+   ],
+   "fixed": [
+    "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered",
+    "modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January"
+   ],
+   "known": 86
+  },
+  "qa": {
+   "counts": {
+    "expected": 0,
+    "unexpected": 1,
+    "flaky": 0,
+    "skipped": 68
+   },
+   "new": [],
+   "fixed": [],
+   "known": 1
+  },
+  "regression-chains": {
+   "counts": {
+    "expected": 83,
+    "unexpected": 14,
+    "flaky": 0,
+    "skipped": 39
+   },
+   "new": [
+    "regression-chains|chain-a|tests/chains/chain-a-order-lifecycle.spec.ts|Chain A — Order Lifecycle > Step 6 — Lab number present on PDF (REPORTABLE)"
+   ],
+   "fixed": [],
+   "known": 13
+  },
+  "all-tc": {
+   "counts": {
+    "expected": 350,
+    "unexpected": 11,
+    "flaky": 1,
+    "skipped": 37
+   },
+   "new": [
+    "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-01: a reagent save that fails keeps the quantity the admin typed, so a retry can send it",
+    "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-02: impossible quantities and over-long units are 4xx, never 500",
+    "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-03: lifecycle: link a reagent, change quantity and unit, unlink; a second unlink is a 404",
+    "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-04: linking two reagents where one link fails: the list shows the one that worked and a retry finishes the job"
+   ],
+   "fixed": [
+    "all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers"
+   ],
+   "known": 7
+  },
+  "deep": {
+   "counts": {
+    "expected": 0,
+    "unexpected": 1,
+    "flaky": 0,
+    "skipped": 6
+   },
+   "new": [],
+   "fixed": [],
+   "known": 1
+  },
+  "e2e": {
+   "counts": {
+    "expected": 15,
+    "unexpected": 3,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 3
+  },
+  "guards": {
+   "counts": {
+    "expected": 17,
+    "unexpected": 2,
+    "flaky": 0,
+    "skipped": 5
+   },
+   "new": [],
+   "fixed": [],
+   "known": 2
+  },
+  "multicomponent": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 1
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "panel-leak": {
+   "counts": {
+    "expected": 5,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 1
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "rtype": {
+   "counts": {
+    "expected": 2,
+    "unexpected": 2,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 2
+  },
+  "workplan": {
+   "counts": {
+    "expected": 4,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "census": {
+   "counts": {
+    "expected": 126,
+    "unexpected": 3,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 3
+  },
+  "cfg": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "disc": {
+   "counts": {
+    "expected": 1,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "envseed": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "eqa": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "lp": {
+   "counts": {
+    "expected": 7,
+    "unexpected": 3,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 3
+  },
+  "modify-order": {
+   "counts": {
+    "expected": 7,
+    "unexpected": 1,
+    "flaky": 0,
+    "skipped": 1
+   },
+   "new": [],
+   "fixed": [],
+   "known": 1
+  },
+  "ogc1192": {
+   "counts": {
+    "expected": 9,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "personas-admin": {
+   "counts": {
+    "expected": 10,
+    "unexpected": 2,
+    "flaky": 0,
+    "skipped": 6
+   },
+   "new": [],
+   "fixed": [],
+   "known": 2
+  },
+  "personas-roles": {
+   "counts": {
+    "expected": 13,
+    "unexpected": 1,
+    "flaky": 0,
+    "skipped": 10
+   },
+   "new": [],
+   "fixed": [],
+   "known": 1
+  },
+  "pr3987": {
+   "counts": {
+    "expected": 10,
+    "unexpected": 3,
+    "flaky": 0,
+    "skipped": 4
+   },
+   "new": [],
+   "fixed": [],
+   "known": 3
+  },
+  "preflight": {
+   "counts": {
+    "expected": 4,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "probe-combo": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "rbac": {
+   "counts": {
+    "expected": 57,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 2
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "regression-seed": {
+   "counts": {
+    "expected": 13,
+    "unexpected": 1,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 1
+  },
+  "reval2": {
+   "counts": {
+    "expected": 4,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "revalidate-unauth": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "revalidate": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  }
+ }
+}
