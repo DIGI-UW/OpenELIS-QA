@@ -1,18 +1,18 @@
 {
- "when": "2026-10-19T04:14:19.768Z",
+ "when": "2026-10-19T06:47:45.543Z",
  "sha": "5f89e0da8f44d413e6c953ab7dec8c05c7d6a4b3",
  "subject": "Update OpenELIS translations from Transifex (#4758)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39173434695",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39192754780",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
-  "failing": 140,
-  "known": 129,
-  "new": 11,
-  "fixed": 3
+  "failing": 142,
+  "known": 130,
+  "new": 12,
+  "fixed": 4
  },
  "knownByTicket": {
-  "untriaged": 107,
+  "untriaged": 108,
   "OGC-730": 13,
   "OGC-1240": 1,
   "harness": 2,
@@ -24,14 +24,13 @@
  "suites": {
   "modules": {
    "counts": {
-    "expected": 1171,
-    "unexpected": 92,
+    "expected": 1172,
+    "unexpected": 91,
     "flaky": 0,
     "skipped": 60
    },
    "new": [
     "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys",
-    "modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-01 by lab number range: one OpenPDF document on the site paper, the patient, every order",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-03 unvalidated results are not printed; a rejected sample says so",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-04 every continuation page names the patient and order it belongs to",
@@ -71,8 +70,8 @@
    "counts": {
     "expected": 350,
     "unexpected": 11,
-    "flaky": 1,
-    "skipped": 37
+    "flaky": 0,
+    "skipped": 38
    },
    "new": [
     "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-01: a reagent save that fails keeps the quantity the admin typed, so a retry can send it",
@@ -87,14 +86,19 @@
   },
   "deep": {
    "counts": {
-    "expected": 0,
-    "unexpected": 1,
+    "expected": 3,
+    "unexpected": 4,
     "flaky": 0,
-    "skipped": 6
+    "skipped": 0
    },
-   "new": [],
-   "fixed": [],
-   "known": 1
+   "new": [
+    "deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-FILTER: Domain filter (Filters flyout) narrows results [FUNCTION]",
+    "deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-DUP: \"Save as new test…\" header CTA is gone (OGC-1142 redesign)"
+   ],
+   "fixed": [
+    "deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-METHOD-LINK: link a method reads back via REST [ROUND-TRIP]"
+   ],
+   "known": 2
   },
   "e2e": {
    "counts": {
