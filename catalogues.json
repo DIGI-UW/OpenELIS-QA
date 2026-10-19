@@ -92,6 +92,11 @@
       "note": "Feature suite, 2026-10-08. Spec: tests/reports-openpdf.spec.ts (helper helpers/report-pdf.ts)."
     },
     {
+      "file": "report-print-queue-test-cases.md",
+      "area": "Report Print Queue, patient reports V1 (OpenELIS-Global-2 #4753, OGC-431, FRS OGC-1031 r4)",
+      "note": "Feature suite, 2026-10-19, testing. Spec: tests/report-print-queue.spec.ts (helper helpers/report-queue.ts)."
+    },
+    {
       "file": "inventory-board.md",
       "area": "Inventory items board and reports after the OGC-438 redesign (#4356 to #4365): projection, row actions, ordering, tags, count mode, receiving",
       "note": "Feature suite, 2026-10-11 to 13, local develop. Spec: tests/inventory-board.spec.ts; replaces tests/inventory.spec.ts and tests/inventory-happy-path.spec.ts."
