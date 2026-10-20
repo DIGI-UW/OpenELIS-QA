@@ -1,18 +1,18 @@
 {
- "when": "2026-10-20T11:41:14.282Z",
- "sha": "ee5d92c4cb831309579f348125ce9a5a342a9afa",
- "subject": "fix: upgrade and loader defects found by the 3.2.3.0 -> develop release-readiness run (OGC-1508, OGC-1509, OGC-1510, OGC-1511, OGC-1512, OGC-1513, OGC-1516, OGC-1517) (#4766)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39391237735",
+ "when": "2026-10-20T17:16:44.848Z",
+ "sha": "e1f2b6939936b2b2042612f6224e26ba94958436",
+ "subject": "fix(reports): Report Print Queue QA follow-ups from the 19 Oct pass (OGC-431) (#4771)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39435789950",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
-  "failing": 138,
-  "known": 128,
-  "new": 10,
-  "fixed": 4
+  "failing": 144,
+  "known": 131,
+  "new": 13,
+  "fixed": 2
  },
  "knownByTicket": {
-  "untriaged": 106,
+  "untriaged": 109,
   "OGC-730": 13,
   "OGC-1240": 1,
   "harness": 2,
@@ -24,24 +24,23 @@
  "suites": {
   "modules": {
    "counts": {
-    "expected": 1173,
-    "unexpected": 90,
+    "expected": 1165,
+    "unexpected": 93,
     "flaky": 0,
-    "skipped": 60
+    "skipped": 65
    },
    "new": [
-    "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys",
+    "modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept",
+    "modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-01 by lab number range: one OpenPDF document on the site paper, the patient, every order",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-03 unvalidated results are not printed; a rejected sample says so",
     "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-04 every continuation page names the patient and order it belongs to",
     "modules|modules|tests/reports-openpdf.spec.ts|Printed Reports Configuration: paper size and page numbers > TC-RPTPDF-50 Letter with page numbers: the reports follow the setting, then the saved settings come back"
    ],
    "fixed": [
-    "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered",
-    "modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January",
     "modules|modules|tests/session-security.spec.ts|Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–16) > TC-SESS-16: Session expiry returns 401/302, not 500"
    ],
-   "known": 85
+   "known": 87
   },
   "qa": {
    "counts": {
@@ -71,8 +70,8 @@
    "counts": {
     "expected": 349,
     "unexpected": 11,
-    "flaky": 2,
-    "skipped": 37
+    "flaky": 1,
+    "skipped": 38
    },
    "new": [
     "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-01: a reagent save that fails keeps the quantity the admin typed, so a retry can send it",
@@ -88,13 +87,16 @@
   "deep": {
    "counts": {
     "expected": 0,
-    "unexpected": 1,
+    "unexpected": 4,
     "flaky": 0,
-    "skipped": 6
+    "skipped": 3
    },
-   "new": [],
+   "new": [
+    "deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-TERMINOLOGY: add a terminology mapping reads back via REST [ROUND-TRIP]",
+    "deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-STORAGE: set storage condition reads back via REST [ROUND-TRIP]"
+   ],
    "fixed": [],
-   "known": 1
+   "known": 2
   },
   "e2e": {
    "counts": {
