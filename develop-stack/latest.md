@@ -1,17 +1,17 @@
-# develop-stack: develop `e1f2b693`
+# develop-stack: develop `8e139901`
 
-fix(reports): Report Print Queue QA follow-ups from the 19 Oct pass (OGC-431) (#4771)
+chore(release): move develop to 3.4.0-SNAPSHOT (#4779)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39435789950 · TZ UTC · 2026-10-20T17:16:44.848Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39478537306 · TZ UTC · 2026-10-20T22:43:41.705Z
 
-**13 NEW FAILURE(S)**: 144 failing = 131 known + 13 new; 2 known reds now pass.
+**13 NEW FAILURE(S)**: 143 failing = 130 known + 13 new; 2 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
-| all-tc | 349 | 11 | 4 | 1 |
+| all-tc | 350 | 11 | 4 | 1 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
-| deep | 0 | 4 | 2 | 0 |
+| deep | 0 | 1 | 0 | 0 |
 | disc | 1 | 0 | 0 | 0 |
 | e2e | 15 | 3 | 0 | 0 |
 | envseed | 3 | 0 | 0 | 0 |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39435789950 · TZ UTC �
 | guards | 17 | 2 | 0 | 0 |
 | lp | 7 | 3 | 0 | 0 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1165 | 93 | 6 | 1 |
+| modules | 1192 | 95 | 8 | 1 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -42,6 +42,8 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39435789950 · TZ UTC �
 
 - `modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept`
 - `modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient`
+- `modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: printing and versions > TC-RPQ-13 a changed printed result makes it Amended; the reprint is an amended version with the corrected banner, and later releases keep Amended (AC-5)`
+- `modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: through the screens > TC-RPQ-44 a Reports user on Hematology sees no Biochemistry order: not listed, not found by lookup, 404 on detail, print and archived PDF (BR-9)`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-01 by lab number range: one OpenPDF document on the site paper, the patient, every order`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-03 unvalidated results are not printed; a rejected sample says so`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-04 every continuation page names the patient and order it belongs to`
@@ -51,8 +53,6 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39435789950 · TZ UTC �
 - `all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-02: impossible quantities and over-long units are 4xx, never 500`
 - `all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-03: lifecycle: link a reagent, change quantity and unit, unlink; a second unlink is a 404`
 - `all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-04: linking two reagents where one link fails: the list shows the one that worked and a retry finishes the job`
-- `deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-TERMINOLOGY: add a terminology mapping reads back via REST [ROUND-TRIP]`
-- `deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-STORAGE: set storage condition reads back via REST [ROUND-TRIP]`
 
 ## Known reds now passing (remove from ci-known-reds.json, check the ticket) (2)
 
@@ -61,7 +61,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39435789950 · TZ UTC �
 
 ## Known reds by ticket
 
-- untriaged: 109
+- untriaged: 108
 - OGC-730: 13
 - harness: 2
 - OGC-1448: 2
