@@ -117,7 +117,9 @@ export interface QueueSeed { ctx: OrderContext; date: string }
 /** One QA patient ("Rpqqa, Queue", national id QARPQ...) for every order a run creates. */
 export async function queueContext(page: Page): Promise<QueueSeed> {
   await page.goto('/');
-  await page.waitForFunction(() => !!localStorage.getItem('CSRF'), null, { timeout: 60_000 });
+  // testing occasionally serves the shell without the session for a while; one reload clears it.
+  const csrf = () => page.waitForFunction(() => !!localStorage.getItem('CSRF'), null, { timeout: 30_000 });
+  await csrf().catch(async () => { await page.reload(); await csrf(); });
   const date = await serverToday(page);
   const sites = (await j(page, `${API}/displayList/SAMPLE_PATIENT_REFERRING_CLINIC`)).body as any[];
   expect(sites?.length, 'a referring clinic exists').toBeGreaterThan(0);
