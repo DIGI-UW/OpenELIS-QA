@@ -1,14 +1,14 @@
-# develop-stack: develop `f72854e5`
+# develop-stack: develop `ee5d92c4`
 
-fix(results): do not flag a coded answer marked Normal as abnormal (OGC-897) (#4744)
+fix: upgrade and loader defects found by the 3.2.3.0 -> develop release-readiness run (OGC-1508, OGC-1509, OGC-1510, OGC-1511, OGC-1512, OGC-1513, OGC-1516, OGC-1517) (#4766)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39345477551 · TZ UTC · 2026-10-20T03:37:19.623Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39391237735 · TZ UTC · 2026-10-20T11:41:14.282Z
 
-**13 NEW FAILURE(S)**: 141 failing = 128 known + 13 new; 4 known reds now pass.
+**10 NEW FAILURE(S)**: 138 failing = 128 known + 10 new; 4 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
-| all-tc | 350 | 11 | 4 | 1 |
+| all-tc | 349 | 11 | 4 | 1 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
 | deep | 0 | 1 | 0 | 0 |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39345477551 · TZ UTC �
 | guards | 17 | 2 | 0 | 0 |
 | lp | 7 | 3 | 0 | 0 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1169 | 93 | 8 | 3 |
+| modules | 1173 | 90 | 5 | 3 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -38,12 +38,9 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39345477551 · TZ UTC �
 | rtype | 2 | 2 | 0 | 0 |
 | workplan | 4 | 0 | 0 | 0 |
 
-## New failures (13)
+## New failures (10)
 
-- `modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept`
 - `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys`
-- `modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)`
-- `modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-01 by lab number range: one OpenPDF document on the site paper, the patient, every order`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-03 unvalidated results are not printed; a rejected sample says so`
 - `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-04 every continuation page names the patient and order it belongs to`
