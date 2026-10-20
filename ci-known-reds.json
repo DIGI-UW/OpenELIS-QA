@@ -250,7 +250,7 @@
   },
   "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys": {
    "ticket": "harness",
-   "note": "tripwire (R53d) that now passes most runs (labels, not normalCash keys, in 6 of the 8 runs 16 to 20 Oct) and fails as expected in the others: confirm on a stack and flip it to a guard, or find why the Order step sometimes renders keys.",
+   "note": "tripwire (R53d) that flips: it passed (labels, not normalCash keys) in 13 of the 23 runs from 16 to 20 Oct on the same develop commits, and failed as expected in the others. Find why the Order step sometimes renders the keys before making it a guard.",
    "since": "2026-10-20"
   },
   "modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-02: legacy Add Order: Next then Back keeps an unticked test unticked (OGC-1388) [FIXED OGC-1388]": {
