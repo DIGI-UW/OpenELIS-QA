@@ -2,9 +2,9 @@
 
 fix(reports): a correction awaiting validation keeps the order printed (OGC-1529) (#4799)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39635528977 · TZ UTC · 2026-10-21T19:58:48.490Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39676684557 · TZ UTC · 2026-10-21T23:54:28.083Z
 
-**14 NEW FAILURE(S)**: 145 failing = 131 known + 14 new; 1 known reds now pass.
+**13 NEW FAILURE(S)**: 145 failing = 132 known + 13 new; 0 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39635528977 · TZ UTC �
 | guards | 17 | 2 | 0 | 0 |
 | lp | 7 | 3 | 0 | 0 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1191 | 96 | 9 | 1 |
+| modules | 1192 | 96 | 8 | 0 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -38,10 +38,9 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39635528977 · TZ UTC �
 | rtype | 2 | 2 | 0 | 0 |
 | workplan | 4 | 0 | 0 | 0 |
 
-## New failures (14)
+## New failures (13)
 
-- `modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept`
-- `modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient`
+- `modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-01: EQA Program Management page loads`
 - `modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: printing and versions > TC-RPQ-13 a changed printed result makes it Amended; the reprint is an amended version with the corrected banner, and later releases keep Amended (AC-5)`
 - `modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: through the screens > TC-RPQ-42 a correction awaiting validation is not due to print and makes no version; once validated it prints as one corrected version naming old and new value (OGC-1529)`
 - `modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: through the screens > TC-RPQ-44 a Reports user on Hematology sees no Biochemistry order: not listed, not found by lookup, 404 on detail, print and archived PDF (BR-9)`
@@ -55,13 +54,9 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39635528977 · TZ UTC �
 - `all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-03: lifecycle: link a reagent, change quantity and unit, unlink; a second unlink is a 404`
 - `all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-04: linking two reagents where one link fails: the list shows the one that worked and a retry finishes the job`
 
-## Known reds now passing (remove from ci-known-reds.json, check the ticket) (1)
-
-- `modules|modules|tests/session-security.spec.ts|Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–16) > TC-SESS-16: Session expiry returns 401/302, not 500`
-
 ## Known reds by ticket
 
-- untriaged: 109
+- untriaged: 110
 - OGC-730: 13
 - harness: 2
 - OGC-1448: 2
