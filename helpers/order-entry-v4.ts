@@ -109,16 +109,29 @@ export async function pickSampleAndTest(page: Page, n: number, sampleType: strin
   return String(id).replace(`test-${n}-`, '');
 }
 
-/** Chooses the first referring clinic from the site search. */
+/**
+ * Chooses a referring clinic from the site search. The display list names a clinic that
+ * has a short code as "<code> - <name>" (CI: "QAARC - QA_AUTO Referring Clinic"), but the
+ * site search matches names only, so the search term and the row are the part after the
+ * code. Tries the first few clinics in case one is not offered by the search.
+ */
 export async function pickSite(page: Page): Promise<string> {
   const sites = await apiJson<{ id: string; value: string }[]>(page, '/rest/displayList/SAMPLE_PATIENT_REFERRING_CLINIC');
   expect(sites.length, 'a referring clinic is configured').toBeGreaterThan(0);
-  const name = String(sites[0].value);
-  await page.locator('#siteName').fill(name.slice(0, Math.min(4, name.length)));
-  const row = page.getByRole('row').filter({ hasText: name }).first();
-  await expect(row, 'the site search lists the clinic').toBeVisible({ timeout: 20_000 });
-  await row.getByRole('button', { name: /^Select$/ }).click();
-  return name;
+  const tried: string[] = [];
+  for (const s of sites.slice(0, 5)) {
+    const value = String(s.value);
+    const name = value.includes(' - ') ? value.slice(value.indexOf(' - ') + 3).trim() : value;
+    tried.push(name);
+    await page.locator('#siteName').fill('');
+    await page.locator('#siteName').fill(name.slice(0, Math.min(4, name.length)));
+    const row = page.getByRole('row').filter({ hasText: name }).first();
+    if (await row.waitFor({ state: 'visible', timeout: 10_000 }).then(() => true, () => false)) {
+      await row.getByRole('button', { name: /^Select$/ }).click();
+      return name;
+    }
+  }
+  throw new Error(`the site search lists none of the first referring clinics: ${tried.join(', ')}`);
 }
 
 export const footer = (page: Page, which: 'next' | 'exit') =>

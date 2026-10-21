@@ -151,7 +151,7 @@ test.describe('Order entry — release blockers', () => {
   });
 
   test('BLK-LAB-4 — a field marked required to sighted users is marked required in the DOM', async ({ page }) => {
-    // [FLIP-WHEN-FIXED] Found 2026-09-12 while confirming AH/AI/AJ; filed with that cluster.
+    // [Was FLIP-WHEN-FIXED] Found 2026-09-12 while confirming AH/AI/AJ; filed with that cluster.
     //
     // The visible label reads "Lab Number *". The asterisk is the only carrier of that fact:
     // the input has required=false and no aria-required. A screen reader user is not told
@@ -159,7 +159,8 @@ test.describe('Order entry — release blockers', () => {
     //
     // Small next to the keyboard trap above, but it is the same control and the same fix
     // pass, so it belongs in the same ticket rather than a separate one.
-    test.fail();
+    // GUARD since 2026-10-21, passing on develop e1f2b693 (oedevqa images 2026-10-20).
+    // OGC-1240 (Done, #4665) fixed it: required fields carry aria-required.
     await open(page, ENTER);
 
     const state = await page.evaluate(() => {

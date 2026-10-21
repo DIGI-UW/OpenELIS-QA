@@ -2,6 +2,7 @@
 
 **Specs:** `tests/order-entry-v4-acceptance.spec.ts`, `tests/order-entry-v4-handoff.spec.ts` (helper `helpers/order-entry-v4.ts`)
 **Written:** 2026-10-08 against local develop 76c6d625a (images 2026-10-08 04:22 UTC), on Casey's ask to test the new order entry page.
+**Refreshed:** 2026-10-21 against oedevqa (develop e1f2b693, images 2026-10-20): six tripwires fixed by OGC-1443 are guards, `pickSite` and TC-OEV4-M14-05 read a clinic listed as "<code> - <name>" (CI), and the save-message and sample-name cases below were added.
 **Scope:** the four v4 tickets In Review (OGC-1419, OGC-1422, OGC-1423, OGC-1424, epic OGC-1266), then the 25 Sep order entry QA handoff (`order-entry-qa-handoff-for-spec.md`: R-NET, R-DATA, R-TIME, R-FLOW, R-UX) and the regression gate (G1 to G11) of `clinical-order-entry-v4-acceptance-tests.md`, re-run on the v4 screens.
 
 Kind: **Guard** passes today and protects it. **Tripwire** asserts the spec, carries `test.fail()` while v4 differs, and goes red the day it is fixed (delete the marker then). Cases create QA patients (`Qaoev...`, national IDs `QAOEV...`) and orders.
@@ -18,19 +19,19 @@ Kind: **Guard** passes today and protects it. **Tripwire** asserts the spec, car
 | TC-OEV4-LBL-03 | A quantity above the preset maximum is never stored | Guard | FR-I5 |
 | TC-OEV4-LBL-04 | A failed PDF shows an error with Retry, and Retry prints | Guard | FR-I6 |
 | TC-OEV4-LBL-05 | A blocked print window falls back to a download with a notification | Guard | FR-I6 |
-| TC-OEV4-LBL-06 | No label status and no help text naming the removed "Print More Sample Labels" control | Tripwire | FR-I6, FR-I7 |
+| TC-OEV4-LBL-06 | No label status and no help text naming the removed "Print More Sample Labels" control | Guard (was tripwire; fixed by 21 Oct, OGC-1443) | FR-I6, FR-I7 |
 | TC-OEV4-REF-01 | A staged referral is stored only with the step Save; a reload drops it | Guard | OGC-1423 AC 2 |
 | TC-OEV4-REF-02 | One of two tubes referred: not fully referred, goes on to Sample check, Has referred tests only | Guard | OGC-1423 AC 4, 5 |
 | TC-OEV4-REF-03 | Every tube referred: no Sample check, Referred Out on the dashboard, test leaves the worklist | Guard | OGC-1423 AC 3, 4 |
 | TC-OEV4-REF-04 | Refer out all after one tube was referred adds only the other tube | Guard | OGC-1423 AC 1, FR-E3a |
 | TC-OEV4-REF-05 | A failed save keeps the staged referral and stores nothing | Guard | FR-A5 |
-| TC-OEV4-REF-06 | The referral table names the tube by lab number, not database id | Tripwire | FR-C2, FR-E2 |
+| TC-OEV4-REF-06 | The referral table names the tube by lab number, not database id | Guard (was tripwire; fixed by 21 Oct, OGC-1443) | FR-C2, FR-E2 |
 | TC-OEV4-M14-01 | No print shortcut in the Order section | Guard | M14 step 1 |
 | TC-OEV4-M14-02 | Swapped names: the existing patient is a possible match; Use this one selects it | Guard | M14 step 2, FR-B6a |
 | TC-OEV4-M14-03 | National ID one character off is a possible match | Guard | FR-B6a |
 | TC-OEV4-M14-04 | Create new anyway is confirmed (names the count) and recorded (201) | Guard | M14 step 3 |
 | TC-OEV4-M14-05 | "<facility> Health Centre" lists the facility as a possible match | Guard | M14 step 4 |
-| TC-OEV4-M14-06 | Patient search stays exact and prefix; never fuzzy | Tripwire | FR-B6a, D-216 |
+| TC-OEV4-M14-06 | Enter Order's patient search asks for prefix matching, a one-letter-off name finds nobody, a prefix finds the patient | Guard (was tripwire; fixed by 21 Oct, OGC-1443; now drives Enter Order, not the bare API) | FR-B6a, D-216 |
 | TC-OEV4-M14-07 | No fax fields while showFaxFields is off | Guard | M14 step 5 |
 | TC-OEV4-M14-08 | Received by reads "(you)" with Change, which opens a user search | Guard | M14 step 8, FR-B23 |
 | TC-OEV4-M14-09 | Mark tested elsewhere: purple Tag, value stored, Not tested elsewhere undoes it | Guard | M14 step 7, FR-B20 |
@@ -39,7 +40,7 @@ Kind: **Guard** passes today and protects it. **Tripwire** asserts the spec, car
 | TC-OEV4-M14-12 | Retired fields gone from the clinical row; Handling group with the five Arrived as conditions | Guard | M14 step 10, FR-C9 |
 | TC-OEV4-M14-13 | Arrived as below the requirement: one Handling mismatch Tag, NCE link, save not blocked | Guard | M14 step 11, FR-C9a |
 | TC-OEV4-M14-14 | Same for all samples copies Arrived as and the temperature to every sample | Guard | M14 step 12 |
-| TC-OEV4-M14-15 | In French, Prepare Samples shows no raw keys and the Handling group is translated | Tripwire | OGC-1424 i18n criterion |
+| TC-OEV4-M14-15 | In French, Prepare Samples shows no raw keys and the Handling group is translated | Guard (was tripwire; fixed by 21 Oct, OGC-1443) | OGC-1424 i18n criterion |
 
 ## Handoff re-run (R-items) and regression gate
 
@@ -56,13 +57,13 @@ Kind: **Guard** passes today and protects it. **Tripwire** asserts the spec, car
 | TC-OEV4-DATA-01 | One collected sample: one card, one label row, one stored sample | Guard | R-DATA-1 (TC-OEW-05) |
 | TC-OEV4-DATA-02 | A panel member ticked alone saves no panel | Guard | R-DATA-2 (TC-OEW-03) |
 | TC-OEV4-DATA-03 | Compatible sample types come from the catalog | Guard | R-DATA-3 (TC-OEW-04) |
-| TC-OEV4-DATA-04 | A test-less sample cannot leave Prepare Samples, with a translated message | Tripwire | R-DATA-4 (TC-OEW-14) |
+| TC-OEV4-DATA-04 | A sample with no test holds Save and next on Enter Order; the checklist names it ("Sample 1: choose at least one test") | Guard (was tripwire; fixed by 21 Oct, OGC-1443, rule moved to Enter Order) | R-DATA-4 (TC-OEW-14) |
 | TC-OEV4-DATA-05 | Back to Enter Order and forward keeps patient, test, collection date and time | Guard | R-DATA-5, G3 (TC-OEW-06, TC-OEW-12) |
 | TC-OEV4-TIME-01 | Collection and received defaults come from one clock (browser in Port Moresby) | Guard | R-TIME-1 (TC-OEW-08) |
 | TC-OEV4-TIME-02 | Today saves from a browser 10 h ahead of the server | Guard | R-TIME-2 (TC-OEW-07) |
 | TC-OEV4-TIME-03 | Collection after receipt is flagged | Tripwire | R-TIME-3, M2 step 4 |
 | TC-OEV4-TIME-04 | Order entry and its dashboard use one date format | Tripwire | R-TIME-4 |
-| TC-OEV4-FLOW-01 | Arriving on Prepare Samples shows no "Unsaved changes" before any edit | Tripwire | R-FLOW-3 (TC-OWF-02) |
+| TC-OEV4-FLOW-01 | Arriving on Prepare Samples shows no visible "Unsaved changes" before any edit | Guard (was tripwire; fixed by 21 Oct, OGC-1443; counts visible text only, the closed Discard dialog keeps its text in the DOM) | R-FLOW-3 (TC-OWF-02) |
 | TC-OEV4-FLOW-02 | Counter reads 1/3 and Enter Order shows done after its save | Guard | R-FLOW-2 (TC-ODB-02) |
 | TC-OEV4-FLOW-03 | Pass, Accept sample, Release for testing: complete, Ready for testing, step done | Guard | R-FLOW-1, M6, G5 (TC-OEW-11) |
 | TC-OEV4-FLOW-04 | Optional checklist: Release with items unanswered asks for a reason | Guard | M6 step 4 |
@@ -73,5 +74,20 @@ Kind: **Guard** passes today and protects it. **Tripwire** asserts the spec, car
 | TC-OEV4-GATE-02 | Saved requests match what was selected, per sample | Guard | G2 (TC-OEW-02) |
 | TC-OEV4-GATE-06 | Dashboard Continue resumes at Prepare Samples | Guard | G6 (TC-OEW-16) |
 | TC-OEV4-GATE-07 | Edit Order reads back sample, facility and received date | Guard | G7 (TC-EO-05) |
+
+
+## Save messages and sample names (added 2026-10-21)
+
+From #4731 (OGC-1483, "save toasts on every v4 step name the lab number") and #4757 (samples named as Result Reporting names them). Wording read on oedevqa, 21 Oct.
+
+| ID | Case | Kind | Source |
+| --- | --- | --- | --- |
+| TC-OEV4-SAVE-01 | Enter Order Save and next shows "Order <lab> saved / Next: Prepare Samples" | Guard | #4731 |
+| TC-OEV4-SAVE-02 | Prepare Samples Save and exit returns to the dashboard (order highlighted) with "Order <lab> has been saved." | Guard | #4731 |
+| TC-OEV4-SAVE-03 | Sample check Save and exit shows "Order <lab> has been saved." | Guard | #4731 |
+| TC-OEV4-SAVE-04 | Prepare Samples Save and next names the order on arrival at Sample check | Tripwire (no message at all on 21 Oct; not filed) | #4731 |
+| TC-OEV4-LBL-07 | The Sample Labels table names each row, its quantity and its print button "<lab>-<n> <type>" | Guard | #4757 (LabelsSection) |
+
+See also `order-entry-lab-unit-scope-test-cases.md` (orders follow the user's lab units, #4757).
 
 Not covered here: G10 (environmental end to end; see `ogc1192-env-order-visibility.spec.ts`), M2 clock-skew notice, M3 lab number audit, M5/M7/M13 layout items (preview), M9 configuration toggles, M10 label presets per test, P-phase slices, and the FRS pre-v4 read-only values ("Recorded before this version", M14 step 13: needs an order saved before v4 with specimen origin set).

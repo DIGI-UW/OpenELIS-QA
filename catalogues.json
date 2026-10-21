@@ -69,7 +69,12 @@
     {
       "file": "order-entry-v4-test-cases.md",
       "area": "Clinical Order Entry v4 acceptance (OGC-1419, 1422, 1423, 1424) and the 25 Sep handoff re-run",
-      "note": "Feature suite, 2026-10-08. Specs: tests/order-entry-v4-acceptance.spec.ts, tests/order-entry-v4-handoff.spec.ts."
+      "note": "Feature suite, 2026-10-08, refreshed 2026-10-21. Specs: tests/order-entry-v4-acceptance.spec.ts, tests/order-entry-v4-handoff.spec.ts."
+    },
+    {
+      "file": "order-entry-lab-unit-scope-test-cases.md",
+      "area": "Orders follow the user's lab units (#4757): dashboard, lookup and Modify Order",
+      "note": "Feature suite, 2026-10-21. Spec: tests/order-entry-lab-unit-scope.spec.ts."
     },
     {
       "file": "test-catalog-chaos-full.md",

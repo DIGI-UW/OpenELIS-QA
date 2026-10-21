@@ -65,6 +65,7 @@ test.describe('Order workflow steps', () => {
     // FLIPPED 2026-09-29 (R63b). This was a tripwire; it passed unexpectedly in three
     // runs on local develop, webapp image 2026-09-28 23:01 UTC, frontend 2026-09-29 01:21 UTC.
     await loadOrder(page, 'collect');
-    await expect(page.getByText(/Unsaved changes/i), 'no unsaved-changes banner before any edit').toHaveCount(0);
+    // Visible text only: the closed "Discard unsaved changes?" dialog keeps its text in the DOM.
+    await expect(page.getByText(/Unsaved changes/i).locator('visible=true'), 'no unsaved-changes banner before any edit').toHaveCount(0);
   });
 });

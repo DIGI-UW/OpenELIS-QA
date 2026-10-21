@@ -703,7 +703,7 @@ Same scan over every /MasterListsPage link in the Admin navigation. Automated: `
 Canary. Automated: `tests/order-entry-unsaved-guard.spec.ts`. **Criterion:** RENDER.
 
 ### TC-OEG-01: An untouched Enter Order page shows no "Unsaved changes" and does not block leaving
-One case per domain (Clinical, Environmental, Vector). **Today:** banner on load and a "Leave site?" prompt on exit on all three (R75). Automated (test.fail). **Criterion:** FUNCTION.
+One case per domain (Clinical, Environmental, Vector). Observed 2026-09-28: banner on load and a "Leave site?" prompt on exit on all three (R75). Environmental and Vector fixed by 8 Oct; Clinical a guard since 21 Oct (the count of 2 after the fix was the closed "Discard unsaved changes?" dialog, hidden but in the DOM; only visible text counts now). Automated. **Criterion:** FUNCTION.
 
 ### TC-OEG-02: After typing into the form, leaving does ask
 The guard must still work once there is something to lose. **Criterion:** FUNCTION.
