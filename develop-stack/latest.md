@@ -2,13 +2,13 @@
 
 fix(reports): a correction awaiting validation keeps the order printed (OGC-1529) (#4799)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39589229015 · TZ UTC · 2026-10-21T15:14:13.223Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39635528977 · TZ UTC · 2026-10-21T19:58:48.490Z
 
-**13 NEW FAILURE(S)**: 144 failing = 131 known + 13 new; 1 known reds now pass.
+**14 NEW FAILURE(S)**: 145 failing = 131 known + 14 new; 1 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
-| all-tc | 349 | 12 | 4 | 0 |
+| all-tc | 348 | 12 | 4 | 0 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
 | deep | 0 | 1 | 0 | 0 |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39589229015 · TZ UTC �
 | guards | 17 | 2 | 0 | 0 |
 | lp | 7 | 3 | 0 | 0 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1197 | 95 | 8 | 1 |
+| modules | 1191 | 96 | 9 | 1 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -38,9 +38,10 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39589229015 · TZ UTC �
 | rtype | 2 | 2 | 0 | 0 |
 | workplan | 4 | 0 | 0 | 0 |
 
-## New failures (13)
+## New failures (14)
 
-- `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys`
+- `modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept`
+- `modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient`
 - `modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: printing and versions > TC-RPQ-13 a changed printed result makes it Amended; the reprint is an amended version with the corrected banner, and later releases keep Amended (AC-5)`
 - `modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: through the screens > TC-RPQ-42 a correction awaiting validation is not due to print and makes no version; once validated it prints as one corrected version naming old and new value (OGC-1529)`
 - `modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: through the screens > TC-RPQ-44 a Reports user on Hematology sees no Biochemistry order: not listed, not found by lookup, 404 on detail, print and archived PDF (BR-9)`
@@ -56,7 +57,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39589229015 · TZ UTC �
 
 ## Known reds now passing (remove from ci-known-reds.json, check the ticket) (1)
 
-- `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered`
+- `modules|modules|tests/session-security.spec.ts|Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–16) > TC-SESS-16: Session expiry returns 401/302, not 500`
 
 ## Known reds by ticket
 

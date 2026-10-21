@@ -1,14 +1,14 @@
 {
- "when": "2026-10-21T15:14:13.223Z",
+ "when": "2026-10-21T19:58:48.490Z",
  "sha": "965d6d10559d9e11e8868cbc01a5157864056af9",
  "subject": "fix(reports): a correction awaiting validation keeps the order printed (OGC-1529) (#4799)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39589229015",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39635528977",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
-  "failing": 144,
+  "failing": 145,
   "known": 131,
-  "new": 13,
+  "new": 14,
   "fixed": 1
  },
  "knownByTicket": {
@@ -24,13 +24,14 @@
  "suites": {
   "modules": {
    "counts": {
-    "expected": 1197,
-    "unexpected": 95,
+    "expected": 1191,
+    "unexpected": 96,
     "flaky": 0,
-    "skipped": 59
+    "skipped": 64
    },
    "new": [
-    "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys",
+    "modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept",
+    "modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient",
     "modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: printing and versions > TC-RPQ-13 a changed printed result makes it Amended; the reprint is an amended version with the corrected banner, and later releases keep Amended (AC-5)",
     "modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: through the screens > TC-RPQ-42 a correction awaiting validation is not due to print and makes no version; once validated it prints as one corrected version naming old and new value (OGC-1529)",
     "modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: through the screens > TC-RPQ-44 a Reports user on Hematology sees no Biochemistry order: not listed, not found by lookup, 404 on detail, print and archived PDF (BR-9)",
@@ -40,7 +41,7 @@
     "modules|modules|tests/reports-openpdf.spec.ts|Printed Reports Configuration: paper size and page numbers > TC-RPTPDF-50 Letter with page numbers: the reports follow the setting, then the saved settings come back"
    ],
    "fixed": [
-    "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered"
+    "modules|modules|tests/session-security.spec.ts|Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–16) > TC-SESS-16: Session expiry returns 401/302, not 500"
    ],
    "known": 87
   },
@@ -70,10 +71,10 @@
   },
   "all-tc": {
    "counts": {
-    "expected": 349,
+    "expected": 348,
     "unexpected": 12,
-    "flaky": 0,
-    "skipped": 38
+    "flaky": 2,
+    "skipped": 37
    },
    "new": [
     "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-01: a reagent save that fails keeps the quantity the admin typed, so a retry can send it",
