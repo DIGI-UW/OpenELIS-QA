@@ -1,14 +1,14 @@
-# develop-stack: develop `8e139901`
+# develop-stack: develop `4909f677`
 
-chore(release): move develop to 3.4.0-SNAPSHOT (#4779)
+ci(deploy): gate retries, never fail a ready deploy on pruning; fix the inline panel create race (#4783)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39478537306 · TZ UTC · 2026-10-20T22:43:41.705Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39516035841 · TZ UTC · 2026-10-21T03:22:13.195Z
 
-**13 NEW FAILURE(S)**: 143 failing = 130 known + 13 new; 2 known reds now pass.
+**13 NEW FAILURE(S)**: 141 failing = 128 known + 13 new; 4 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
-| all-tc | 350 | 11 | 4 | 1 |
+| all-tc | 348 | 11 | 4 | 1 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
 | deep | 0 | 1 | 0 | 0 |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39478537306 · TZ UTC �
 | guards | 17 | 2 | 0 | 0 |
 | lp | 7 | 3 | 0 | 0 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1192 | 95 | 8 | 1 |
+| modules | 1199 | 93 | 8 | 3 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -40,7 +40,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39478537306 · TZ UTC �
 
 ## New failures (13)
 
-- `modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept`
+- `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys`
 - `modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient`
 - `modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: printing and versions > TC-RPQ-13 a changed printed result makes it Amended; the reprint is an amended version with the corrected banner, and later releases keep Amended (AC-5)`
 - `modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: through the screens > TC-RPQ-44 a Reports user on Hematology sees no Biochemistry order: not listed, not found by lookup, 404 on detail, print and archived PDF (BR-9)`
@@ -54,14 +54,16 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39478537306 · TZ UTC �
 - `all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-03: lifecycle: link a reagent, change quantity and unit, unlink; a second unlink is a 404`
 - `all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-04: linking two reagents where one link fails: the list shows the one that worked and a retry finishes the job`
 
-## Known reds now passing (remove from ci-known-reds.json, check the ticket) (2)
+## Known reds now passing (remove from ci-known-reds.json, check the ticket) (4)
 
+- `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered`
+- `modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January`
 - `modules|modules|tests/session-security.spec.ts|Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–16) > TC-SESS-16: Session expiry returns 401/302, not 500`
 - `all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers`
 
 ## Known reds by ticket
 
-- untriaged: 108
+- untriaged: 106
 - OGC-730: 13
 - harness: 2
 - OGC-1448: 2

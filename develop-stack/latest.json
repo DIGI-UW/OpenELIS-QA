@@ -1,18 +1,18 @@
 {
- "when": "2026-10-20T22:43:41.705Z",
- "sha": "8e139901d09404a2b0a360b6f3bec527436ab589",
- "subject": "chore(release): move develop to 3.4.0-SNAPSHOT (#4779)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39478537306",
+ "when": "2026-10-21T03:22:13.195Z",
+ "sha": "4909f67738527a09c156bda57836efb05916b2b3",
+ "subject": "ci(deploy): gate retries, never fail a ready deploy on pruning; fix the inline panel create race (#4783)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39516035841",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
-  "failing": 143,
-  "known": 130,
+  "failing": 141,
+  "known": 128,
   "new": 13,
-  "fixed": 2
+  "fixed": 4
  },
  "knownByTicket": {
-  "untriaged": 108,
+  "untriaged": 106,
   "OGC-730": 13,
   "OGC-1240": 1,
   "harness": 2,
@@ -24,13 +24,13 @@
  "suites": {
   "modules": {
    "counts": {
-    "expected": 1192,
-    "unexpected": 95,
+    "expected": 1199,
+    "unexpected": 93,
     "flaky": 0,
-    "skipped": 64
+    "skipped": 59
    },
    "new": [
-    "modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept",
+    "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys",
     "modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient",
     "modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: printing and versions > TC-RPQ-13 a changed printed result makes it Amended; the reprint is an amended version with the corrected banner, and later releases keep Amended (AC-5)",
     "modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: through the screens > TC-RPQ-44 a Reports user on Hematology sees no Biochemistry order: not listed, not found by lookup, 404 on detail, print and archived PDF (BR-9)",
@@ -40,9 +40,11 @@
     "modules|modules|tests/reports-openpdf.spec.ts|Printed Reports Configuration: paper size and page numbers > TC-RPTPDF-50 Letter with page numbers: the reports follow the setting, then the saved settings come back"
    ],
    "fixed": [
+    "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered",
+    "modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January",
     "modules|modules|tests/session-security.spec.ts|Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–16) > TC-SESS-16: Session expiry returns 401/302, not 500"
    ],
-   "known": 87
+   "known": 85
   },
   "qa": {
    "counts": {
@@ -70,9 +72,9 @@
   },
   "all-tc": {
    "counts": {
-    "expected": 350,
+    "expected": 348,
     "unexpected": 11,
-    "flaky": 0,
+    "flaky": 2,
     "skipped": 38
    },
    "new": [
