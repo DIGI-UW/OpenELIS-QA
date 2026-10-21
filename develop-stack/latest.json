@@ -1,14 +1,14 @@
 {
- "when": "2026-10-21T03:22:13.195Z",
- "sha": "4909f67738527a09c156bda57836efb05916b2b3",
- "subject": "ci(deploy): gate retries, never fail a ready deploy on pruning; fix the inline panel create race (#4783)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39516035841",
+ "when": "2026-10-21T07:00:56.289Z",
+ "sha": "8a870f7875d60113b1fea68d93bd0bce0abdbd75",
+ "subject": "Update OpenELIS translations from Transifex (#4785)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39536756384",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
-  "failing": 141,
+  "failing": 142,
   "known": 128,
-  "new": 13,
+  "new": 14,
   "fixed": 4
  },
  "knownByTicket": {
@@ -24,13 +24,14 @@
  "suites": {
   "modules": {
    "counts": {
-    "expected": 1199,
-    "unexpected": 93,
+    "expected": 1198,
+    "unexpected": 94,
     "flaky": 0,
     "skipped": 59
    },
    "new": [
     "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys",
+    "modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)",
     "modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient",
     "modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: printing and versions > TC-RPQ-13 a changed printed result makes it Amended; the reprint is an amended version with the corrected banner, and later releases keep Amended (AC-5)",
     "modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: through the screens > TC-RPQ-44 a Reports user on Hematology sees no Biochemistry order: not listed, not found by lookup, 404 on detail, print and archived PDF (BR-9)",
@@ -72,9 +73,9 @@
   },
   "all-tc": {
    "counts": {
-    "expected": 348,
+    "expected": 349,
     "unexpected": 11,
-    "flaky": 2,
+    "flaky": 1,
     "skipped": 38
    },
    "new": [

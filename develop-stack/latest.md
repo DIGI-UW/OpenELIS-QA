@@ -1,14 +1,14 @@
-# develop-stack: develop `4909f677`
+# develop-stack: develop `8a870f78`
 
-ci(deploy): gate retries, never fail a ready deploy on pruning; fix the inline panel create race (#4783)
+Update OpenELIS translations from Transifex (#4785)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39516035841 · TZ UTC · 2026-10-21T03:22:13.195Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39536756384 · TZ UTC · 2026-10-21T07:00:56.289Z
 
-**13 NEW FAILURE(S)**: 141 failing = 128 known + 13 new; 4 known reds now pass.
+**14 NEW FAILURE(S)**: 142 failing = 128 known + 14 new; 4 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
-| all-tc | 348 | 11 | 4 | 1 |
+| all-tc | 349 | 11 | 4 | 1 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
 | deep | 0 | 1 | 0 | 0 |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39516035841 · TZ UTC �
 | guards | 17 | 2 | 0 | 0 |
 | lp | 7 | 3 | 0 | 0 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1199 | 93 | 8 | 3 |
+| modules | 1198 | 94 | 9 | 3 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -38,9 +38,10 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39516035841 · TZ UTC �
 | rtype | 2 | 2 | 0 | 0 |
 | workplan | 4 | 0 | 0 | 0 |
 
-## New failures (13)
+## New failures (14)
 
 - `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys`
+- `modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)`
 - `modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient`
 - `modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: printing and versions > TC-RPQ-13 a changed printed result makes it Amended; the reprint is an amended version with the corrected banner, and later releases keep Amended (AC-5)`
 - `modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: through the screens > TC-RPQ-44 a Reports user on Hematology sees no Biochemistry order: not listed, not found by lookup, 404 on detail, print and archived PDF (BR-9)`
