@@ -1,0 +1,353 @@
+{
+ "when": "2026-10-22T19:35:35.535Z",
+ "sha": "965d6d10559d9e11e8868cbc01a5157864056af9",
+ "subject": "fix(reports): a correction awaiting validation keeps the order printed (OGC-1529) (#4799)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39814921521",
+ "tz": "UTC",
+ "bootstrap": false,
+ "totals": {
+  "failing": 97,
+  "known": 93,
+  "new": 4,
+  "fixed": 3
+ },
+ "knownByTicket": {
+  "untriaged": 66,
+  "OGC-730": 13,
+  "harness": 8,
+  "OGC-1446": 1,
+  "OGC-1367": 1,
+  "OGC-1448": 2,
+  "OGC-189": 2
+ },
+ "suites": {
+  "modules": {
+   "counts": {
+    "expected": 1259,
+    "unexpected": 51,
+    "flaky": 0,
+    "skipped": 65
+   },
+   "new": [
+    "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered",
+    "modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)",
+    "modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient",
+    "modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January"
+   ],
+   "fixed": [
+    "modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-11: Enter Order: a late response for the previous sample type does not replace the list (OGC-1266)",
+    "modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-12: Enter Order: a failed tests request does not leave \"Loading\" forever (OGC-1266)",
+    "modules|modules|tests/order-entry-release-blockers.spec.ts|Order entry — release blockers > BLK-LAB-4 — a field marked required to sighted users is marked required in the DOM"
+   ],
+   "known": 47
+  },
+  "qa": {
+   "counts": {
+    "expected": 0,
+    "unexpected": 1,
+    "flaky": 0,
+    "skipped": 68
+   },
+   "new": [],
+   "fixed": [],
+   "known": 1
+  },
+  "regression-chains": {
+   "counts": {
+    "expected": 83,
+    "unexpected": 14,
+    "flaky": 0,
+    "skipped": 39
+   },
+   "new": [],
+   "fixed": [],
+   "known": 14
+  },
+  "all-tc": {
+   "counts": {
+    "expected": 354,
+    "unexpected": 7,
+    "flaky": 1,
+    "skipped": 37
+   },
+   "new": [],
+   "fixed": [],
+   "known": 7
+  },
+  "deep": {
+   "counts": {
+    "expected": 0,
+    "unexpected": 3,
+    "flaky": 0,
+    "skipped": 4
+   },
+   "new": [],
+   "fixed": [],
+   "known": 3
+  },
+  "e2e": {
+   "counts": {
+    "expected": 15,
+    "unexpected": 3,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 3
+  },
+  "guards": {
+   "counts": {
+    "expected": 17,
+    "unexpected": 2,
+    "flaky": 0,
+    "skipped": 5
+   },
+   "new": [],
+   "fixed": [],
+   "known": 2
+  },
+  "multicomponent": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 1
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "panel-leak": {
+   "counts": {
+    "expected": 5,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 1
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "rtype": {
+   "counts": {
+    "expected": 2,
+    "unexpected": 2,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 2
+  },
+  "workplan": {
+   "counts": {
+    "expected": 4,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "census": {
+   "counts": {
+    "expected": 126,
+    "unexpected": 3,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 3
+  },
+  "cfg": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "disc": {
+   "counts": {
+    "expected": 1,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "envseed": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "eqa": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "lp": {
+   "counts": {
+    "expected": 7,
+    "unexpected": 3,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 3
+  },
+  "modify-order": {
+   "counts": {
+    "expected": 7,
+    "unexpected": 1,
+    "flaky": 0,
+    "skipped": 1
+   },
+   "new": [],
+   "fixed": [],
+   "known": 1
+  },
+  "ogc1192": {
+   "counts": {
+    "expected": 9,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "personas-admin": {
+   "counts": {
+    "expected": 10,
+    "unexpected": 2,
+    "flaky": 0,
+    "skipped": 6
+   },
+   "new": [],
+   "fixed": [],
+   "known": 2
+  },
+  "personas-roles": {
+   "counts": {
+    "expected": 13,
+    "unexpected": 1,
+    "flaky": 0,
+    "skipped": 10
+   },
+   "new": [],
+   "fixed": [],
+   "known": 1
+  },
+  "pr3987": {
+   "counts": {
+    "expected": 10,
+    "unexpected": 3,
+    "flaky": 0,
+    "skipped": 4
+   },
+   "new": [],
+   "fixed": [],
+   "known": 3
+  },
+  "preflight": {
+   "counts": {
+    "expected": 4,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "probe-combo": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "rbac": {
+   "counts": {
+    "expected": 57,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 2
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "regression-seed": {
+   "counts": {
+    "expected": 13,
+    "unexpected": 1,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 1
+  },
+  "reval2": {
+   "counts": {
+    "expected": 4,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "revalidate-unauth": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "revalidate": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  }
+ }
+}
