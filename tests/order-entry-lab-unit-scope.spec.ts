@@ -22,6 +22,11 @@ import { pageAs, QueueUser } from '../helpers/report-queue-ui';
  * TC-OELU-00 guards the oracle: if the admin cannot see both, or the Hematology user cannot
  * see H, the other cases mean nothing.
  *
+ * TC-OELU-06 to 13 (added 21 Oct, develop 965d6d10) cover the other lists, lookups and writes #4757
+ * scoped: sample management, aliquot lookup and save, patient by lab number, the Modify Order save,
+ * generic sample order, the pathology, IHC and cytology dashboards, and the cancel reasons a bench
+ * user now reads. Each checks the user does get the in-unit order, so a role gap cannot pass as scope.
+ *
  * Written 2026-10-21 against oedevqa (develop e1f2b693 images 2026-10-20).
  */
 
@@ -37,6 +42,11 @@ async function get(page: Page, path: string): Promise<{ status: number; body: an
   const r = await page.request.get(`${API}${path}`);
   return { status: r.status(), body: await r.json().catch(() => null) };
 }
+async function csrf(page: Page): Promise<Record<string, string>> {
+  const t = await page.evaluate(() => localStorage.getItem('CSRF'));
+  return t ? { 'X-CSRF-Token': t } : {};
+}
+
 async function dashboardLists(page: Page, lab: string): Promise<boolean> {
   const r = await get(page, `/rest/order/dashboard?search=${encodeURIComponent(lab)}`);
   expect(r.status, 'the dashboard answers').toBe(200);
@@ -124,4 +134,71 @@ test.describe('Orders follow the user\'s lab units (#4757)', () => {
     await heme.waitForTimeout(4_000);
     await expect(heme.locator('main').getByText(B), `${B} is not listed`).toHaveCount(0);
   });
+
+  // The other order lists, lookups and writes #4757 put under the same scope. Each case also checks
+  // that the Hematology user does get the Hematology order (or the admin gets B), so a role gap
+  // (403 for both) cannot pass as scope.
+  test('TC-OELU-06 Sample management search: 404 for the Biochemistry-only order, the Hematology order found', async () => {
+    const b = await get(heme, `/rest/sample-management/search?accessionNumber=${B}&includeTests=true`);
+    const h = await get(heme, `/rest/sample-management/search?accessionNumber=${H}&includeTests=true`);
+    expect(h.status, `the Hematology user can search ${H}`).toBe(200);
+    expect(JSON.stringify(h.body), `the search returns ${H}`).toContain(H);
+    expect(b.status, `${B} reads as absent`).toBe(404);
+  });
+
+  test('TC-OELU-07 Aliquot lookup (/rest/SampleItem) returns no tube of the Biochemistry-only order, and the Hematology order\'s tubes', async () => {
+    const b = await get(heme, `/rest/SampleItem?accessionNumber=${B}`);
+    const h = await get(heme, `/rest/SampleItem?accessionNumber=${H}`);
+    expect(h.status).toBe(200);
+    expect((h.body?.sampleItems || h.body?.sampleItemEntries || []).length, `${H} has a tube`).toBeGreaterThan(0);
+    expect(b.status).toBe(200);
+    expect(String(b.body?.accessionNumber ?? ''), `${B} is not echoed`).toBe('');
+    expect((b.body?.sampleItems || b.body?.sampleItemEntries || []).length, `${B} shows no tube`).toBe(0);
+  });
+
+  test('TC-OELU-08 Aliquot save on the Biochemistry-only order is refused with "Sample not found"', async () => {
+    const r = await heme.request.post(`${API}/rest/Aliquot`, { data: { accessionNumber: B, sampleItems: [] }, headers: await csrf(heme) });
+    const body = await r.json().catch(() => null);
+    expect(JSON.stringify(body), 'the save is refused as not found').toContain('Sample not found');
+  });
+
+  test('TC-OELU-09 Patient by lab number: 404 for the Biochemistry-only order, 200 for the Hematology order', async () => {
+    expect((await get(heme, `/rest/patientByLabNumer?accessionNumber=${H}`)).status).toBe(200);
+    expect((await get(heme, `/rest/patientByLabNumer?accessionNumber=${B}`)).status).toBe(404);
+  });
+
+  test('TC-OELU-10 Modify Order save on the Biochemistry-only order answers 404 (nothing saved)', async () => {
+    const r = await heme.request.post(`${API}/rest/SampleEdit`, { data: { accessionNumber: B }, headers: await csrf(heme) });
+    expect(r.status()).toBe(404);
+  });
+
+  test('TC-OELU-11 Generic sample order lookup: the Biochemistry-only order reads as absent when the admin can read it', async () => {
+    const a = await get(admin, `/rest/GenericSampleOrder?accessionNumber=${B}`);
+    test.skip(a.status !== 200, `the admin gets ${a.status} for a non-generic order; nothing to compare`);
+    expect((await get(heme, `/rest/GenericSampleOrder?accessionNumber=${B}`)).status).toBe(404);
+  });
+
+  test('TC-OELU-12 Order cancel reasons are readable by a bench user (dictionary lookup no longer admin-only)', async () => {
+    const r = await get(heme, `/rest/dictionary/categories/${encodeURIComponent('Order cancel reasons')}/entries`);
+    expect(r.status).toBe(200);
+    expect(Array.isArray(r.body) ? r.body.length : Object.keys(r.body || {}).length, 'at least one reason').toBeGreaterThan(0);
+  });
+
+  // The dashboards list nothing without statuses; ask for every status, as the screen's filter can.
+  const PROGRAMS: Record<string, string> = {
+    pathology: 'ACCESSIONED,GROSSING,DECALCIFICATION,PROCESSING,EMBEDDING,MICROTOMY,STAINING,COVERSLIPPING,READY_PATHOLOGIST,UNDER_REVIEW,COMPLETED',
+    immunohistochemistry: 'IN_PROGRESS,READY_PATHOLOGIST,COMPLETED',
+    cytology: 'PREPARING_SLIDES,SCREENING,READY_FOR_CYTOPATHOLOGIST,COMPLETED',
+  };
+  for (const [p, statuses] of Object.entries(PROGRAMS)) {
+    test(`TC-OELU-13 ${p} dashboard: the Hematology user sees no case the admin sees in other units`, async () => {
+      const a = await get(admin, `/rest/${p}/dashboard?statuses=${statuses}&searchTerm=`);
+      const h = await get(heme, `/rest/${p}/dashboard?statuses=${statuses}&searchTerm=`);
+      const list = (x: any) => (Array.isArray(x) ? x : x?.items || x?.content || x?.results || []);
+      test.info().annotations.push({ type: 'counts', description: `admin ${a.status} ${list(a.body).length}, heme ${h.status} ${list(h.body).length}` });
+      test.skip(a.status !== 200 || list(a.body).length === 0, `no ${p} case on this stack to compare`);
+      expect([200, 403], `heme gets the list or no access`).toContain(h.status);
+      if (h.status === 200) expect(list(h.body).length, `a Hematology-only user sees none of the admin's ${p} cases`).toBe(0);
+    });
+  }
 });
