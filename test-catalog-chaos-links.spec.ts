@@ -100,9 +100,26 @@ test.describe('Test Catalog chaos: Methods (TC-CX-ME)', () => {
 // Reagents
 // ---------------------------------------------------------------------------------------------
 const RE = (id: string) => `${TC}/${id}/reagents`;
+// Since the inventory rework (#4361, 13 Oct) an item carries tags instead of an item type, and
+// GET /rest/inventory/items/type/{type} is gone (404). The Link Reagent modal lists GET
+// /rest/inventory/items (active items), so read that, prefer items tagged Reagent, and create the
+// missing ones so the cases do not depend on the instance's stock list.
+const isReagent = (x: any) => (x.tags ?? []).some((t: string) => /^reagent$/i.test(String(t)));
 async function reagents(page: Page, n = 2) {
-  const r = await apiGet<any[]>(page, '/rest/inventory/items/type/REAGENT');
-  const list = (r.json ?? []).filter((x: any) => x.isActive === 'Y' || x.isActive === true);
+  const read = async () => {
+    const r = await apiGet<any[]>(page, '/rest/inventory/items');
+    expect(r.status, `GET /rest/inventory/items: ${r.text.slice(0, 200)}`).toBe(200);
+    return (Array.isArray(r.json) ? r.json : []).filter((x: any) => (x.isActive === 'Y' || x.isActive === true) && isReagent(x));
+  };
+  let list = await read();
+  for (let i = list.length; i < n; i++) {
+    const w = await apiWrite<any>(page, 'POST', '/rest/inventory/items', {
+      name: `QACX Reagent ${RUN} ${i}`, tags: ['Reagent'], units: 'tests', category: 'QA', lowStockThreshold: 5,
+      storageRequirements: 'QA fixture', calibrationRequired: 'N', trackLots: 'N', isActive: 'Y',
+    });
+    expect(w.status, `create reagent item ${i}: ${w.text.slice(0, 200)}`).toBeLessThan(300);
+  }
+  if (list.length < n) list = await read();
   expect(list.length, 'active reagents on this instance').toBeGreaterThanOrEqual(n);
   return list.slice(0, n);
 }

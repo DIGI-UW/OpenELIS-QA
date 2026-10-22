@@ -43,11 +43,6 @@
    "note": "inactive lab units still hold tests (by design question)",
    "since": "2026-10-15"
   },
-  "all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers": {
-   "ticket": "untriaged",
-   "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
-   "since": "2026-10-15"
-  },
   "all-tc|test-catalog|tests/reference-lab-results-fhir-contract.spec.ts|Reference Lab Results — FHIR contract (OGC-802 / 805 / 809) > RLR-FHIR-04 [OGC-802/805]: a returned referral carries the peer result card, or says why none exists": {
    "ticket": "harness",
    "note": "harness call() truncates responses at 4000 characters",
@@ -253,10 +248,10 @@
    "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
    "since": "2026-10-15"
   },
-  "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered": {
-   "ticket": "untriaged",
-   "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
-   "since": "2026-10-15"
+  "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-I18NK-04: payment status options are labels, not message keys": {
+   "ticket": "harness",
+   "note": "tripwire (R53d) that flips: it passed (labels, not normalCash keys) in 13 of the 23 runs from 16 to 20 Oct on the same develop commits, and failed as expected in the others. Find why the Order step sometimes renders the keys before making it a guard.",
+   "since": "2026-10-20"
   },
   "modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-02: legacy Add Order: Next then Back keeps an unticked test unticked (OGC-1388) [FIXED OGC-1388]": {
    "ticket": "untriaged",
@@ -528,15 +523,30 @@
    "note": "reflex save 500 and calculation save 400, both on OGC-730",
    "since": "2026-10-15"
   },
+  "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-01 by lab number range: one OpenPDF document on the site paper, the patient, every order": {
+   "ticket": "harness",
+   "note": "spec drift: the V1 patient report (#4747, OGC-932, 16 Oct) prints one section per order with its own \"Page n of N\" and a new row layout; the spec still parses the old PatientResultsPdf. Content checked by hand 20 Oct on develop: values, flags, Awaiting validation, Sample rejected and the patient/order footer are all there. Rewrite the parsers.",
+   "since": "2026-10-20"
+  },
   "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-02 results, flags, ranges and units print as stored; Complete vs Partial per order": {
-   "ticket": "untriaged",
-   "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
+   "ticket": "harness",
+   "note": "spec drift: the V1 patient report (#4747, OGC-932, 16 Oct) prints one section per order with its own \"Page n of N\" and a new row layout; the spec still parses the old PatientResultsPdf. Content checked by hand 20 Oct on develop: values, flags, Awaiting validation, Sample rejected and the patient/order footer are all there. Rewrite the parsers.",
    "since": "2026-10-15"
   },
-  "modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January": {
-   "ticket": "untriaged",
-   "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
-   "since": "2026-10-15"
+  "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-03 unvalidated results are not printed; a rejected sample says so": {
+   "ticket": "harness",
+   "note": "spec drift: the V1 patient report (#4747, OGC-932, 16 Oct) prints one section per order with its own \"Page n of N\" and a new row layout; the spec still parses the old PatientResultsPdf. Content checked by hand 20 Oct on develop: values, flags, Awaiting validation, Sample rejected and the patient/order footer are all there. Rewrite the parsers.",
+   "since": "2026-10-20"
+  },
+  "modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-04 every continuation page names the patient and order it belongs to": {
+   "ticket": "harness",
+   "note": "spec drift: the V1 patient report (#4747, OGC-932, 16 Oct) prints one section per order with its own \"Page n of N\" and a new row layout; the spec still parses the old PatientResultsPdf. Content checked by hand 20 Oct on develop: values, flags, Awaiting validation, Sample rejected and the patient/order footer are all there. Rewrite the parsers.",
+   "since": "2026-10-20"
+  },
+  "modules|modules|tests/reports-openpdf.spec.ts|Printed Reports Configuration: paper size and page numbers > TC-RPTPDF-50 Letter with page numbers: the reports follow the setting, then the saved settings come back": {
+   "ticket": "harness",
+   "note": "spec drift: the V1 patient report (#4747, OGC-932, 16 Oct) prints one section per order with its own \"Page n of N\" and a new row layout; the spec still parses the old PatientResultsPdf. Content checked by hand 20 Oct on develop: values, flags, Awaiting validation, Sample rejected and the patient/order footer are all there. Rewrite the parsers. Run 183 (ee5d92c4) also printed A4 on a Letter site; develop images of 20 Oct 12:11 UTC (with #4771) print Letter, so only the page-number assertion is drift: watch the next run.",
+   "since": "2026-10-20"
   },
   "modules|modules|tests/reports-output-correctness.spec.ts|Routine Reports: output matches the request > TC-RPTOUT-04: Activity report by test type returns a PDF": {
    "ticket": "OGC-1446",
@@ -546,11 +556,6 @@
   "modules|modules|tests/sample-shipment.spec.ts|Shipment API Extended (TC-SHIP-EXT) > TC-SHIP-EXT-02: Facilities API returns destination labs list": {
    "ticket": "OGC-1367",
    "note": "shipment",
-   "since": "2026-10-15"
-  },
-  "modules|modules|tests/session-security.spec.ts|Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–16) > TC-SESS-16: Session expiry returns 401/302, not 500": {
-   "ticket": "untriaged",
-   "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
    "since": "2026-10-15"
   },
   "modules|modules|tests/table-labels.spec.ts|Tables > TC-TBL-00: CANARY the Inventory table offers several page sizes": {
@@ -607,6 +612,11 @@
    "ticket": "untriaged",
    "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
    "since": "2026-10-15"
+  },
+  "regression-chains|chain-a|tests/chains/chain-a-order-lifecycle.spec.ts|Chain A — Order Lifecycle > Step 6 — Lab number present on PDF (REPORTABLE)": {
+   "ticket": "harness",
+   "note": "spec drift: since the V1 patient report (#4747, 16 Oct) the chain's simple PDF text extractor does not find the lab number; pdfjs reads \"Lab Number <accession>\" on every order section (checked 20 Oct). Switch the step to helpers/report-pdf readPdf.",
+   "since": "2026-10-20"
   },
   "regression-chains|chain-b|tests/chains/chain-b-rejection.spec.ts|Chain B — Rejection → NCE → Report > Step 3 — Reject the sample via API substitute (PERSIST)": {
    "ticket": "untriaged",
