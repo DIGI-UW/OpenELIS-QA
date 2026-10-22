@@ -193,16 +193,6 @@
    "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
    "since": "2026-10-15"
   },
-  "modules|modules|tests/app-shell.spec.ts|Logout (OGC-1448) > TC-SHELL-02: after Logout the login page does not report the server as unreachable [FLIP-WHEN-FIXED]": {
-   "ticket": "untriaged",
-   "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
-   "since": "2026-10-15"
-  },
-  "modules|modules|tests/app-shell.spec.ts|Page titles (OGC-1448) > TC-SHELL-10: each screen #4681 walked has exactly one h1, its title": {
-   "ticket": "untriaged",
-   "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
-   "since": "2026-10-15"
-  },
   "modules|modules|tests/calculated-values-ui.spec.ts|Calculated Values — UI round-trip (TC-CALC-UI) > TC-CALC-UI-02: dictionary/relational calc built in the UI persists testId + dictionary value": {
    "ticket": "OGC-730",
    "note": "reflex save 500 and calculation save 400, both on OGC-730",
