@@ -1,17 +1,17 @@
-# develop-stack: develop `965d6d10`
+# develop-stack: develop `350cbc83`
 
-fix(reports): a correction awaiting validation keeps the order printed (OGC-1529) (#4799)
+feat(i18n): shipped NCE and dictionary values read through Transifex keys (OGC-1507) (#4800)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39814921521 · TZ UTC · 2026-10-22T19:35:35.535Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39854840393 · TZ UTC · 2026-10-22T23:51:02.740Z
 
-**4 NEW FAILURE(S)**: 97 failing = 93 known + 4 new; 3 known reds now pass.
+**4 NEW FAILURE(S)**: 95 failing = 91 known + 4 new; 3 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
-| all-tc | 354 | 7 | 0 | 0 |
+| all-tc | 353 | 7 | 0 | 0 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
-| deep | 0 | 3 | 0 | 0 |
+| deep | 0 | 1 | 0 | 0 |
 | disc | 1 | 0 | 0 | 0 |
 | e2e | 15 | 3 | 0 | 0 |
 | envseed | 3 | 0 | 0 | 0 |
@@ -40,9 +40,9 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39814921521 · TZ UTC �
 
 ## New failures (4)
 
+- `modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-01: EQA Program Management page loads`
+- `modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-06: EQA Distributions page loads`
 - `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered`
-- `modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)`
-- `modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient`
 - `modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January`
 
 ## Known reds now passing (remove from ci-known-reds.json, check the ticket) (3)
@@ -53,7 +53,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39814921521 · TZ UTC �
 
 ## Known reds by ticket
 
-- untriaged: 66
+- untriaged: 64
 - OGC-730: 13
 - harness: 8
 - OGC-1448: 2

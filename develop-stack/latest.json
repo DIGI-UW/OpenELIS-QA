@@ -1,18 +1,18 @@
 {
- "when": "2026-10-22T19:35:35.535Z",
- "sha": "965d6d10559d9e11e8868cbc01a5157864056af9",
- "subject": "fix(reports): a correction awaiting validation keeps the order printed (OGC-1529) (#4799)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39814921521",
+ "when": "2026-10-22T23:51:02.740Z",
+ "sha": "350cbc83054e590cb3ed5810042c883dbb99f76a",
+ "subject": "feat(i18n): shipped NCE and dictionary values read through Transifex keys (OGC-1507) (#4800)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39854840393",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
-  "failing": 97,
-  "known": 93,
+  "failing": 95,
+  "known": 91,
   "new": 4,
   "fixed": 3
  },
  "knownByTicket": {
-  "untriaged": 66,
+  "untriaged": 64,
   "OGC-730": 13,
   "harness": 8,
   "OGC-1446": 1,
@@ -29,9 +29,9 @@
     "skipped": 65
    },
    "new": [
+    "modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-01: EQA Program Management page loads",
+    "modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-06: EQA Distributions page loads",
     "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered",
-    "modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)",
-    "modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient",
     "modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January"
    ],
    "fixed": [
@@ -65,9 +65,9 @@
   },
   "all-tc": {
    "counts": {
-    "expected": 354,
+    "expected": 353,
     "unexpected": 7,
-    "flaky": 1,
+    "flaky": 2,
     "skipped": 37
    },
    "new": [],
@@ -77,13 +77,13 @@
   "deep": {
    "counts": {
     "expected": 0,
-    "unexpected": 3,
+    "unexpected": 1,
     "flaky": 0,
-    "skipped": 4
+    "skipped": 6
    },
    "new": [],
    "fixed": [],
-   "known": 3
+   "known": 1
   },
   "e2e": {
    "counts": {
