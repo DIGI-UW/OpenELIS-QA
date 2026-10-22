@@ -27,7 +27,7 @@ Data: every case creates its own orders for one QA patient (`Rpqqa, Queue`, nati
 | TC-RPQ-10 | Print from the row creates v1, opens the PDF, archives it with a 64-character SHA-256 that matches the stored bytes | Guard | AC-3 |
 | TC-RPQ-11 | Printing again returns byte-identical content and adds a reprint, not a version | Guard | AC-6, BR-5 |
 | TC-RPQ-12 | Releasing the rest makes it Final, Unprinted; printing makes v2 "Added: Glucose", not amended, no corrected banner | Guard | AC-4 |
-| TC-RPQ-13 | A changed printed result makes it Amended, Unprinted; the print is an amended v2 with "Version 2. Corrected report." and a "Glucose old → new" summary; a later release keeps Amended | Guard | AC-5 |
+| TC-RPQ-13 | A changed printed result makes it Amended, Unprinted; the print is an amended v2 with "Version 2. Corrected report." and a "Glucose 5 → 6" summary (whole numbers, so it holds where Glucose has 0 significant digits); a later release keeps Amended | Guard | AC-5 |
 | TC-RPQ-14 | Four prints of one unprinted order at once issue one version and three reprints | Guard | FR-6.2 (lock) |
 | TC-RPQ-15 | A Patient Status Report print makes the queue row Printed with v1 and an archived hash | Guard | AC-19, FR-6.8 |
 | TC-RPQ-16 | Refusals: nothing released 409, unknown order 404, no CSRF token 403, non-numeric patient id 400 | Guard | FR-6.1 |
@@ -57,7 +57,7 @@ Orders are placed through REST (order entry is being rewritten); results go in o
 | --- | --- | --- | --- |
 | TC-RPQ-40 | Entered on Results, released on Validation: Partial 2/3, Unprinted; row Print issues v1 with "Version 1 · Issued" | Guard | AC-2, AC-3, FR-4.6 |
 | TC-RPQ-41 | A correction on Results, re-released on Validation, reprints as amended v2 "HDL cholesterol 0.50 → 0.60" with the corrected banner | Guard | AC-5 |
-| TC-RPQ-42 | A correction awaiting validation is not due to print and makes no version; once validated it prints as one corrected version naming old and new value | Tripwire | OGC-1529. Ruling (Casey, 20 Oct): a new version only after validation; unvalidated results do not show in reports. Today the edit alone makes it Amended to print, a print gives "Removed: HDL cholesterol", the next "Added: HDL cholesterol" |
+| TC-RPQ-42 | A correction awaiting validation is not due to print and makes no version; once validated it prints as one corrected version naming old and new value | Guard | OGC-1529, fixed by #4799 (develop 965d6d10). Ruling (Casey, 20 Oct): a new version only after validation; unvalidated results do not show in reports. Today the edit alone makes it Amended to print, a print gives "Removed: HDL cholesterol", the next "Added: HDL cholesterol" |
 | TC-RPQ-43 | A critical result (QA test, critical above 400) acknowledged at entry and at validation: no tag while unreleased, Critical tag once released, PDF prints 450.0 and CRITICAL | Guard | FR-1.4 Critical tag |
 | TC-RPQ-44 | A Reports user on Hematology: Biochemistry order not listed, not found by lookup, 404 on detail, print and archived PDF; the Biochemistry user sees it | Guard | BR-9 (lead 19 Oct, fixed by #4771) |
 | TC-RPQ-45 | A Reception-only user: no menu entry, 403 on list, detail, PDF, preferences and print | Guard | §8 |

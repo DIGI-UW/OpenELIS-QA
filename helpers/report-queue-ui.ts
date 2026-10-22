@@ -111,7 +111,11 @@ async function loginAs(page: Page, u: QueueUser): Promise<boolean> {
   return !!s.body?.authenticated && s.body?.loginName === u.login;
 }
 
-/** A page logged in as the user, creating the user from the admin page first if needed. */
+/**
+ * A page logged in as the user, creating the user from the admin page first if needed.
+ * The person name must be unique: the server refuses a second user with the same first and last name
+ * (SystemUserDAOImpl.duplicateSystemUserExists) yet still answers 200, so the last name is the login.
+ */
 export async function pageAs(browser: Browser, admin: Page, u: QueueUser): Promise<Page> {
   const ctx = await browser.newContext({ ignoreHTTPSErrors: true, baseURL: process.env.BASE ?? 'https://testing.openelis-global.org', storageState: { cookies: [], origins: [] } });
   const page = await ctx.newPage();
@@ -123,7 +127,7 @@ export async function pageAs(browser: Browser, admin: Page, u: QueueUser): Promi
   const dd = String(exp.getDate()).padStart(2, '0'); const mm = String(exp.getMonth() + 1).padStart(2, '0');
   const r = await j(admin, `${API}/UnifiedSystemUser`, { method: 'POST', body: {
     loginUserId: '', systemUserId: '', userLoginName: u.login, userPassword: u.password, confirmPassword: u.password,
-    userFirstName: 'QA', userLastName: `Rpq ${u.role}`, expirationDate: `${dd}/${mm}/${exp.getFullYear()}`,
+    userFirstName: 'QA', userLastName: u.login, expirationDate: `${dd}/${mm}/${exp.getFullYear()}`,
     accountLocked: 'N', accountDisabled: 'N', accountActive: 'Y', timeout: '480', selectedRoles: [], testSectionId: '',
     selectedLabUnitRoles: [], selectedTestSectionLabUnits: { [u.section]: [String(role.roleId)] }, systemUserIdToCopy: '', allowCopyUserRoles: 'N',
   } });
