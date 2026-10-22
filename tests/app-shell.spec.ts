@@ -42,14 +42,14 @@ test.describe('Logout (OGC-1448)', () => {
     });
   });
 
-  test('TC-SHELL-02: after Logout the login page does not report the server as unreachable [FLIP-WHEN-FIXED]', async ({ browser }) => {
-    // FLIP-WHEN-FIXED (found 2026-10-12, on OGC-1448 comment 38090). After Logout the login page
+  test('TC-SHELL-02: after Logout the login page does not report the server as unreachable', async ({ browser }) => {
+    // Guard since 21 Oct 2026 (develop 965d6d10 and the 3.3.0 package; OGC-1448 closed).
+    // Found 2026-10-12 (OGC-1448 comment 38090). After Logout the login page
     // checks the session with the ended cookie; the server redirects that check to its login page
     // with a URL built from Host, which behind a proxy forwarding `Host $host` has no port. The
     // fetch follows it, the connection is refused, and "Can't reach the server / Trying again in
     // 1 s" shows. #4681 fixed the Logout POST (redirect: manual) and retries a session check that
-    // lands on the login page, but a redirect that cannot be followed still reads as an outage.
-    test.fail();
+    // lands on the login page, but a redirect that cannot be followed still read as an outage.
     await withIsolatedSession(browser, async (page) => {
       const { outageNotice } = await signOut(page);
       await expect(page.locator('#loginName')).toBeVisible({ timeout: 30_000 });
@@ -66,7 +66,7 @@ test.describe('Page titles (OGC-1448)', () => {
     ['/ImmunohistochemistryDashboard', 'Immunohistochemistry'],
     ['/CytologyDashboard', 'Cytology'],
     ['/NoteBookDashboard', 'Notebook'],
-    ['/inventory', 'Inventory Items'],
+    ['/inventory', 'Items'], // #4368 split Inventory into Items, Receive and Reports
     ['/Storage', 'Storage Management'],
     ['/qa/qms/audit-trail?type=system', 'System Audit Trail'],
     ['/SamplePatientEntry', 'Test Request'],
