@@ -184,10 +184,11 @@ test.describe('Report Print Queue: printing and versions', () => {
 
   test('TC-RPQ-13 a changed printed result makes it Amended; the reprint is an amended version with the corrected banner, and later releases keep Amended (AC-5)', async ({ page }) => {
     const o = await order(page, seed, [{ type: SERUM, tests: [T.GPT, T.Glucose, T.Creatinine] }]);
-    await enterOn(page, o.labNo, { [T.GPT]: '25', [T.Glucose]: '0.9' });
+    // Whole numbers: where Glucose has 0 significant digits (CI), 0.9 and 0.95 both store as "0" and nothing changes.
+    await enterOn(page, o.labNo, { [T.GPT]: '25', [T.Glucose]: '5' });
     await validateOnly(page, o.labNo);
     await print(page, o.sampleId);
-    await enterOn(page, o.labNo, { [T.Glucose]: '0.95' });
+    await enterOn(page, o.labNo, { [T.Glucose]: '6' });
     await validateOnly(page, o.labNo);
     const amended = await row(page, o.labNo);
     expect([amended.state, amended.printStatus]).toEqual(['AMENDED', 'UNPRINTED']);
@@ -196,7 +197,7 @@ test.describe('Report Print Queue: printing and versions', () => {
     const d = await detail(page, o.sampleId);
     const v2 = d.versions.find((v: any) => v.version === 2);
     expect(v2.amended).toBe(true);
-    expect(v2.changeSummary).toMatch(/Glucose .*0\.9\d* → 0\.95/);
+    expect(v2.changeSummary).toMatch(/Glucose .*\b5(\.0+)? → 6(\.0+)?\b/);
     const text = await archivedText(page, v2.id);
     expect(text).toMatch(/Version 2\. Corrected report\./);
     await enterOn(page, o.labNo, { [T.Creatinine]: '9' });
@@ -357,7 +358,7 @@ test.describe('Report Print Queue: through the screens', () => {
   });
 
   test('TC-RPQ-42 a correction awaiting validation is not due to print and makes no version; once validated it prints as one corrected version naming old and new value (OGC-1529)', async ({ page }) => {
-    test.fail(true, 'OGC-1529: the edit alone makes it Amended to print; a print then issues "Removed: HDL cholesterol" and the next "Added: HDL cholesterol"; 0.50 to 0.60 is on no version');
+    // Guard since #4799 (develop 965d6d10, 21 Oct): was a tripwire for OGC-1529.
     // Ruling (Casey, 20 Oct): a new version to print only comes after validation; unvalidated results do not show in reports.
     const o = await order(page, seed, [{ type: SERUM, tests: [CHOL, HDL] }]);
     await enterOnScreen(page, o.labNo, 'Total cholesterol', '2.1');
