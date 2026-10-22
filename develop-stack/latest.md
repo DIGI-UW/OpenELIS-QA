@@ -2,13 +2,13 @@
 
 fix(reports): a correction awaiting validation keeps the order printed (OGC-1529) (#4799)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39676684557 · TZ UTC · 2026-10-21T23:54:28.083Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39714925725 · TZ UTC · 2026-10-22T06:13:24.873Z
 
-**13 NEW FAILURE(S)**: 145 failing = 132 known + 13 new; 0 known reds now pass.
+**2 NEW FAILURE(S)**: 96 failing = 94 known + 2 new; 3 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
-| all-tc | 348 | 12 | 4 | 0 |
+| all-tc | 352 | 8 | 1 | 0 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
 | deep | 0 | 1 | 0 | 0 |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39676684557 · TZ UTC �
 | guards | 17 | 2 | 0 | 0 |
 | lp | 7 | 3 | 0 | 0 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1192 | 96 | 8 | 0 |
+| modules | 1263 | 51 | 1 | 3 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -30,7 +30,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39676684557 · TZ UTC �
 | probe-combo | 3 | 0 | 0 | 0 |
 | qa | 0 | 1 | 0 | 0 |
 | rbac | 57 | 0 | 0 | 0 |
-| regression-chains | 83 | 14 | 1 | 0 |
+| regression-chains | 83 | 14 | 0 | 0 |
 | regression-seed | 13 | 1 | 0 | 0 |
 | reval2 | 4 | 0 | 0 | 0 |
 | revalidate | 3 | 0 | 0 | 0 |
@@ -38,29 +38,23 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39676684557 · TZ UTC �
 | rtype | 2 | 2 | 0 | 0 |
 | workplan | 4 | 0 | 0 | 0 |
 
-## New failures (13)
+## New failures (2)
 
-- `modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-01: EQA Program Management page loads`
-- `modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: printing and versions > TC-RPQ-13 a changed printed result makes it Amended; the reprint is an amended version with the corrected banner, and later releases keep Amended (AC-5)`
-- `modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: through the screens > TC-RPQ-42 a correction awaiting validation is not due to print and makes no version; once validated it prints as one corrected version naming old and new value (OGC-1529)`
-- `modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: through the screens > TC-RPQ-44 a Reports user on Hematology sees no Biochemistry order: not listed, not found by lookup, 404 on detail, print and archived PDF (BR-9)`
-- `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-01 by lab number range: one OpenPDF document on the site paper, the patient, every order`
-- `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-03 unvalidated results are not printed; a rejected sample says so`
-- `modules|modules|tests/reports-openpdf.spec.ts|Patient Status Report (PatientResultsPdf) > TC-RPTPDF-04 every continuation page names the patient and order it belongs to`
-- `modules|modules|tests/reports-openpdf.spec.ts|Printed Reports Configuration: paper size and page numbers > TC-RPTPDF-50 Letter with page numbers: the reports follow the setting, then the saved settings come back`
-- `regression-chains|chain-a|tests/chains/chain-a-order-lifecycle.spec.ts|Chain A — Order Lifecycle > Step 6 — Lab number present on PDF (REPORTABLE)`
-- `all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-01: a reagent save that fails keeps the quantity the admin typed, so a retry can send it`
-- `all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-02: impossible quantities and over-long units are 4xx, never 500`
-- `all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-03: lifecycle: link a reagent, change quantity and unit, unlink; a second unlink is a 404`
-- `all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Reagents (TC-CX-RE) > TC-CX-RE-04: linking two reagents where one link fails: the list shows the one that worked and a retry finishes the job`
+- `modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)`
+- `all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers`
+
+## Known reds now passing (remove from ci-known-reds.json, check the ticket) (3)
+
+- `modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-11: Enter Order: a late response for the previous sample type does not replace the list (OGC-1266)`
+- `modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-12: Enter Order: a failed tests request does not leave "Loading" forever (OGC-1266)`
+- `modules|modules|tests/order-entry-release-blockers.spec.ts|Order entry — release blockers > BLK-LAB-4 — a field marked required to sighted users is marked required in the DOM`
 
 ## Known reds by ticket
 
-- untriaged: 110
+- untriaged: 66
 - OGC-730: 13
-- harness: 2
+- harness: 9
 - OGC-1448: 2
 - OGC-189: 2
-- OGC-1240: 1
 - OGC-1446: 1
 - OGC-1367: 1
