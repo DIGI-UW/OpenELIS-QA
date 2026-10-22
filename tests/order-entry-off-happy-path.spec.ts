@@ -260,6 +260,34 @@ test.describe('Order entry off the happy path', () => {
     await expect(page.locator('#sampleId_0'), 'the sample step stays on screen').toBeVisible();
   });
 
+  // ── Legacy Add Order: samples named as Result Reporting names them (#4757) ──
+  // Added 2026-10-21 for develop e1f2b693. #4757: "Order entry names samples as Result
+  // Reporting does in the labels table and the missing-test warning" ("Sample N: <type>").
+
+  test('TC-OEX-30: legacy Add Order: the missing-test warning names the sample and its type (#4757)', async ({ page }) => {
+    const [A] = await sampleTypes(page);
+    await legacySampleStep(page);
+    await legacyPick(page, A.id);
+    await legacyTick(page, A.tests[0].id, true);
+    await page.getByRole('button', { name: /^\+?\s*Add Sample$/ }).first().click();
+    await expect(page.locator('#sampleId_1'), 'a second sample card').toBeVisible({ timeout: 15_000 });
+    await page.locator('#sampleId_1').selectOption(A.id);
+    await page.waitForTimeout(1800);
+    await page.locator('button.forwardButton:has-text("Next")').click();
+    await expect(page.getByTestId('order-sample-missing-tests'), 'the warning names sample 2 by number and type')
+      .toContainText(`Sample 2: ${A.name} has no test`, { timeout: 20_000 });
+  });
+
+  test('TC-OEX-31: legacy Add Order: the labels table names each sample "Sample N: <type>" (#4757)', async ({ page }) => {
+    const [A] = await sampleTypes(page);
+    await legacySampleStep(page);
+    await legacyPick(page, A.id);
+    await legacyTick(page, A.tests[0].id, true);
+    await legacyResultReporting(page);
+    await expect(page.getByRole('rowheader', { name: `Sample 1: ${A.name}`, exact: true }), 'the label row reads as the Result Reporting heading does')
+      .toBeVisible({ timeout: 20_000 });
+  });
+
   // ── Enter Order (v4) ───────────────────────────────────────────────────────
 
   test('TC-OEX-10: [guard] Enter Order lists the chosen sample type\'s tests', async ({ page }) => {
@@ -270,7 +298,8 @@ test.describe('Order entry off the happy path', () => {
   });
 
   test('TC-OEX-11: Enter Order: a late response for the previous sample type does not replace the list (OGC-1266)', async ({ page }) => {
-    test.fail();
+    // GUARD since 2026-10-21, passing on develop e1f2b693 (oedevqa images 2026-10-20).
+    // The late answer for the first sample type no longer replaces the list.
     const [A, B] = await sampleTypes(page);
     await v4Enter(page);
     await page.route(`**/rest/sample-type-tests?sampleType=${A.id}`, async (r: Route) => {
@@ -286,7 +315,8 @@ test.describe('Order entry off the happy path', () => {
   });
 
   test('TC-OEX-12: Enter Order: a failed tests request does not leave "Loading" forever (OGC-1266)', async ({ page }) => {
-    test.fail();
+    // GUARD since 2026-10-21, passing on develop e1f2b693 (oedevqa images 2026-10-20).
+    // A failed tests request ends the loading state (same fix as TC-OEV4-NET-03, OGC-1443).
     const [A] = await sampleTypes(page);
     await v4Enter(page);
     await page.route('**/rest/sample-type-tests*', (r: Route) => r.fulfill({ status: 500, contentType: 'application/json', body: '{}' }));

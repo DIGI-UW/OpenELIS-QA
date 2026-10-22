@@ -169,10 +169,11 @@ test.describe('OGC-1422 labels from Prepare Samples', () => {
   });
 
   test('TC-OEV4-LBL-06 no label status and no stale reprint wording on Prepare Samples (FR-I6, FR-I7)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-08 on 76c6d625a: the sample card still says
+    // Was a tripwire. Observed 2026-10-08 on 76c6d625a: the sample card still says
     // "Use 'Print More Sample Labels' if you draw more than expected...", but #4590 removed
     // that control (FR-I7: one print control per row and column, no second reprint block).
-    test.fail();
+    // GUARD since 2026-10-21, passing on develop e1f2b693 (oedevqa images 2026-10-20).
+    // OGC-1443 (Done, #4664) fixed it: the help text now points at Add Sample and the Labels section.
     await newOrderToPrepare(page);
     const text = await page.locator('main').innerText();
     expect(text, 'no printed / generated label status (FR-I6)').not.toMatch(/\b(printed|generated)\b/i);
@@ -258,11 +259,12 @@ test.describe('OGC-1423 Refer Out from Prepare Samples', () => {
   });
 
   test('TC-OEV4-REF-06 referral rows name the tube by lab number, not by database id', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-08 on 76c6d625a: the Refer Out table's
+    // Was a tripwire. Observed 2026-10-08 on 76c6d625a: the Refer Out table's
     // "Sample ID" column shows the sample item's database id (e.g. 1121), which is printed
     // nowhere and cannot be matched to a tube. FR-C2 / FR-E2: samples are named by number
     // (<lab number>-1).
-    test.fail();
+    // GUARD since 2026-10-21, passing on develop e1f2b693 (oedevqa images 2026-10-20).
+    // OGC-1443 (Done, #4664) fixed it: the column is "Reference lab" and names <lab number>-<n>.
     const o = await savedPrepare(page);
     await expect(page.getByText('Refer Out / Subcontract')).toBeVisible({ timeout: 30_000 });
     const row = page.getByRole('row').filter({ has: page.getByRole('button', { name: 'Refer Out', exact: true }) }).first();
@@ -331,10 +333,14 @@ test.describe('OGC-1424 M14 order entry clean-up', () => {
 
   test('TC-OEV4-M14-05 Add new organization lists the facility named the same apart from common words', async ({ page }) => {
     const sites = await (async () => { await page.goto('/', { waitUntil: 'domcontentloaded' }); return apiJson<{ id: string; value: string }[]>(page, '/rest/displayList/SAMPLE_PATIENT_REFERRING_CLINIC'); })();
-    const plain = sites.find((s) => /^[A-Za-z][A-Za-z ]{3,40}$/.test(s.value));
+    // A clinic with a short code is listed as "<code> - <name>"; the search and the possible
+    // matches use the name. Prefer a name of letters and spaces; CI's seeded clinic is
+    // "QA_AUTO Referring Clinic".
+    const names = sites.map((s) => (s.value.includes(' - ') ? s.value.slice(s.value.indexOf(' - ') + 3) : s.value).trim());
+    const plain = names.find((n) => /^[A-Za-z][A-Za-z ]{3,40}$/.test(n)) ?? names.find((n) => /^[A-Za-z][A-Za-z_ ]{3,40}$/.test(n));
     expect(plain, 'a facility with a plain name exists').toBeTruthy();
     await openEnter(page);
-    const typed = `${plain!.value} Health Centre`;
+    const typed = `${plain} Health Centre`;
     await page.locator('#siteName').fill(typed);
     // The button reads "organisation" in the English (US) bundle on 76c6d625a; either spelling passes.
     const addNew = page.getByRole('button', { name: new RegExp(`^\\+ Add new organi[sz]ation "${typed}"$`) });
@@ -342,20 +348,31 @@ test.describe('OGC-1424 M14 order entry clean-up', () => {
     const check = page.waitForResponse((r) => r.url().includes('/rest/possible-matches/facility'));
     await addNew.click();
     expect((await check).status()).toBe(200);
-    await expect(page.getByTestId('possible-matches-dialog').getByText(plain!.value).first(), `${plain!.value} is a possible match`).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('possible-matches-dialog').getByText(plain!).first(), `${plain} is a possible match`).toBeVisible({ timeout: 15_000 });
   });
 
   test('TC-OEV4-M14-06 patient search stays exact and prefix; it never returns a fuzzy match (FR-B6a)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-08 on 76c6d625a: GET patient-search-results with
-    // lastName "<seed last name with its last letter changed>" returns the seeded patient.
-    // FR-B6a / D-216: "Search itself never uses fuzzy matching: it stays exact and prefix";
-    // fuzzy matching runs only at Create (possible matches).
-    test.fail();
+    // GUARD since 2026-10-21, passing on develop e1f2b693 (oedevqa images 2026-10-20).
+    // Was a tripwire: on 76c6d625a (8 Oct) a last name one letter off listed the seeded
+    // patient. OGC-1443 (Done, #4664): Enter Order's search sends nameMatch=prefix; Patient
+    // Management keeps its fuzzy search, so this case drives Enter Order, not the bare API.
+    // FR-B6a / D-216: "Search itself never uses fuzzy matching: it stays exact and prefix".
     const p = await seedPatient(page);
     const typo = p.lastName.slice(0, -1) + (p.lastName.endsWith('x') ? 'y' : 'x');
-    const j = await apiJson(page, `/rest/patient-search-results?lastName=${typo}&firstName=&STNumber=&subjectNumber=&nationalID=&labNumber=&guid=&dateOfBirth=&gender=&suppressExternalSearch=true`);
-    const names = (j.patientSearchResults || []).map((x: any) => String(x.lastName));
-    expect(names.filter((n: string) => !n.toLowerCase().startsWith(typo.toLowerCase())), `search "${typo}" returns only names starting with it`).toEqual([]);
+    await openEnter(page);
+    const search = async (lastName: string) => {
+      const req = page.waitForRequest((r) => r.url().includes('/rest/patient-search-results'), { timeout: 30_000 });
+      await page.locator('#order-patient-search-lastName').fill(lastName);
+      await page.locator('#order-patient-search-local_search').click();
+      return (await req).url();
+    };
+    const url = await search(typo);
+    expect(new URL(url).searchParams.get('nameMatch'), 'Enter Order asks for exact and prefix matching').toBe('prefix');
+    await expect(page.getByTestId('patient-search-section').getByText(/No patients found/i).or(page.getByText(/No patients found/i)).first(),
+      `search "${typo}" finds nobody`).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator(`#order-patient-search-${p.id}`), 'the one-letter-off name does not list the patient').toHaveCount(0);
+    await search(p.lastName.slice(0, 6));
+    await expect(page.locator(`#order-patient-search-${p.id}`), 'a prefix of the last name lists the patient').toBeAttached({ timeout: 30_000 });
   });
 
   test('TC-OEV4-M14-07 fax fields are hidden while showFaxFields is off (default)', async ({ page }) => {
@@ -469,12 +486,13 @@ test.describe('OGC-1424 M14 order entry clean-up', () => {
   });
 
   test('TC-OEV4-M14-15 French: Prepare Samples shows no raw keys and translates the new Handling labels', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-08 on 76c6d625a with the UI in French: the Handling
+    // Was a tripwire. Observed 2026-10-08 on 76c6d625a with the UI in French: the Handling
     // group reads "Required: No requirement", "Arrived as", "Room temperature",
     // "Refrigerated 2 to 8 °C", "Frozen", "On ice", "Dry ice", "Measured temperature (°C)",
     // "Stored at: Not stored yet" in English; only "Non enregistré" is French. OGC-1424:
     // "i18n: new keys listed in the FRS Localization section; run once in French."
-    test.fail();
+    // GUARD since 2026-10-21, passing on develop e1f2b693 (oedevqa images 2026-10-20).
+    // OGC-1443 (Done, #4664) moved the Handling labels to the message bundle; they read French now.
     await newOrderToPrepare(page);
     const url = page.url();
     const before = await currentLocale(page);
@@ -489,5 +507,88 @@ test.describe('OGC-1424 M14 order entry clean-up', () => {
     } finally {
       await setLocale(page, before); // the server keeps the choice; never leave the session in French
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Added 2026-10-21 for develop e1f2b693: #4731 (OGC-1483) "save toasts on every v4 step name
+// the lab number" and #4757 "order entry names samples as Result Reporting does in the labels
+// table". Wording read on oedevqa (images 2026-10-20).
+test.describe('Save messages and sample names (#4731, #4757)', () => {
+  /** Every notification text the page shows from now on, kept after it disappears. */
+  async function collectNotices(page: Page) {
+    await page.addInitScript(() => {
+      (window as any).__qaNotices = [];
+      const grab = () => document.querySelectorAll('.cds--toast-notification, .cds--inline-notification, .cds--actionable-notification, [role="status"], [role="alert"]').forEach((n) => {
+        const t = (n as HTMLElement).innerText.trim();
+        if (t && !(window as any).__qaNotices.includes(t)) (window as any).__qaNotices.push(t);
+      });
+      new MutationObserver(grab).observe(document, { subtree: true, childList: true, characterData: true });
+      setInterval(grab, 100);
+    });
+  }
+  const notices = (page: Page): Promise<string[]> => page.evaluate(() => (window as any).__qaNotices || []);
+  const resetNotices = (page: Page) => page.evaluate(() => { (window as any).__qaNotices = []; });
+
+  test('TC-OEV4-SAVE-01 Enter Order Save and next names the order and the next step', async ({ page }) => {
+    await collectNotices(page);
+    const o = await newOrderToPrepare(page);
+    await expect.poll(async () => (await notices(page)).join(' | '), { timeout: 15_000 })
+      .toMatch(new RegExp(`Order ${o.lab} saved\\s+Next: Prepare Samples`));
+  });
+
+  test('TC-OEV4-SAVE-02 Prepare Samples Save and exit names the order on the dashboard', async ({ page }) => {
+    await collectNotices(page);
+    const o = await newOrderToPrepare(page);
+    await fillCollection(page, 0);
+    await resetNotices(page);
+    expect((await saveStep(page, 'exit')).status(), 'Prepare Samples saves').toBe(200);
+    await expect(page, 'Save and exit returns to the dashboard with the order highlighted').toHaveURL(new RegExp(`highlight=${o.lab}`), { timeout: 30_000 });
+    await expect.poll(async () => (await notices(page)).join(' | '), { timeout: 15_000 }).toContain(`Order ${o.lab} has been saved.`);
+  });
+
+  test('TC-OEV4-SAVE-03 Sample check Save and exit names the order', async ({ page }) => {
+    await collectNotices(page);
+    const o = await newOrderToPrepare(page);
+    await fillCollection(page, 0);
+    expect((await saveStep(page, 'next')).status(), 'Prepare Samples saves').toBe(200);
+    await expect(page).toHaveURL(/\/order\/clinical\/qa/, { timeout: 30_000 });
+    await resetNotices(page);
+    await footer(page, 'exit').click();
+    await expect.poll(async () => (await notices(page)).join(' | '), { timeout: 15_000 }).toContain(`Order ${o.lab} has been saved.`);
+  });
+
+  test('TC-OEV4-SAVE-04 Prepare Samples Save and next names the order on arrival at Sample check', async ({ page }) => {
+    // FLIP-WHEN-FIXED. Observed 2026-10-21 on develop e1f2b693: Save and next on Prepare
+    // Samples saves (200) and opens Sample check with no message at all, while Enter Order's
+    // Save and next says "Order <lab> saved / Next: Prepare Samples" and every Save and exit
+    // says "Order <lab> has been saved." #4731: "Save toasts on every v4 step name the lab
+    // number." OrderCollect.jsx adds the notification, but Save and next leaves the page
+    // before it shows. Not filed (lead, 21 Oct).
+    test.fail();
+    await collectNotices(page);
+    const o = await newOrderToPrepare(page);
+    await fillCollection(page, 0);
+    await resetNotices(page);
+    expect((await saveStep(page, 'next')).status(), 'Prepare Samples saves').toBe(200);
+    await expect(page).toHaveURL(/\/order\/clinical\/qa/, { timeout: 30_000 });
+    // The save message itself, not the Prepare Samples notices that also carry the lab number.
+    await expect.poll(async () => (await notices(page)).join(' | '), { timeout: 10_000 })
+      .toMatch(new RegExp(`Order ${o.lab} (saved|has been saved)`));
+  });
+
+  test('TC-OEV4-LBL-07 the labels table names each sample by lab number and type, on the row, the quantity and the print button', async ({ page }) => {
+    const o = await newOrderToPrepare(page, [{ type: 'Serum' }, { type: 'Serum' }]);
+    const types = await apiJson<{ id: string; value: string }[]>(page, '/rest/user-sample-types');
+    const type = types.find((t) => t.value.toLowerCase() === 'serum')!.value;
+    const table = page.getByTestId('prepare-labels-section').getByRole('table', { name: 'Sample Labels' });
+    await expect(table, 'the Sample Labels table is shown').toBeVisible({ timeout: 30_000 });
+    for (const n of [1, 2]) {
+      const name = `${o.lab}-${n} ${type}`;
+      await expect(table.getByRole('rowheader', { name, exact: true }), `row ${n} is named "${name}"`).toBeVisible();
+      await expect(table.getByRole('spinbutton', { name: `${name} Specimen Label quantity`, exact: true }), `the quantity of row ${n} is named after its sample`).toBeVisible();
+      await expect(table.getByRole('button', { name: `Print labels for ${name}`, exact: true }), `the print button of row ${n} is named after its sample`).toBeVisible();
+    }
+    await expect(table.getByText(/^Sample \d+$/), 'no row is named by position alone').toHaveCount(0);
   });
 });

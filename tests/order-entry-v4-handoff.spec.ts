@@ -16,7 +16,7 @@ import { test, expect, Page } from '@playwright/test';
 import {
   API, ENTRY_POST, ENTER, apiJson, footer, newOrderToPrepare, openEnter, openPrepare, orderSearch,
   pickPatient, pickSampleAndTest, pickSite, rawKeysOnScreen, saveStep, seedPatient, toContinue, fillCollection, currentLocale, setLocale,
-  sampleType,
+  sampleType, sampleTypeId,
 } from '../helpers/order-entry-v4';
 
 test.setTimeout(240_000);
@@ -175,34 +175,25 @@ test.describe('R-DATA data integrity', () => {
     expect(types, 'never the arbitrary fallback list').not.toContain('Histopathology specimen');
   });
 
-  test('TC-OEV4-DATA-04 a sample with no test cannot leave Prepare Samples, and the message is translated (R-DATA-4, FR-D7, was TC-OEW-14)', async ({ page }) => {
-    // v4 lets Enter Order save a sample type with no test ("Sample and test selection is
-    // optional at this step"); R-DATA-4 then applies on Prepare Samples, where tests are
-    // also chosen. FR-D7 save level: every sample carries at least one test.
-    // FLIP-WHEN-FIXED. Observed 2026-10-08 on 76c6d625a: Save and next on Prepare Samples
-    // with a test-less sample shows the raw key "errors.samples.with.no.tests", as on
-    // 25 Sep (TC-OEW-14), and the To continue checklist does not list the sample.
-    test.fail();
+  test('TC-OEV4-DATA-04 a sample with no test cannot be saved, and the page names the sample (R-DATA-4, FR-D7, was TC-OEW-14)', async ({ page }) => {
+    // GUARD since 2026-10-21, passing on develop e1f2b693 (oedevqa images 2026-10-20).
+    // Was a tripwire: on 76c6d625a (8 Oct) Enter Order saved a sample type with no test and
+    // Prepare Samples then showed the raw key "errors.samples.with.no.tests". OGC-1443 (Done,
+    // #4664) moved the rule to where tests are chosen: Enter Order holds Save and next and the
+    // To continue checklist names the sample. FR-D7 save level: every sample has a test.
     const p = await seedPatient(page);
     await openEnter(page);
     await pickPatient(page, p);
-    await page.locator('#sampleType-0').selectOption({ label: 'Serum' });
-    await expect(page.locator('input[id^="test-0-"]').first()).toBeAttached({ timeout: 30_000 });
+    await page.locator('#sampleType-0').selectOption(await sampleTypeId(page, 'Serum'));
+    await expect(page.locator('input[id^="test-0-"]').first(), 'tests load for Serum').toBeAttached({ timeout: 30_000 });
     await pickSite(page);
-    expect((await saveStep(page, 'next')).status()).toBe(200);
-    await expect(page).toHaveURL(/\/order\/clinical\/collect/, { timeout: 30_000 });
-    await expect(page.getByTestId('sample-collection-card-0')).toBeVisible({ timeout: 60_000 });
-    await fillCollection(page, 0);
-    const next = footer(page, 'next');
-    const items = (await toContinue(page)).join(' | ');
-    let moved = false;
-    if (await next.isEnabled()) {
-      await next.click();
-      await page.waitForTimeout(6_000);
-      moved = !/\/collect/.test(page.url());
-    }
-    expect(await rawKeysOnScreen(page), 'no raw i18n key shown').toEqual([]);
-    expect(moved, `a sample with no test must not leave Prepare Samples (checklist: ${items || 'empty'})`).toBe(false);
+    await expect(footer(page, 'next'), 'Save and next is held while sample 1 has no test').toBeDisabled({ timeout: 15_000 });
+    // Save and exit stays enabled here (21 Oct); whether a draft may keep a test-less sample
+    // is a product call, so this case does not assert it.
+    expect((await toContinue(page)).join(' | '), 'the checklist names the sample').toMatch(/Sample 1: choose at least one test/i);
+    expect(await rawKeysOnScreen(page), 'no raw i18n keys').toEqual([]);
+    await pickSampleAndTest(page, 0, 'Serum');
+    await expect(footer(page, 'next'), 'ticking a test releases Save and next').toBeEnabled({ timeout: 15_000 });
   });
 
   test('TC-OEV4-DATA-05 Back to Enter Order and forward keeps the collection date and time (R-DATA-5, was TC-OEW-06, gate G3)', async ({ page }) => {
@@ -280,14 +271,16 @@ test.describe('R-TIME one clock', () => {
 // ---------------------------------------------------------------- flow and UX
 test.describe('R-FLOW and R-UX', () => {
   test('TC-OEV4-FLOW-01 arriving on Prepare Samples shows no "Unsaved changes" before any edit (R-FLOW-3, was TC-OWF-02)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-08 on 76c6d625a: Save and next from Enter Order
+    // Was a tripwire. Observed 2026-10-08 on 76c6d625a: Save and next from Enter Order
     // lands on Prepare Samples with "Unsaved changes" already shown (the defaulted
     // collection date and time mark the step dirty). TC-OWF-02 passed on 2026-09-29 when
     // the order was opened by lab number; this is the Save and next path.
-    test.fail();
+    // GUARD since 2026-10-21, passing on develop e1f2b693 (oedevqa images 2026-10-20).
+    // OGC-1443 (Done, #4664) fixed it. The case stayed red after the fix because it counted
+    // the hidden text of the closed "Discard unsaved changes?" dialog; it counts visible text now.
     await newOrderToPrepare(page);
     await page.waitForTimeout(3_000);
-    await expect(page.getByText(/Unsaved changes/i), 'no unsaved-changes banner before any edit').toHaveCount(0);
+    await expect(page.getByText(/Unsaved changes/i).locator('visible=true'), 'no unsaved-changes banner before any edit').toHaveCount(0);
   });
 
   test('TC-OEV4-FLOW-02 the counter and the steps agree after Enter Order is saved (R-FLOW-2, was TC-ODB-02)', async ({ page }) => {
