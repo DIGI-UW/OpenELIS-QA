@@ -1,14 +1,14 @@
-# develop-stack: develop `350cbc83`
+# develop-stack: develop `0f84c346`
 
-feat(i18n): shipped NCE and dictionary values read through Transifex keys (OGC-1507) (#4800)
+Update OpenELIS translations from Transifex (#4802)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39854840393 · TZ UTC · 2026-10-22T23:51:02.740Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39893534925 · TZ UTC · 2026-10-23T05:49:36.630Z
 
-**4 NEW FAILURE(S)**: 95 failing = 91 known + 4 new; 3 known reds now pass.
+**NO NEW FAILURES**: 92 failing = 92 known + 0 new; 3 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
-| all-tc | 353 | 7 | 0 | 0 |
+| all-tc | 354 | 7 | 0 | 0 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
 | deep | 0 | 1 | 0 | 0 |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39854840393 · TZ UTC �
 | guards | 17 | 2 | 0 | 0 |
 | lp | 7 | 3 | 0 | 0 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1259 | 51 | 4 | 3 |
+| modules | 1266 | 48 | 0 | 3 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -38,13 +38,6 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39854840393 · TZ UTC �
 | rtype | 2 | 2 | 0 | 0 |
 | workplan | 4 | 0 | 0 | 0 |
 
-## New failures (4)
-
-- `modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-01: EQA Program Management page loads`
-- `modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-06: EQA Distributions page loads`
-- `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered`
-- `modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January`
-
 ## Known reds now passing (remove from ci-known-reds.json, check the ticket) (3)
 
 - `modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-11: Enter Order: a late response for the previous sample type does not replace the list (OGC-1266)`
@@ -55,7 +48,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39854840393 · TZ UTC �
 
 - untriaged: 64
 - OGC-730: 13
-- harness: 8
+- harness: 9
 - OGC-1448: 2
 - OGC-189: 2
 - OGC-1446: 1

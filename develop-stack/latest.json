@@ -1,20 +1,20 @@
 {
- "when": "2026-10-22T23:51:02.740Z",
- "sha": "350cbc83054e590cb3ed5810042c883dbb99f76a",
- "subject": "feat(i18n): shipped NCE and dictionary values read through Transifex keys (OGC-1507) (#4800)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39854840393",
+ "when": "2026-10-23T05:49:36.630Z",
+ "sha": "0f84c346e027d5144d2775f012b26c427380d1f3",
+ "subject": "Update OpenELIS translations from Transifex (#4802)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39893534925",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
-  "failing": 95,
-  "known": 91,
-  "new": 4,
+  "failing": 92,
+  "known": 92,
+  "new": 0,
   "fixed": 3
  },
  "knownByTicket": {
   "untriaged": 64,
   "OGC-730": 13,
-  "harness": 8,
+  "harness": 9,
   "OGC-1446": 1,
   "OGC-1367": 1,
   "OGC-1448": 2,
@@ -23,23 +23,18 @@
  "suites": {
   "modules": {
    "counts": {
-    "expected": 1259,
-    "unexpected": 51,
+    "expected": 1266,
+    "unexpected": 48,
     "flaky": 0,
-    "skipped": 65
+    "skipped": 61
    },
-   "new": [
-    "modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-01: EQA Program Management page loads",
-    "modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-06: EQA Distributions page loads",
-    "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered",
-    "modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January"
-   ],
+   "new": [],
    "fixed": [
     "modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-11: Enter Order: a late response for the previous sample type does not replace the list (OGC-1266)",
     "modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-12: Enter Order: a failed tests request does not leave \"Loading\" forever (OGC-1266)",
     "modules|modules|tests/order-entry-release-blockers.spec.ts|Order entry — release blockers > BLK-LAB-4 — a field marked required to sighted users is marked required in the DOM"
    ],
-   "known": 47
+   "known": 48
   },
   "qa": {
    "counts": {
@@ -65,10 +60,10 @@
   },
   "all-tc": {
    "counts": {
-    "expected": 353,
+    "expected": 354,
     "unexpected": 7,
-    "flaky": 2,
-    "skipped": 37
+    "flaky": 0,
+    "skipped": 38
    },
    "new": [],
    "fixed": [],
