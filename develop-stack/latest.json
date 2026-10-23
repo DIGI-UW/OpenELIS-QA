@@ -1,20 +1,20 @@
 {
- "when": "2026-10-23T14:29:21.958Z",
- "sha": "0f84c346e027d5144d2775f012b26c427380d1f3",
- "subject": "Update OpenELIS translations from Transifex (#4802)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39942591091",
+ "when": "2026-10-23T19:53:53.483Z",
+ "sha": "ee6340a850772988ae0d62ae5e275082fac693fc",
+ "subject": "feat: add PatientIdDocumentService integration tests (#4228)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39986225636",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
-  "failing": 92,
+  "failing": 95,
   "known": 92,
-  "new": 0,
+  "new": 3,
   "fixed": 3
  },
  "knownByTicket": {
-  "untriaged": 64,
+  "untriaged": 65,
   "OGC-730": 13,
-  "harness": 9,
+  "harness": 8,
   "OGC-1446": 1,
   "OGC-1367": 1,
   "OGC-1448": 2,
@@ -23,18 +23,22 @@
  "suites": {
   "modules": {
    "counts": {
-    "expected": 1266,
-    "unexpected": 48,
+    "expected": 1260,
+    "unexpected": 50,
     "flaky": 0,
-    "skipped": 61
+    "skipped": 65
    },
-   "new": [],
+   "new": [
+    "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered",
+    "modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient",
+    "modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January"
+   ],
    "fixed": [
     "modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-11: Enter Order: a late response for the previous sample type does not replace the list (OGC-1266)",
     "modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-12: Enter Order: a failed tests request does not leave \"Loading\" forever (OGC-1266)",
     "modules|modules|tests/order-entry-release-blockers.spec.ts|Order entry — release blockers > BLK-LAB-4 — a field marked required to sighted users is marked required in the DOM"
    ],
-   "known": 48
+   "known": 47
   },
   "qa": {
    "counts": {
@@ -60,10 +64,10 @@
   },
   "all-tc": {
    "counts": {
-    "expected": 354,
+    "expected": 353,
     "unexpected": 7,
-    "flaky": 0,
-    "skipped": 38
+    "flaky": 2,
+    "skipped": 37
    },
    "new": [],
    "fixed": [],
@@ -72,13 +76,13 @@
   "deep": {
    "counts": {
     "expected": 0,
-    "unexpected": 1,
+    "unexpected": 2,
     "flaky": 0,
-    "skipped": 6
+    "skipped": 5
    },
    "new": [],
    "fixed": [],
-   "known": 1
+   "known": 2
   },
   "e2e": {
    "counts": {
