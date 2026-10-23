@@ -1,8 +1,8 @@
 {
- "when": "2026-10-23T05:49:36.630Z",
+ "when": "2026-10-23T14:29:21.958Z",
  "sha": "0f84c346e027d5144d2775f012b26c427380d1f3",
  "subject": "Update OpenELIS translations from Transifex (#4802)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39893534925",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39942591091",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {

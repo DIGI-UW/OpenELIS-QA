@@ -2,7 +2,7 @@
 
 Update OpenELIS translations from Transifex (#4802)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39893534925 · TZ UTC · 2026-10-23T05:49:36.630Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39942591091 · TZ UTC · 2026-10-23T14:29:21.958Z
 
 **NO NEW FAILURES**: 92 failing = 92 known + 0 new; 3 known reds now pass.
 
