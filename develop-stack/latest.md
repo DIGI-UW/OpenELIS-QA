@@ -2,16 +2,16 @@
 
 feat: add PatientIdDocumentService integration tests (#4228)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39986225636 · TZ UTC · 2026-10-23T19:53:53.483Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40022918778 · TZ UTC · 2026-10-24T00:29:16.363Z
 
-**3 NEW FAILURE(S)**: 95 failing = 92 known + 3 new; 3 known reds now pass.
+**4 NEW FAILURE(S)**: 95 failing = 91 known + 4 new; 3 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
 | all-tc | 353 | 7 | 0 | 0 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
-| deep | 0 | 2 | 0 | 0 |
+| deep | 0 | 1 | 0 | 0 |
 | disc | 1 | 0 | 0 | 0 |
 | e2e | 15 | 3 | 0 | 0 |
 | envseed | 3 | 0 | 0 | 0 |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39986225636 · TZ UTC �
 | guards | 17 | 2 | 0 | 0 |
 | lp | 7 | 3 | 0 | 0 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1260 | 50 | 3 | 3 |
+| modules | 1258 | 51 | 4 | 3 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -38,10 +38,11 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39986225636 · TZ UTC �
 | rtype | 2 | 2 | 0 | 0 |
 | workplan | 4 | 0 | 0 | 0 |
 
-## New failures (3)
+## New failures (4)
 
+- `modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-01: EQA Program Management page loads`
+- `modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept`
 - `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered`
-- `modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient`
 - `modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January`
 
 ## Known reds now passing (remove from ci-known-reds.json, check the ticket) (3)
@@ -52,7 +53,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/39986225636 · TZ UTC �
 
 ## Known reds by ticket
 
-- untriaged: 65
+- untriaged: 64
 - OGC-730: 13
 - harness: 8
 - OGC-1448: 2
