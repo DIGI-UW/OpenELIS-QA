@@ -1,18 +1,18 @@
 {
- "when": "2026-10-24T04:05:24.039Z",
+ "when": "2026-10-24T06:41:00.472Z",
  "sha": "ee6340a850772988ae0d62ae5e275082fac693fc",
  "subject": "feat: add PatientIdDocumentService integration tests (#4228)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40041336619",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40056832352",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
-  "failing": 92,
-  "known": 92,
-  "new": 0,
+  "failing": 95,
+  "known": 93,
+  "new": 2,
   "fixed": 3
  },
  "knownByTicket": {
-  "untriaged": 64,
+  "untriaged": 65,
   "OGC-730": 13,
   "harness": 9,
   "OGC-1446": 1,
@@ -23,12 +23,14 @@
  "suites": {
   "modules": {
    "counts": {
-    "expected": 1266,
-    "unexpected": 48,
+    "expected": 1265,
+    "unexpected": 49,
     "flaky": 0,
     "skipped": 61
    },
-   "new": [],
+   "new": [
+    "modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)"
+   ],
    "fixed": [
     "modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-11: Enter Order: a late response for the previous sample type does not replace the list (OGC-1266)",
     "modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-12: Enter Order: a failed tests request does not leave \"Loading\" forever (OGC-1266)",
@@ -60,25 +62,27 @@
   },
   "all-tc": {
    "counts": {
-    "expected": 354,
-    "unexpected": 7,
-    "flaky": 0,
+    "expected": 352,
+    "unexpected": 8,
+    "flaky": 1,
     "skipped": 38
    },
-   "new": [],
+   "new": [
+    "all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers"
+   ],
    "fixed": [],
    "known": 7
   },
   "deep": {
    "counts": {
     "expected": 0,
-    "unexpected": 1,
+    "unexpected": 2,
     "flaky": 0,
-    "skipped": 6
+    "skipped": 5
    },
    "new": [],
    "fixed": [],
-   "known": 1
+   "known": 2
   },
   "e2e": {
    "counts": {

@@ -2,16 +2,16 @@
 
 feat: add PatientIdDocumentService integration tests (#4228)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40041336619 · TZ UTC · 2026-10-24T04:05:24.039Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40056832352 · TZ UTC · 2026-10-24T06:41:00.472Z
 
-**NO NEW FAILURES**: 92 failing = 92 known + 0 new; 3 known reds now pass.
+**2 NEW FAILURE(S)**: 95 failing = 93 known + 2 new; 3 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
-| all-tc | 354 | 7 | 0 | 0 |
+| all-tc | 352 | 8 | 1 | 0 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
-| deep | 0 | 1 | 0 | 0 |
+| deep | 0 | 2 | 0 | 0 |
 | disc | 1 | 0 | 0 | 0 |
 | e2e | 15 | 3 | 0 | 0 |
 | envseed | 3 | 0 | 0 | 0 |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40041336619 · TZ UTC �
 | guards | 17 | 2 | 0 | 0 |
 | lp | 7 | 3 | 0 | 0 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1266 | 48 | 0 | 3 |
+| modules | 1265 | 49 | 1 | 3 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -38,6 +38,11 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40041336619 · TZ UTC �
 | rtype | 2 | 2 | 0 | 0 |
 | workplan | 4 | 0 | 0 | 0 |
 
+## New failures (2)
+
+- `modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)`
+- `all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers`
+
 ## Known reds now passing (remove from ci-known-reds.json, check the ticket) (3)
 
 - `modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-11: Enter Order: a late response for the previous sample type does not replace the list (OGC-1266)`
@@ -46,7 +51,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40041336619 · TZ UTC �
 
 ## Known reds by ticket
 
-- untriaged: 64
+- untriaged: 65
 - OGC-730: 13
 - harness: 9
 - OGC-1448: 2
