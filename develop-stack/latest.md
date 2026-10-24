@@ -2,16 +2,16 @@
 
 feat: add PatientIdDocumentService integration tests (#4228)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40056832352 · TZ UTC · 2026-10-24T06:41:00.472Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40084952794 · TZ UTC · 2026-10-24T13:43:38.795Z
 
-**2 NEW FAILURE(S)**: 95 failing = 93 known + 2 new; 3 known reds now pass.
+**2 NEW FAILURE(S)**: 94 failing = 92 known + 2 new; 3 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
-| all-tc | 352 | 8 | 1 | 0 |
+| all-tc | 353 | 8 | 1 | 0 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
-| deep | 0 | 2 | 0 | 0 |
+| deep | 0 | 1 | 0 | 0 |
 | disc | 1 | 0 | 0 | 0 |
 | e2e | 15 | 3 | 0 | 0 |
 | envseed | 3 | 0 | 0 | 0 |
@@ -40,7 +40,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40056832352 · TZ UTC �
 
 ## New failures (2)
 
-- `modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)`
+- `modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient`
 - `all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers`
 
 ## Known reds now passing (remove from ci-known-reds.json, check the ticket) (3)
@@ -51,7 +51,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40056832352 · TZ UTC �
 
 ## Known reds by ticket
 
-- untriaged: 65
+- untriaged: 64
 - OGC-730: 13
 - harness: 9
 - OGC-1448: 2

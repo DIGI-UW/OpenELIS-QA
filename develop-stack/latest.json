@@ -1,18 +1,18 @@
 {
- "when": "2026-10-24T06:41:00.472Z",
+ "when": "2026-10-24T13:43:38.795Z",
  "sha": "ee6340a850772988ae0d62ae5e275082fac693fc",
  "subject": "feat: add PatientIdDocumentService integration tests (#4228)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40056832352",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40084952794",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
-  "failing": 95,
-  "known": 93,
+  "failing": 94,
+  "known": 92,
   "new": 2,
   "fixed": 3
  },
  "knownByTicket": {
-  "untriaged": 65,
+  "untriaged": 64,
   "OGC-730": 13,
   "harness": 9,
   "OGC-1446": 1,
@@ -29,7 +29,7 @@
     "skipped": 61
    },
    "new": [
-    "modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)"
+    "modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient"
    ],
    "fixed": [
     "modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-11: Enter Order: a late response for the previous sample type does not replace the list (OGC-1266)",
@@ -62,10 +62,10 @@
   },
   "all-tc": {
    "counts": {
-    "expected": 352,
+    "expected": 353,
     "unexpected": 8,
     "flaky": 1,
-    "skipped": 38
+    "skipped": 37
    },
    "new": [
     "all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers"
@@ -76,13 +76,13 @@
   "deep": {
    "counts": {
     "expected": 0,
-    "unexpected": 2,
+    "unexpected": 1,
     "flaky": 0,
-    "skipped": 5
+    "skipped": 6
    },
    "new": [],
    "fixed": [],
-   "known": 2
+   "known": 1
   },
   "e2e": {
    "counts": {
