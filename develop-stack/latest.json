@@ -1,20 +1,20 @@
 {
- "when": "2026-10-24T00:29:16.363Z",
+ "when": "2026-10-24T04:05:24.039Z",
  "sha": "ee6340a850772988ae0d62ae5e275082fac693fc",
  "subject": "feat: add PatientIdDocumentService integration tests (#4228)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40022918778",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40041336619",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
-  "failing": 95,
-  "known": 91,
-  "new": 4,
+  "failing": 92,
+  "known": 92,
+  "new": 0,
   "fixed": 3
  },
  "knownByTicket": {
   "untriaged": 64,
   "OGC-730": 13,
-  "harness": 8,
+  "harness": 9,
   "OGC-1446": 1,
   "OGC-1367": 1,
   "OGC-1448": 2,
@@ -23,23 +23,18 @@
  "suites": {
   "modules": {
    "counts": {
-    "expected": 1258,
-    "unexpected": 51,
+    "expected": 1266,
+    "unexpected": 48,
     "flaky": 0,
-    "skipped": 66
+    "skipped": 61
    },
-   "new": [
-    "modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-01: EQA Program Management page loads",
-    "modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept",
-    "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered",
-    "modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January"
-   ],
+   "new": [],
    "fixed": [
     "modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-11: Enter Order: a late response for the previous sample type does not replace the list (OGC-1266)",
     "modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-12: Enter Order: a failed tests request does not leave \"Loading\" forever (OGC-1266)",
     "modules|modules|tests/order-entry-release-blockers.spec.ts|Order entry — release blockers > BLK-LAB-4 — a field marked required to sighted users is marked required in the DOM"
    ],
-   "known": 47
+   "known": 48
   },
   "qa": {
    "counts": {
@@ -65,9 +60,9 @@
   },
   "all-tc": {
    "counts": {
-    "expected": 353,
+    "expected": 354,
     "unexpected": 7,
-    "flaky": 1,
+    "flaky": 0,
     "skipped": 38
    },
    "new": [],
