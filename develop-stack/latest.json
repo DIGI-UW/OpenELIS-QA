@@ -1,14 +1,14 @@
 {
- "when": "2026-10-24T18:20:22.147Z",
+ "when": "2026-10-24T23:11:20.451Z",
  "sha": "ee6340a850772988ae0d62ae5e275082fac693fc",
  "subject": "feat: add PatientIdDocumentService integration tests (#4228)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40106375808",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40128408879",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
-  "failing": 94,
+  "failing": 95,
   "known": 91,
-  "new": 3,
+  "new": 4,
   "fixed": 3
  },
  "knownByTicket": {
@@ -23,14 +23,14 @@
  "suites": {
   "modules": {
    "counts": {
-    "expected": 1260,
+    "expected": 1259,
     "unexpected": 50,
     "flaky": 0,
-    "skipped": 65
+    "skipped": 66
    },
    "new": [
+    "modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept",
     "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered",
-    "modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)",
     "modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January"
    ],
    "fixed": [
@@ -64,12 +64,14 @@
   },
   "all-tc": {
    "counts": {
-    "expected": 353,
-    "unexpected": 7,
-    "flaky": 1,
-    "skipped": 38
+    "expected": 351,
+    "unexpected": 8,
+    "flaky": 3,
+    "skipped": 37
    },
-   "new": [],
+   "new": [
+    "all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers"
+   ],
    "fixed": [],
    "known": 7
   },
