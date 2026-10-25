@@ -2,13 +2,13 @@
 
 feat: add PatientIdDocumentService integration tests (#4228)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40140283560 · TZ UTC · 2026-10-25T02:47:29.689Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40156504918 · TZ UTC · 2026-10-25T05:36:39.249Z
 
 **2 NEW FAILURE(S)**: 94 failing = 92 known + 2 new; 3 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
-| all-tc | 352 | 7 | 0 | 0 |
+| all-tc | 352 | 8 | 1 | 0 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
 | deep | 0 | 1 | 0 | 0 |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40140283560 · TZ UTC �
 | guards | 17 | 2 | 0 | 0 |
 | lp | 7 | 3 | 0 | 0 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1263 | 50 | 2 | 3 |
+| modules | 1265 | 49 | 1 | 3 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -40,8 +40,8 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40140283560 · TZ UTC �
 
 ## New failures (2)
 
-- `modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept`
-- `modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)`
+- `modules|modules|tests/session-security.spec.ts|Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–16) > TC-SESS-16: Session expiry returns 401/302, not 500`
+- `all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers`
 
 ## Known reds now passing (remove from ci-known-reds.json, check the ticket) (3)
 

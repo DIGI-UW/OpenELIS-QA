@@ -1,8 +1,8 @@
 {
- "when": "2026-10-25T02:47:29.689Z",
+ "when": "2026-10-25T05:36:39.249Z",
  "sha": "ee6340a850772988ae0d62ae5e275082fac693fc",
  "subject": "feat: add PatientIdDocumentService integration tests (#4228)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40140283560",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40156504918",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
@@ -23,14 +23,13 @@
  "suites": {
   "modules": {
    "counts": {
-    "expected": 1263,
-    "unexpected": 50,
+    "expected": 1265,
+    "unexpected": 49,
     "flaky": 0,
-    "skipped": 62
+    "skipped": 61
    },
    "new": [
-    "modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept",
-    "modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)"
+    "modules|modules|tests/session-security.spec.ts|Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–16) > TC-SESS-16: Session expiry returns 401/302, not 500"
    ],
    "fixed": [
     "modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-11: Enter Order: a late response for the previous sample type does not replace the list (OGC-1266)",
@@ -64,11 +63,13 @@
   "all-tc": {
    "counts": {
     "expected": 352,
-    "unexpected": 7,
-    "flaky": 2,
+    "unexpected": 8,
+    "flaky": 1,
     "skipped": 38
    },
-   "new": [],
+   "new": [
+    "all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers"
+   ],
    "fixed": [],
    "known": 7
   },
