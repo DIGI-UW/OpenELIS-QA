@@ -1,8 +1,8 @@
 {
- "when": "2026-10-25T13:36:20.638Z",
+ "when": "2026-10-25T13:49:01.876Z",
  "sha": "4b28fb46801fd7e76db87085aab765613e8c40a4",
  "subject": "fix(analyzer): re-pair with the configured code when the Bridge no longer matches the pin (OGC-1518) (#4768)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40198029919",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40199003390",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
