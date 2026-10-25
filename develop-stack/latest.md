@@ -2,13 +2,13 @@
 
 feat: add PatientIdDocumentService integration tests (#4228)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40128408879 · TZ UTC · 2026-10-24T23:11:20.451Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40140283560 · TZ UTC · 2026-10-25T02:47:29.689Z
 
-**4 NEW FAILURE(S)**: 95 failing = 91 known + 4 new; 3 known reds now pass.
+**2 NEW FAILURE(S)**: 94 failing = 92 known + 2 new; 3 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
-| all-tc | 351 | 8 | 1 | 0 |
+| all-tc | 352 | 7 | 0 | 0 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
 | deep | 0 | 1 | 0 | 0 |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40128408879 · TZ UTC �
 | guards | 17 | 2 | 0 | 0 |
 | lp | 7 | 3 | 0 | 0 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1259 | 50 | 3 | 3 |
+| modules | 1263 | 50 | 2 | 3 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -38,12 +38,10 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40128408879 · TZ UTC �
 | rtype | 2 | 2 | 0 | 0 |
 | workplan | 4 | 0 | 0 | 0 |
 
-## New failures (4)
+## New failures (2)
 
 - `modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept`
-- `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered`
-- `modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January`
-- `all-tc|test-catalog|test-catalog-section-depth.spec.ts|Localization > TC-SD-21: a renamed test shows its new name in the test pickers`
+- `modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)`
 
 ## Known reds now passing (remove from ci-known-reds.json, check the ticket) (3)
 
@@ -55,7 +53,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40128408879 · TZ UTC �
 
 - untriaged: 64
 - OGC-730: 13
-- harness: 8
+- harness: 9
 - OGC-1448: 2
 - OGC-189: 2
 - OGC-1446: 1
