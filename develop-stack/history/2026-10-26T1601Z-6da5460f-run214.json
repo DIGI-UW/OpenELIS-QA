@@ -1,0 +1,16 @@
+{
+ "when": "2026-10-26T16:01:45.814Z",
+ "sha": "6da5460f9257b4736cbe61da1ee88a4c63102e63",
+ "subject": "fix(order): Modify Order opens only once the order has loaded (OGC-1543) (#4822)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40352814841",
+ "tz": "UTC",
+ "bootstrap": false,
+ "totals": {
+  "failing": 0,
+  "known": 0,
+  "new": 0,
+  "fixed": 0
+ },
+ "knownByTicket": {},
+ "suites": {}
+}
