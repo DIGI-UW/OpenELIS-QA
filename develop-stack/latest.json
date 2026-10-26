@@ -1,8 +1,8 @@
 {
- "when": "2026-10-26T16:01:45.814Z",
- "sha": "6da5460f9257b4736cbe61da1ee88a4c63102e63",
- "subject": "fix(order): Modify Order opens only once the order has loaded (OGC-1543) (#4822)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40352814841",
+ "when": "2026-10-26T22:41:19.746Z",
+ "sha": "33ba95d9490ee10559e03d71ed04dbf5f9463c25",
+ "subject": "feat(dashboards): add workload and TAT by section to the Management Overview (OGC-897) (#4688)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40410827310",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
