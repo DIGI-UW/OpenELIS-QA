@@ -1,8 +1,8 @@
 {
- "when": "2026-10-25T23:07:58.948Z",
- "sha": "4b28fb46801fd7e76db87085aab765613e8c40a4",
- "subject": "fix(analyzer): re-pair with the configured code when the Bridge no longer matches the pin (OGC-1518) (#4768)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40242693416",
+ "when": "2026-10-26T03:02:59.678Z",
+ "sha": "709b602d89c2e426bed38d3f463b667d99203b71",
+ "subject": "Update OpenELIS translations from Transifex (#4821)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40261713840",
  "tz": "UTC",
  "bootstrap": false,
  "totals": {
