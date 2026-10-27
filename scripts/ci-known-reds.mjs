@@ -19,7 +19,8 @@
 //   report --shards <dir> --out <dir> --run-url <url> --sha <sha> --subject <text>
 //          Merges every shard's reds.json (and its summary counts) into latest.json and
 //          latest.md for the ci-reports branch. Exits 0 with no output when no shard ran
-//          (develop had not moved).
+//          (develop had not moved). A run whose shards reported but ran no suite (the
+//          stack never came up) is reported as NO RESULTS, never as "no new failures".
 //   seed   --from <dir-with-reds.json-files> [--baseline ci-known-reds.json] [--note <text>]
 //          Adds every NEW red found under <dir> to the baseline as ticket "untriaged".
 //          For bootstrapping and for accepting a triaged batch; never run by CI.
@@ -122,6 +123,10 @@ function report() {
     bootstrap = bootstrap || r.bootstrap;
     Object.assign(merged, r.suites);
   }
+  // NO RESULTS (2026-10-26). Runs 207 to 214 (25 to 26 Oct) had a shard reds.json with no
+  // suite in it, because the stack never came up, and this report called each of them
+  // "NO NEW FAILURES". Zero suites is the absence of a verdict, not a green one.
+  const noResults = Object.keys(merged).length === 0;
   const all = (k) => Object.values(merged).flatMap((s) => s[k] || []);
   const byTicket = {};
   for (const id of all('known')) {
@@ -135,6 +140,7 @@ function report() {
     runUrl: arg('--run-url', ''),
     tz: process.env.TZ || 'UTC',
     bootstrap,
+    noResults,
     totals: {
       failing: all('failing').length,
       known: all('known').length,
@@ -153,8 +159,12 @@ function report() {
   L.push('');
   L.push(`Run: ${doc.runUrl} · TZ ${doc.tz} · ${doc.when}`);
   L.push('');
-  const verdict = doc.totals.new === 0 ? 'NO NEW FAILURES' : `${doc.totals.new} NEW FAILURE(S)`;
-  L.push(`**${verdict}**: ${doc.totals.failing} failing = ${doc.totals.known} known + ${doc.totals.new} new; ${doc.totals.fixed} known reds now pass.${bootstrap ? ' (Baseline is in bootstrap mode: new failures are reported, not gated.)' : ''}`);
+  if (noResults) {
+    L.push('**NO RESULTS**: no suite ran, so nothing passed or failed. The stack most likely did not come up; read the "Wait for the stack to be healthy" step of the run above. This is not a green run.');
+    L.push('');
+  }
+  const verdict = noResults ? 'NO RESULTS' : doc.totals.new === 0 ? 'NO NEW FAILURES' : `${doc.totals.new} NEW FAILURE(S)`;
+  if (!noResults) L.push(`**${verdict}**: ${doc.totals.failing} failing = ${doc.totals.known} known + ${doc.totals.new} new; ${doc.totals.fixed} known reds now pass.${bootstrap ? ' (Baseline is in bootstrap mode: new failures are reported, not gated.)' : ''}`);
   L.push('');
   L.push('| suite | passed | failing | new | known reds now passing |');
   L.push('| --- | ---: | ---: | ---: | ---: |');
