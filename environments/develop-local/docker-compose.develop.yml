@@ -50,21 +50,36 @@
 #
 # A cold first boot reseeds the whole config catalog (~836s measured on this
 # host), which is why the webapp healthcheck carries a 900s start_period.
+#
+# CERTS (2026-10-26). Since OpenELIS-Global-2 #4792 (merged 25 Oct, develop
+# c525598b) itechuw/certgen:main ships no key: the certs service has to run the
+# app repo's scripts/certs/ensure-install-keys.sh, which makes the install's own
+# key, keystore, truststore and proxy certificate, and every service that reads
+# the stores waits for it to finish. This file still ran the old image's
+# default, so no keystore was written, the webapp never came up and
+# develop-stack runs 207 onward (25 Oct 08:21 UTC) ran no suite at all. The
+# certs, webapp, fhir and proxy blocks below follow develop's
+# docker-compose.yml. The passwords are unquoted: in list form the quotes were
+# part of the value, which the script would have used as the store password.
 services:
     certs:
         container_name: oe-certs-dev
         image: itechuw/certgen:main
         platform: linux/amd64
         restart: "no"
+        # Gives the install its own TLS key on first start and keeps the stores built from it.
+        # ./scripts resolves in the OpenELIS-Global-2 checkout this file is copied into.
+        entrypoint: ["/bin/sh", "/ensure-install-keys.sh"]
         environment:
-            - KEYSTORE_PW="kspass"
-            - TRUSTSTORE_PW="tspass"
+            - KEYSTORE_PW=${SSL_KEYSTORE_PASSWORD:-kspass}
+            - TRUSTSTORE_PW=${SSL_TRUSTSTORE_PASSWORD:-tspass}
         networks:
             - default
         volumes:
             - key_trust-store-volume:/etc/openelis-global
             - keys-vol:/etc/ssl/private/
             - certs-vol:/etc/ssl/certs/
+            - ./scripts/certs/ensure-install-keys.sh:/ensure-install-keys.sh:ro
 
     db.openelis.org:
         container_name: openelisglobal-database-dev
@@ -95,8 +110,10 @@ services:
         image: itechuw/openelis-global-2:develop
         platform: linux/amd64
         depends_on:
-            - db.openelis.org
-            - certs
+            db.openelis.org:
+                condition: service_started
+            certs:
+                condition: service_completed_successfully
         ports:
             - "19080:8080"
             - "19443:8443"
@@ -113,6 +130,9 @@ services:
         environment:
             - DEFAULT_PW=adminADMIN!
             - TZ=${TZ:-UTC}
+            - OE_ENCRYPTION_PASSWORD=${OE_ENCRYPTION_PASSWORD:-}
+            - SSL_KEYSTORE_PASSWORD=${SSL_KEYSTORE_PASSWORD:-kspass}
+            - SSL_TRUSTSTORE_PASSWORD=${SSL_TRUSTSTORE_PASSWORD:-tspass}
             - CATALINA_OPTS=-Ddatasource.url=jdbc:postgresql://db.openelis.org:5432/clinlims -Ddatasource.username=clinlims -Ddatasource.password=${OE_DB_PASSWORD:-clinlims} -Doe.ssl.truststorepath=${SSL_TRUSTSTORE_PATH:-/etc/openelis-global/truststore} -Doe.ssl.truststorepassword=${SSL_TRUSTSTORE_PASSWORD:-tspass} -Doe.ssl.keystorepath=${SSL_KEYSTORE_PATH:-/etc/openelis-global/keystore} -Doe.ssl.keystorepassword=${SSL_KEYSTORE_PASSWORD:-kspass}
         volumes:
             - key_trust-store-volume:/etc/openelis-global
@@ -130,8 +150,10 @@ services:
         image: itechuw/openelis-global-2-fhir:develop
         platform: linux/amd64
         depends_on:
-            - db.openelis.org
-            - certs
+            db.openelis.org:
+                condition: service_started
+            certs:
+                condition: service_completed_successfully
         ports:
             - "19081:8080"
             - "19444:8443"
@@ -179,7 +201,8 @@ services:
             - default
         restart: unless-stopped
         depends_on:
-            - certs
+            certs:
+                condition: service_completed_successfully
 
 secrets:
     common.properties:
