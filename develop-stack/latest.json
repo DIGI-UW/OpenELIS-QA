@@ -1,8 +1,8 @@
 {
- "when": "2026-10-27T18:00:15.649Z",
- "sha": "78fd082cc138831997eb86b35901ba25da9ff3fb",
- "subject": "fix(reports): the unprinted tile counts the queue it opens (OGC-431) (#4844)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40549932849",
+ "when": "2026-10-27T22:42:21.591Z",
+ "sha": "fda3c629659b91df3726bf253df7b601852f889d",
+ "subject": "feat(dashboards): add the quality rollup to the Management Overview (OGC-897) (#4697)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40589485158",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": true,
