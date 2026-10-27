@@ -1,0 +1,357 @@
+{
+ "when": "2026-10-27T07:42:21.034Z",
+ "sha": "14a0dd5c5a34b76bf83db507d408f7cef6cfc02f",
+ "subject": "fix(admin): show names for configuration settings listed by raw keys (OGC-1547) (#4836)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40444566874",
+ "tz": "UTC",
+ "bootstrap": false,
+ "noResults": false,
+ "totals": {
+  "failing": 99,
+  "known": 94,
+  "new": 5,
+  "fixed": 3
+ },
+ "knownByTicket": {
+  "untriaged": 66,
+  "OGC-730": 13,
+  "harness": 9,
+  "OGC-1446": 1,
+  "OGC-1367": 1,
+  "OGC-1448": 2,
+  "OGC-189": 2
+ },
+ "suites": {
+  "modules": {
+   "counts": {
+    "expected": 1265,
+    "unexpected": 49,
+    "flaky": 0,
+    "skipped": 61
+   },
+   "new": [
+    "modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)"
+   ],
+   "fixed": [
+    "modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-11: Enter Order: a late response for the previous sample type does not replace the list (OGC-1266)",
+    "modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-12: Enter Order: a failed tests request does not leave \"Loading\" forever (OGC-1266)",
+    "modules|modules|tests/order-entry-release-blockers.spec.ts|Order entry — release blockers > BLK-LAB-4 — a field marked required to sighted users is marked required in the DOM"
+   ],
+   "known": 48
+  },
+  "qa": {
+   "counts": {
+    "expected": 0,
+    "unexpected": 1,
+    "flaky": 0,
+    "skipped": 68
+   },
+   "new": [],
+   "fixed": [],
+   "known": 1
+  },
+  "regression-chains": {
+   "counts": {
+    "expected": 83,
+    "unexpected": 14,
+    "flaky": 0,
+    "skipped": 39
+   },
+   "new": [],
+   "fixed": [],
+   "known": 14
+  },
+  "all-tc": {
+   "counts": {
+    "expected": 350,
+    "unexpected": 10,
+    "flaky": 2,
+    "skipped": 37
+   },
+   "new": [
+    "all-tc|test-catalog|test-catalog-chaos-results.spec.ts|Test Catalog chaos: Terminology (TC-CX-TM) > TC-CX-TM-01: a Terminology save that meets 500 JSON is reported as failed and stores nothing",
+    "all-tc|test-catalog|test-catalog-chaos-results.spec.ts|Test Catalog chaos: Terminology (TC-CX-TM) > TC-CX-TM-02: a Terminology save that meets login page with a 200 is reported as failed and stores nothing",
+    "all-tc|test-catalog|test-catalog-mgmt-deep.spec.ts|TC-DEEP-TERMINOLOGY: add a terminology mapping reads back via REST [ROUND-TRIP]"
+   ],
+   "fixed": [],
+   "known": 7
+  },
+  "deep": {
+   "counts": {
+    "expected": 0,
+    "unexpected": 4,
+    "flaky": 0,
+    "skipped": 3
+   },
+   "new": [
+    "deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-TERMINOLOGY: add a terminology mapping reads back via REST [ROUND-TRIP]"
+   ],
+   "fixed": [],
+   "known": 3
+  },
+  "e2e": {
+   "counts": {
+    "expected": 15,
+    "unexpected": 3,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 3
+  },
+  "guards": {
+   "counts": {
+    "expected": 17,
+    "unexpected": 2,
+    "flaky": 0,
+    "skipped": 5
+   },
+   "new": [],
+   "fixed": [],
+   "known": 2
+  },
+  "multicomponent": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 1
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "panel-leak": {
+   "counts": {
+    "expected": 5,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 1
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "rtype": {
+   "counts": {
+    "expected": 2,
+    "unexpected": 2,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 2
+  },
+  "workplan": {
+   "counts": {
+    "expected": 4,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "census": {
+   "counts": {
+    "expected": 126,
+    "unexpected": 3,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 3
+  },
+  "cfg": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "disc": {
+   "counts": {
+    "expected": 1,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "envseed": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "eqa": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "lp": {
+   "counts": {
+    "expected": 7,
+    "unexpected": 3,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 3
+  },
+  "modify-order": {
+   "counts": {
+    "expected": 7,
+    "unexpected": 1,
+    "flaky": 0,
+    "skipped": 1
+   },
+   "new": [],
+   "fixed": [],
+   "known": 1
+  },
+  "ogc1192": {
+   "counts": {
+    "expected": 9,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "personas-admin": {
+   "counts": {
+    "expected": 10,
+    "unexpected": 2,
+    "flaky": 0,
+    "skipped": 6
+   },
+   "new": [],
+   "fixed": [],
+   "known": 2
+  },
+  "personas-roles": {
+   "counts": {
+    "expected": 13,
+    "unexpected": 1,
+    "flaky": 0,
+    "skipped": 10
+   },
+   "new": [],
+   "fixed": [],
+   "known": 1
+  },
+  "pr3987": {
+   "counts": {
+    "expected": 10,
+    "unexpected": 3,
+    "flaky": 0,
+    "skipped": 4
+   },
+   "new": [],
+   "fixed": [],
+   "known": 3
+  },
+  "preflight": {
+   "counts": {
+    "expected": 4,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "probe-combo": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "rbac": {
+   "counts": {
+    "expected": 57,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 2
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "regression-seed": {
+   "counts": {
+    "expected": 13,
+    "unexpected": 1,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 1
+  },
+  "reval2": {
+   "counts": {
+    "expected": 4,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "revalidate-unauth": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "revalidate": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  }
+ }
+}

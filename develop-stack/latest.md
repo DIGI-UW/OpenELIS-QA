@@ -1,17 +1,17 @@
-# develop-stack: develop `ee8398e9`
+# develop-stack: develop `14a0dd5c`
 
-feat(dashboards): add the equipment activity grid to the Management Overview (OGC-897) (#4689)
+fix(admin): show names for configuration settings listed by raw keys (OGC-1547) (#4836)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40427843535 · TZ UTC · 2026-10-27T04:16:39.239Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40444566874 · TZ UTC · 2026-10-27T07:42:21.034Z
 
-**4 NEW FAILURE(S)**: 96 failing = 92 known + 4 new; 3 known reds now pass.
+**5 NEW FAILURE(S)**: 99 failing = 94 known + 5 new; 3 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
 | all-tc | 350 | 10 | 3 | 0 |
 | census | 126 | 3 | 0 | 0 |
 | cfg | 3 | 0 | 0 | 0 |
-| deep | 0 | 1 | 0 | 0 |
+| deep | 0 | 4 | 1 | 0 |
 | disc | 1 | 0 | 0 | 0 |
 | e2e | 15 | 3 | 0 | 0 |
 | envseed | 3 | 0 | 0 | 0 |
@@ -38,12 +38,13 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40427843535 · TZ UTC �
 | rtype | 2 | 2 | 0 | 0 |
 | workplan | 4 | 0 | 0 | 0 |
 
-## New failures (4)
+## New failures (5)
 
 - `modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)`
 - `all-tc|test-catalog|test-catalog-chaos-results.spec.ts|Test Catalog chaos: Terminology (TC-CX-TM) > TC-CX-TM-01: a Terminology save that meets 500 JSON is reported as failed and stores nothing`
 - `all-tc|test-catalog|test-catalog-chaos-results.spec.ts|Test Catalog chaos: Terminology (TC-CX-TM) > TC-CX-TM-02: a Terminology save that meets login page with a 200 is reported as failed and stores nothing`
 - `all-tc|test-catalog|test-catalog-mgmt-deep.spec.ts|TC-DEEP-TERMINOLOGY: add a terminology mapping reads back via REST [ROUND-TRIP]`
+- `deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-TERMINOLOGY: add a terminology mapping reads back via REST [ROUND-TRIP]`
 
 ## Known reds now passing (remove from ci-known-reds.json, check the ticket) (3)
 
@@ -53,7 +54,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40427843535 · TZ UTC �
 
 ## Known reds by ticket
 
-- untriaged: 64
+- untriaged: 66
 - OGC-730: 13
 - harness: 9
 - OGC-1448: 2

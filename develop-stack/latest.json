@@ -1,19 +1,19 @@
 {
- "when": "2026-10-27T04:16:39.239Z",
- "sha": "ee8398e9935efdd7f219ec5434f19b845371beac",
- "subject": "feat(dashboards): add the equipment activity grid to the Management Overview (OGC-897) (#4689)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40427843535",
+ "when": "2026-10-27T07:42:21.034Z",
+ "sha": "14a0dd5c5a34b76bf83db507d408f7cef6cfc02f",
+ "subject": "fix(admin): show names for configuration settings listed by raw keys (OGC-1547) (#4836)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40444566874",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": false,
  "totals": {
-  "failing": 96,
-  "known": 92,
-  "new": 4,
+  "failing": 99,
+  "known": 94,
+  "new": 5,
   "fixed": 3
  },
  "knownByTicket": {
-  "untriaged": 64,
+  "untriaged": 66,
   "OGC-730": 13,
   "harness": 9,
   "OGC-1446": 1,
@@ -79,13 +79,15 @@
   "deep": {
    "counts": {
     "expected": 0,
-    "unexpected": 1,
+    "unexpected": 4,
     "flaky": 0,
-    "skipped": 6
+    "skipped": 3
    },
-   "new": [],
+   "new": [
+    "deep||test-catalog-mgmt-deep.spec.ts|TC-DEEP-TERMINOLOGY: add a terminology mapping reads back via REST [ROUND-TRIP]"
+   ],
    "fixed": [],
-   "known": 1
+   "known": 3
   },
   "e2e": {
    "counts": {
