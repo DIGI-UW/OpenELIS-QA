@@ -1,8 +1,8 @@
-# develop-stack: develop `2039a64e`
+# develop-stack: develop `78fd082c`
 
-fix(reports): load TAT ordering sites in one query (OGC-897) (#4725)
+fix(reports): the unprinted tile counts the queue it opens (OGC-431) (#4844)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40496810167 · TZ UTC · 2026-10-27T12:25:09.110Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40549932849 · TZ UTC · 2026-10-27T18:00:15.649Z
 
 **NO RESULTS**: no suite ran, so nothing passed or failed. The stack most likely did not come up; read the "Wait for the stack to be healthy" step of the run above. This is not a green run.
 
