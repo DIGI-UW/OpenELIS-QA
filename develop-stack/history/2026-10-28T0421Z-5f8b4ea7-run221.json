@@ -1,0 +1,17 @@
+{
+ "when": "2026-10-28T04:21:22.083Z",
+ "sha": "5f8b4ea76bd9b02341d2ba1a00b82c4918921963",
+ "subject": "Feat/001 sample management m1 integration tests (#4119)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40628564036",
+ "tz": "UTC",
+ "bootstrap": false,
+ "noResults": true,
+ "totals": {
+  "failing": 0,
+  "known": 0,
+  "new": 0,
+  "fixed": 0
+ },
+ "knownByTicket": {},
+ "suites": {}
+}
