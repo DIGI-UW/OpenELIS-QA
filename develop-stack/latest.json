@@ -1,8 +1,8 @@
 {
- "when": "2026-10-28T12:37:03.576Z",
- "sha": "26979a66f2bd352d60ea76dd294437603cf549e1",
- "subject": "feat(dashboards): export the Management Overview as PDF or CSV (OGC-897) (#4705)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40684427701",
+ "when": "2026-10-28T20:21:21.508Z",
+ "sha": "f2903a03e6573115dd4095a9ba67a58c6283d2b8",
+ "subject": "docs(architecture): per-module class loaders, bundled frontend, minimum OpenELIS version (OGC-1577) (#4867)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40759620382",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": true,
