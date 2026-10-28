@@ -1,9 +1,9 @@
 {
- "when": "2026-10-28T04:21:22.083Z",
- "sha": "5f8b4ea76bd9b02341d2ba1a00b82c4918921963",
- "subject": "Feat/001 sample management m1 integration tests (#4119)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40628564036",
- "tz": "UTC",
+ "when": "2026-10-28T09:20:10.273Z",
+ "sha": "2550f343a5014a8e72dfc4391774f2d6a9496e38",
+ "subject": "feat(dashboards): add the disease surveillance cards to the Management Overview (OGC-897) (#4699)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40659010811",
+ "tz": "Pacific/Port_Moresby",
  "bootstrap": false,
  "noResults": true,
  "totals": {

@@ -1,8 +1,8 @@
-# develop-stack: develop `5f8b4ea7`
+# develop-stack: develop `2550f343`
 
-Feat/001 sample management m1 integration tests (#4119)
+feat(dashboards): add the disease surveillance cards to the Management Overview (OGC-897) (#4699)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40628564036 · TZ UTC · 2026-10-28T04:21:22.083Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40659010811 · TZ Pacific/Port_Moresby · 2026-10-28T09:20:10.273Z
 
 **NO RESULTS**: no suite ran, so nothing passed or failed. The stack most likely did not come up; read the "Wait for the stack to be healthy" step of the run above. This is not a green run.
 
