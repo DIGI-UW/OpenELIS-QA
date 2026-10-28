@@ -1,0 +1,17 @@
+{
+ "when": "2026-10-28T12:37:03.576Z",
+ "sha": "26979a66f2bd352d60ea76dd294437603cf549e1",
+ "subject": "feat(dashboards): export the Management Overview as PDF or CSV (OGC-897) (#4705)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40684427701",
+ "tz": "UTC",
+ "bootstrap": false,
+ "noResults": true,
+ "totals": {
+  "failing": 0,
+  "known": 0,
+  "new": 0,
+  "fixed": 0
+ },
+ "knownByTicket": {},
+ "suites": {}
+}

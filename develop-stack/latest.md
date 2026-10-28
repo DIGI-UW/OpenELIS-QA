@@ -1,8 +1,8 @@
-# develop-stack: develop `2550f343`
+# develop-stack: develop `26979a66`
 
-feat(dashboards): add the disease surveillance cards to the Management Overview (OGC-897) (#4699)
+feat(dashboards): export the Management Overview as PDF or CSV (OGC-897) (#4705)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40659010811 · TZ Pacific/Port_Moresby · 2026-10-28T09:20:10.273Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40684427701 · TZ UTC · 2026-10-28T12:37:03.576Z
 
 **NO RESULTS**: no suite ran, so nothing passed or failed. The stack most likely did not come up; read the "Wait for the stack to be healthy" step of the run above. This is not a green run.
 

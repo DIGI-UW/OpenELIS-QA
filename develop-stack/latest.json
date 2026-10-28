@@ -1,9 +1,9 @@
 {
- "when": "2026-10-28T09:20:10.273Z",
- "sha": "2550f343a5014a8e72dfc4391774f2d6a9496e38",
- "subject": "feat(dashboards): add the disease surveillance cards to the Management Overview (OGC-897) (#4699)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40659010811",
- "tz": "Pacific/Port_Moresby",
+ "when": "2026-10-28T12:37:03.576Z",
+ "sha": "26979a66f2bd352d60ea76dd294437603cf549e1",
+ "subject": "feat(dashboards): export the Management Overview as PDF or CSV (OGC-897) (#4705)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40684427701",
+ "tz": "UTC",
  "bootstrap": false,
  "noResults": true,
  "totals": {
