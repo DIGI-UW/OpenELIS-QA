@@ -1,0 +1,17 @@
+{
+ "when": "2026-10-29T18:33:35.363Z",
+ "sha": "615942a7e3a20360ec44a2e6d55276100f042738",
+ "subject": "fix(fhir): run without a FHIR store, and document the light setup (OGC-1546) (#4880)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40926265103",
+ "tz": "UTC",
+ "bootstrap": false,
+ "noResults": true,
+ "totals": {
+  "failing": 0,
+  "known": 0,
+  "new": 0,
+  "fixed": 0
+ },
+ "knownByTicket": {},
+ "suites": {}
+}

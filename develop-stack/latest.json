@@ -1,8 +1,8 @@
 {
- "when": "2026-10-29T09:35:30.653Z",
- "sha": "c8539adc3f23df88afa16a465caedc96144fd326",
- "subject": "docs(readme): offline installers come from the openelis-docker releases (OGC-1546) (#4879)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40848296740",
+ "when": "2026-10-29T18:33:35.363Z",
+ "sha": "615942a7e3a20360ec44a2e6d55276100f042738",
+ "subject": "fix(fhir): run without a FHIR store, and document the light setup (OGC-1546) (#4880)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40926265103",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": true,
