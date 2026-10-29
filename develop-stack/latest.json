@@ -1,8 +1,8 @@
 {
- "when": "2026-10-29T18:33:35.363Z",
- "sha": "615942a7e3a20360ec44a2e6d55276100f042738",
- "subject": "fix(fhir): run without a FHIR store, and document the light setup (OGC-1546) (#4880)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40926265103",
+ "when": "2026-10-29T22:52:42.826Z",
+ "sha": "482eb81c5ab6d87e396fa10a8bb01057e838c613",
+ "subject": "Feat: Add Rest controller testing skill (#4330)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40966802512",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": true,

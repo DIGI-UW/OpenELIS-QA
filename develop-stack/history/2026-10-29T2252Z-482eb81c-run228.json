@@ -1,0 +1,17 @@
+{
+ "when": "2026-10-29T22:52:42.826Z",
+ "sha": "482eb81c5ab6d87e396fa10a8bb01057e838c613",
+ "subject": "Feat: Add Rest controller testing skill (#4330)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/40966802512",
+ "tz": "UTC",
+ "bootstrap": false,
+ "noResults": true,
+ "totals": {
+  "failing": 0,
+  "known": 0,
+  "new": 0,
+  "fixed": 0
+ },
+ "knownByTicket": {},
+ "suites": {}
+}
