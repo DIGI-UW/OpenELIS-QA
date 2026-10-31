@@ -1,8 +1,8 @@
 {
- "when": "2026-10-31T09:32:48.616Z",
+ "when": "2026-10-31T17:03:58.287Z",
  "sha": "0b5af90641851b39b232591f298acd4bb48c99e6",
  "subject": "test: Implement comprehensive integration tests for ReferralSetService and strict assertions (#4110)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41187842752",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41221157110",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": true,
