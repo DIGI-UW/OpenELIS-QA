@@ -370,3 +370,18 @@ Transifex translations update (#4613), so no behaviour change is expected. Route
 against `suite-catalog.md` Section 5: all present; `/NotebookSampleOrder` and the
 `/qa/eqa/distribution` redirect added. The drift check is still disabled, so this redeploy is also
 unrecorded in the tracker. No login, no Jira filing.
+
+## 2026-11-01 -- monthly consolidation pass (no test execution)
+
+State refresh only; nothing run, no Jira filed. This branch merges the unmerged
+`skill/consolidation-2026-10` (2026-10-01, 10-06, 10-07 entries above) on top of `main`, because
+none of the August, September or October consolidation branches reached `main`.
+- Router re-read on testing (bundle `index-BmuW64ma.js`, logged out, Claude in Chrome): 151 route
+  literals, 19 redirect pairs. Changes recorded in `suite-catalog.md` Section 5 (three-step clinical
+  order entry, eight new routes, new EQA legacy redirects; `/analyzers/errors` and
+  `/ReferredOutTests` still gone).
+- Coverage delta against 168 develop merges (2026-10-07 to 2026-11-01): `coverage-gap-analysis.md`
+  2026-11-01 section; four new NEEDS-GUIDANCE questions (open-questions 16 to 19).
+- `bug-triage.md` re-read: Jira is the source of truth and the 2-of-3 revalidation gate stands; no
+  embedded status table. No change.
+

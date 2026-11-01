@@ -405,26 +405,42 @@ from this list is not proof it was removed. Re-extract each cycle rather than pr
 
 **Results:** `/Results` (unified worklist), `/AccessionResults`, `/PatientResults(/:patientId)`, `/LogbookResults`, `/RangeResults`, `/StatusResults`, `/AnalyzerResults`, `/result`
 **Validation:** `/ResultValidation` (Routine; select a Test Unit to see the triage lanes), `/AccessionValidation`, `/AccessionValidationRange`, `/ResultValidationByTestDate`, `/validation`
-**Workplan:** `/Workplan`, `/WorkplanByTest`, `/WorkplanByPanel`, `/WorkplanByPriority`, `/WorkPlanByTestSection` (only this one keeps the capital P)
-**Orders:** `/order/{clinical,environmental,vector}/{enter,collect,label,qa}` (vector also `/complete`), `/order/enter`, `/SamplePatientEntry` (legacy), `/ModifyOrder`, `/SampleEdit`, `/SampleManagement`, `/ElectronicOrders`, `/SampleBatchEntrySetup`, `/PrintBarcode`, `/GenericSample/{Order,Edit,Import,Results}`, `/genericProgram`, `/programView/:programSampleId`
+**Workplan:** `/Workplan`, `/Workplan/batch/:id/print` (new 2026-11-01), `/WorkplanByTest`, `/WorkplanByPanel`, `/WorkplanByPriority`, `/WorkPlanByTestSection` (only this one keeps the capital P)
+**Orders:** `/order/clinical/{enter,collect,qa}` (clinical is three steps; `/order/clinical/label` is no longer a literal, it redirects to Prepare Samples per `tests/order-workflow-steps.spec.ts`), `/order/environmental/{enter,label,qa}`, `/order/vector/{enter,label,qa,complete}` (no `collect` literal for environmental or vector in the 2026-11-01 router), `/order/enter`, `/SamplePatientEntry` (legacy), `/ModifyOrder`, `/SampleEdit`, `/SampleManagement`, `/ElectronicOrders`, `/SampleBatchEntrySetup`, `/PrintBarcode`, `/GenericSample/{Order,Edit,Import,Results}`, `/genericProgram`, `/programView/:programSampleId`
 **Patient:** `/PatientManagement/:patientId`, `/PatientHistory`, `/PatientMerge`
-**Reports:** `/Report`, `/RoutineReport(s)`, `/StudyReport(s)`, `/TATReport`, `/LaporanHasil`, `/VectorSurveillanceReport`; generation via JSP `/api/OpenELIS-Global/ReportPrint`
+**Reports:** `/Report`, `/ReportPrintQueue` (new in the 2026-11-01 router), `/SentMessages` (new 2026-11-01: Result Delivery's Sent Messages page, D-232; no suite yet), `/RoutineReport(s)`, `/StudyReport(s)`, `/TATReport`, `/LaporanHasil`, `/VectorSurveillanceReport`; generation via JSP `/api/OpenELIS-Global/ReportPrint`
 **Referrals / shipment:** `/SampleShipment` (+ `/:tab`, `/receive`, `/create-box`, `/box/:boxId`, `/reference-lab-results`, `/reports`, `/settings`). `/ReferredOutTests` is **not in the 2026-10-06 router** (no literal anywhere in the bundle; the Referred Out list now renders as a report component). UNVERIFIED logged in; the REST endpoint `/rest/ReferredOutTests` is a separate question
 **Quality (new menu):** `/qa/overview`; QC `/qa/qc/{dashboard,alerts,control-lots,manual-qc,reagent-qc,rule-config}`; QI `/qa/qi/{dashboard,amendment,callback,config,rejection,tat}`; QMS `/qa/qms/{accreditation,audit-trail,capa-register,e-signature-log,nce-register}`
 **EQA:** `/qa/eqa/{management,my-programs,my-cycles,participants,follow-up-queue,in-house,analyst-competency}`, `/qa/eqa/lab-performance/{coverage,recent}`, `/qa/eqa/provider/{schemes,follow-ups}`, `/qa/eqa/provider/cycles/:cycleId/workbench`, `/qa/eqa/provider/schemes/:schemeId/{performance,cycles/new}`, `/qa/eqa/in-house/new` (in the 2026-10-06 router); `/qa/eqa/distribution` **redirects** to `/qa/eqa/provider/schemes`. The old `/EQAManagement`, `/EQADistribution`, `/EQAParticipants`, `/EQAResults`, `/EQAOrders`, `/EQAMyPrograms` are now **redirects** into `/qa/eqa/*`
-**Analyzers:** `/analyzers`, `/analyzers/types`, `/analyzers/types/:profileId/mapping`, `/analyzers/qc/charts/:analyzerId`, `/analyzers/qc/instruments/:instrumentId`, `/analyzers/qc/control-lots/{new,:id}`; `/analyzers/qc/{db,control-lots,rule-config}` redirect to `/qa/qc/*`. `/analyzers/errors` is **gone** (retired, open-question 8)
+**Analyzers:** `/analyzers`, `/analyzers/:analyzerId/mapping` and `/analyzers/:analyzerId/adoption` (both new 2026-11-01), `/analyzers/types`, `/analyzers/types/:profileId/mapping`, `/analyzers/qc/charts/:analyzerId`, `/analyzers/qc/instruments/:instrumentId`, `/analyzers/qc/control-lots/{new,:id}`; `/analyzers/qc/{db,control-lots,rule-config}` redirect to `/qa/qc/*`. `/analyzers/errors` is **gone** (retired, open-question 8)
 **NC Events:** `/NceDashboard`, `/ReportNonConformingEvent`, `/ViewNonConformingEvent`, `/NCECorrectiveAction`
-**Storage / inventory:** `/Storage`, `/Storage/:resource` with resource `sample-items|inventory-lots|rooms|devices|shelves|racks|boxes`, `/inventory` (lowercase; Items board with reorder suggestions, mark as ordered and the critical banner, + Catalog + Reports tabs; the Dashboard tab was removed by OGC-438 #4358, see `inventory-board.md`), `/FreezerMonitoring` (Cold Storage)
+**Storage / inventory:** `/Storage`, `/Storage/:resource` with resource `sample-items|inventory-lots|rooms|devices|shelves|racks|boxes`, `/inventory`, `/inventory/receive`, `/inventory/reports` (lowercase; Items board with reorder suggestions, mark as ordered and the critical banner, + Catalog + Reports tabs; the Dashboard tab was removed by OGC-438 #4358, see `inventory-board.md`), `/FreezerMonitoring` (Cold Storage)
 **Pathology:** `/PathologyDashboard`, `/ImmunohistochemistryDashboard`, `/CytologyDashboard`, each with `…CaseView/:sampleId`
 **Microbiology:** `/Microbiology/worklist`, `/Microbiology/cases/:caseId`, `/Microbiology/whonet` (WHONET export, new 2026-10-06). The 2026-10-01 paths `/MicrobiologyWorklist` and `/MicrobiologyCaseView/:caseId` are now **redirects** to these (query string carried over)
 **Vector / environmental:** `/vector/deconvolution`, `/vector/identification`, `/VectorManualEntry`, `/EnvironmentalDashboard`
-**Other:** `/Alerts`, `/Aliquot`, `/AuditTrailReport` (now a **redirect** to `/qa/qms/audit-trail`, search string kept), `/Dashboard`, `/NoteBookDashboard` (+ entry/instance forms: `/NoteBookEntryForm(/:notebookid)`, `/NoteBookInstanceEntryForm/:notebookid`, `/NoteBookInstanceEditForm/:notebookentryid`), `/NotebookSampleOrder/:notebookId(/:notebookEntryId)` (notebook sample order, RESULTS role), `/landing`
+**Other:** `/dashboards/management` (Management Overview, new 2026-11-01; suite `management-overview-test-cases.md`), `/Alerts`, `/Aliquot`, `/AuditTrailReport` (now a **redirect** to `/qa/qms/audit-trail`, search string kept), `/Dashboard`, `/NoteBookDashboard` (+ entry/instance forms: `/NoteBookEntryForm(/:notebookid)`, `/NoteBookInstanceEntryForm/:notebookid`, `/NoteBookInstanceEditForm/:notebookentryid`), `/NotebookSampleOrder/:notebookId(/:notebookEntryId)` (notebook sample order, RESULTS role), `/landing`
 **FHIR:** `<BASE>/api/fhir/metadata` (BUG-14: has timed out at 60s)
 
 **Not routes (drop them):** `/ResultsByPatient`, `/ResultsByOrder`, `/LOINCManagement`, `/AuditLog`,
 `/SystemLog`, `/Inventory` (capital I), `/Storage/samples`, `/WorkPlanByTest`, `/WorkPlanByPanel`,
 `/WorkPlanByPriority`, `/analyzers/errors`.
 
+> **Route-verification status: 2026-11-01 (monthly consolidation):** router re-read from bundle
+> `index-BmuW64ma.js` (testing redeployed since 2026-10-07), logged out, via Claude in Chrome
+> (151 route literals, 19 redirect pairs). Every route listed above is still present except as
+> noted. **Changed:** clinical order entry is three steps (no `/order/clinical/label` literal),
+> environmental and vector have no `collect` step literal. **New:** `/ReportPrintQueue`,
+> `/SentMessages`, `/dashboards/management`, `/analyzers/:analyzerId/{mapping,adoption}`,
+> `/inventory/{receive,reports}`, `/Workplan/batch/:id/print`, plus EQA legacy redirects from
+> `/eqa/oversight/*`, `/eqa/participant/cycles`, `/eqa/management/provider/schemes` and
+> `/qa/eqa/{orders,results,provider/workbench}`. **Still gone:** `/analyzers/errors`,
+> `/ReferredOutTests` (no literal anywhere in the bundle). Ten files still reference
+> `ReferredOutTests` (`pages/ReferralPage.ts`, `tests/referral-workflow.spec.ts`,
+> `tests/chains/chain-o-referral-roundtrip.spec.ts`, `tests/chains/_common.ts`, `tests/rbac/_rbac.ts`,
+> `tests/deep-endpoint-testing.spec.ts`, `tests/docs/sample-shipment-referral.docs.spec.ts`,
+> `helpers/order-entry-v4.ts`, `helpers/referral-seed.ts`, archive); some may target the REST
+> endpoint, which is a separate question. No screen behaviour checked.
+>
 > **Route-verification status: 2026-10-07 (third firing this month):** testing redeployed again,
 > now bundle `index-BrFrgJ_6.js`. The only develop commit since the 10-06 read is a Transifex
 > translations update (#4613), and every route literal listed above is still present (the two

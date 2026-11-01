@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-01 - monthly consolidation (state only, no test execution)
+
+- Merged the unmerged `skill/consolidation-2026-10` branch into this pass (none of the 08, 09 or 10
+  consolidation branches reached `main`); `suite-catalog.md` conflict resolved in favour of the
+  router-derived list, keeping main's Inventory note.
+- `references/suite-catalog.md` Section 5: router re-read from `index-BmuW64ma.js`. Clinical order
+  entry is three steps; new `/ReportPrintQueue`, `/SentMessages`, `/dashboards/management`,
+  `/analyzers/:analyzerId/{mapping,adoption}`, `/inventory/{receive,reports}`,
+  `/Workplan/batch/:id/print`; new EQA legacy redirects.
+- `coverage-gap-analysis.md`: 2026-11-01 delta against 168 develop merges.
+- `references/open-questions.md`: questions 16 to 19 (Result Delivery, Workplan batch override,
+  Microbiology V2, analyzer adoption); question 13 updated.
+- `references/validation-history.md`: dated note. `bug-triage.md` re-checked, unchanged.
+- Rebuilt `openelis-test-catalog-qa.skill`.
+
 ## 2026-10-07 - consolidation task, third firing (state only, no test execution)
 
 - `references/suite-catalog.md` Section 5: re-checked against bundle `index-BrFrgJ_6.js`

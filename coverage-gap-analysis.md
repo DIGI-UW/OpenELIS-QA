@@ -390,3 +390,46 @@ exception because this repo tests shared instances.
 **Stale `test.fail()` markers to flip:** ST-2b, ST-3, ST-4 (`test-catalog-sample-type-management.spec.ts`),
 STW-4, STW-6 (`test-catalog-admin-list-screens-write.spec.ts`): OGC-1156/1157 closed as fixed.
 LU-W-11 should cite OGC-1415 (filed 2026-10-02) instead of OGC-189 alone.
+
+## 2026-11-01: Monthly consolidation: coverage delta since 2026-10-06
+
+Method: router re-read (`index-BmuW64ma.js`, logged out, Claude in Chrome) plus the 168 develop
+merges from 2026-10-07 to 2026-11-01 (GitHub search, read-only), checked against `main` specs and
+`*.md` catalogues by OGC key and route. Nothing run. Release 3.3.0 was cut on develop 2026-10-20
+(#4777); develop is now 3.4.0-SNAPSHOT.
+
+**Closed or narrowed since 2026-10-06 (QA #207 to #230):** Report Print Queue V1 (OGC-431, #224,
+#227), Inventory items board, scan-first receive and reports (OGC-438, #215, #220, #221), Management
+Overview (OGC-897, #230), EQA deep suite (#218), Test Catalog chaos to guards (OGC-1455 to 1467,
+#214, #216, #220), app shell (OGC-1448, #217, #228), order entry 3-step rework and OGC-1419/1422/1423/1424
+acceptance (#207, #212, #226), validation specs moved to the one-page Validation (#208, covers OGC-1418's
+surface). Prepare Samples refer-out and print labels from the 2026-10-06 list are now covered.
+
+**UNCOVERED (no case, new since 2026-10-06):**
+- **Result Delivery foundation** (OGC-439, #4755) and its `/SentMessages` page. NEEDS-GUIDANCE:
+  open-question 16.
+- **Workplan batch: reagent lot, QC check, override release** (OGC-427, #4858) and
+  `/Workplan/batch/:id/print`. NEEDS-GUIDANCE: open-question 17.
+- **Microbiology V2 baseline** (OGC-1383, #4646, #4650, #4653). NEEDS-GUIDANCE: open-question 18
+  (supersedes 9 for V2).
+- **Analyzer baseline** (OGC-1054: per-analyzer mapping #4584, profile adoption and its review #4604
+  and #4607, remediation in setup #4611, set-aside results on the types page #4625, one coding shape
+  OGC-1519 #4770, Bridge missing or unreachable message OGC-1546 #4831). The upstream harness has its
+  own E2E (#4629, #4647); this repo has none for the new screens. NEEDS-GUIDANCE: open-question 19.
+- **Pathology OGC-264**: case view on the shared shell (#4392), blocks and slides as identified rows
+  (#4410), grossing (#4859) and embedding (#4864) sections. Existing pathology specs predate them.
+- **Modify Order add-test search, tags and panels** (OGC-1514, #4769) and **Modify Order opens only
+  once loaded** (OGC-1543, #4822): no case; expected behaviour is in OGC-1514's AC and design D-371.
+- **Redesigned V1 patient report** (OGC-932, #4747): two catalogue mentions, no case that reads the
+  new layout.
+- **Users: two people with the same name; refused saves say why** (OGC-1545, #4833), **rounded
+  reported values keep the entered result** (OGC-1544, #4824), **NCE and dictionary values through
+  Transifex keys** (OGC-1507, #4800, #4842), **configuration settings shown by name** (OGC-1547,
+  #4836): no case.
+- **Patient search by telecom email and phone** (#4236): no case.
+
+**Still open from 2026-10-06:** critical-value acknowledgement on Results (OGC-1417), Print Barcode
+by name (OGC-1169), Label Presets content-fields editor (OGC-1218 group), menu filtered by privilege
+(OGC-1151), Overdue STAT alerts (OGC-1372), the `ReferredOutTests` specs (open-question 15), the
+harness vs constitution V.7 question (open-question 14).
+
