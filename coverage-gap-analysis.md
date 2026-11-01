@@ -312,3 +312,81 @@ boxes (`/SampleShipment` → `/boxes`).
 Domain filtering (not built — see openelis-design current-state-gotchas). New admin config pages
 (Test Notification, Menu Config, Application Properties) are admin-route coverage — deferred to
 `openelis-design/admin-ia-inventory.md`, not maintained here.
+
+## 2026-10-01: Monthly consolidation: new-surface coverage delta
+
+Method: routes in the shipped router (2026-10-01) and develop merges since 2026-09-01, checked
+against `master-test-cases.md` and the Playwright specs by route and ticket string. A spec that
+mentions a route may only visit it; "no case" means no row in `master-test-cases.md`. Nothing
+here was run. Confirm each item before authoring; expected results are **not** proposed for
+workflows marked NEEDS-GUIDANCE.
+
+**UNCOVERED (no case and no spec found):**
+- **Microbiology case and worklist**: `/MicrobiologyWorklist`, `/MicrobiologyCaseView/:caseId`,
+  admin `MicrobiologyReference`. First shipped micro screens. NEEDS-GUIDANCE (open-question 9):
+  which case states are live on testing versus spec-only.
+- **Validation triage and "Release all clear"** (OGC-1027 to OGC-1030, OGC-1226). The drift check
+  confirmed the lanes and the guarded button live on 2026-09-22, but no case asserts the lane
+  rule and `tests/validation-review*.spec.ts` have never run (no config collects them).
+  NEEDS-GUIDANCE (open-question 10): whether a QA run may press Release on shared data.
+- **Optional patient sex and age** (OGC-1362, develop PR #4455, merged 2026-09-28): the two new
+  Order Entry Configuration settings and the "Range not applied" review signal. NEEDS-GUIDANCE
+  (open-question 11): the range shown when sex is blank.
+- **Storage Inventory Lots tab** (`/Storage/inventory-lots`, PRs #4016/#4033/#4026): lot storage
+  location and barcode; "free a disposed lot's box" untested (needs a disposed lot).
+- **Provider titles** (`providerTitleMenu`, OGC-1223) and **Programs admin** (OGC-781, develop PR
+  #3979; `tests/programs-admin.spec.ts` exists, no case).
+- **Analyzer profile authoring** (`/analyzers/types/:profileId/mapping`, Bridge profile catalog):
+  no case. See `openelis-design` / `analyzer-mapping-spec` for the new profile model.
+- **Admin pages with no case:** `ComplianceStandardsAdmin`, `stuckAnalyzerEvents` (route presence
+  only; admin coverage is owned by `openelis-design/admin-ia-inventory.md`).
+
+**THIN (spec exists, no master case):** `/qa/qi/*` and `/qa/qms/*` (QA module, develop PR #4069,
+merged 2026-09-24; 2 specs each), `/qa/eqa/*` (coverage sits on the unmerged `qa/eqa-coverage`
+branch), `/vector/deconvolution` (2 specs; still blocked on open-question 1's resolved intent
+being authored), `/LaporanHasil`, `/EnvironmentalDashboard`, `/MasterListsPage/CatalogImport`
+(render only; no import exercised).
+
+**Carried from 2026-07-01, now resolvable:** the referral reference-lab view has its intent
+(open-question 2 resolved); Analyzer Maintenance is still not built, so still not a gap.
+
+## 2026-10-06: Consolidation top-up: coverage delta since 2026-10-01
+
+Method as on 2026-10-01 (router `index-CeaYeajT.js` plus develop first-parent merges 2026-10-01 to
+2026-10-06, checked against `main` specs and `master-test-cases.md`). Nothing run.
+
+**Closed or narrowed since 2026-10-01 (QA PRs #197, #202, #203, #204 merged):**
+- Storage Inventory Lots: `tests/inventory-happy-path.spec.ts` receives a lot into storage and
+  disposes it (INVHP); "free a disposed lot's box" still unasserted.
+- Pathology and IHC (`tests/pathology-ihc-happy-path.spec.ts`), EQA participant cycle
+  (`tests/eqa-participant-happy-path.spec.ts`), e-signature end to end, Locations & Organizations
+  (TC-LORG, 81 cases), duplicate patient on Enter Order (TC-DUPPAT). Still no rows in
+  `master-test-cases.md` for any of these; the catalogues are `happy-path-modules.md` and the
+  Playwright notes.
+
+**UNCOVERED (new or still open):**
+- **Microbiology WHONET export** (`/Microbiology/whonet`, new route) and the micro worklist/case
+  pages under their new paths. NEEDS-GUIDANCE: open-question 9 still open.
+- **Validation one-page search** (OGC-1418, develop #4513) and **critical-value acknowledgement
+  on Results** (OGC-1417, #4512): no case. The acknowledgement flow is a story Casey ruled on
+  2026-10-02, so expected behaviour exists in Jira; author from OGC-1417's AC, not from the UI.
+- **Prepare Samples refer-out and print labels** (OGC-1423 #4594, OGC-1422 #4590, merged
+  2026-10-06) and **Print Barcode by name** (OGC-1169 #4602): no case.
+- **Label Presets content-fields editor** (OGC-1218 #4600, OGC-1219 #4589, OGC-1227 #4582, OGC-1217 #4598): the old
+  Label Presets suite pinned OGC-1227 as a defect; it now needs flipping and a write case for the
+  per-preset field editor.
+- **Menu filtered by user privileges** (OGC-1151, #3996) and **Overdue STAT alerts / Acknowledge
+  vs Resolve** (OGC-1372, #4502 merged 2026-10-05): the tracker's tripwires for both (R103,
+  TC-TZ-04, ALRT-04/05) should flip; verify before closing.
+- **Legacy Test Management and Results Entry retired** (#4528): any spec that opens the retired
+  JSP pages will now fail on routing, not on behaviour. Needs a sweep. NEEDS-GUIDANCE: none.
+
+**Harness vs constitution V.7 (Test Isolation, MANDATORY since 1.12.0):** specs that read
+"everything from today" or depend on rows another spec seeded (shared `seedOrder`, chain seeds,
+dashboard count specs such as `home-dashboard-counts`) are now non-compliant upstream. QUESTION
+for Casey (open-question 14): bring the QA harness under V.7, or record it as an intentional
+exception because this repo tests shared instances.
+
+**Stale `test.fail()` markers to flip:** ST-2b, ST-3, ST-4 (`test-catalog-sample-type-management.spec.ts`),
+STW-4, STW-6 (`test-catalog-admin-list-screens-write.spec.ts`): OGC-1156/1157 closed as fixed.
+LU-W-11 should cite OGC-1415 (filed 2026-10-02) instead of OGC-189 alone.

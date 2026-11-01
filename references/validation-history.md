@@ -336,3 +336,37 @@ timeouts); catalogUi.open() now re-logs once. A REST read before the first navig
 record a TypeError as their expected failure; fixed, and tripwire failure reasons are now read from the JSON
 report. Final run: 27/27, every tripwire failing on its spec assertion.
 Terminology cleared-code stays open (open question 6). No Jira tickets filed; one combined bug draft awaits Casey.
+
+## 2026-10-01 -- monthly consolidation pass (no test execution)
+
+State-only refresh by the scheduled skill-consolidation task. testing.openelis-global.org is up
+and serving bundle `index-DDcS0cc-.js`, a newer build than the drift tracker's last record
+(`index-DiLvlcZ5.js`, 2026-09-22) and than `spec-freshness.json`'s `currentBuild`
+(`index-u12wW6QI.js`). No login was used, so no screen behaviour was checked. The shipped router
+was re-read and `references/suite-catalog.md` Section 5 rewritten from it: EQA and QC moved under
+`/qa/*` (old paths redirect), a new Quality menu (`/qa/qi/*`, `/qa/qms/*`), Microbiology and
+vector routes, `/Storage/:resource` with inventory lots, and `/analyzers/errors` gone. Coverage
+gaps and new questions: `coverage-gap-analysis.md` (2026-10-01 section) and
+`references/open-questions.md` rows 9 to 13. Bug state stays in Jira; nothing filed.
+
+## 2026-10-06 -- monthly consolidation top-up (no test execution)
+
+Second state-only pass this month (the scheduled task fired again). testing.openelis-global.org
+now serves bundle `index-CeaYeajT.js` (was `index-DDcS0cc-.js` on 2026-10-01); no drift-check run
+recorded either redeploy. Router delta written into `references/suite-catalog.md` Section 5:
+Microbiology under `/Microbiology/*`, `/AuditTrailReport` redirects to `/qa/qms/audit-trail`,
+`/ReferredOutTests` gone. Upstream constitution is now **1.12.0** (2026-09-29): new Principle V.7
+Test Isolation is MANDATORY (tests own their data, scope reads to it, never widen an assertion, pin
+time); the harness's shared-database seeds and "today" reads should be checked against it (see
+`coverage-gap-analysis.md` 2026-10-06). Stale markers on `main`: ST-2b, ST-3, ST-4, STW-4 and STW-6
+still carry `test.fail()` for OGC-1156/OGC-1157, which the tracker records as fixed and closed by
+2026-10-01. No login, no Jira filing.
+
+## 2026-10-07 -- consolidation task fired a third time (no test execution)
+
+Catch-up firing about three hours after the 2026-10-06 top-up. testing.openelis-global.org now
+serves bundle `index-BrFrgJ_6.js` (was `index-CeaYeajT.js`); the only develop merge in between is a
+Transifex translations update (#4613), so no behaviour change is expected. Router literals re-checked
+against `suite-catalog.md` Section 5: all present; `/NotebookSampleOrder` and the
+`/qa/eqa/distribution` redirect added. The drift check is still disabled, so this redeploy is also
+unrecorded in the tracker. No login, no Jira filing.
