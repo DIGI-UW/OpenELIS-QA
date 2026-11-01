@@ -129,8 +129,9 @@ test.describe('Sample Shipment integrity', () => {
     expect(text, 'dialog names the destination').toContain(pick!.referralTests[0].organizationName);
   });
   test('TC-SHIPI-14: Add to Box with no draft box carries the sample and destination into Create Box', async ({ page }) => {
-    // FLIP-WHEN-FIXED (R91). Observed 2026-09-28: the dialog promises "A new box will be created" for
-    // the sample, but Create Box ignores ?facilityId=&sampleItemId= (destination "Select", 0 samples).
+    // Guard since 2026-10-31 (OGC-1368 fixed by OpenELIS-Global-2 #4849). Was FLIP-WHEN-FIXED (R91):
+    // Create Box ignored ?facilityId=&sampleItemId=. The prefill lands a few seconds after the page
+    // loads (it reads the referral-lab list and the unassigned list), so wait for it before reading.
     // Read-only: the form is cancelled, nothing is saved.
     test.setTimeout(300_000); // Create New Box is a full page load (window.location)
     await open(page, '/SampleShipment/unassigned');
@@ -148,9 +149,9 @@ test.describe('Sample Shipment integrity', () => {
     await page.waitForURL(/create-box/, { timeout: 180_000 });
     await expect(page.locator('main')).toContainText('Samples Added', { timeout: 30_000 });
     await page.waitForLoadState('networkidle');
+    await expect(page.locator('main')).toContainText(/Samples Added:\s*1/, { timeout: 30_000 }).catch(() => {});
     const summary = await page.locator('main').innerText();
     await page.getByRole('button', { name: 'Cancel', exact: true }).last().click().catch(() => {});
-    test.fail();
     expect(summary, `${pick!.accessionNumber} is in the new box`).toMatch(/Samples Added:\s*1/);
   });
 

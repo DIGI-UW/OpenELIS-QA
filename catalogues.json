@@ -120,6 +120,16 @@
       "file": "patient-form-messages.md",
       "area": "Add Patient validation messages (OGC-1497, #4731)",
       "note": "Feature suite, 2026-10-15, local develop. Spec: tests/patient-form-messages.spec.ts."
+    },
+    {
+      "file": "management-overview-test-cases.md",
+      "area": "Management Overview dashboard (OGC-897, OpenELIS-Global-2 #4692 and follow-ups)",
+      "note": "Feature suite, 2026-10-26, local develop; updated 2026-10-31. Spec: tests/management-overview.spec.ts."
+    },
+    {
+      "file": "calculation-rule-integrity.md",
+      "area": "Calculated value rules: self-reference, cycles, duplicate outputs, overwritten entries",
+      "note": "Feature suite, 2026-10-31, testing 615942a7. Spec: tests/calculation-rule-integrity.spec.ts. All tripwires."
     }
   ],
   "notCatalogues": [
