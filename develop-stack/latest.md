@@ -2,7 +2,7 @@
 
 test: Implement comprehensive integration tests for ReferralSetService and strict assertions (#4110)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41324512751 · TZ UTC · 2026-11-01T16:24:39.084Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41341196728 · TZ UTC · 2026-11-01T19:42:38.035Z
 
 **NO RESULTS**: no suite ran, so nothing passed or failed. The stack most likely did not come up; read the "Wait for the stack to be healthy" step of the run above. This is not a green run.
 
