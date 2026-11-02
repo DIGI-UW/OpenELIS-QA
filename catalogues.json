@@ -129,7 +129,7 @@
     {
       "file": "calculation-rule-integrity.md",
       "area": "Calculated value rules: self-reference, cycles, duplicate outputs, overwritten entries",
-      "note": "Feature suite, 2026-10-31, testing 615942a7. Spec: tests/calculation-rule-integrity.spec.ts. All tripwires."
+      "note": "Feature suite, 2026-10-31, testing 615942a7. Spec: tests/calculation-rule-integrity.spec.ts. One guard (TC-CALCI-00, canary) and four tripwires; per-run rule names since 2026-11-02. Ticket OGC-1587."
     }
   ],
   "notCatalogues": [
