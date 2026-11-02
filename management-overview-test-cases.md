@@ -31,3 +31,11 @@ Spec: `tests/management-overview.spec.ts`. Written 26 Oct 2026 on local develop 
 ### TC-MGMT-23 — A failed KPI request shows an error, not five empty tiles (guard)
 
 ### TC-MGMT-24 — A phone-width viewport has no horizontal page scroll (guard)
+
+### TC-MGMT-30: Workload TAT by section equals the TAT report by lab unit for the same days (guard)
+
+For 7 and 30 days, each Workload section's median and 90th percentile TAT equal the TAT report's LAB_UNIT breakdown (receipt to validation, calendar hours) over the Workload's own days, to 0.01 h. A section the report has no TAT for shows none, and every lab unit in the report is a Workload section. Added 2 Nov 2026 for #4907 (OGC-1572), which moved this figure into SQL.
+
+### TC-MGMT-31: The Workload section answers within 5 seconds for a year (guard)
+
+`/dashboards/management/workload?scope=year` answers 200 in under 5 s. Before OGC-1572 the dashboard's TAT figures took 7 to 20 s each.

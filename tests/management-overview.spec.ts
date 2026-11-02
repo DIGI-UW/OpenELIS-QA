@@ -220,3 +220,46 @@ test.describe('Management Overview: screen', () => {
     expect(over).toBeLessThanOrEqual(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Added 2026-11-02 for #4907 (OGC-1572): the Workload section's TAT by section now comes from SQL
+// (KpiService.tatBySection) instead of calling the TAT report. Its contract is unchanged: per section,
+// the median and 90th percentile are the TAT report's LAB_UNIT breakdown (receipt to validation,
+// calendar hours) for the same days. Checked on testing before #4907 deployed (develop a21c3123):
+// all six sections with TAT agree, Cytology has none in both.
+test.describe('Management Overview: Workload TAT by section (#4907)', () => {
+  test.beforeEach(async ({ page }) => { await adminReady(page); });
+
+  test('TC-MGMT-30 workload TAT by section equals the TAT report by lab unit for the same days (guard)', async ({ page }) => {
+    for (const s of ['7d', '30d'] as const) {
+      const w = await j(page, `${MGMT}/workload?scope=${s}`);
+      expect(w.status, `workload ${s}`).toBe(200);
+      const days: string[] = w.body.days;
+      expect(days.length, `workload ${s} days`).toBeGreaterThan(0);
+      const tat = await j(page, `${API}/reports/tat/summary?fromDate=${days[0]}&toDate=${days[days.length - 1]}&segment=RECEIPT_TO_VALIDATION&calculationMode=CALENDAR&breakdownBy=LAB_UNIT`);
+      expect(tat.status, `TAT summary ${days[0]} to ${days[days.length - 1]}`).toBe(200);
+      const byName = new Map<string, any>((tat.body.breakdown ?? []).map((r: any) => [r.dimensionValue, r]));
+      const sections = w.body.sections as any[];
+      for (const sec of sections) {
+        const row = byName.get(sec.name);
+        if (!row) {
+          expect(sec.medianTat ?? null, `${s} ${sec.name}: no TAT in the report, so none on the dashboard`).toBeNull();
+          continue;
+        }
+        expect(Number(sec.medianTat), `${s} ${sec.name} median`).toBeCloseTo(Number(row.median), 2);
+        expect(Number(sec.p90Tat), `${s} ${sec.name} 90th percentile`).toBeCloseTo(Number(row.percentile90), 2);
+      }
+      for (const name of byName.keys()) {
+        expect(sections.map((x) => x.name), `${s}: the report's lab unit ${name} is a workload section`).toContain(name);
+      }
+    }
+  });
+
+  test('TC-MGMT-31 the Workload section answers within 5 seconds for a year (guard)', async ({ page }) => {
+    const t0 = Date.now();
+    const w = await j(page, `${MGMT}/workload?scope=year`);
+    const ms = Date.now() - t0;
+    expect(w.status).toBe(200);
+    expect(ms, `workload?scope=year took ${ms} ms`).toBeLessThan(5_000);
+  });
+});
