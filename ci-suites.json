@@ -237,6 +237,10 @@
     {
       "match": "tests/ogc803-804-referral-accept-reject.spec.ts",
       "why": "OGC-803/804 Accept and Reject are RETURNED-only actions, and a referral only reaches Returned when the peer-lab import poll writes COMPLETED. Nothing inside an instance can produce one: scripts/mint-returned-referral.sh writes the peer's four FHIR resources into the store over mutual TLS, which needs the webapp container's keystore and therefore a local stack. On the shared CI target every case would fail for want of a fixture. Run it with referral-reception.config.ts after minting."
+    },
+    {
+      "match": "tests/amr-v2.spec.ts",
+      "why": "Microbiology / AMR V2 (OGC-1383) guards and the tripwires the v3 work (OGC-1528) and OGC-1522 to 1527 flip. Every case reads the QA_AMR fixture built by hand on pngtest.openelis-global.org on 19 Oct 2026 (culture tests, organisms, AST panels, a synthetic breakpoint standard, a medium lot, three orders with cases). The shared CI target has no microbiology reference data, so on it every case would skip or fail for want of a fixture. Run it with amr.config.ts against pngtest."
     }
   ],
   "$shards": [

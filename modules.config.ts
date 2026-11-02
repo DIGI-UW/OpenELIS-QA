@@ -91,6 +91,8 @@ const OWNED_ELSEWHERE = [
   // these cases would fail for want of fixtures, every night, saying nothing about the
   // product. See ci-suites.json `excluded`.
   'ogc803-804-referral-accept-reject',
+  // amr.config.ts: reads the QA_AMR microbiology fixture that exists only on pngtest; see ci-suites.json `excluded`.
+  'amr-v2',
 ];
 
 const EXCLUDED = OWNED_ELSEWHERE.join('|');
