@@ -234,10 +234,25 @@ export default defineConfig({
       timeout: Number(process.env.PW_SETUP_TIMEOUT ?? 150_000),
       retries: 0,
     },
+    // TESTING CATALOG (added 2026-11-02). testing.openelis-global.org restores its
+    // baseline every night (openelis-testing-reset.timer), which drops the QA
+    // catalog additions of 28 Oct 2026: LOINC codes on the baseline tests and the
+    // Sysmex BX-3010 chemistry tests that analyzer QA matches against. This setup
+    // re-applies them, idempotently, before the sweep. It skips on any instance
+    // other than testing (its LOINC map is keyed to testing's baseline test ids)
+    // and is non-fatal, same contract as `data`.
+    {
+      name: 'testing-catalog',
+      testMatch: /(^|\/)testing-catalog\.setup\.ts$/,
+      dependencies: ['setup'],
+      use: { storageState: '.auth/user.json' },
+      timeout: Number(process.env.PW_SETUP_TIMEOUT ?? 300_000),
+      retries: 0,
+    },
     {
       name: 'modules',
       testMatch: MODULE_MATCH,
-      dependencies: ['setup', 'data', 'referral-data'],
+      dependencies: ['setup', 'data', 'referral-data', 'testing-catalog'],
       use: { storageState: '.auth/user.json' },
     },
   ],
