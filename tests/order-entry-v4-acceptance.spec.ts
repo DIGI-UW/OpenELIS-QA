@@ -564,7 +564,7 @@ test.describe('Save messages and sample names (#4731, #4757)', () => {
     // Save and next says "Order <lab> saved / Next: Prepare Samples" and every Save and exit
     // says "Order <lab> has been saved." #4731: "Save toasts on every v4 step name the lab
     // number." OrderCollect.jsx adds the notification, but Save and next leaves the page
-    // before it shows. Not filed (lead, 21 Oct).
+    // before it shows. Filed as OGC-1598 (2 Nov 2026; still seen on testing, develop 482eb81c).
     test.fail();
     await collectNotices(page);
     const o = await newOrderToPrepare(page);
@@ -590,5 +590,32 @@ test.describe('Save messages and sample names (#4731, #4757)', () => {
       await expect(table.getByRole('button', { name: `Print labels for ${name}`, exact: true }), `the print button of row ${n} is named after its sample`).toBeVisible();
     }
     await expect(table.getByText(/^Sample \d+$/), 'no row is named by position alone').toHaveCount(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Added 2026-11-02. Casey's rule (2 Nov 2026): an order can be saved on Enter Order for someone to
+// come back to, but an order with no tests yet must not show on Results entry. Enter Order creates
+// no samples or analyses (order search returns samples: []); Prepare Samples does. Seen on testing
+// (develop 482eb81c) on 2 Nov: Results entry lists 0 rows for the order, then 1 after Prepare Samples.
+test.describe('Results entry follows Prepare Samples (Casey, 2 Nov 2026)', () => {
+  async function resultsRows(page: Page, lab: string) {
+    const loaded = page.waitForResponse(
+      (r) => r.url().includes('/rest/LogbookResults') && r.url().includes(lab) && r.request().method() === 'GET',
+      { timeout: 60_000 },
+    );
+    await page.goto(`/Results?accessionNumber=${lab}`, { waitUntil: 'domcontentloaded' });
+    expect((await loaded).status(), 'Results entry asks the server for the order').toBe(200);
+    await page.waitForTimeout(1000); // let the table render what the response held
+    return page.locator('tbody tr').filter({ hasText: lab });
+  }
+
+  test('TC-OEV4-RES-01 an order saved only on Enter Order is not on Results entry; after Prepare Samples it is', async ({ page }) => {
+    const o = await newOrderToPrepare(page);
+    await expect(await resultsRows(page, o.lab), 'an order with no samples or tests yet is not on Results entry').toHaveCount(0);
+    await openPrepare(page, o.lab);
+    await fillCollection(page, 0);
+    expect((await saveStep(page, 'exit')).status(), 'Prepare Samples saves').toBe(200);
+    await expect(await resultsRows(page, o.lab), 'once Prepare Samples saves, its test is on Results entry').toHaveCount(1, { timeout: 30_000 });
   });
 });

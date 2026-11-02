@@ -130,6 +130,11 @@
       "file": "calculation-rule-integrity.md",
       "area": "Calculated value rules: self-reference, cycles, duplicate outputs, overwritten entries",
       "note": "Feature suite, 2026-10-31, testing 615942a7. Spec: tests/calculation-rule-integrity.spec.ts. One guard (TC-CALCI-00, canary) and four tripwires; per-run rule names since 2026-11-02. Ticket OGC-1587."
+    },
+    {
+      "file": "amr-v2-test-cases.md",
+      "area": "Microbiology / AMR V2 (pngtest fixture)",
+      "note": "Feature suite for OGC-1383; tripwires point at OGC-1522 to 1527 and the v3.2 FRS (OGC-1528). Not in CI; run with amr.config.ts against pngtest."
     }
   ],
   "notCatalogues": [

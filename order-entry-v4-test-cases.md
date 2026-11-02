@@ -57,7 +57,7 @@ Kind: **Guard** passes today and protects it. **Tripwire** asserts the spec, car
 | TC-OEV4-DATA-01 | One collected sample: one card, one label row, one stored sample | Guard | R-DATA-1 (TC-OEW-05) |
 | TC-OEV4-DATA-02 | A panel member ticked alone saves no panel | Guard | R-DATA-2 (TC-OEW-03) |
 | TC-OEV4-DATA-03 | Compatible sample types come from the catalog | Guard | R-DATA-3 (TC-OEW-04) |
-| TC-OEV4-DATA-04 | A sample with no test holds Save and next on Enter Order; the checklist names it ("Sample 1: choose at least one test") | Guard (was tripwire; fixed by 21 Oct, OGC-1443, rule moved to Enter Order) | R-DATA-4 (TC-OEW-14) |
+| TC-OEV4-DATA-04 | A sample with no test holds Save and next on Enter Order; the checklist names it ("Sample 1: choose at least one test"). Save and exit still saves such an order, by design (Casey, 2 Nov 2026: it can be saved and finished later) | Guard (was tripwire; fixed by 21 Oct, OGC-1443, rule moved to Enter Order) | R-DATA-4 (TC-OEW-14) |
 | TC-OEV4-DATA-05 | Back to Enter Order and forward keeps patient, test, collection date and time | Guard | R-DATA-5, G3 (TC-OEW-06, TC-OEW-12) |
 | TC-OEV4-TIME-01 | Collection and received defaults come from one clock (browser in Port Moresby) | Guard | R-TIME-1 (TC-OEW-08) |
 | TC-OEV4-TIME-02 | Today saves from a browser 10 h ahead of the server | Guard | R-TIME-2 (TC-OEW-07) |
@@ -85,8 +85,9 @@ From #4731 (OGC-1483, "save toasts on every v4 step name the lab number") and #4
 | TC-OEV4-SAVE-01 | Enter Order Save and next shows "Order <lab> saved / Next: Prepare Samples" | Guard | #4731 |
 | TC-OEV4-SAVE-02 | Prepare Samples Save and exit returns to the dashboard (order highlighted) with "Order <lab> has been saved." | Guard | #4731 |
 | TC-OEV4-SAVE-03 | Sample check Save and exit shows "Order <lab> has been saved." | Guard | #4731 |
-| TC-OEV4-SAVE-04 | Prepare Samples Save and next names the order on arrival at Sample check | Tripwire (no message at all on 21 Oct; not filed) | #4731 |
+| TC-OEV4-SAVE-04 | Prepare Samples Save and next names the order on arrival at Sample check | Tripwire, OGC-1598 (no message at all; seen 21 Oct and on testing 2 Nov) | #4731 |
 | TC-OEV4-LBL-07 | The Sample Labels table names each row, its quantity and its print button "<lab>-<n> <type>" | Guard | #4757 (LabelsSection) |
+| TC-OEV4-RES-01 | An order saved only on Enter Order (no samples or tests yet) is not on Results entry; after Prepare Samples saves, its test is | Guard | Casey's rule, 2 Nov 2026 |
 
 See also `order-entry-lab-unit-scope-test-cases.md` (orders follow the user's lab units, #4757).
 
