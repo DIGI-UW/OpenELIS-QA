@@ -13,8 +13,15 @@
  * CalculatedValueRestController.saveReflexRule validates only the destination component.
  * Catalogue: calculation-rule-integrity.md.
  *
- * Kind: Tripwire, each carries test.fail() until the API refuses the rule. Every rule this
- * spec creates is deactivated in afterAll, so a run leaves no active rule behind.
+ * Kind: TC-CALCI-00 is a guard (canary); 01 to 04 are tripwires, each carries test.fail()
+ * until the API refuses the rule. Every rule this spec creates is deactivated in afterAll,
+ * so a run leaves no active rule behind.
+ *
+ * Names carry a per-run suffix: the API refuses a rule name that already exists, even an
+ * inactive one, and on 1 Nov 2026 that refusal made TC-CALCI-01 and 04 read as fixed. The
+ * canary fails if an ordinary rule cannot be saved, so a harness refusal can never pass for
+ * a fix. Tests are picked from those no ACTIVE rule uses, so deactivated rules from earlier
+ * runs do not use up the catalog.
  */
 import { test, expect, Page } from '@playwright/test';
 import { API, j, queueContext, order, enterOn, QueueSeed, SERUM } from '../helpers/report-queue';
@@ -27,9 +34,10 @@ let A: string, B: string, C: string;
 async function rules(page: Page): Promise<any[]> {
   return (await j(page, `${API}/test-calculations`)).body as any[];
 }
+const RUN = Date.now().toString(36);
 function rule(name: string, outTest: string, inTest: string, fn: string, num: string) {
   return {
-    id: null, name, testId: outTest, sampleId: 2, componentId: null, active: true, toggled: true, result: '',
+    id: null, name: `${name} ${RUN}`, testId: outTest, sampleId: 2, componentId: null, active: true, toggled: true, result: '',
     note: 'QA calculation-rule-integrity, deactivated after the run',
     operations: [
       { id: null, order: 0, type: 'TEST_RESULT', value: inTest, sampleId: 2 },
@@ -49,9 +57,9 @@ test.beforeAll(async ({ browser }) => {
   const page = await (await browser.newContext({ storageState: '.auth/user.json', ignoreHTTPSErrors: true })).newPage();
   seed = await queueContext(page);
   const serum = (await j(page, `${API}/sample-type-tests?sampleType=2`)).body;
-  const used = new Set((await rules(page)).flatMap((r: any) => [String(r.testId), ...(r.operations || []).filter((o: any) => o.type === 'TEST_RESULT').map((o: any) => String(o.value))]));
+  const used = new Set((await rules(page)).filter((r: any) => r.active).flatMap((r: any) => [String(r.testId), ...(r.operations || []).filter((o: any) => o.type === 'TEST_RESULT').map((o: any) => String(o.value))]));
   const free = (serum.tests || []).filter((t: any) => t.resultType === 'N' && !used.has(String(t.id)));
-  expect(free.length, 'three numeric Serum tests no rule uses').toBeGreaterThanOrEqual(3);
+  expect(free.length, 'three numeric Serum tests no active rule uses').toBeGreaterThanOrEqual(3);
   [A, B, C] = free.slice(-3).map((t: any) => String(t.id));
   await page.close();
 });
@@ -66,6 +74,11 @@ test.afterAll(async ({ browser }) => {
 
 test.describe('Calculated value rules cannot loop or overwrite entered results', () => {
   test.beforeEach(async ({ page }) => { seed = await queueContext(page); });
+
+  test('TC-CALCI-00 an ordinary rule with a fresh name saves (guard, canary for 01 to 04)', async ({ page }) => {
+    expect(await save(page, rule('QA CALCI CANARY', B, C, '*', '2')), 'B = C * 2 is a valid rule').toBe(200);
+    for (const id of created.splice(0)) await j(page, `${API}/deactivate-test-calculation/${id}`, { method: 'POST', body: {} });
+  });
 
   test('TC-CALCI-01 a rule that reads its own test is refused', async ({ page }) => {
     test.fail(true, 'saves with 200 on develop 615942a7 (31 Oct)');
@@ -86,7 +99,7 @@ test.describe('Calculated value rules cannot loop or overwrite entered results',
 
   test('TC-CALCI-04 an entered result is not overwritten by a rule that reads it', async ({ page }) => {
     test.fail(true, 'Albumin 5.5 stored as 11.0 on testing 615942a7 (31 Oct)');
-    await save(page, rule('QA CALCI SELF 4', A, A, '*', '2'));
+    expect(await save(page, rule('QA CALCI SELF 4', A, A, '*', '2')), 'the rule saves today; 04 checks result entry').toBe(200);
     const o = await order(page, seed, [{ type: SERUM, tests: [A] }]);
     await enterOn(page, o.labNo, { [A]: '5.5' });
     const lb = (await j(page, `${API}/LogbookResults?labNumber=${o.labNo}`)).body;
