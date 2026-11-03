@@ -1,0 +1,17 @@
+{
+ "when": "2026-11-03T21:14:00.627Z",
+ "sha": "a1e0fcf9ac3cf307b3d62441b2019b36bbd88d59",
+ "subject": "fix(ui): long dropdowns are searched by typing (OGC-1515) (#4922)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41715345216",
+ "tz": "UTC",
+ "bootstrap": false,
+ "noResults": true,
+ "totals": {
+  "failing": 0,
+  "known": 0,
+  "new": 0,
+  "fixed": 0
+ },
+ "knownByTicket": {},
+ "suites": {}
+}

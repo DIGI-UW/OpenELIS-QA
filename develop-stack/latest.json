@@ -1,8 +1,8 @@
 {
- "when": "2026-11-03T13:51:41.537Z",
- "sha": "f151c40d58d15d685a5ec14fa5ffb0e4ad3d0db8",
- "subject": "fix(analyzers): no Bridge address answers as a known state, not 502 (OGC-1594) (#4915)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41645131046",
+ "when": "2026-11-03T21:14:00.627Z",
+ "sha": "a1e0fcf9ac3cf307b3d62441b2019b36bbd88d59",
+ "subject": "fix(ui): long dropdowns are searched by typing (OGC-1515) (#4922)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41715345216",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": true,
