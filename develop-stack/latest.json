@@ -1,8 +1,8 @@
 {
- "when": "2026-11-03T05:26:44.341Z",
- "sha": "57f40b184e10b45cb2b58468633b31a726ad9b5b",
- "subject": "fix(results): a row posted back with its rounded value keeps the entered measurement (OGC-1569) (#4912)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41582053414",
+ "when": "2026-11-03T13:51:41.537Z",
+ "sha": "f151c40d58d15d685a5ec14fa5ffb0e4ad3d0db8",
+ "subject": "fix(analyzers): no Bridge address answers as a known state, not 502 (OGC-1594) (#4915)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41645131046",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": true,
