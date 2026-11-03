@@ -1,0 +1,17 @@
+{
+ "when": "2026-11-03T05:26:44.341Z",
+ "sha": "57f40b184e10b45cb2b58468633b31a726ad9b5b",
+ "subject": "fix(results): a row posted back with its rounded value keeps the entered measurement (OGC-1569) (#4912)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41582053414",
+ "tz": "UTC",
+ "bootstrap": false,
+ "noResults": true,
+ "totals": {
+  "failing": 0,
+  "known": 0,
+  "new": 0,
+  "fixed": 0
+ },
+ "knownByTicket": {},
+ "suites": {}
+}

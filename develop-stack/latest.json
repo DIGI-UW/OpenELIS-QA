@@ -1,8 +1,8 @@
 {
- "when": "2026-11-02T22:13:28.536Z",
- "sha": "b18f177b9f124cd6dce731d1312c5d0f73168628",
- "subject": "fix(workplan): override reason, server-paged pending tests, one lab unit per batch (OGC-1588) (#4909)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41527394519",
+ "when": "2026-11-03T05:26:44.341Z",
+ "sha": "57f40b184e10b45cb2b58468633b31a726ad9b5b",
+ "subject": "fix(results): a row posted back with its rounded value keeps the entered measurement (OGC-1569) (#4912)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41582053414",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": true,
