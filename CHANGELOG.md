@@ -1,5 +1,8 @@
 # Changelog
 
+> **2026-11-03:** the skill this changelog tracked is retired. Its successor is the openelis-qa
+> plugin (`plugin/openelis-qa/`, its own `CHANGELOG.md`). Entries below are history.
+
 
 ## 2026-09-21 - the silent-save contract; Label Presets write coverage (testing 3.2.2.0)
 

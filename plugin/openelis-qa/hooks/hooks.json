@@ -1,0 +1,35 @@
+{
+  "description": "openelis-qa: QA context at session start, the Jira filing gate, a public-repo git guard, and a tracker reminder after Jira or QA-repo writes.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/run.sh\" session-start", "timeout": 10 }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "mcp__.*createJiraIssue",
+        "hooks": [
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/run.sh\" jira-create", "timeout": 10 }
+        ]
+      },
+      {
+        "matcher": "Bash|mcp__.*device_bash|mcp__.*osascript",
+        "hooks": [
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/run.sh\" git-guard", "timeout": 10 }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/run.sh\" tracker-reminder", "timeout": 20 }
+        ]
+      }
+    ]
+  }
+}

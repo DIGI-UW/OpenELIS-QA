@@ -1,0 +1,18 @@
+{
+  "name": "openelis-qa",
+  "version": "0.1.0",
+  "description": "QA for OpenELIS Global: run and grade suites on a live instance, check what new work came in, confirm and file bugs without false positives, close verified fixes, keep the QA tracker current, capture evidence, and author test catalog CSVs.",
+  "author": {
+    "name": "Casey Iiams-Hauser, DIGI (University of Washington)"
+  },
+  "homepage": "https://github.com/DIGI-UW/OpenELIS-QA",
+  "repository": "https://github.com/DIGI-UW/OpenELIS-QA",
+  "license": "MPL-2.0",
+  "keywords": [
+    "openelis",
+    "lims",
+    "qa",
+    "playwright",
+    "jira"
+  ]
+}
