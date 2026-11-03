@@ -31,3 +31,7 @@ test-results-prov/
 runlogs/
 .session-guard/
 scratch/
+
+# Built plugin package (npm run build:plugin)
+dist/
+__pycache__/

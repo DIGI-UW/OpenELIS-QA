@@ -28,13 +28,13 @@ jobs:
       - name: Install dev dependencies
         run: npm install --no-audit --no-fund
 
-      # BLOCKING: the committed .skill package must match its source. It is a
-      # build artifact that gets INSTALLED into an account and is not read from
-      # source at install time — twice on 2026-08-12 a PR edited SKILL.md /
-      # references/ and the packaged copy silently kept the old content, so the
-      # installed skill lagged the repo. Compares content hashes, not zip bytes.
-      - name: Skill package is in sync with source
-        run: npm run check:skill
+      # BLOCKING: the openelis-qa plugin (plugin/openelis-qa/) is the only source of the QA
+      # skills. The installed QA skill had drifted into three copies with different rules and
+      # tracker steps that named tools that do not exist. This check fails when the plugin's
+      # rulings copy differs from RULINGS.md, a skill or agent is malformed, a hook script is
+      # missing, a hook self-test fails, or any plugin text has an em dash (org writing rule).
+      - name: openelis-qa plugin is valid
+        run: npm run check:plugin
 
       # BLOCKING: the maintained surface (RBAC axes, personas, chain H,
       # apiShapes, setups, configs). This is green today and must stay green.
