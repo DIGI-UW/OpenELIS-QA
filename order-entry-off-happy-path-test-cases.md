@@ -24,3 +24,4 @@ Guards run the same screens on the happy path. When a guard is red, the tripwire
 | TC-OEX-23 | A failed tests request does not blank the screen | Modify Order | Guard (fixed) | OGC-1389 |
 | TC-OEX-30 | The missing-test warning names the sample and its type ("Sample 2: <type> has no test") | Legacy Add Order | Guard (added 21 Oct) | #4757 |
 | TC-OEX-31 | The labels table names each sample "Sample N: <type>", as Result Reporting does | Legacy Add Order | Guard (added 21 Oct) | #4757 |
+| TC-OEX-33 | An added sample keeps its quantity and unit of measure; the unit is a type-to-search box | Modify Order | Guard (added 4 Nov) | OGC-1515, #4922 |
