@@ -1,0 +1,11 @@
+panelName,antibioticWhonetCode,susceptibilityProtocol,tier,reportBehavior,defaultFor
+QA_AUTO Gram negative rods (10),AMP,GENERAL,1,ALWAYS,Escherichia coli;Klebsiella pneumoniae
+QA_AUTO Gram negative rods (10),AMC,GENERAL,1,ALWAYS,Escherichia coli;Klebsiella pneumoniae
+QA_AUTO Gram negative rods (10),CRO,GENERAL,1,ALWAYS,Escherichia coli;Klebsiella pneumoniae
+QA_AUTO Gram negative rods (10),CAZ,GENERAL,1,ALWAYS,Escherichia coli;Klebsiella pneumoniae
+QA_AUTO Gram negative rods (10),FEP,GENERAL,1,ALWAYS,Escherichia coli;Klebsiella pneumoniae
+QA_AUTO Gram negative rods (10),CIP,GENERAL,1,ALWAYS,Escherichia coli;Klebsiella pneumoniae
+QA_AUTO Gram negative rods (10),GEN,GENERAL,1,ALWAYS,Escherichia coli;Klebsiella pneumoniae
+QA_AUTO Gram negative rods (10),AMK,GENERAL,1,ALWAYS,Escherichia coli;Klebsiella pneumoniae
+QA_AUTO Gram negative rods (10),SXT,GENERAL,1,ALWAYS,Escherichia coli;Klebsiella pneumoniae
+QA_AUTO Gram negative rods (10),MEM,GENERAL,1,SUPPRESS_UNLESS_RESISTANT,Escherichia coli;Klebsiella pneumoniae

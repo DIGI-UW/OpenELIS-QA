@@ -134,7 +134,7 @@
     {
       "file": "amr-v2-test-cases.md",
       "area": "Microbiology / AMR V2 (pngtest fixture)",
-      "note": "Feature suite for OGC-1383; tripwires point at OGC-1522 to 1527 and the v3.2 FRS (OGC-1528). Not in CI; run with amr.config.ts against pngtest."
+      "note": "Feature suite for OGC-1383; tripwires point at OGC-1522 to 1527 and the v3.2 FRS (OGC-1528). Not in CI; run with amr.config.ts against pngtest. Since 2026-11-04 also the testing release checks (tests/amr-release-ogc1605-1606.spec.ts, TC-1606-01, TC-1605-01/02) on the QA_AUTO seed (helpers/amr-seed.ts); those run on testing."
     },
     {
       "file": "search-not-select-test-cases.md",

@@ -1,0 +1,11 @@
+source,code,displayName,whonetCode
+QA_AUTO,AMP,Ampicillin,AMP
+QA_AUTO,AMC,Amoxicillin-clavulanic acid,AMC
+QA_AUTO,CRO,Ceftriaxone,CRO
+QA_AUTO,CAZ,Ceftazidime,CAZ
+QA_AUTO,FEP,Cefepime,FEP
+QA_AUTO,CIP,Ciprofloxacin,CIP
+QA_AUTO,GEN,Gentamicin,GEN
+QA_AUTO,AMK,Amikacin,AMK
+QA_AUTO,SXT,Trimethoprim-sulfamethoxazole,SXT
+QA_AUTO,MEM,Meropenem,MEM
