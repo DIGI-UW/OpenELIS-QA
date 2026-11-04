@@ -1,0 +1,21 @@
+publisher,version,organism_or_group,antibiotic_whonet_code,method,specimen_type_id,breakpoint_type,susceptible_value,intermediate_lower_value,intermediate_upper_value,resistant_value,units,notes
+CLSI,QA-AUTO-1104,Escherichia coli,AMP,MIC,,MIC,8,,,32,mg/L,Synthetic QA test edition - not for clinical use
+CLSI,QA-AUTO-1104,Escherichia coli,AMC,MIC,,MIC,8,,,32,mg/L,Synthetic QA test edition - not for clinical use
+CLSI,QA-AUTO-1104,Escherichia coli,CRO,MIC,,MIC,1,,,4,mg/L,Synthetic QA test edition - not for clinical use
+CLSI,QA-AUTO-1104,Escherichia coli,CAZ,MIC,,MIC,4,,,16,mg/L,Synthetic QA test edition - not for clinical use
+CLSI,QA-AUTO-1104,Escherichia coli,FEP,MIC,,MIC,2,,,16,mg/L,Synthetic QA test edition - not for clinical use
+CLSI,QA-AUTO-1104,Escherichia coli,CIP,MIC,,MIC,0.25,,,1,mg/L,Synthetic QA test edition - not for clinical use
+CLSI,QA-AUTO-1104,Escherichia coli,GEN,MIC,,MIC,2,,,8,mg/L,Synthetic QA test edition - not for clinical use
+CLSI,QA-AUTO-1104,Escherichia coli,AMK,MIC,,MIC,4,,,16,mg/L,Synthetic QA test edition - not for clinical use
+CLSI,QA-AUTO-1104,Escherichia coli,SXT,MIC,,MIC,2,,,4,mg/L,Synthetic QA test edition - not for clinical use
+CLSI,QA-AUTO-1104,Escherichia coli,MEM,MIC,,MIC,1,,,4,mg/L,Synthetic QA test edition - not for clinical use
+CLSI,QA-AUTO-1104,Klebsiella pneumoniae,AMP,MIC,,MIC,8,,,32,mg/L,Synthetic QA test edition - not for clinical use
+CLSI,QA-AUTO-1104,Klebsiella pneumoniae,AMC,MIC,,MIC,8,,,32,mg/L,Synthetic QA test edition - not for clinical use
+CLSI,QA-AUTO-1104,Klebsiella pneumoniae,CRO,MIC,,MIC,1,,,4,mg/L,Synthetic QA test edition - not for clinical use
+CLSI,QA-AUTO-1104,Klebsiella pneumoniae,CAZ,MIC,,MIC,4,,,16,mg/L,Synthetic QA test edition - not for clinical use
+CLSI,QA-AUTO-1104,Klebsiella pneumoniae,FEP,MIC,,MIC,2,,,16,mg/L,Synthetic QA test edition - not for clinical use
+CLSI,QA-AUTO-1104,Klebsiella pneumoniae,CIP,MIC,,MIC,0.25,,,1,mg/L,Synthetic QA test edition - not for clinical use
+CLSI,QA-AUTO-1104,Klebsiella pneumoniae,GEN,MIC,,MIC,2,,,8,mg/L,Synthetic QA test edition - not for clinical use
+CLSI,QA-AUTO-1104,Klebsiella pneumoniae,AMK,MIC,,MIC,4,,,16,mg/L,Synthetic QA test edition - not for clinical use
+CLSI,QA-AUTO-1104,Klebsiella pneumoniae,SXT,MIC,,MIC,2,,,4,mg/L,Synthetic QA test edition - not for clinical use
+CLSI,QA-AUTO-1104,Klebsiella pneumoniae,MEM,MIC,,MIC,1,,,4,mg/L,Synthetic QA test edition - not for clinical use

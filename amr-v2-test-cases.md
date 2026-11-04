@@ -50,6 +50,17 @@ When a tripwire goes red, the fix has landed: remove its `test.fail()`.
 | TC-AMR-T11 | Cases from one order list each other as related (A22) | Tripwire, v3.2 R-LINK-1 |
 | TC-AMR-T12 | A multi-sample case offers Split (A21) | Tripwire, v3.2 R-LINK-2 |
 
+
+## Release on testing after #4819 (tests/amr-release-ogc1605-1606.spec.ts, 4 Nov 2026)
+
+Runs on testing.openelis-global.org with the QA_AUTO seed (helpers/amr-seed.ts, fixtures/amr-qa/). Each run places one QA_AUTO Urine culture order and releases it.
+
+| TC | What it checks | Kind |
+|---|---|---|
+| TC-1606-01 | A culture ordered through Clinical Order Entry opens a case, and releases partial then final with no report mapping; the case reads "Final case is read-only" | Guard, OGC-1606 (closed 4 Nov) |
+| TC-1605-01 | The released Patient Status Report prints E. coli, the 10-agent panel and the edition (no 200-character cap) | Guard, OGC-1605 item 1 |
+| TC-1605-02 | A Susceptible agent set to SUPPRESS_UNLESS_RESISTANT (Meropenem) is left off the released report | Tripwire, OGC-1605 item 2 |
+
 **Not covered:**
 - Roles and lab-unit rights (needs a non-admin pngtest login).
 - Incoming analyzer results, referral dispatch, labels and bench sheets, reflex rules on cultures.
