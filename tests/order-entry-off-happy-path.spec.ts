@@ -367,4 +367,27 @@ test.describe('Order entry off the happy path', () => {
     await page.waitForTimeout(3000);
     await expect(page.locator('#sampleId_0'), 'Modify Order stays on screen').toBeVisible();
   });
+
+  test('TC-OEX-33: Modify Order: an added sample keeps its quantity and unit of measure (OGC-1515, #4922)', async ({ page }) => {
+    // GUARD since 2026-11-04 (testing, develop a1e0fcf9). Before #4922 the new-sample XML had no
+    // quantity or uom attribute, so both were dropped on save. The unit is now a type-to-search box.
+    const [A] = await sampleTypes(page);
+    const posts = await modifySampleStep(page);
+    await page.locator('#sampleId_0').selectOption(A.id);
+    await page.waitForTimeout(1800);
+    await modifyTick(page, 0, A.tests[0].id, true);
+    await page.locator('input[name="quantity"]').first().fill('4');
+    const uom = page.locator('#uomId_0');
+    await uom.click();
+    const listbox = page.locator(`[id="${await uom.getAttribute('aria-controls')}"]`);
+    await expect(listbox.getByRole('option').first(), 'units are offered').toBeVisible({ timeout: 15_000 });
+    const units = (await listbox.getByRole('option').allInnerTexts()).map((t) => t.trim()).filter(Boolean);
+    const unit = units.find((u) => /^ml$/i.test(u)) ?? units[0];
+    await uom.fill(unit.slice(0, 2).toUpperCase());
+    await listbox.getByRole('option', { name: unit, exact: true }).first().click();
+    await expect(uom, 'the unit shows in the box').toHaveValue(unit);
+    const xml = await modifySubmit(page, posts);
+    expect(xml, 'the added sample carries its quantity').toMatch(/quantity='4'/);
+    expect(xml, 'the added sample carries a unit').toMatch(/uom='[^']+'/);
+  });
 });

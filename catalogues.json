@@ -135,6 +135,11 @@
       "file": "amr-v2-test-cases.md",
       "area": "Microbiology / AMR V2 (pngtest fixture)",
       "note": "Feature suite for OGC-1383; tripwires point at OGC-1522 to 1527 and the v3.2 FRS (OGC-1528). Not in CI; run with amr.config.ts against pngtest."
+    },
+    {
+      "file": "search-not-select-test-cases.md",
+      "area": "Search, not manual select (H12, OGC-1514, OGC-1515)",
+      "note": "Sweep tests/ux-h12-search-not-select.spec.ts plus tests/ogc-1515-searchable-lists.spec.ts; part 2 rows are tripwires until #4925 is on testing."
     }
   ],
   "notCatalogues": [
