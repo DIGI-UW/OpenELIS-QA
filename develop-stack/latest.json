@@ -1,9 +1,9 @@
 {
- "when": "2026-11-04T01:26:37.688Z",
- "sha": "0dca62f6f9ab728da3f65e0d059e05b9f9ebc863",
- "subject": "fix(ui): shipment, dictionary, pre-print and settings lists are searched by typing (OGC-1515) (#4925)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41750957643",
- "tz": "UTC",
+ "when": "2026-11-04T09:50:41.203Z",
+ "sha": "392ae8b1b98a60268e80c1bb22a931b2c1a98ad7",
+ "subject": "fix(ui): order entry and EQA lists are searched by typing (OGC-1515) (#4931)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41808254698",
+ "tz": "Pacific/Port_Moresby",
  "bootstrap": false,
  "noResults": true,
  "totals": {
