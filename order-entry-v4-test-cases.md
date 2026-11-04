@@ -85,7 +85,7 @@ From #4731 (OGC-1483, "save toasts on every v4 step name the lab number") and #4
 | TC-OEV4-SAVE-01 | Enter Order Save and next shows "Order <lab> saved / Next: Prepare Samples" | Guard | #4731 |
 | TC-OEV4-SAVE-02 | Prepare Samples Save and exit returns to the dashboard (order highlighted) with "Order <lab> has been saved." | Guard | #4731 |
 | TC-OEV4-SAVE-03 | Sample check Save and exit shows "Order <lab> has been saved." | Guard | #4731 |
-| TC-OEV4-SAVE-04 | Prepare Samples Save and next names the order on arrival at Sample check | Tripwire, OGC-1598 (no message at all; seen 21 Oct and on testing 2 Nov) | #4731 |
+| TC-OEV4-SAVE-04 | Prepare Samples Save and next names the order on arrival at Sample check | Guard since 4 Nov (OGC-1598, #4934 on testing f3047c55; was no message at all, 21 Oct and 2 Nov) | #4731 |
 | TC-OEV4-LBL-07 | The Sample Labels table names each row, its quantity and its print button "<lab>-<n> <type>" | Guard | #4757 (LabelsSection) |
 | TC-OEV4-RES-01 | An order saved only on Enter Order (no samples or tests yet) is not on Results entry; after Prepare Samples saves, its test is | Guard | Casey's rule, 2 Nov 2026 |
 

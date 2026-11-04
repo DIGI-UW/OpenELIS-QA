@@ -16,7 +16,7 @@ import { test, expect, Page } from '@playwright/test';
 import {
   API, ENTRY_POST, ENTER, apiJson, footer, newOrderToPrepare, openEnter, openPrepare, orderSearch,
   pickPatient, pickSampleAndTest, pickSite, rawKeysOnScreen, saveStep, seedPatient, toContinue, fillCollection, currentLocale, setLocale,
-  sampleType, sampleTypeId,
+  sampleType, sampleTypeId, chooseSampleType, setSampleTypeBox,
 } from '../helpers/order-entry-v4';
 
 test.setTimeout(240_000);
@@ -67,7 +67,7 @@ test.describe('R-NET network resilience', () => {
     await openEnter(page);
     await pickPatient(page, p);
     await page.route(/\/rest\/sample-type-tests/, (route) => route.abort('internetdisconnected'), { times: 1 });
-    await page.locator('#sampleType-0').selectOption({ label: 'Serum' });
+    await setSampleTypeBox(page, 0, 'Serum');
     await expect(page.locator('main').getByText(/fail|could not|couldn.t|try again/i).first(), 'the failed load is reported').toBeVisible({ timeout: 20_000 });
     const retry = page.locator('main').getByRole('button', { name: /retry|try again/i }).first();
     await expect(retry, 'a Retry is offered').toBeVisible();
@@ -184,7 +184,7 @@ test.describe('R-DATA data integrity', () => {
     const p = await seedPatient(page);
     await openEnter(page);
     await pickPatient(page, p);
-    await page.locator('#sampleType-0').selectOption(await sampleTypeId(page, 'Serum'));
+    await chooseSampleType(page, 0, 'Serum');
     await expect(page.locator('input[id^="test-0-"]').first(), 'tests load for Serum').toBeAttached({ timeout: 30_000 });
     await pickSite(page);
     await expect(footer(page, 'next'), 'Save and next is held while sample 1 has no test').toBeDisabled({ timeout: 15_000 });

@@ -73,7 +73,7 @@ export const sampleResultsOf = async (page: Page, id: string) => {
 export function component(over: Record<string, unknown>) {
   return {
     code: 'PRIMARY', label: 'QA', resultType: 'N', isPrimary: true, displayOrder: 1, showOnReport: true,
-    significantDigits: 1, allowMultipleReadings: false, options: [], interpretations: [], ...over,
+    reportingDecimalPlaces: 1, allowMultipleReadings: false, options: [], interpretations: [], ...over,
   };
 }
 

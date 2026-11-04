@@ -113,7 +113,7 @@ export async function seedNumericTest(page: Page, opts: {
   const pid = sr.json?.components?.[0]?.id;
   const put = await apiWrite(page, 'PUT', `${TC}/tests/${id}/sample-results`, {
     testId: id, components: [{ id: pid, code: 'PRIMARY', label: opts.name, resultType: 'N', isPrimary: true,
-      displayOrder: 1, showOnReport: true, significantDigits: 1, allowMultipleReadings: false, options: [], interpretations: [] }],
+      displayOrder: 1, showOnReport: true, reportingDecimalPlaces: 1, allowMultipleReadings: false, options: [], interpretations: [] }],
   });
   expect(put.status, `seed numeric component on ${id}`).toBe(200);
   const sr2 = await apiGet<any>(page, `${TC}/tests/${id}/sample-results`);

@@ -91,12 +91,52 @@ export async function sampleTypeId(page: Page, name: string): Promise<string> {
   return (await sampleType(page, name)).id;
 }
 
+const foldText = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
+/**
+ * Chooses the sample type on sample card n. Up to develop 0dca62f6 the box was a native select;
+ * OGC-1515 part 4 (#4931, 4 Nov 2026) made it a type-to-search combobox, so the name is typed
+ * and the option whose label matches it (ignoring case and accents) is picked.
+ */
+export async function chooseSampleType(page: Page, n: number, name: string): Promise<void> {
+  const t = await sampleType(page, name);
+  await setSampleTypeBox(page, n, t.value, t.id);
+}
+
+/**
+ * Sets sample card n's type box to the type labelled `label` (matched ignoring case and accents),
+ * whether the box is the old native select or the #4931 searchable combobox. `id`, when given,
+ * is used for the native select.
+ */
+export async function setSampleTypeBox(page: Page, n: number, label: string, id?: string): Promise<void> {
+  const box = page.locator(`#sampleType-${n}`);
+  const want = foldText(label);
+  if ((await box.evaluate((el) => el.tagName)) === 'SELECT') {
+    if (id) { await box.selectOption(id); return; }
+    const value = await box.locator('option').evaluateAll(
+      (opts, w) => (opts as HTMLOptionElement[]).find((o) => (o.textContent ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim() === w)?.value ?? '',
+      want,
+    );
+    expect(value, `the sample type list offers "${label}"`).not.toBe('');
+    await box.selectOption(value);
+    return;
+  }
+  await box.click();
+  await box.fill(label.slice(0, 3));
+  const list = page.locator(`[id="${await box.getAttribute('aria-controls')}"]`);
+  await expect(list.getByRole('option').first(), `the sample type list offers "${label}"`).toBeVisible({ timeout: 30_000 });
+  const labels = (await list.getByRole('option').allInnerTexts()).map((s) => s.trim());
+  const idx = labels.findIndex((l) => foldText(l) === want);
+  expect(idx, `"${label}" is offered (offered: ${labels.join(', ')})`).toBeGreaterThanOrEqual(0);
+  await list.getByRole('option').nth(idx).click();
+}
+
 /** Chooses the sample type on sample card n and ticks the test whose label starts with testName (or the first test). */
 export async function pickSampleAndTest(page: Page, n: number, sampleType: string, testName?: string): Promise<string> {
   if (n > 0 && !(await page.locator(`#sampleType-${n}`).count())) {
     await page.getByRole('button', { name: /^Add Sample$/ }).click();
   }
-  await page.locator(`#sampleType-${n}`).selectOption(await sampleTypeId(page, sampleType));
+  await chooseSampleType(page, n, sampleType);
   const boxes = page.locator(`input[id^="test-${n}-"]`);
   await expect(boxes.first(), `tests load for ${sampleType}`).toBeAttached({ timeout: 30_000 });
   let id = await boxes.first().getAttribute('id');

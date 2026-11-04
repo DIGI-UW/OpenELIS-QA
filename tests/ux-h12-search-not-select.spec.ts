@@ -137,7 +137,10 @@ test.describe('H12 search, not manual select', () => {
     await open(page, '/SampleBatchEntrySetup');
     await page.locator('main select').first().selectOption({ label: 'Routine' });
     await page.waitForTimeout(1500);
-    await pickNative(page, 'Serum');
+    // The sample type became a type-to-search box in OGC-1515 part 3 (#4929, 4 Nov 2026).
+    const typeBox = page.locator('input#selectSampleType');
+    if (await typeBox.count()) await pickCombo(page, 'Sample Type', 'Serum');
+    else await pickNative(page, 'Serum');
     await expect(page.getByPlaceholder(/Search tests/i)).toBeVisible();
     await expect(page.getByPlaceholder(/Search panels/i)).toBeVisible();
   });

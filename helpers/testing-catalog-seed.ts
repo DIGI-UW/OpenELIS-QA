@@ -121,7 +121,7 @@ export async function seedTestingCatalog(page: Page): Promise<CatalogSeedResult>
       const [, sr] = await api(`/tests/${id}/sample-results`);
       await api(`/tests/${id}/sample-results`, 'PUT', { testId: id, components: [{ id: sr.components?.[0]?.id, code: 'PRIMARY', label: name,
         displayOrder: 0, resultType: 'N', uomId: uomId(unit), isPrimary: true, showOnReport: true, allowMultipleReadings: false,
-        significantDigits: dig, interpretations: [], options: [] }] });
+        reportingDecimalPlaces: dig, interpretations: [], options: [] }] });
       const [, sr2] = await api(`/tests/${id}/sample-results`);
       await api(`/tests/${id}/ranges`, 'PUT', { testId: id, ranges: [{ componentId: sr2.components?.[0]?.id, gender: ' ', minAge: 0, maxAge: null,
         lowNormal: ln, highNormal: hn, lowCritical: lc, highCritical: hc, lowValid: 0, highValid: hc * 2 }] });

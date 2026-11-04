@@ -326,6 +326,15 @@ not because anything in the module blocks it. Nothing here is a blocker.
   control-lot and Westgard configuration live in the sidebar, so the QC step cannot be completed
   from the analyzer link itself.
 
+## Setup labels in each English (OGC-1591)
+
+`tests/ogc-1591-setup-labels.spec.ts`, read-only. #4905 gave the reordered setup actions new keys, so the English overlays no longer show the old step names.
+
+| TC | What | Tier | Status |
+|---|---|---|---|
+| TC-1591-01 | In en, en-US, en-GB and en-PG the Instrument step's action reads "Continue to Connect", never "Continue to Assays" | RENDER | Guard (4 Nov, testing f3047c55, 2 of 2) |
+| TC-1591-02 | In the same four, the Verify step's action of an analyser still in setup reads "Finish and activate", not "Continue to Connect" | RENDER | Guard (4 Nov, testing f3047c55, analyser 7) |
+
 ## Untested
 Learn-from-traffic (FR-B7/B8, FR-G) still needs the analyzer simulator — now against the Bridge
 listener — and with it reconciliation against the mappings, pending codes and pending result values.

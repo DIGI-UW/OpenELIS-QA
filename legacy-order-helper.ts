@@ -83,7 +83,7 @@ export async function setComponentViaRest(
     testId: id,
     components: [{
       id: pid, code: comp.code, label: comp.label, displayOrder: 0, resultType: comp.resultType,
-      isPrimary: true, showOnReport: true, allowMultipleReadings: false, significantDigits: comp.significantDigits ?? 1,
+      isPrimary: true, showOnReport: true, allowMultipleReadings: false, reportingDecimalPlaces: comp.significantDigits ?? 1,
       interpretations: [], options,
     }],
   });

@@ -13,6 +13,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { BASE, ADMIN, login } from '../helpers/test-helpers';
 import { createPatientViaAPI } from '../helpers/data-factory';
+import { setSampleTypeBox } from '../helpers/order-entry-v4';
 
 test.setTimeout(240000);
 const ENTRY = /\/rest\/SamplePatientEntry$/;
@@ -65,7 +66,7 @@ async function typeNewPatient(page: Page, last: string, nid: string) {
 async function pickSerumAndFirstTest(page: Page) {
   const types = await page.evaluate(async () => (await (await fetch('/api/OpenELIS-Global/rest/user-sample-types')).json()));
   const serum = types.find((t: any) => /^serum$/i.test(t.value)) || types[0];
-  await page.locator('#sampleType-0').selectOption(String(serum.id));
+  await setSampleTypeBox(page, 0, String(serum.value), String(serum.id));
   const first = page.locator('input[id^="test-0-"]').first();
   await first.waitFor({ state: 'attached', timeout: 20000 });
   await page.locator(`label[for="${await first.getAttribute('id')}"]`).click();

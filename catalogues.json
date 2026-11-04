@@ -139,7 +139,7 @@
     {
       "file": "search-not-select-test-cases.md",
       "area": "Search, not manual select (H12, OGC-1514, OGC-1515)",
-      "note": "Sweep tests/ux-h12-search-not-select.spec.ts plus tests/ogc-1515-searchable-lists.spec.ts; part 2 rows are tripwires until #4925 is on testing."
+      "note": "Sweep tests/ux-h12-search-not-select.spec.ts plus tests/ogc-1515-searchable-lists.spec.ts, tests/ogc-1515-part2.spec.ts and tests/ogc-1515-part3.spec.ts (parts 3 and 4); every row is a guard (4 Nov 2026)."
     }
   ],
   "notCatalogues": [
