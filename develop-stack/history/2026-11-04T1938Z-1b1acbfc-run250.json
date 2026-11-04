@@ -1,0 +1,17 @@
+{
+ "when": "2026-11-04T19:38:07.130Z",
+ "sha": "1b1acbfc67e11f936bbc139d032dbd52749faf64",
+ "subject": "fix(locations): a geographic levels file reports the columns it ignores (OGC-1600) (#4937)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41895434799",
+ "tz": "UTC",
+ "bootstrap": false,
+ "noResults": true,
+ "totals": {
+  "failing": 0,
+  "known": 0,
+  "new": 0,
+  "fixed": 0
+ },
+ "knownByTicket": {},
+ "suites": {}
+}

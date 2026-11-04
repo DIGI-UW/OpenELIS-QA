@@ -1,8 +1,8 @@
 {
- "when": "2026-11-04T10:41:15.366Z",
- "sha": "392ae8b1b98a60268e80c1bb22a931b2c1a98ad7",
- "subject": "fix(ui): order entry and EQA lists are searched by typing (OGC-1515) (#4931)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41813705221",
+ "when": "2026-11-04T19:38:07.130Z",
+ "sha": "1b1acbfc67e11f936bbc139d032dbd52749faf64",
+ "subject": "fix(locations): a geographic levels file reports the columns it ignores (OGC-1600) (#4937)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41895434799",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": true,
