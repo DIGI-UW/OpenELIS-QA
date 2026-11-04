@@ -1,9 +1,9 @@
 {
- "when": "2026-11-04T09:50:41.203Z",
+ "when": "2026-11-04T10:41:15.366Z",
  "sha": "392ae8b1b98a60268e80c1bb22a931b2c1a98ad7",
  "subject": "fix(ui): order entry and EQA lists are searched by typing (OGC-1515) (#4931)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41808254698",
- "tz": "Pacific/Port_Moresby",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41813705221",
+ "tz": "UTC",
  "bootstrap": false,
  "noResults": true,
  "totals": {
