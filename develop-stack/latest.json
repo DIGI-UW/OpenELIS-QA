@@ -1,8 +1,8 @@
 {
- "when": "2026-11-03T21:14:00.627Z",
- "sha": "a1e0fcf9ac3cf307b3d62441b2019b36bbd88d59",
- "subject": "fix(ui): long dropdowns are searched by typing (OGC-1515) (#4922)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41715345216",
+ "when": "2026-11-04T01:26:37.688Z",
+ "sha": "0dca62f6f9ab728da3f65e0d059e05b9f9ebc863",
+ "subject": "fix(ui): shipment, dictionary, pre-print and settings lists are searched by typing (OGC-1515) (#4925)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41750957643",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": true,

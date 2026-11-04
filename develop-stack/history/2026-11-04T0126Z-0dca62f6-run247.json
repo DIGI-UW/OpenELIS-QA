@@ -1,0 +1,17 @@
+{
+ "when": "2026-11-04T01:26:37.688Z",
+ "sha": "0dca62f6f9ab728da3f65e0d059e05b9f9ebc863",
+ "subject": "fix(ui): shipment, dictionary, pre-print and settings lists are searched by typing (OGC-1515) (#4925)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41750957643",
+ "tz": "UTC",
+ "bootstrap": false,
+ "noResults": true,
+ "totals": {
+  "failing": 0,
+  "known": 0,
+  "new": 0,
+  "fixed": 0
+ },
+ "knownByTicket": {},
+ "suites": {}
+}

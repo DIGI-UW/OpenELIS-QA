@@ -1,8 +1,8 @@
-# develop-stack: develop `a1e0fcf9`
+# develop-stack: develop `0dca62f6`
 
-fix(ui): long dropdowns are searched by typing (OGC-1515) (#4922)
+fix(ui): shipment, dictionary, pre-print and settings lists are searched by typing (OGC-1515) (#4925)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41715345216 · TZ UTC · 2026-11-03T21:14:00.627Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41750957643 · TZ UTC · 2026-11-04T01:26:37.688Z
 
 **NO RESULTS**: no suite ran, so nothing passed or failed. The stack most likely did not come up; read the "Wait for the stack to be healthy" step of the run above. This is not a green run.
 
