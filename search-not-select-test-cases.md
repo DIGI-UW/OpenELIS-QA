@@ -47,3 +47,13 @@ Every sweep row is a guard since 4 Nov (parts 1 and 2 on testing). The searchabl
 | TC-1515-17 | Facility filter is searchable and still applies once a box state is chosen | Sample Shipment boxes | Guard | OGC-1515 part 2 |
 | TC-1515-18 | Reference lab filter is searchable | Reference lab results | Guard | OGC-1515 part 2 |
 | TC-1515-19 | The unassigned samples facility route answers 200 with a list (was 404) | Sample Shipment (API) | Guard | OGC-1515 part 2 |
+| TC-1515-20a | Lab Unit is searchable | Results | Guard | OGC-1515 part 3 |
+| TC-1515-20b | Lab Unit is searchable | Validation | Guard | OGC-1515 part 3 |
+| TC-1515-21 | Reporting unit is searchable | Report NCE | Guard | OGC-1515 part 3 |
+| TC-1515-22 | Sample type and ordering site are searchable | TAT report | Guard | OGC-1515 part 3 |
+| TC-1515-23 | Study is searchable; only exportable studies are offered, with Routine HIV Testing (was missing) and without "Testing" (was an internal error) | Study export | Guard | OGC-1515 part 3 |
+| TC-1515-24 | Every offered study exports a CSV with each date type (Print Date was an internal error for all but EID); an empty trends export answers 200 (was 500) | Study export (API) | Guard | OGC-1515 part 3 |
+| TC-1515-25 | Sample type and unit of measure are searchable | Generic sample order | Guard | OGC-1515 part 3 |
+| TC-1515-26 | Sample type is searchable; the tests list has its search once a type is chosen | Batch Order Entry | Guard | OGC-1515 part 3 |
+| TC-1515-27 | Scheme is searchable | EQA participants | Guard | OGC-1515 part 4 |
+| TC-1515-28 | Scheme is searchable; the first Escape ends the search and the dialog stays, the second closes it | New EQA cycle dialog | Guard | OGC-1515 part 4 |

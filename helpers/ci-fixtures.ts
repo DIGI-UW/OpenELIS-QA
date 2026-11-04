@@ -142,7 +142,7 @@ export async function ensureTest(
         ...(i === 0 && primaryId ? { id: primaryId } : {}),
         code: i === 0 ? (sr.body?.components?.[0]?.code ?? comp.code) : comp.code,
         label: comp.label, displayOrder: i, resultType: comp.resultType,
-        isPrimary: i === 0, showOnReport: true, allowMultipleReadings: false, significantDigits: comp.resultType === 'N' ? 1 : 0,
+        isPrimary: i === 0, showOnReport: true, allowMultipleReadings: false, reportingDecimalPlaces: comp.resultType === 'N' ? 1 : null,
         interpretations: [], options: comp.options ?? [],
       })),
     });

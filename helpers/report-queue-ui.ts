@@ -81,7 +81,7 @@ export async function criticalTest(page: Page): Promise<{ id: string; name: stri
   expect(c.status, 'critical test created').toBe(201);
   const id = String(c.body?.testId ?? c.body?.id);
   const sr0 = await tc(`/tests/${id}/sample-results`, 'GET');
-  const put = await tc(`/tests/${id}/sample-results`, 'PUT', { testId: id, components: [{ id: sr0.body?.components?.[0]?.id, code: 'QRC', label: name, displayOrder: 0, resultType: 'N', isPrimary: true, showOnReport: true, allowMultipleReadings: false, significantDigits: 1, interpretations: [], options: [] }] });
+  const put = await tc(`/tests/${id}/sample-results`, 'PUT', { testId: id, components: [{ id: sr0.body?.components?.[0]?.id, code: 'QRC', label: name, displayOrder: 0, resultType: 'N', isPrimary: true, showOnReport: true, allowMultipleReadings: false, reportingDecimalPlaces: 1, interpretations: [], options: [] }] });
   expect(put.status, 'component set').toBe(200);
   const comp = (await tc(`/tests/${id}/sample-results`, 'GET')).body?.components?.[0]?.id;
   const rg = await tc(`/tests/${id}/ranges`, 'PUT', { testId: id, ranges: [{ componentId: comp, gender: ' ', minAge: 0, maxAge: null, lowNormal: 70, highNormal: 110, lowCritical: 40, highCritical: 400, lowValid: 0, highValid: 800 }] });

@@ -1,6 +1,7 @@
 import { test, expect, Page, Route } from '@playwright/test';
 import { BASE, ADMIN, login } from '../helpers/test-helpers';
 import { seedModifiableOrder } from '../helpers/data-factory';
+import { setSampleTypeBox } from '../helpers/order-entry-v4';
 
 /**
  * tests/order-entry-off-happy-path.spec.ts
@@ -293,7 +294,7 @@ test.describe('Order entry off the happy path', () => {
   test('TC-OEX-10: [guard] Enter Order lists the chosen sample type\'s tests', async ({ page }) => {
     const [A] = await sampleTypes(page);
     await v4Enter(page);
-    await page.locator('#sampleType-0').selectOption(A.id);
+    await setSampleTypeBox(page, 0, A.name, A.id);
     await expect.poll(async () => (await v4Listed(page)).length, { timeout: 15_000 }).toBe(A.tests.length);
   });
 
@@ -306,9 +307,9 @@ test.describe('Order entry off the happy path', () => {
       await new Promise((res) => setTimeout(res, 4000));
       await r.fallback();
     });
-    await page.locator('#sampleType-0').selectOption(A.id);
+    await setSampleTypeBox(page, 0, A.name, A.id);
     await page.waitForTimeout(300);
-    await page.locator('#sampleType-0').selectOption(B.id);
+    await setSampleTypeBox(page, 0, B.name, B.id);
     await page.waitForTimeout(6500);
     const listed = await v4Listed(page);
     expect(listed.sort(), `${B.name} is selected, so its tests must be listed`).toEqual(B.tests.map((t) => t.id).sort());
@@ -320,7 +321,7 @@ test.describe('Order entry off the happy path', () => {
     const [A] = await sampleTypes(page);
     await v4Enter(page);
     await page.route('**/rest/sample-type-tests*', (r: Route) => r.fulfill({ status: 500, contentType: 'application/json', body: '{}' }));
-    await page.locator('#sampleType-0').selectOption(A.id);
+    await setSampleTypeBox(page, 0, A.name, A.id);
     await expect(page.getByText(/^Loading/i), 'the loading state must end').toHaveCount(0, { timeout: 10_000 });
   });
 

@@ -559,13 +559,11 @@ test.describe('Save messages and sample names (#4731, #4757)', () => {
   });
 
   test('TC-OEV4-SAVE-04 Prepare Samples Save and next names the order on arrival at Sample check', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-21 on develop e1f2b693: Save and next on Prepare
-    // Samples saves (200) and opens Sample check with no message at all, while Enter Order's
-    // Save and next says "Order <lab> saved / Next: Prepare Samples" and every Save and exit
-    // says "Order <lab> has been saved." #4731: "Save toasts on every v4 step name the lab
-    // number." OrderCollect.jsx adds the notification, but Save and next leaves the page
-    // before it shows. Filed as OGC-1598 (2 Nov 2026; still seen on testing, develop 482eb81c).
-    test.fail();
+    // GUARD since 4 Nov 2026 (OGC-1598, OpenELIS-Global-2 #4934, testing f3047c55). Was a
+    // tripwire: Save and next on Prepare Samples saved (200) and opened Sample check with no
+    // message (seen 21 Oct on develop e1f2b693 and 2 Nov on testing 482eb81c). It now raises
+    // "Order <lab> has been saved." before Sample check opens. The match is that exact text, so
+    // Enter Order's "Order <lab> saved / Next: Prepare Samples" cannot pass it.
     await collectNotices(page);
     const o = await newOrderToPrepare(page);
     await fillCollection(page, 0);
@@ -574,7 +572,7 @@ test.describe('Save messages and sample names (#4731, #4757)', () => {
     await expect(page).toHaveURL(/\/order\/clinical\/qa/, { timeout: 30_000 });
     // The save message itself, not the Prepare Samples notices that also carry the lab number.
     await expect.poll(async () => (await notices(page)).join(' | '), { timeout: 10_000 })
-      .toMatch(new RegExp(`Order ${o.lab} (saved|has been saved)`));
+      .toContain(`Order ${o.lab} has been saved.`);
   });
 
   test('TC-OEV4-LBL-07 the labels table names each sample by lab number and type, on the row, the quantity and the print button', async ({ page }) => {

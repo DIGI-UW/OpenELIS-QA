@@ -7,6 +7,7 @@
  */
 import { test, expect, Page } from '@playwright/test';
 import { HeuristicLog, landing, afterSave } from '../helpers/ux-heuristics';
+import { setSampleTypeBox } from '../helpers/order-entry-v4';
 
 const BASE = process.env.BASE_URL || process.env.BASE || 'https://testing.openelis-global.org';
 const IDS = ['requestorFirstName', 'requestorLastName', 'fieldNotes', 'sampleType-0'];
@@ -29,7 +30,7 @@ test('TC-HEUR-01: Add Environmental Order resets for the next order after Save',
   test.skip(!types.includes('QA_Surface Water'), 'environmental seed (QA_Surface Water) not on this instance');
   await page.locator('#vec-site-search').fill('QA-VS');
   await page.getByRole('button', { name: 'Select', exact: true }).first().click({ timeout: 30_000 });
-  await page.locator('#sampleType-0').selectOption({ label: 'QA_Surface Water' });
+  await setSampleTypeBox(page, 0, 'QA_Surface Water');
   await page.getByRole('button', { name: /Tests & Panels/ }).first().click();
   await page.locator('main label').filter({ hasText: 'QA_Water pH' }).last().click();
   await page.locator('#requestorFirstName').fill('Qaheur');
