@@ -17,10 +17,10 @@ import { test, expect, Page } from '@playwright/test';
  * Run: BASE=https://testing.openelis-global.org npx playwright test --config=ux-h12.config.ts
  * Threshold: H12_MIN (default 10) items before a list without search is reported.
  *
- * STATUS (4 Nov 2026, testing develop a1e0fcf9): moved into the repo. OGC-1515 part 1 (#4922)
- * flipped rows 2, 3, 5, 9, 10 and 11 to guards (2 of 2 runs). Part 2 (#4925, merged 3 Nov 23:48
- * UTC, not yet on testing) covers rows 4, 6, 7, 8 and 12, which stay tripwires (test.fail) until it
- * deploys. Companion: tests/ogc-1515-searchable-lists.spec.ts proves the new comboboxes work.
+ * STATUS (4 Nov 2026): every row is a guard. OGC-1515 part 1 (#4922, testing a1e0fcf9) flipped
+ * rows 2, 3, 5, 9, 10 and 11; part 2 (#4925, testing 0dca62f6, deployed 3 Nov 23:52 UTC) flipped
+ * rows 4, 6, 7, 8 and 12 (2 of 2 runs each). Companions: tests/ogc-1515-searchable-lists.spec.ts
+ * and tests/ogc-1515-part2.spec.ts prove the new search boxes work.
  */
 
 const MIN = Number(process.env.H12_MIN ?? '10');
@@ -40,13 +40,15 @@ async function probe(page: Page, min = MIN): Promise<Finding[]> {
       return ((l as HTMLElement)?.innerText || el.getAttribute('aria-label') || (wl as HTMLElement)?.innerText || (el as HTMLSelectElement).name || id || '').trim().slice(0, 60);
     };
     const isTime = (s: string) => /\b(time|hour|minute|hh|mm)\b/i.test(s) || /_minute|_hour/i.test(s);
-    const hasSearch = (root: Element | null) =>
-      !!root?.querySelector('input[type=search], .cds--search input, input[placeholder*="earch" i], input[placeholder*="ilter" i], .cds--combo-box input');
+    const SEARCH_SEL = 'input[type=search], .cds--search input, input[placeholder*="earch" i], input[placeholder*="ilter" i], .cds--combo-box input';
+    const FIXED_ENUM = /^(filter by state|state|status|priority|action|subject type|severity)\b/i;
+    const hasSearch = (root: Element | null) => !!root?.querySelector(SEARCH_SEL);
     const out: { kind: string; label: string; size: number | string }[] = [];
     const main = document.querySelector('main') ?? document.body;
 
     // 1. Native selects.
     main.querySelectorAll('select').forEach((s) => {
+      if (s.closest('.cds--pagination')) return; // page pickers are not data lists
       const label = labelOf(s);
       const n = (s as HTMLSelectElement).options.length;
       if (n >= min && !isTime(label) && !isTime(s.id)) out.push({ kind: 'native select', label, size: n });
@@ -59,7 +61,8 @@ async function probe(page: Page, min = MIN): Promise<Finding[]> {
       btn.click(); await sleep(300);
       const n = d.querySelectorAll('.cds--list-box__menu-item').length;
       btn.click(); await sleep(100);
-      if (n >= min) out.push({ kind: d.classList.contains('cds--multi-select') ? 'Carbon MultiSelect' : 'Carbon Dropdown', label: labelOf(d), size: n });
+      // Short fixed enums may stay plain dropdowns (H12 rule); these labels are fixed lists, not site data.
+      if (n >= min && !FIXED_ENUM.test(labelOf(d))) out.push({ kind: d.classList.contains('cds--multi-select') ? 'Carbon MultiSelect' : 'Carbon Dropdown', label: labelOf(d), size: n });
     }
 
     // 3. Checkbox lists: a container holding MIN+ checkboxes with no search box near it.
@@ -82,7 +85,9 @@ async function probe(page: Page, min = MIN): Promise<Finding[]> {
     main.querySelectorAll('table').forEach((t) => {
       const wrap = t.closest('.cds--data-table-container') ?? t.parentElement?.parentElement ?? t;
       const total = Number((((wrap.parentElement ?? wrap) as HTMLElement).innerText.match(/of (\d+) items/) || [])[1] ?? t.querySelectorAll('tbody tr').length);
-      if (total >= min && !hasSearch(wrap) && !hasSearch(wrap.parentElement)) {
+      // A search box anywhere above the table in <main> counts (the dictionary and settings tables put it there).
+      const searchAbove = Array.from(main.querySelectorAll(SEARCH_SEL)).some((inp) => !!(inp.compareDocumentPosition(t) & Node.DOCUMENT_POSITION_FOLLOWING));
+      if (total >= min && !hasSearch(wrap) && !hasSearch(wrap.parentElement) && !searchAbove) {
         const heads = Array.from(t.querySelectorAll('th')).map((x) => (x as HTMLElement).innerText.trim()).filter(Boolean).slice(0, 3).join(' / ');
         out.push({ kind: 'table', label: heads, size: total });
       }
@@ -164,22 +169,22 @@ test.describe('H12 search, not manual select', () => {
     expect(names, 'available tests are in alphabetical order').toEqual(sorted);
   });
 
-  // guard: true = fixed and held (part 1, #4922). false = tripwire until part 2 (#4925) deploys.
+  // guard: true = fixed and held. false = a tripwire (test.fail) until its fix is on testing.
   const SWEEP: { id: string; route: string | (() => Promise<string>) | null; menuNeedle?: string; prep?: (p: Page) => Promise<void>; ticket: string; guard: boolean }[] = [
     { id: 'TC-H12-02', route: '/WorkPlanByTest', ticket: 'OGC-1515 row 2 (Test, 170)', guard: true },
     { id: 'TC-H12-03', route: null, menuNeedle: 'report=activityReportByTest', ticket: 'OGC-1515 row 3 (Search By, 170)', guard: true },
-    { id: 'TC-H12-04', route: '/PrintBarcode', prep: (p) => pickNative(p, 'Serum'), ticket: 'OGC-1515 row 4 (tests 25 for Serum)', guard: false },
+    { id: 'TC-H12-04', route: '/PrintBarcode', prep: (p) => pickCombo(p, 'Sample Type', 'Serum'), ticket: 'OGC-1515 row 4 (tests 25 for Serum)', guard: true },
     { id: 'TC-H12-05', route: '/MasterListsPage/batchTestReassignment', prep: (p) => pickCombo(p, 'Sample Type', 'Serum'), ticket: 'OGC-1515 row 5 (Sample Type 19, Test 26)', guard: true },
-    { id: 'TC-H12-06', route: '/MasterListsPage/DictionaryMenu', prep: async (p) => { await p.getByRole('button', { name: 'Add', exact: true }).click(); await p.waitForTimeout(800); }, ticket: 'OGC-1515 row 6 (Dictionary Category, 111)', guard: false },
-    { id: 'TC-H12-07', route: '/SampleShipment', ticket: 'OGC-1515 row 7 (Filter by Facility, 45)', guard: false },
-    { id: 'TC-H12-08', route: '/SampleShipment/reference-lab-results', ticket: 'OGC-1515 row 8 (Reference Lab, 45)', guard: false },
+    { id: 'TC-H12-06', route: '/MasterListsPage/DictionaryMenu', prep: async (p) => { await p.getByRole('button', { name: 'Add', exact: true }).click(); await p.waitForTimeout(800); }, ticket: 'OGC-1515 row 6 (Dictionary Category, 111)', guard: true },
+    { id: 'TC-H12-07', route: '/SampleShipment', ticket: 'OGC-1515 row 7 (Filter by Facility, 45)', guard: true },
+    { id: 'TC-H12-08', route: '/SampleShipment/reference-lab-results', ticket: 'OGC-1515 row 8 (Reference Lab, 45)', guard: true },
     { id: 'TC-H12-09', route: null, menuNeedle: 'report=referredOut', ticket: 'OGC-1515 row 9 (Referral Center or Laboratory, 45)', guard: true },
     { id: 'TC-H12-11a', route: '/Alerts', ticket: 'OGC-1515 row 11 (Alert Type, 19)', guard: true },
     { id: 'TC-H12-11b', route: '/qa/qms/audit-trail', ticket: 'OGC-1515 row 11 (Entity Type, 20)', guard: true },
-    { id: 'TC-H12-12a', route: '/MasterListsPage/SiteInformationMenu', ticket: 'OGC-1515 row 12 (36 settings)', guard: false },
-    { id: 'TC-H12-12b', route: '/MasterListsPage/ResultConfigurationMenu', ticket: 'OGC-1515 row 12 (27 settings)', guard: false },
-    { id: 'TC-H12-12c', route: '/MasterListsPage/SampleEntryConfigurationMenu', ticket: 'OGC-1515 row 12 (24 settings)', guard: false },
-    { id: 'TC-H12-12d', route: '/qa/qms/e-signature-log', ticket: 'OGC-1515 row 12 (40 log rows)', guard: false },
+    { id: 'TC-H12-12a', route: '/MasterListsPage/SiteInformationMenu', ticket: 'OGC-1515 row 12 (36 settings)', guard: true },
+    { id: 'TC-H12-12b', route: '/MasterListsPage/ResultConfigurationMenu', ticket: 'OGC-1515 row 12 (27 settings)', guard: true },
+    { id: 'TC-H12-12c', route: '/MasterListsPage/SampleEntryConfigurationMenu', ticket: 'OGC-1515 row 12 (24 settings)', guard: true },
+    { id: 'TC-H12-12d', route: '/qa/qms/e-signature-log', ticket: 'OGC-1515 row 12 (40 log rows)', guard: true },
   ];
 
   for (const s of SWEEP) {
