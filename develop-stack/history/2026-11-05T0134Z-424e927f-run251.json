@@ -1,0 +1,17 @@
+{
+ "when": "2026-11-05T01:34:21.455Z",
+ "sha": "424e927fb623fc0ea6f4aee5e5299f89b691df4b",
+ "subject": "feat(results): analyzer messages open runs that the worklist names and opens (OGC-1200) (#4939)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41947201020",
+ "tz": "UTC",
+ "bootstrap": false,
+ "noResults": true,
+ "totals": {
+  "failing": 0,
+  "known": 0,
+  "new": 0,
+  "fixed": 0
+ },
+ "knownByTicket": {},
+ "suites": {}
+}

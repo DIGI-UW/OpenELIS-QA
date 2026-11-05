@@ -1,8 +1,8 @@
 {
- "when": "2026-11-04T19:38:07.130Z",
- "sha": "1b1acbfc67e11f936bbc139d032dbd52749faf64",
- "subject": "fix(locations): a geographic levels file reports the columns it ignores (OGC-1600) (#4937)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41895434799",
+ "when": "2026-11-05T01:34:21.455Z",
+ "sha": "424e927fb623fc0ea6f4aee5e5299f89b691df4b",
+ "subject": "feat(results): analyzer messages open runs that the worklist names and opens (OGC-1200) (#4939)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/41947201020",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": true,
