@@ -140,6 +140,16 @@
       "file": "search-not-select-test-cases.md",
       "area": "Search, not manual select (H12, OGC-1514, OGC-1515)",
       "note": "Sweep tests/ux-h12-search-not-select.spec.ts plus tests/ogc-1515-searchable-lists.spec.ts, tests/ogc-1515-part2.spec.ts and tests/ogc-1515-part3.spec.ts (parts 3 and 4); every row is a guard (4 Nov 2026)."
+    },
+    {
+      "file": "analyzer-runs-test-cases.md",
+      "area": "Runs, slice 1: analyzer messages open runs the Results worklist names and opens (OGC-1200, #4939)",
+      "note": "Feature suite, 2026-11-05, testing 424e927f. Spec: tests/ogc-1200-runs.spec.ts (ogc1200.config.ts). Not in CI: needs the RUN-16 fixture on testing."
+    },
+    {
+      "file": "module-system-test-cases.md",
+      "area": "Module system with no module installed: registry, Admin > Modules, unknown module pages and assets (OGC-1577, #4954)",
+      "note": "Feature suite, 2026-11-05, testing f7eb2d47. Spec: tests/ogc-1577-modules.spec.ts (ogc1200.config.ts)."
     }
   ],
   "notCatalogues": [

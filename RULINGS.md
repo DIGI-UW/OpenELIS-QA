@@ -59,6 +59,7 @@ to contradict a row, ask Casey which stands; do not pick one yourself.
 | R-41 | FHIR becomes read-only (#4893): OK. Release and upgrade notes must say integration accounts need the new reader roles. | 2026-11-02 |
 | R-42 | Attachments JPEG/PNG/PDF up to 10 MB, HTTP backup receiver removed, SVG logos no longer served, study CSVs need Reports access: all OK as they are. | 2026-11-02 |
 | R-43 | The release go/no-go verdict is Casey's call. QA writes what blocks a cut and what flips it to GO. | 2026-10-15 |
+| R-44 | Runs (OGC-1200): the /AnalyzerResults redirect and the menu retirement ship with slice 3 (Accept on the run view), not slice 1. Until then the old import page stays reachable and is not a finding. | 2026-11-05 |
 
 ## Who gets a ticket
 
