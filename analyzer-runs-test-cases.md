@@ -17,7 +17,7 @@ Fixture on testing: order DEV01260000000001634 has Creatinine, Amylase, Total ch
 | TC-RUN-09 | Expanding a waiting row offers no result input and no Save | FR-D3 | RENDER | Guard (5 Nov, 2 of 2) |
 | TC-RUN-10 | In French the run screens show readable text, never raw keys (English until Transifex delivers run.*) | i18n | RENDER | Guard (5 Nov, 2 of 2) |
 | TC-RUN-11 | The run header's link opens the analyser import page; its breadcrumb names the analyser with no MISSING_TRANSLATION console errors | #4939 also-fixed | RENDER | Guard (5 Nov, 2 of 2) |
-| TC-RUN-12 | Ignoring a run's last value on the import page completes the run (Complete, n of n) and drops it from the chip | FR-A3, FR-E5 | CROSS-LINK | Opt-in (`RUN_COMPLETE_ID`); not run yet: it removes a staged value |
+| TC-RUN-12 | Ignoring a run's last value on the import page completes the run (Complete, n of n) and drops it from the chip | FR-A3, FR-E5 | CROSS-LINK | Guard, opt-in (`RUN_COMPLETE_ID`, removes a staged value): 5 Nov on Casey's OK, RUN-1 and RUN-2 (GeneXpert, one unmatched value each) went Complete, 2 of 2 |
 
 ## Not covered
 
