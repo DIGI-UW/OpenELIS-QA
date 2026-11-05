@@ -1767,16 +1767,26 @@ test.describe('Locations & Organizations (OGC-1363)', () => {
     expect(p.json.rows.filter((r: any) => r.outcome === 'rejected').length, 'the second row is rejected').toBe(1);
   });
 
-  test('TC-LORG-29w: a column the importer does not know is reported as ignored (FR-M)', async ({ page }) => {
+  test('TC-LORG-29w: a column the importer does not know is reported as ignored, for organizations and geographic levels files (FR-M) [FIXED OGC-1600]', async ({ page }) => {
     test.skip(!F.prov, 'no geographic levels on this instance');
-    // FLIP-WHEN-FIXED. Observed 2026-10-02 on local develop (image 10-01 17:48 UTC), in two runs with a fresh login and fresh records each.
-    // A file with an extra "colour" column previews with errors [] and no warning anywhere in the plan.
-    test.fail();
+    // FIXED OGC-1600, flipped 2026-11-04 on testing (develop 1b1acbfc, #4937). Was FLIP-WHEN-FIXED from 2026-10-02.
+    // The warning lives in plan.ignoredColumns (shown as "These columns are not imported and were ignored: ..."),
+    // not in errors or row reasons, which is why the old assertion never saw it. Organizations files reported it
+    // already (#4515); geographic levels files dropped unknown columns silently until #4937.
     await page.goto(LOCATIONS);
     if (!F.mf) { F.mf = await createArea(page, `QA MF Area ${S}`, `QMF${S}`, F.prov); saveFix(); }
-    const p = await importCall(page, 'preview', [{ name: `organizations-col-${S}.csv`, content: `type,name,parentCode,colour\nreferring clinic,QA Colour Post ${S},QMF${S},blue\n` }], 'merge');
-    note('TC-LORG-29w', { errors: p.json?.errors, rows: p.json?.rows });
-    expect(JSON.stringify({ e: p.json?.errors, r: (p.json?.rows || []).map((r: any) => r.reason) })).toMatch(/colour/i);
+    const levelsCsv = 'level,typeName,colour,notes\n1,Province,blue,x\n';
+    const orgs = await importCall(page, 'preview', [{ name: `organizations-col-${S}.csv`, content: `type,name,parentCode,colour\nreferring clinic,QA Colour Post ${S},QMF${S},blue\n` }], 'merge');
+    const levels = await importCall(page, 'preview', [{ name: `qa-col-${S}-levels.csv`, content: levelsCsv, area: 'levels' }], 'merge');
+    note('TC-LORG-29w', { orgs: orgs.json?.ignoredColumns, levels: levels.json?.ignoredColumns, levelErrors: levels.json?.errors });
+    expect.soft(orgs.json?.ignoredColumns, 'organizations file names the ignored column').toEqual(['colour']);
+    expect(levels.json?.ignoredColumns, 'geographic levels file names every ignored column').toEqual(['colour', 'notes']);
+    // UI: the preview shows the warning (preview only, nothing is saved)
+    await page.goto(`${LOCATIONS}/import`);
+    await page.locator('input[type="file"]').first().setInputFiles({ name: `qa-col-${S}-levels.csv`, mimeType: 'text/csv', buffer: Buffer.from(levelsCsv) });
+    await page.locator('select[id^="import-area-"]').first().selectOption('levels');
+    await page.getByRole('button', { name: /^Preview$/ }).click();
+    await expect(page.getByTestId('locations-import-ignored')).toContainText('colour, notes');
   });
 
   test('TC-LORG-29e: files saved by Excel import: "CSV UTF-8" (with a byte-order mark) and plain "CSV" (Windows-1252) (FR-F1) [FIXED OGC-1363]', async ({ page }) => {
