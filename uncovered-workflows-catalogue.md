@@ -257,7 +257,7 @@ Added 2026-10-02 against local develop (images 2026-10-01 17:48 UTC). Automated:
 | TC-LORG-28t | Referral-lab export round trip in Replace changes nothing | AC12 | PERSIST | **fails**: 36 referring clinics would be deactivated |
 | TC-LORG-29 | Malformed files refused with reasons, never 500; quoted commas; 5,000 rows in under 30 s | FR-F7 | FUNCTION | pass |
 | TC-LORG-29d | An identifier value repeated inside one file is rejected | FR-F7, FR-I3 | FUNCTION | **fails**: both rows preview as new |
-| TC-LORG-29w | An unknown column is reported as ignored | FR-M | RENDER | **fails**: no warning |
+| TC-LORG-29w | An unknown column is reported as ignored (organizations and geographic levels files) | FR-M | RENDER | guard: passes since OGC-1600 (#4937), 4 Nov 2026 |
 | TC-LORG-29e | Excel "CSV UTF-8" (BOM) and Windows-1252 files import | FR-F1 | FUNCTION | **fails** |
 | TC-LORG-29b | Different "... Health Centre" names are not offered as renames | FR-F12 | FUNCTION | **fails**: every one is |
 | TC-LORG-30 | Runs listed with who, when, mode, counts; report downloads; previews recorded | FR-F10, FR-F9 | RENDER | pass |
