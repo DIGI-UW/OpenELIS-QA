@@ -1,8 +1,8 @@
 {
- "when": "2026-11-06T10:38:38.436Z",
- "sha": "aabc57995e2b971d3bf1e0a85359fb020bfe44f3",
- "subject": "docs(modules): section on reusing the core's services and components (#4963)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42201756102",
+ "when": "2026-11-06T19:00:57.298Z",
+ "sha": "e605310137eab91e0bb19030a088302c0b5881de",
+ "subject": "Verify deployment TLS and isolate remote working files (#4890)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42274078104",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": true,
