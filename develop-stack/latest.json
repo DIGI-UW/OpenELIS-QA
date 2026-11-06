@@ -1,8 +1,8 @@
 {
- "when": "2026-11-06T01:48:02.898Z",
+ "when": "2026-11-06T10:38:38.436Z",
  "sha": "aabc57995e2b971d3bf1e0a85359fb020bfe44f3",
  "subject": "docs(modules): section on reusing the core's services and components (#4963)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42143168843",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42201756102",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": true,
