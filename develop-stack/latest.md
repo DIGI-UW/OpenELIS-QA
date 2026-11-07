@@ -2,7 +2,7 @@
 
 test(reports): run the study CSV export suite in the isolated-database shard (#4975)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42360271670 · TZ UTC · 2026-11-07T09:35:26.481Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42395818350 · TZ UTC · 2026-11-07T17:26:14.484Z
 
 **NO RESULTS**: no suite ran, so nothing passed or failed. The stack most likely did not come up; read the "Wait for the stack to be healthy" step of the run above. This is not a green run.
 
