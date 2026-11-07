@@ -1,8 +1,8 @@
-# develop-stack: develop `e6053101`
+# develop-stack: develop `57c19b65`
 
-Verify deployment TLS and isolate remote working files (#4890)
+test(reports): run the study CSV export suite in the isolated-database shard (#4975)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42319150643 · TZ UTC · 2026-11-07T00:36:58.588Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42360271670 · TZ UTC · 2026-11-07T09:35:26.481Z
 
 **NO RESULTS**: no suite ran, so nothing passed or failed. The stack most likely did not come up; read the "Wait for the stack to be healthy" step of the run above. This is not a green run.
 

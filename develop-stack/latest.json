@@ -1,8 +1,8 @@
 {
- "when": "2026-11-07T00:36:58.588Z",
- "sha": "e605310137eab91e0bb19030a088302c0b5881de",
- "subject": "Verify deployment TLS and isolate remote working files (#4890)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42319150643",
+ "when": "2026-11-07T09:35:26.481Z",
+ "sha": "57c19b655dd07af02c2e62dbf33fe30735cba235",
+ "subject": "test(reports): run the study CSV export suite in the isolated-database shard (#4975)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42360271670",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": true,
