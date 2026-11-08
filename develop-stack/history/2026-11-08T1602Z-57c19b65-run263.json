@@ -1,0 +1,17 @@
+{
+ "when": "2026-11-08T16:02:57.662Z",
+ "sha": "57c19b655dd07af02c2e62dbf33fe30735cba235",
+ "subject": "test(reports): run the study CSV export suite in the isolated-database shard (#4975)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42497719925",
+ "tz": "UTC",
+ "bootstrap": false,
+ "noResults": true,
+ "totals": {
+  "failing": 0,
+  "known": 0,
+  "new": 0,
+  "fixed": 0
+ },
+ "knownByTicket": {},
+ "suites": {}
+}
