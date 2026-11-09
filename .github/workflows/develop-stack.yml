@@ -223,6 +223,10 @@ jobs:
             sleep 20
           done
           echo "::error::stack did not come up in time"
+          # Every service, not only the webapp: runs 218 to 266 failed in the
+          # proxy (nginx config) while this printed only the webapp.
+          docker compose -p oedevqa -f "$APP_DIR/docker-compose.develop.yml" ps -a || true
+          docker compose -p oedevqa -f "$APP_DIR/docker-compose.develop.yml" logs --tail 40 certs proxy || true
           docker compose -p oedevqa -f "$APP_DIR/docker-compose.develop.yml" logs --tail 60 oe.openelis.org || true
           exit 1
 
