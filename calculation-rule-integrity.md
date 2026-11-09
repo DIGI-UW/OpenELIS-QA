@@ -49,3 +49,24 @@ A save with an id that doesn't exist answers 404 `calculation.error.notFound`, n
 With B = C * 2 and C = D * 2 active, D = B * 2 answers 400 `calculation.error.cycle`, and `messageArgs.cycle` names all three rules.
 
 Not covered here: the Calculated Value admin screen showing these messages. The dev spec `ogc-1587-calculation-rule-integrity.spec.ts` drives the screen's switch-on refusal.
+
+## Bounded evaluator (#4852, TC-CALCB)
+
+Spec: `tests/calculated-results-bounded.spec.ts`, config `calc.config.ts`. Added 9 Nov 2026 on testing (develop c470bd68, which carries #4852 at 6a44dda30). All guards.
+
+Contract (from the diff and `docs/upgrades/calculated-results.md`): operators `+ - * / ( ) == != >= <= && ||` and the normal-range operations after a test result; operands are bounded decimals (exponents allowed), test results and patient age; 1 to 256 operations, depth 32. A rule outside that set answers 400 `error.invalid.calculation.logic`. A non-finite result is skipped and overwrites nothing.
+
+| ID | Case | Seen 9 Nov |
+|---|---|---|
+| TC-CALCB-01 | B = C * 2 with C = 20 stores `40`, not `40.0` | 40 |
+| TC-CALCB-02 | B = C / 0: C saves, B stays empty (3.3.0 stored 9.2E16, develop before #4852 stored Infinity) | empty |
+| TC-CALCB-03 | B = C / 30000000 with C = 1 stores a usable number | `3.3333333333333334E-8` |
+| TC-CALCB-04 | `Math.max(` in a rule is refused 400, nothing stored | 400 |
+| TC-CALCB-05 | C && 2 (logic on numbers) is refused 400 | 400 |
+| TC-CALCB-06 | Patient Weight as an operand is refused 400 | 400 |
+| TC-CALCB-07 | A constant outside the decimal grammar (`0x10`) is refused 400; `1e3` is allowed by design | 400 |
+| TC-CALCB-08 | B = C >= 10 with C = 12 stores `true` (record: a condition rule writes true/false, as before #4852) | true |
+
+Seen in the UI on 9 Nov (probe, not automated): the editor offers only Patient Age(Years) as a patient attribute, and a refused save shows "The calculation is invalid. Check its operations and numeric values." The key has no French yet.
+
+Not covered: switching on a stored rule that uses an unsupported operation (the upgrade note says activation answers 400 and evaluation skips it). Test it on an upgrade stack, not on testing.

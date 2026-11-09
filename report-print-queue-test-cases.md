@@ -64,6 +64,18 @@ Orders are placed through REST (order entry is being rewritten); results go in o
 | TC-RPQ-46 | Sort by Lab No (server), Time window and Items per page from the page, saved and kept over a reload, page 2, Clear filters keeps the window | Guard | FR-1.8, FR-3.2, FR-3.8, FR-10.5 |
 | TC-RPQ-47 | A Patient Status Report range over two printed orders adds a reprint to each, no new version | Guard | AC-19, BR-5 |
 
+## Required components on the patient report (OGC-1608, TC-RPTCOMP)
+
+Spec: `tests/report-required-components.spec.ts`, config `calc.config.ts`. Written 9 Nov 2026 on testing (develop c470bd68, #5001). All guards. The cases read the PDF ReportPrint returns, the request the Patient Status Report screen makes.
+
+| ID | Case | Kind | Source |
+|---|---|---|---|
+| TC-RPTCOMP-00 | Upgrade: on QA CI MultiComp (test 442) only the primary component is Required | Guard | OGC-1608 item 5 |
+| TC-RPTCOMP-01 | Value 42 only, validated: "Results: final report", "Value 42.0", no Interpretation or Organisms line, no "In Progress" | Guard | OGC-1608 acceptance |
+| TC-RPTCOMP-02 | Interpretation Required: Value only, validated, gives "partial report" and "Interpretation In Progress" (optional Comment left off); resulted but not validated stays partial; validated gives final with the value | Guard | OGC-1608 items 2, 3, 6 |
+
+The Required test is "QA RPTCOMP Req" (created once per server; 456 on testing). Dictionary results are posted as the dictionary id (`option.value`), never the catalog option id: on 9 Nov posting the option id stored a stray extra result on another component (order 260000JH).
+
 ## Not automated (manual, 2026-10-19)
 
 - AC-21 legacy: a document_track print shows Printed v1, "Not archived (issued before 10/16/2026)"; a pre-install unprinted order is not listed but the Lab No lookup finds it. Passed by hand; the data depends on the stack's history.
