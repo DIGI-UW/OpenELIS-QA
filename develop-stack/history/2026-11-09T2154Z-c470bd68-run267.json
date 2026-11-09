@@ -1,0 +1,17 @@
+{
+ "when": "2026-11-09T21:54:24.385Z",
+ "sha": "c470bd68709d7347b897bdce75ec29ab59d74e34",
+ "subject": "fix(reports): a Required flag per result component; blank optional parts leave the report (OGC-1608) (#5001)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42706616906",
+ "tz": "UTC",
+ "bootstrap": false,
+ "noResults": true,
+ "totals": {
+  "failing": 0,
+  "known": 0,
+  "new": 0,
+  "fixed": 0
+ },
+ "knownByTicket": {},
+ "suites": {}
+}
