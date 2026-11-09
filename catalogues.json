@@ -99,7 +99,7 @@
     {
       "file": "report-print-queue-test-cases.md",
       "area": "Report Print Queue, patient reports V1 (OpenELIS-Global-2 #4753, OGC-431, FRS OGC-1031 r4)",
-      "note": "Feature suite, 2026-10-19, testing. Spec: tests/report-print-queue.spec.ts (helper helpers/report-queue.ts)."
+      "note": "Feature suite, 2026-10-19, testing. Spec: tests/report-print-queue.spec.ts (helper helpers/report-queue.ts). 2026-11-09: TC-RPTCOMP-00 to 02 (tests/report-required-components.spec.ts), OGC-1608 Required components."
     },
     {
       "file": "inventory-board.md",
@@ -129,7 +129,7 @@
     {
       "file": "calculation-rule-integrity.md",
       "area": "Calculated value rules: self-reference, cycles, duplicate outputs, overwritten entries",
-      "note": "Feature suite, 2026-10-31, testing 615942a7. Spec: tests/calculation-rule-integrity.spec.ts. One guard (TC-CALCI-00, canary) and four tripwires; per-run rule names since 2026-11-02. Ticket OGC-1587."
+      "note": "Feature suite, 2026-10-31, testing 615942a7. Spec: tests/calculation-rule-integrity.spec.ts. One guard (TC-CALCI-00, canary) and four tripwires; per-run rule names since 2026-11-02. Ticket OGC-1587. 2026-11-09: TC-CALCB-01 to 08 (tests/calculated-results-bounded.spec.ts) for the bounded evaluator, #4852; run both with calc.config.ts."
     },
     {
       "file": "amr-v2-test-cases.md",
