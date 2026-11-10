@@ -1,8 +1,8 @@
 {
- "when": "2026-11-10T05:54:17.508Z",
- "sha": "b7f786cd1545ae5c5aad92b841cfcb55f78966ca",
- "subject": "fix(localization): a translated setting such as the banner saves again (OGC-1609) (#5003)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42764324784",
+ "when": "2026-11-10T14:40:23.137Z",
+ "sha": "cb17cfcbe2ebaceef68f299e0c62512194f26954",
+ "subject": "feat(results): a run's chips count the whole run and a selection follows the run (OGC-1200 slice 2) (#5008)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42831974071",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": true,
