@@ -21,6 +21,9 @@
 import { test, expect, Page } from '@playwright/test';
 import { apiGet } from '../helpers/silentSave';
 import { ensureReferringClinic } from '../helpers/data-factory';
+import { pick, expectPreselected } from '../helpers/searchable';
+import { siteDate } from '../helpers/site-date';
+import { labNoPattern } from './helpers/eqa-deep';
 
 const BASE = process.env.BASE_URL || process.env.BASE || 'https://testing.openelis-global.org';
 const STAMP = `${Date.now()}`.slice(-6);
@@ -80,10 +83,13 @@ test.describe('EQA participant happy path (TC-EQAHP)', () => {
     await openMyCycles(page, 'active');
     await page.getByRole('button', { name: /^New cycle$/ }).click();
     const m = page.locator('.cds--modal.is-visible');
-    await m.locator('#new-cycle-scheme').selectOption(s.enrolment!.programName);
+    await pick(m.locator('#new-cycle-scheme'), s.enrolment!.programName);
     await m.locator('#new-cycle-name').fill(CYCLE_NAME);
-    await m.locator('#new-cycle-distribution').fill(day(0));
-    await m.locator('#new-cycle-deadline').fill(day(14));
+    // Since 10 Nov (OGC-608) the cycle dates follow the site's date format.
+    await m.locator('#new-cycle-distribution').fill(await siteDate(page, 0));
+    await m.locator('#new-cycle-distribution').press('Tab');
+    await m.locator('#new-cycle-deadline').fill(await siteDate(page, 14));
+    await m.locator('#new-cycle-deadline').press('Tab');
     const post = page.waitForResponse((r) => new URL(r.url()).pathname.endsWith('/rest/eqa/cycles/mine') && r.request().method() === 'POST');
     await m.getByRole('button', { name: /^Create cycle$/ }).click();
     const res = await post;
@@ -93,7 +99,7 @@ test.describe('EQA participant happy path (TC-EQAHP)', () => {
     const row = page.getByTestId(`cycle-row-${s.cycleId}`);
     await expect(row, 'the new cycle is listed').toBeVisible({ timeout: 15_000 });
     await expect(row).toContainText('Planned');
-    await expect(row).toContainText(day(14));
+    await expect(row).toContainText(await siteDate(page, 14));
     const c = await myCycle(page);
     expect(c.cycleName).toBe(CYCLE_NAME);
     expect(c.status).toBe('PLANNED');
@@ -110,7 +116,7 @@ test.describe('EQA participant happy path (TC-EQAHP)', () => {
     await page.getByRole('button', { name: /^Next$/ }).click();
     // Step 2: programme and cycle come pre-selected from the link.
     await expect(page.locator('#eqa-cycle'), 'the cycle is pre-selected').toHaveValue(s.cycleId!, { timeout: 15_000 });
-    await expect(page.locator('#eqa-program'), 'the enrolment is pre-selected').toHaveValue(s.enrolment!.id);
+    await expectPreselected(page.locator('#eqa-program'), s.enrolment!.id, s.enrolment!.programName); // the enrolment is pre-selected
     await page.locator('#eqa-provider-sample-id').fill(PROVIDER_SAMPLE);
     await page.locator('#eqa-received-temp').fill('4');
     await page.getByRole('button', { name: /^Next$/ }).click();
@@ -174,11 +180,19 @@ test.describe('EQA participant happy path (TC-EQAHP)', () => {
     await search.press('Enter');
     const row = page.locator('tr').filter({ hasText: s.labNo! }).first();
     await expect(row, 'the EQA sample is on the results worklist').toBeVisible({ timeout: 60_000 });
+    // The enrolled test may be a select (dictionary) or a numeric result, depending on the scheme found.
     const sel = row.locator('select[id^="unifiedResultValue-"]').first();
-    const value = await sel.evaluate((el: HTMLSelectElement, label: string) =>
-      Array.from(el.options).find((o) => o.text.trim() === label)?.value || Array.from(el.options).map((o) => o.value).find((v) => v && v !== '0') || '', s.test!.resultOption);
-    expect(value, 'a result option is offered').not.toBe('');
-    await sel.selectOption(value);
+    if (await sel.count()) {
+      const value = await sel.evaluate((el: HTMLSelectElement, label: string) =>
+        Array.from(el.options).find((o) => o.text.trim() === label)?.value || Array.from(el.options).map((o) => o.value).find((v) => v && v !== '0') || '', s.test!.resultOption);
+      expect(value, 'a result option is offered').not.toBe('');
+      await sel.selectOption(value);
+    } else {
+      const box = row.getByRole('textbox', { name: /^Result for/ }).first();
+      await expect(box, 'a result field is offered').toBeVisible();
+      await box.fill('1.0');
+      await box.press('Tab');
+    }
     const save = page.waitForResponse((r) => /results-entry\/analysis\/\d+\/result$/.test(new URL(r.url()).pathname) && r.request().method() === 'POST');
     await row.getByRole('button', { name: /^Save$/ }).click();
     expect((await save).status(), 'result saved').toBe(200);
@@ -187,7 +201,7 @@ test.describe('EQA participant happy path (TC-EQAHP)', () => {
     await page.goto(`${BASE}/validation`, { waitUntil: 'domcontentloaded' });
     await page.locator('main').getByRole('searchbox', { name: 'Lab number' }).fill(s.labNo!);
     await page.locator('main').getByRole('button', { name: 'Load results' }).click();
-    const vrow = page.getByRole('row').filter({ hasText: s.labNo! }).first();
+    const vrow = page.getByRole('row').filter({ hasText: labNoPattern(s.labNo!) }).first(); // shown as 26-000-0NX
     await expect(vrow, 'the EQA result is in the validation queue').toBeVisible({ timeout: 60_000 });
     await vrow.getByRole('button', { name: /expand/i }).first().click();
     const release = page.waitForResponse((r) => /release/i.test(new URL(r.url()).pathname) && r.request().method() !== 'GET', { timeout: 60_000 });

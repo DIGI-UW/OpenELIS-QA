@@ -7,8 +7,9 @@
  *   - OGC-1615 compliance grading: a RANGE result below the minimum is Borderline, and only the
  *     first threshold on a test is checked.
  *   - OGC-1613 removing a resulted test from an order is refused for a cancel reason the screen
- *     never asks for.
- *   - OGC-1614 the Results entry Method list offers inactive methods, in no order.
+ *     never asks for (fixed by #5006, guards since 10 Nov).
+ *   - OGC-1614 the Results entry Method list offers inactive methods, in no order (fixed by
+ *     #5007, guards since 10 Nov).
  *   - OGC-1616 date filters on the shipment pages and the Compliance Report ignore the site
  *     date format.
  *
@@ -258,7 +259,13 @@ test.describe('Removing a test from an environmental order (OGC-1613)', () => {
     await page.locator('main').getByRole('button', { name: /^Enter Order/ }).first().click();
     await page.waitForLoadState('networkidle');
     await page.locator('main').getByRole('button', { name: /^Tests & Panels/ }).first().click();
-    await page.locator('main label, main span', { hasText: new RegExp(`^${testName}$`) }).last().click();
+    // The tick list renders before its state settles; untick until the box really is clear.
+    const box = page.locator('main').getByRole('checkbox', { name: testName, exact: true });
+    await expect(box, `${testName} is ticked`).toBeChecked({ timeout: 20_000 });
+    await expect(async () => {
+      if (await box.isChecked()) await page.locator('main label, main span', { hasText: new RegExp(`^${testName}$`) }).last().click();
+      await expect(box).not.toBeChecked({ timeout: 2_000 });
+    }, `${testName} unticked`).toPass({ timeout: 20_000 });
     await page.locator('main').getByRole('button', { name: /^Save$/ }).first().click();
     return saved;
   }
@@ -269,17 +276,26 @@ test.describe('Removing a test from an environmental order (OGC-1613)', () => {
     expect(res.status(), 'order save').toBe(200);
   });
 
-  test('TC-CPHL-21: removing a resulted test either asks for the reason or saves', async ({ page }) => {
-    // TRIPWIRE OGC-1613. Observed 9 Nov 2026: 400 fieldErrors cancelReason, toast "cancelReason:
-    // A reason is required to cancel this test.", and no reason field on the page.
-    test.fail();
+  test('TC-CPHL-21: removing a resulted test asks for the reason, then cancels the test', async ({ page }) => {
+    // Was a tripwire for OGC-1613 (400 fieldErrors cancelReason and no reason field, 9 Nov).
+    // Fixed by #5006; guard since 10 Nov 2026 on testing cb17cfcb.
     const labNo = await envOrder(page, [seed.range, seed.minmax]);
     expect(await enterOn(page, labNo, { [seed.range]: '1.0' }), 'one result entered').toBe(1);
-    const res = await untickAndSave(page, labNo, RANGE_TEST);
-    const reasonField = page.locator('main, [role=dialog]').getByLabel(/reason/i);
-    const asked = await reasonField.first().isVisible().catch(() => false);
-    expect(res.status() === 200 || asked, `saved (${res.status()}) or a reason is asked for`).toBe(true);
+    const first = await untickAndSave(page, labNo, RANGE_TEST);
+    expect(first.status(), 'the first save asks for a reason').toBe(400);
+    const dialog = page.getByRole('dialog', { name: 'Remove a test that has results' });
+    await expect(dialog, 'the reason dialog').toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(/cancelReason/), 'no raw field name shown').toHaveCount(0);
+    await dialog.getByRole('combobox', { name: 'Reason for cancelling' }).selectOption('Duplicate order');
+    const resend = page.waitForResponse((r) => /\/rest\/SamplePatientEntry/.test(r.url()) && r.request().method() === 'POST', { timeout: 60_000 });
+    await dialog.getByRole('button', { name: 'Remove test' }).click();
+    const saved = await resend;
+    expect(saved.status(), 'the save with the reason').toBe(200);
+    expect(saved.request().postData() ?? '', 'the reason is sent').toContain('"cancelReason":"Duplicate order"');
+    const left = (await j(page, `${API}/LogbookResults?labNumber=${labNo}`)).body?.testResult ?? [];
+    const names = left.map((t: any) => String(t.testName));
+    expect(names.some((n: string) => n.startsWith(RANGE_TEST)), 'the removed test leaves Results entry').toBe(false);
+    expect(names.some((n: string) => n.startsWith(MINMAX_TEST)), 'the other test stays').toBe(true);
   });
 });
 
@@ -303,15 +319,34 @@ test.describe('Results entry Method list (OGC-1614)', () => {
     expect(opts.length, 'at least one method').toBeGreaterThan(0);
   });
 
-  test('TC-CPHL-31: the Method list offers only active methods, A to Z', async ({ page }) => {
-    // TRIPWIRE OGC-1614. Observed 9 Nov 2026: the whole method dictionary in id order, inactive
-    // CULTURE included.
-    test.fail();
+  test('TC-CPHL-31: the Method list offers the test\'s linked active methods, A to Z', async ({ page }) => {
+    // Was a tripwire for OGC-1614 (whole dictionary in id order, inactive CULTURE included, 9 Nov).
+    // Fixed by #5007; guard since 10 Nov 2026 on testing cb17cfcb. The row first shows the full
+    // list and then the test's own methods, so the options are polled until they settle.
+    const linked: any[] = (await j(page, `${API}/test/4/methods`)).body ?? [];
     const inactive: any[] = (await j(page, `${API}/displayList/METHODS_INACTIVE`)).body ?? [];
-    const inactiveNames = new Set(inactive.map((m: any) => String(m.value ?? m.name).trim()));
-    const opts = await methodOptions(page);
-    expect(opts.filter((o) => inactiveNames.has(o)), 'no inactive method offered').toEqual([]);
-    expect(opts, 'A to Z').toEqual([...opts].sort((a, b) => a.localeCompare(b)));
+    const inactiveIds = new Set(inactive.map((m: any) => String(m.id)));
+    const want = linked.filter((l: any) => !inactiveIds.has(String(l.methodId))).map((l: any) => String(l.methodName))
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    expect(want.length, 'Creatinine has an active linked method').toBeGreaterThan(0);
+    await methodOptions(page);
+    await expect.poll(async () => (await page.locator('select[id^="method-"]').first().locator('option').allInnerTexts())
+      .map((t) => t.trim()).filter(Boolean), { timeout: 15_000, message: 'the linked active methods, A to Z' }).toEqual(want);
+  });
+
+  test('TC-CPHL-32: a test with no linked method is offered every active method, A to Z', async ({ page }) => {
+    // OGC-1614 fallback, read from the endpoint the Results row uses.
+    const all: any[] = (await j(page, `${API}/displayList/METHODS`)).body ?? [];
+    const inactive: any[] = (await j(page, `${API}/displayList/METHODS_INACTIVE`)).body ?? [];
+    const inactiveIds = new Set(inactive.map((m: any) => String(m.id)));
+    expect((await j(page, `${API}/test/${seed.range}/methods`)).body ?? [], 'the seed test has no linked method').toEqual([]);
+    const r = await j(page, `${API}/methods-for-test/${seed.range}`);
+    expect(r.status, 'methods-for-test').toBe(200);
+    const got = (r.body?.methods ?? []).map((m: any) => String(m.value));
+    const want = all.filter((m: any) => !inactiveIds.has(String(m.id))).map((m: any) => String(m.value))
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    expect(got, 'every active method, A to Z').toEqual(want);
+    expect(r.body?.defaultMethodId ?? null, 'no default without a link').toBeNull();
   });
 });
 
@@ -351,4 +386,50 @@ test.describe('Date filters follow the site date format (OGC-1616)', () => {
       expect((await input.getAttribute('placeholder'))?.toLowerCase()).toBe(want);
     });
   }
+});
+
+/* ------------------------------------------------------------------ OGC-1609 */
+
+test.describe('Site Information: a translated setting saves (OGC-1609)', () => {
+  // From Karen's CPHL field report of 28 Oct (JDHS): the banner could not be changed. Fixed by
+  // #5003; guard since 10 Nov 2026 on testing cb17cfcb. The banner is put back through the same
+  // record the screen reads, whatever the outcome.
+  async function banner(page: Page): Promise<{ id: string; english: string; french: string }> {
+    const list = (await j(page, `${API}/SiteInformationMenu`)).body;
+    const rows: any[] = list?.menuList ?? list ?? [];
+    const row = rows.find((r: any) => (r.elementName ?? r.name) === 'bannerHeading');
+    expect(row, 'bannerHeading setting').toBeTruthy();
+    const form = (await j(page, `${API}/SiteInformation?ID=${row.id}`)).body;
+    return { id: String(row.id), english: form.localization.values.en.value, french: form.localization.values.fr.value };
+  }
+
+  test('TC-CPHL-50: changing the banner on Site Information saves, shows in the header and survives a reload', async ({ page }) => {
+    const before = await banner(page);
+    const english = `${before.english.replace(/ QA \d+$/, '')} QA ${Date.now() % 100000}`;
+    try {
+      await page.goto('/MasterListsPage/SiteInformationMenu', { waitUntil: 'domcontentloaded' });
+      const row = page.locator('tr', { hasText: 'bannerHeading' });
+      await expect(row, 'bannerHeading row').toBeVisible({ timeout: 30_000 });
+      await row.locator('label').first().click();
+      await page.getByRole('button', { name: 'Modify', exact: true }).click();
+      const input = page.getByRole('textbox', { name: 'English' });
+      await expect(input, 'English field holds the stored banner').toHaveValue(before.english, { timeout: 15_000 });
+      await input.fill(english);
+      const saved = page.waitForResponse((r) => /\/rest\/SiteInformation\?ID=/.test(r.url()) && r.request().method() === 'POST');
+      await page.getByRole('button', { name: 'Save', exact: true }).click();
+      expect((await saved).status(), 'the save').toBe(200);
+      await expect(page.getByText('Configuration Updated Successfully'), 'success message').toBeVisible({ timeout: 15_000 });
+      if (process.env.QA_SHOTS) await page.screenshot({ path: `${process.env.QA_SHOTS}/tc-cphl-50-saved.png` });
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await expect(page.locator('header').getByText(english), 'header after reload').toBeVisible({ timeout: 30_000 });
+      if (process.env.QA_SHOTS) await page.screenshot({ path: `${process.env.QA_SHOTS}/tc-cphl-50-reloaded.png` });
+      expect((await banner(page)).english, 'stored value').toBe(english);
+    } finally {
+      const form = (await j(page, `${API}/SiteInformation?ID=${before.id}`)).body;
+      form.localization.english = before.english;
+      form.localization.french = before.french;
+      const r = await j(page, `${API}/SiteInformation?ID=${before.id}`, { method: 'POST', body: form });
+      expect(r.status, 'banner restored').toBe(200);
+    }
+  });
 });

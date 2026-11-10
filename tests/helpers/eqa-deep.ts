@@ -12,6 +12,7 @@
  * Fixtures are QA-named ("QA-EQA-DEEP ... <stamp>") and kept in one JSON file per run so a worker
  * that Playwright restarts after a failure finds the same stamp. Nothing is deleted.
  */
+import { expectPreselected } from '../../helpers/searchable';
 import { expect, Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -205,7 +206,7 @@ export async function placeEqaOrder(page: Page, o: { cycleId: string; enrollment
   await expect(page.locator('#eqa-sample-checkbox'), 'the EQA box is ticked').toBeChecked({ timeout: 30_000 });
   await page.getByRole('button', { name: /^Next$/ }).click();
   await expect(page.locator('#eqa-cycle'), 'the cycle is pre-selected').toHaveValue(o.cycleId, { timeout: 15_000 });
-  await expect(page.locator('#eqa-program'), 'the enrollment is pre-selected').toHaveValue(o.enrollmentId);
+  await expectPreselected(page.locator('#eqa-program'), o.enrollmentId); // the enrollment is pre-selected (searchable since #4975)
   await page.locator('#eqa-provider-sample-id').fill(o.providerSampleId);
   // The panel's receipt is recorded once per cycle: the second item of a panel shows it as on file.
   if (await page.locator('#eqa-received-temp').isVisible()) await page.locator('#eqa-received-temp').fill('4');
@@ -267,11 +268,14 @@ export async function enterResult(page: Page, labNo: string, value: string): Pro
 }
 
 /** Validate and release one lab number on the one-page Validation screen; returns the release status. */
+/** Validation shows the lab number with separators ("26-000-0NX"); match it either way. */
+export const labNoPattern = (labNo: string) => new RegExp(labNo.split('').map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('-?'));
+
 export async function validate(page: Page, labNo: string): Promise<number> {
   await page.goto('/validation', { waitUntil: 'domcontentloaded' });
   await page.locator('main').getByRole('searchbox', { name: 'Lab number' }).fill(labNo);
   await page.locator('main').getByRole('button', { name: 'Load results' }).click();
-  const vrow = page.getByRole('row').filter({ hasText: labNo }).first();
+  const vrow = page.getByRole('row').filter({ hasText: labNoPattern(labNo) }).first();
   await expect(vrow, `${labNo} is in the validation queue`).toBeVisible({ timeout: 60_000 });
   await vrow.getByRole('button', { name: /expand/i }).first().click();
   const release = page.waitForResponse((r) => /release/i.test(new URL(r.url()).pathname) && r.request().method() !== 'GET', { timeout: 60_000 });

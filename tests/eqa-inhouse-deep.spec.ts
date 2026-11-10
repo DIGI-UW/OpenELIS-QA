@@ -26,6 +26,7 @@
  */
 import { test, expect } from '@playwright/test';
 import { api, ready, day, fixtures, enterResult, validate, asUser, note } from './helpers/eqa-deep';
+import { pick } from '../helpers/searchable';
 
 test.describe.configure({ mode: 'serial' });
 test.setTimeout(240_000);
@@ -70,8 +71,7 @@ test.describe('In-house blinded EQA, deep (TC-EQAIH)', () => {
   test('TC-EQAIH-01: the wizard seals and distributes three blinded samples and names both analysts (OGC-1245)', async ({ page }) => {
     F.cycleName = `QA-EQA-DEEP IH Cycle ${F.S}`;
     await page.goto('/qa/eqa/in-house/new', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('#inhouse-scheme').locator(`option[value="${F.schemeId}"]`)).toBeAttached({ timeout: 30_000 });
-    await page.locator('#inhouse-scheme').selectOption(F.schemeId);
+    await pick(page.locator('#inhouse-scheme'), F.schemeName);
     await page.locator('#inhouse-cycle-name').fill(F.cycleName);
     await page.locator('#inhouse-start').fill(day(0));
     await page.locator('#inhouse-unblind').fill(day(7));
