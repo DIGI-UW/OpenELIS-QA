@@ -1,8 +1,8 @@
 {
- "when": "2026-11-10T00:11:02.090Z",
+ "when": "2026-11-10T00:42:18.712Z",
  "sha": "c470bd68709d7347b897bdce75ec29ab59d74e34",
  "subject": "fix(reports): a Required flag per result component; blank optional parts leave the report (OGC-1608) (#5001)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42724862927",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42727935069",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": true,
