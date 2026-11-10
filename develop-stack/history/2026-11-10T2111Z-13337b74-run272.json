@@ -1,0 +1,17 @@
+{
+ "when": "2026-11-10T21:11:32.746Z",
+ "sha": "13337b74c3a85657a14ef71069e5bf8bed8316af",
+ "subject": "feat(validation): a lab-wide validation policy replaces \"validate all results\" (OGC-1364 v1 slice 1) (#5013)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42902363077",
+ "tz": "UTC",
+ "bootstrap": false,
+ "noResults": true,
+ "totals": {
+  "failing": 0,
+  "known": 0,
+  "new": 0,
+  "fixed": 0
+ },
+ "knownByTicket": {},
+ "suites": {}
+}

@@ -1,8 +1,8 @@
 {
- "when": "2026-11-10T14:40:23.137Z",
- "sha": "cb17cfcbe2ebaceef68f299e0c62512194f26954",
- "subject": "feat(results): a run's chips count the whole run and a selection follows the run (OGC-1200 slice 2) (#5008)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42831974071",
+ "when": "2026-11-10T21:11:32.746Z",
+ "sha": "13337b74c3a85657a14ef71069e5bf8bed8316af",
+ "subject": "feat(validation): a lab-wide validation policy replaces \"validate all results\" (OGC-1364 v1 slice 1) (#5013)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42902363077",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": true,
