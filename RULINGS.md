@@ -68,5 +68,6 @@ to contradict a row, ask Casey which stands; do not pick one yourself.
 | Order entry (v4 and legacy), barcode and labels, multi-stage validation, openelis-docker installer | Mozzy |
 | Analyzers, AMR / microbiology | Piotr |
 | Referral, sample shipment, FHIR referral and shipment import, eOrders | Samuel Male |
+| Environmental compliance: compliance standards, evaluation engine, Compliance Report and certificate (Casey, 2026-11-09) | Mozzy |
 | Alternate when Piotr is unavailable | Herbert |
 | PNG work | set Contract = CPHL PNG |

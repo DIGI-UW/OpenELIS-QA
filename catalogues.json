@@ -97,6 +97,11 @@
       "note": "Feature suite, 2026-10-08. Spec: tests/reports-openpdf.spec.ts (helper helpers/report-pdf.ts)."
     },
     {
+      "file": "cphl-field-report-test-cases.md",
+      "area": "CPHL PNG field report of 8 Nov 2026: environmental compliance eligibility and grading, removing a resulted test, Method list, date filters (OGC-1613 to 1616, OGC-1620)",
+      "note": "Feature suite, 2026-11-10, testing c470bd68. Spec: tests/cphl-field-report.spec.ts; config cphl.config.ts. 6 guards, 9 tripwires."
+    },
+    {
       "file": "report-print-queue-test-cases.md",
       "area": "Report Print Queue, patient reports V1 (OpenELIS-Global-2 #4753, OGC-431, FRS OGC-1031 r4)",
       "note": "Feature suite, 2026-10-19, testing. Spec: tests/report-print-queue.spec.ts (helper helpers/report-queue.ts). 2026-11-09: TC-RPTCOMP-00 to 02 (tests/report-required-components.spec.ts), OGC-1608 Required components."
