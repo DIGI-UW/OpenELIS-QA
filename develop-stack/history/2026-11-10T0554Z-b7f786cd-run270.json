@@ -1,0 +1,17 @@
+{
+ "when": "2026-11-10T05:54:17.508Z",
+ "sha": "b7f786cd1545ae5c5aad92b841cfcb55f78966ca",
+ "subject": "fix(localization): a translated setting such as the banner saves again (OGC-1609) (#5003)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42764324784",
+ "tz": "UTC",
+ "bootstrap": false,
+ "noResults": true,
+ "totals": {
+  "failing": 0,
+  "known": 0,
+  "new": 0,
+  "fixed": 0
+ },
+ "knownByTicket": {},
+ "suites": {}
+}
