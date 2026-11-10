@@ -26,6 +26,7 @@
  */
 import { test, expect } from '@playwright/test';
 import { api, ready, db, day, fixtures, myCycle, until, placeEqaOrder, enterResult, validate, asUser, note } from './helpers/eqa-deep';
+import { pick, optionTexts } from '../helpers/searchable';
 
 test.describe.configure({ mode: 'serial' });
 test.setTimeout(240_000);
@@ -81,7 +82,7 @@ test.describe('EQA participant lane, deep (TC-EQAPT)', () => {
     await page.getByRole('button', { name: /Enroll in Scheme/i }).click();
     // Wait for the form's lists, then pick: the ordinary way a user does it.
     await expect(page.locator('#enrollment-tests'), 'the Tests field is shown').toBeVisible({ timeout: 30_000 });
-    await page.locator('#enrollment-scheme').selectOption(F.schemeName);
+    await pick(page.locator('#enrollment-scheme'), F.schemeName);
     await expect(page.locator('#enrollment-provider')).toHaveValue(F.provider);
     await page.waitForTimeout(2000);
     note('EQAPT-01.field', { shown: (await page.locator('#enrollment-tests').innerText()).slice(0, 120) });
@@ -107,8 +108,7 @@ test.describe('EQA participant lane, deep (TC-EQAPT)', () => {
     await page.route('**/rest/displayList/ALL_TESTS', async (route) => { await new Promise((r) => setTimeout(r, 6000)); await route.continue(); });
     await page.goto('/qa/eqa/my-programs', { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: /Enroll in Scheme/i }).click();
-    await expect(page.locator('#enrollment-scheme').locator(`option[value="${F.scheme2Name}"]`)).toBeAttached({ timeout: 15_000 });
-    await page.locator('#enrollment-scheme').selectOption(F.scheme2Name);
+    await pick(page.locator('#enrollment-scheme'), F.scheme2Name, 15_000);
     await expect(page.locator('#enrollment-tests')).toBeVisible({ timeout: 30_000 });
     const post = page.waitForResponse((r) => new URL(r.url()).pathname.endsWith('/rest/eqa/my-programs') && r.request().method() === 'POST');
     await page.getByRole('button', { name: /^Save Enrollment$/ }).click();
@@ -155,12 +155,14 @@ test.describe('EQA participant lane, deep (TC-EQAPT)', () => {
     await box.click();
     await expect(page.locator('#eqaProgramId')).toBeVisible({ timeout: 15_000 });
     // The list loads after the box opens; an empty list would pass the loop below vacuously (seen once).
-    await expect.poll(async () => page.locator('#eqaProgramId option:not([value=""])').count(), { timeout: 30_000, message: 'the EQA Scheme list has loaded' }).toBeGreaterThan(0);
-    const offered = await page.locator('#eqaProgramId option').evaluateAll((os) => os.map((o: any) => ({ v: o.value, t: o.textContent?.trim() })).filter((o) => o.v));
+    // Searchable since #4975: compared by the names a user sees.
+    await expect.poll(async () => (await optionTexts(page.locator('#eqaProgramId'))).length, { timeout: 30_000, message: 'the EQA Scheme list has loaded' }).toBeGreaterThan(0);
+    const offered = await optionTexts(page.locator('#eqaProgramId'));
     const mine = (await api(page, 'GET', '/eqa/my-programs?active=true')).json ?? [];
     note('EQAPT-04', { offered: offered.slice(0, 12), activeEnrollments: mine.map((m: any) => `${m.id}:${m.programName}`).slice(0, 12) });
-    expect(offered.map((o) => o.v).sort(), 'offered = the lab\'s active enrollments').toEqual(mine.map((m: any) => String(m.id)).sort());
-    expect(offered.map((o) => o.v), 'this suite\'s enrollment is offered').toContain(String(F.enrollmentId));
+    expect(offered.length, 'one option per active enrollment').toBe(mine.length);
+    for (const m of mine) expect(offered.some((o) => o.includes(String(m.programName))), `${m.programName} is offered`).toBe(true);
+    expect(offered.some((o) => o.includes(F.schemeName)), 'this suite\'s enrollment is offered').toBe(true);
   });
 
   test('TC-EQAPT-05: once both results are validated the cycle is ready to submit within seconds (OGC-1257)', async ({ page }) => {

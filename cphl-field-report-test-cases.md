@@ -1,7 +1,7 @@
 # CPHL PNG field report (8 Nov 2026): test cases
 
 **Spec:** `tests/cphl-field-report.spec.ts` (config `cphl.config.ts`)
-**Written:** 2026-11-10 against testing.openelis-global.org (develop c470bd68, 3.4.0-SNAPSHOT, site date format fr-FR), from the CPHL PNG field report Karen forwarded on 8 Nov (JDHS Production). The findings were reproduced on testing on 9 Nov and filed on Casey's calls. Two runs, 16 of 16 as expected.
+**Written:** 2026-11-10 against testing.openelis-global.org (develop c470bd68, 3.4.0-SNAPSHOT, site date format fr-FR), from the CPHL PNG field report Karen forwarded on 8 Nov (JDHS Production). The findings were reproduced on testing on 9 Nov and filed on Casey's calls. Two runs, 16 of 16 as expected. 10 Nov on cb17cfcb: OGC-1613 and OGC-1614 fixed; their tripwires are guards, TC-CPHL-32 and 50 added.
 
 **Scope:** the filed findings only: environmental compliance eligibility and grading, removing a test from an environmental order, the Results entry Method list, and date filters. Micro items from the report go to the v3 redesign (R-14) and are not here.
 
@@ -30,14 +30,21 @@ Data: the spec seeds, once per server, two environmental tests on Surface Water 
 | ID | Case | Kind | Ticket |
 | --- | --- | --- | --- |
 | TC-CPHL-20 | Environmental dashboard, Continue, Enter Order, Tests & Panels: unticking a test with no result saves (200) | Guard | OGC-1613 |
-| TC-CPHL-21 | The same path with a resulted test either asks for the cancel reason or saves, and never shows the raw field name "cancelReason" (today 400 and no reason field) | Tripwire | OGC-1613 |
+| TC-CPHL-21 | The same path with a resulted test: the first save answers 400 and "Remove a test that has results" asks for a reason (no raw "cancelReason" shown); with "Duplicate order" the resend saves and the test leaves Results entry while the other stays | Guard (was a tripwire; fixed by #5006, 10 Nov) | OGC-1613 |
 
 ## Results entry Method list (OGC-1614)
 
 | ID | Case | Kind | Ticket |
 | --- | --- | --- | --- |
 | TC-CPHL-30 | Creatinine on Results entry: the expanded row has a Method list with at least one method | Guard | OGC-1614 |
-| TC-CPHL-31 | The Method list offers no inactive method (per `displayList/METHODS_INACTIVE`) and is A to Z (today CULTURE, inactive, is offered and the list is in id order) | Tripwire | OGC-1614 |
+| TC-CPHL-31 | The Method list settles on Creatinine's linked active methods, A to Z (polled: the row first shows the full list) | Guard (was a tripwire; fixed by #5007, 10 Nov) | OGC-1614 |
+| TC-CPHL-32 | A test with no linked method: `methods-for-test` offers every active method, A to Z, and no default | Guard | OGC-1614 |
+
+## Site Information: a translated setting saves (OGC-1609)
+
+| ID | Case | Kind | Ticket |
+| --- | --- | --- | --- |
+| TC-CPHL-50 | bannerHeading: Modify, change English, Save: 200, "Configuration Updated Successfully", the header shows it after a reload and the stored value matches; the banner is put back afterwards | Guard (fixed by #5003, 10 Nov) | OGC-1609 |
 
 ## Date filters follow the site date format (OGC-1616)
 

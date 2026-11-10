@@ -29,6 +29,7 @@
  */
 import { test, expect, type Page } from '@playwright/test';
 import { api, ready, db, day, fixtures, note } from './helpers/eqa-deep';
+import { pick, expectOffered, optionTexts } from '../helpers/searchable';
 
 test.describe.configure({ mode: 'serial' });
 test.setTimeout(240_000);
@@ -47,14 +48,14 @@ const q = (s: string) => s.replace(/'/g, "''");
 async function openEnter(page: Page) {
   await page.goto(ENTER, { waitUntil: 'domcontentloaded' });
   await expect(page.locator('#labNumber'), 'a lab number is issued').not.toHaveValue('', { timeout: 60_000 });
-  await expect(page.locator(`#eqaProgramId option[value="${F.enrollmentId}"]`), 'the scheme list has loaded').toHaveCount(1, { timeout: 60_000 });
+  await expectOffered(page.locator('#eqaProgramId'), F.scheme, 60_000); // the scheme list has loaded
   return page.locator('#labNumber').inputValue();
 }
 
 /** Pick Serum and its first test, the way the developer's spec does. */
 async function pickSampleAndTest(page: Page) {
   const section = page.getByTestId('order-sample-test-section');
-  await section.getByLabel('Sample Type').selectOption({ label: 'Serum' });
+  await pick(section.getByRole('combobox', { name: /^Sample Type/ }).first(), 'Serum');
   const first = section.locator('input[type="checkbox"][id^="test-0-"]').first();
   await expect(first).toBeAttached({ timeout: 60_000 });
   await page.locator(`label[for="${await first.getAttribute('id')}"]`).click();
@@ -138,11 +139,14 @@ test.describe('EQA order intake on the v4 order flow (TC-EQAOI)', () => {
 
   test('TC-EQAOI-01: the EQA Scheme list is exactly the lab\'s active enrollments: a withdrawn one is not offered', async ({ page }) => {
     await openEnter(page);
-    const offered = await page.locator('#eqaProgramId option').evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value).filter(Boolean));
-    const active = ((await api(page, 'GET', '/eqa/my-programs?active=true')).json ?? []).map((e: any) => String(e.id));
-    expect(active, 'the active list leaves the withdrawn enrollment out').not.toContain(F.withdrawnId);
-    expect([...offered].sort(), 'offered = active enrollments').toEqual([...active].sort());
-    expect(offered).not.toContain(F.withdrawnId);
+    // The scheme picker is searchable since #4975, so it is compared by the names a user sees.
+    const offered = await optionTexts(page.locator('#eqaProgramId'));
+    const activeRows: any[] = (await api(page, 'GET', '/eqa/my-programs?active=true')).json ?? [];
+    expect(activeRows.map((e: any) => String(e.id)), 'the active list leaves the withdrawn enrollment out').not.toContain(F.withdrawnId);
+    const active = activeRows.map((e: any) => String(e.programName));
+    expect(offered.length, 'one option per active enrollment').toBe(active.length);
+    for (const name of active) expect(offered.some((o) => o.includes(name)), `${name} is offered`).toBe(true);
+    expect(offered.some((o) => o.includes(`QA-EQAOI withdrawn ${F.S}`)), 'the withdrawn enrollment is not offered').toBe(false);
   });
 
   test('TC-EQAOI-02: in EQA mode the order has no patient: "No patient" is ticked and locked and the patient search is not shown', async ({ page }) => {
@@ -158,14 +162,14 @@ test.describe('EQA order intake on the v4 order flow (TC-EQAOI)', () => {
     await expect(page.getByRole('button', { name: /^Save and exit$/ }), 'Save and exit is off').toBeDisabled();
     await expect(page.getByRole('button', { name: /^Save and next$/ }), 'Save and next is off').toBeDisabled();
     await expect(page.getByText(/Choose the EQA scheme/).first(), 'the screen says what is missing').toBeVisible();
-    await page.locator('#eqaProgramId').selectOption(F.enrollmentId);
+    await pick(page.locator('#eqaProgramId'), F.scheme);
     await expect(page.getByRole('button', { name: /^Save and exit$/ }), 'on once a scheme is chosen').toBeEnabled({ timeout: 15_000 });
   });
 
   test('TC-EQAOI-04: the server refuses an EQA order with no scheme, and one naming a withdrawn enrollment (the screen cannot send either)', async ({ page }) => {
     for (const [what, patch] of [['no scheme', { eqaProgramId: '' }], ['a withdrawn enrollment', { eqaProgramId: F.withdrawnId }]] as const) {
       const labNo = await openEnter(page);
-      await page.locator('#eqaProgramId').selectOption(F.enrollmentId);
+      await pick(page.locator('#eqaProgramId'), F.scheme);
       await pickSampleAndTest(page);
       await tamperNextSave(page, patch);
       const resp = await saveAndExit(page);
@@ -179,10 +183,10 @@ test.describe('EQA order intake on the v4 order flow (TC-EQAOI)', () => {
 
   test('TC-EQAOI-05: choosing a cycle prefills its deadline; the saved order stores the enrollment id, the cycle and the deadline, no patient link, and the toast names the lab number', async ({ page }) => {
     const labNo = await openEnter(page);
-    await page.locator('#eqaProgramId').selectOption(F.enrollmentId);
-    await expect(page.locator(`#eqaCycleId option[value="${F.cycleId}"]`), 'the open cycle is offered').toHaveCount(1, { timeout: 30_000 });
-    await expect(page.locator(`#eqaCycleId option[value="${F.otherCycleId}"]`), 'not another scheme\'s cycle').toHaveCount(0);
-    await page.locator('#eqaCycleId').selectOption(F.cycleId);
+    await pick(page.locator('#eqaProgramId'), F.scheme);
+    await expectOffered(page.locator('#eqaCycleId'), `QA-EQAOI cycle ${F.S}`); // the open cycle is offered
+    expect(await optionTexts(page.locator('#eqaCycleId')), 'not another scheme\'s cycle').not.toContainEqual(expect.stringContaining(`QA-EQAOI other cycle ${F.S}`));
+    await pick(page.locator('#eqaCycleId'), `QA-EQAOI cycle ${F.S}`);
     await expect(page.locator('#eqaDeadline'), 'the deadline is the cycle\'s').toHaveValue(new RegExp(day(30).slice(0, 4)));
     await pickSampleAndTest(page);
     const resp = await saveAndExit(page);
@@ -201,7 +205,7 @@ test.describe('EQA order intake on the v4 order flow (TC-EQAOI)', () => {
 
   test('TC-EQAOI-06: with no cycle chosen the screen warns, offers New cycle, and still saves; the order is stored with no cycle', async ({ page }) => {
     const labNo = await openEnter(page);
-    await page.locator('#eqaProgramId').selectOption(F.enrollmentId);
+    await pick(page.locator('#eqaProgramId'), F.scheme);
     await expect(page.getByText(/not linked to a cycle, so it will not be submitted/).first()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole('button', { name: /^New cycle$/ })).toBeVisible();
     await pickSampleAndTest(page);
@@ -216,7 +220,7 @@ test.describe('EQA order intake on the v4 order flow (TC-EQAOI)', () => {
 
   test('TC-EQAOI-07: the server refuses a cycle that belongs to another scheme', async ({ page }) => {
     const labNo = await openEnter(page);
-    await page.locator('#eqaProgramId').selectOption(F.enrollmentId);
+    await pick(page.locator('#eqaProgramId'), F.scheme);
     await pickSampleAndTest(page);
     await tamperNextSave(page, { eqaCycleId: F.otherCycleId });
     const resp = await saveAndExit(page);
