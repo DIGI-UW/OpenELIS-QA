@@ -1,0 +1,17 @@
+{
+ "when": "2026-11-11T04:30:30.775Z",
+ "sha": "9abcc5b72833db5ab6218ef04b2da1a231fb6f74",
+ "subject": "fix(compliance): a result outside a limit is Non-compliant unless an advisory zone covers it (OGC-1615) (#5016)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42959497999",
+ "tz": "UTC",
+ "bootstrap": false,
+ "noResults": true,
+ "totals": {
+  "failing": 0,
+  "known": 0,
+  "new": 0,
+  "fixed": 0
+ },
+ "knownByTicket": {},
+ "suites": {}
+}
