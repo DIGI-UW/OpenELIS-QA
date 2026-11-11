@@ -1,9 +1,9 @@
 {
- "when": "2026-11-11T09:45:36.581Z",
- "sha": "dd940c08b390b9dc0dd70726891255bf742cf311",
- "subject": "feat(pathology): slides cut under their block with level and stain (OGC-264) (#4992)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/42996849922",
- "tz": "Pacific/Port_Moresby",
+ "when": "2026-11-11T13:30:03.821Z",
+ "sha": "f12488de24502df43d911c6b94cdf933bfe50340",
+ "subject": "test(dashboards): Management Overview access, accessibility and performance specs (OGC-897)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43029421476",
+ "tz": "UTC",
  "bootstrap": false,
  "noResults": true,
  "totals": {
