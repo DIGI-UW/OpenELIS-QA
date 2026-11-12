@@ -60,7 +60,7 @@ The expected placeholder comes from `DEFAULT_DATE_LOCALE`: mm/dd/yyyy for en-US,
 
 ## Not covered
 
-- OGC-1617 AC 2 (a standard plus a test with no threshold) and OGC-1619 with a clinical lab number are not covered yet.
+- OGC-1617 AC 5 (numbering, e-signatures, amendment) needs e-signatures on; AC 4 on both stories waits on the Transifex pull.
 - The certificate letterhead and label text (comment on OGC-552), the manifest Sample Type clipping (OGC-527) and the unsorted Sample Type list (OGC-1266) are comments on open tickets, not covered here.
 - With e-signatures off on testing, no order counts as released, so Reissue and the archive path are not exercised (noted on OGC-1620).
 
@@ -72,5 +72,7 @@ The expected placeholder comes from `DEFAULT_DATE_LOCALE`: mm/dd/yyyy for en-US,
 | TC-CPHL-60 | The lab number field finds an order typed in lower case with no dates, and lists only that order | Guard | OGC-1619 |
 | TC-CPHL-61 | An unknown lab number shows "No environmental order with lab number ..." | Guard | OGC-1619 |
 | TC-CPHL-62 | A validated environmental order with no standard is listed as "Results report (no standard)", its expanded row says no standard applies, and exportPdf returns a PDF | Guard | OGC-1617 |
+| TC-CPHL-63 | An order with a standard plus a test with no threshold prints both results; the no-threshold row has no guideline or status, and the conclusion covers only the assessed parameter | Guard | OGC-1617 AC 2 |
+| TC-CPHL-64 | A clinical lab number shows the not-found message and no rows | Guard | OGC-1619 AC 3 |
 
 The suite's Compliance Report helper finds orders by lab number since 12 Nov (it searched this month's dates before).
