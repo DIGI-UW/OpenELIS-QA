@@ -1,8 +1,8 @@
 {
- "when": "2026-11-11T21:44:20.992Z",
- "sha": "e1d2c6498d9f4155f2ac04912ccaf5f1560fb099",
- "subject": "feat(compliance): every validated environmental order prints a results report; the compliance assessment only when a standard is linked (OGC-1617) (#5025)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43105402409",
+ "when": "2026-11-12T05:35:36.763Z",
+ "sha": "5172e3bd7624fc75e94930f0fac428d6881e60c3",
+ "subject": "fix(order-entry): an incoming order keeps its patient, so Submit is enabled; validation answers are per request (#5042)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43162224457",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": true,
