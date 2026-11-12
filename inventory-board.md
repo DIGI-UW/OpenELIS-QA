@@ -71,6 +71,7 @@ Every case that acts on a row makes its own throwaway item `QA INV <tag> <stamp>
 | TC-INVB-30 | New item on the board defines an active item; a typed tag is folded to the directory's spelling (reagent -> Reagent); the board says it was defined and lists it (was the Catalog tab's Add Catalog Item, TC-INV-04/06) | Guard | #4361, #4363 |
 | TC-INVB-31 | New item refuses a blank name and sends nothing (the stability-after-opening rule went with item types in #4361) | Guard | #4363 |
 | TC-INVB-32 | The board's tag filter shows only items carrying the chosen tag (was the catalog Item Type filter, TC-INV-07) | Guard | #4362 |
+| TC-INVB-33 | The tag filter also scopes the Reorder now banner and Reorder suggestions: an off-tag item below threshold leaves both, an on-tag one stays | Guard (12 Nov, fixed by #5014) | OGC-1549 |
 | TC-INVB-34 | A deactivated item leaves the board; activating it brings it back with its stock | Guard | #4357 (active items only) |
 | TC-INVB-35 | Count mode: a counted quantity that differs corrects the lot as one adjustment (no usage), on hand follows, and the row's last count is today | Guard | #4364 |
 | TC-INVB-36 | Receive stock finds the item from its product barcode; the scanner's Enter does not submit; an unknown code is named and offered as a new item | Guard | #4365 |
