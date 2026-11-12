@@ -1,0 +1,17 @@
+{
+ "when": "2026-11-12T14:35:18.340Z",
+ "sha": "ac2d325cfd9a8178c222058331e6876d7b0c41e2",
+ "subject": "fix(referrals): two OpenELIS labs exchange referrals without manual pairing (#5053)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43238277646",
+ "tz": "UTC",
+ "bootstrap": false,
+ "noResults": true,
+ "totals": {
+  "failing": 0,
+  "known": 0,
+  "new": 0,
+  "fixed": 0
+ },
+ "knownByTicket": {},
+ "suites": {}
+}

@@ -1,8 +1,8 @@
-# develop-stack: develop `5172e3bd`
+# develop-stack: develop `ac2d325c`
 
-fix(order-entry): an incoming order keeps its patient, so Submit is enabled; validation answers are per request (#5042)
+fix(referrals): two OpenELIS labs exchange referrals without manual pairing (#5053)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43162224457 · TZ UTC · 2026-11-12T05:35:36.763Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43238277646 · TZ UTC · 2026-11-12T14:35:18.340Z
 
 **NO RESULTS**: no suite ran, so nothing passed or failed. The stack most likely did not come up; read the "Wait for the stack to be healthy" step of the run above. This is not a green run.
 
