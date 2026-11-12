@@ -11,7 +11,8 @@
  *   - OGC-1614 the Results entry Method list offers inactive methods, in no order (fixed by
  *     #5007, guards since 10 Nov).
  *   - OGC-1616 date filters on the shipment pages and the Compliance Report ignore the site
- *     date format.
+ *     date format (fixed by 3b7fcf66, guards since 12 Nov, as are OGC-1615 and OGC-1620).
+ *   - OGC-1619 lab number search and OGC-1617 results reports (guards from 12 Nov).
  *
  * Kind: a Guard passes today. A Tripwire asserts the intended behaviour and carries test.fail()
  * while develop differs; it goes red ("Expected to fail, but passed") the day the fix lands, and
@@ -120,12 +121,12 @@ async function ensureSeed(page: Page): Promise<Seed> {
 /* ------------------------------------------------------------------ orders */
 
 /** An environmental order on Surface Water with the given tests, linked to the QA standard. */
-async function envOrder(page: Page, testIds: string[]): Promise<string> {
+async function envOrder(page: Page, testIds: string[], withStandard = true): Promise<string> {
   const labNo = (await j(page, `${API}/SampleEntryGenerateScanProvider`)).body?.body;
   expect(labNo, 'a lab number').toBeTruthy();
   const body: any = buildEnvOrderPayload({ labNo, date: ddMMyyyy(), sampleTypeId: seed.sampleType, testIds: testIds.join(','),
     samplingSiteId: seed.site.id, samplingSiteName: seed.site.name, samplingSiteCode: seed.site.code });
-  body.sampleOrderItems.environmentalFields.complianceStandards = JSON.stringify([seed.standard]);
+  if (withStandard) body.sampleOrderItems.environmentalFields.complianceStandards = JSON.stringify([seed.standard]);
   const r = await j(page, `${API}/SamplePatientEntry`, { method: 'POST', body });
   expect(r.status, `environmental order ${labNo}: ${JSON.stringify(r.body).slice(0, 160)}`).toBe(200);
   return labNo;
@@ -147,23 +148,20 @@ async function exportPdf(page: Page, sampleId: number): Promise<{ status: number
   }, { api: API, sampleId });
 }
 
-/** Compliance Report screen: search this month and return the row for the lab number. */
-async function screenRow(page: Page, labNo: string) {
+/** Compliance Report screen: find the order by its lab number (OGC-1619) and return its row. */
+async function screenRow(page: Page, labNo: string, typed = labNo) {
   await page.goto('/LaporanHasil', { waitUntil: 'domcontentloaded' });
-  const now = new Date();
-  const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const from = page.locator('#filter-date-from');
-  const to = page.locator('#filter-date-to');
-  await expect(from, 'Compliance Report date filters').toBeVisible({ timeout: 20_000 });
-  await from.fill(`${ym}-01`); await from.press('Tab');
-  await to.fill(`${ym}-28`); await to.press('Tab');
-  // The open calendar covers the Search button: close it on the page heading first.
-  await page.keyboard.press('Escape');
-  await page.getByRole('heading', { name: /compliance report/i }).first().click();
+  const lab = page.locator('#filter-lab-number');
+  await expect(lab, 'Compliance Report lab number field').toBeVisible({ timeout: 20_000 });
+  await lab.fill(typed);
   await page.locator('main').getByRole('button', { name: /^search$/i }).first().click({ timeout: 20_000 });
   const row = page.locator('tbody tr', { hasText: labNo }).first();
   await expect(row, `${labNo} listed on the Compliance Report`).toBeVisible({ timeout: 30_000 });
   return row;
+}
+
+async function shot(page: Page, name: string) {
+  await page.screenshot({ path: `${process.env.QA_SHOTS ?? 'test-results/shots'}/${name}.png`, fullPage: true }).catch(() => undefined);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -191,9 +189,8 @@ test.describe('Compliance Report eligibility (OGC-1620)', () => {
   });
 
   test('TC-CPHL-02: an order with a saved but unvalidated result, and a test with no result, is not offered a certificate', async ({ page }) => {
-    // TRIPWIRE OGC-1620. Observed 9 Nov 2026 on c470bd68 (260000JM): listed Compliant,
-    // Not Yet Generated, and Generate PDF issued "CERTIFICATE OF TEST RESULTS".
-    test.fail();
+    // Was a tripwire for OGC-1620 (9 Nov, c470bd68, 260000JM: listed Compliant, Not Yet
+    // Generated, and Generate PDF issued a certificate). Fixed by #5021; guard since 12 Nov.
     const labNo = await envOrder(page, [seed.range, seed.minmax]);
     expect(await enterOn(page, labNo, { [seed.range]: '0.3' }), 'one result entered').toBe(1);
     const row = await complianceRow(page, labNo);
@@ -203,18 +200,27 @@ test.describe('Compliance Report eligibility (OGC-1620)', () => {
       const pdf = await exportPdf(page, Number(row.sampleId));
       expect(pdf.head, 'exportPdf refuses an unvalidated order').not.toBe('%PDF-');
     }
+    const ui = await screenRow(page, labNo);
+    await expect(ui, 'the row says why').toContainText(/results not yet validated/i);
+    await expect(ui.getByRole('button', { name: /generate pdf/i }), 'no Generate PDF').toHaveCount(0);
+    await shot(page, 'ogc1620-unvalidated-row');
   });
 });
 
 /* ------------------------------------------------------------------ OGC-1615 */
 
 test.describe('Compliance grading (OGC-1615)', () => {
-  async function graded(page: Page, testId: string, value: string): Promise<string> {
+  async function graded(page: Page, testId: string, value: string, ui?: RegExp): Promise<string> {
     const labNo = await envOrder(page, [testId]);
     expect(await enterOn(page, labNo, { [testId]: value }), 'one result entered').toBe(1);
     expect(await validateOnly(page, labNo), 'one result validated').toBe(1);
     const row = await complianceRow(page, labNo);
     expect(row, `${labNo} listed`).toBeTruthy();
+    if (ui) {
+      const r = await screenRow(page, labNo);
+      await expect(r, `${labNo} grade on screen`).toContainText(ui);
+      await shot(page, `ogc1615-${value}`);
+    }
     return String(row.complianceStatus);
   }
 
@@ -224,17 +230,15 @@ test.describe('Compliance grading (OGC-1615)', () => {
   });
 
   test('TC-CPHL-11: RANGE 0.2 to 5, a result of 0.1 (below the minimum) is Non-compliant', async ({ page }) => {
-    // TRIPWIRE OGC-1615. Observed 9 Nov 2026 (260000GR): Borderline. The borderline margin is
-    // 10% of the range width, applied outside the limits.
-    test.fail();
-    expect(await graded(page, seed.range, '0.1')).toBe('NON_COMPLIANT');
+    // Was a tripwire for OGC-1615 (9 Nov, 260000GR: Borderline, from a 10% margin outside the
+    // limits). Fixed by #5016; guard since 12 Nov, read on the screen too.
+    expect(await graded(page, seed.range, '0.1', /non-compliant/i)).toBe('NON_COMPLIANT');
   });
 
   test('TC-CPHL-12: MINIMUM 0.2 plus MAXIMUM 5 on one test, a result of 7.0 is Non-compliant', async ({ page }) => {
-    // TRIPWIRE OGC-1615. Observed 9 Nov 2026: Compliant, threshold shown ">= 0.2 mg/L";
-    // only the first threshold on the test is checked.
-    test.fail();
-    expect(await graded(page, seed.minmax, '7.0')).toBe('NON_COMPLIANT');
+    // Was a tripwire for OGC-1615 (9 Nov: Compliant, only the first threshold checked). Fixed by
+    // #5016; guard since 12 Nov, read on the screen too.
+    expect(await graded(page, seed.minmax, '7.0', /non-compliant/i)).toBe('NON_COMPLIANT');
   });
 
   test('TC-CPHL-13: MINIMUM 0.2 plus MAXIMUM 5 on one test, a result of 0.05 is Non-compliant', async ({ page }) => {
@@ -375,10 +379,9 @@ test.describe('Date filters follow the site date format (OGC-1616)', () => {
   ];
   for (const [id, path, sel] of pages) {
     test(`${id}: ${path} date filter shows the site format`, async ({ page }) => {
-      // TRIPWIRE OGC-1616. Observed 9 Nov 2026 on a dd/MM/yyyy site: mm/dd/yyyy on the shipment
-      // pages, yyyy-mm-dd on the Compliance Report.
+      // Was a tripwire for OGC-1616 (9 Nov, dd/MM/yyyy site: mm/dd/yyyy on the shipment pages,
+      // yyyy-mm-dd on the Compliance Report). Fixed by 3b7fcf66; guard since 12 Nov.
       test.skip((await sitePlaceholder(page)) === 'mm/dd/yyyy', 'needs a site whose date format is not US');
-      test.fail();
       const want = await sitePlaceholder(page);
       await page.goto(path, { waitUntil: 'domcontentloaded' });
       const input = page.locator(sel).first();
@@ -386,6 +389,87 @@ test.describe('Date filters follow the site date format (OGC-1616)', () => {
       expect((await input.getAttribute('placeholder'))?.toLowerCase()).toBe(want);
     });
   }
+});
+
+/* ------------------------------------------------------- OGC-1616, 1619, 1617 (12 Nov) */
+
+test.describe('Compliance Report search and results reports (OGC-1616, OGC-1619, OGC-1617)', () => {
+  test('TC-CPHL-45: dates picked on a dd/MM/yyyy site filter the Compliance Report by those days', async ({ page }) => {
+    // OGC-1616 beyond the placeholder: the picked days reach the server as the right days.
+    // Picked from the calendar: a typed date is not always taken (lead of 12 Nov, see the
+    // session doc), so this guard does not type.
+    const cfg = (await j(page, `${API}/configuration-properties`)).body;
+    test.skip(/^en[-_]US$/i.test(String(cfg?.DEFAULT_DATE_LOCALE ?? 'en-US')), 'needs a dd/MM/yyyy site');
+    const today = new Date();
+    test.skip(today.getDate() < 3, 'needs two earlier days in this month');
+    const labNo = await envOrder(page, [seed.range]);
+    expect(await enterOn(page, labNo, { [seed.range]: '3.0' }), 'one result entered').toBe(1);
+    expect(await validateOnly(page, labNo), 'one result validated').toBe(1);
+    const iso = (d: number) => `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const dmy = (d: number) => `${String(d).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+    const pick = async (sel: string, d: number) => {
+      await page.locator(sel).click();
+      await page.locator('.flatpickr-calendar.open .flatpickr-day:not(.prevMonthDay):not(.nextMonthDay)', { hasText: new RegExp(`^${d}$`) }).first().click();
+      await expect(page.locator(sel), `${sel} shows the day in the site format`).toHaveValue(dmy(d));
+    };
+    const search = async (from: number, to: number) => {
+      await page.goto('/LaporanHasil', { waitUntil: 'networkidle' });
+      await pick('#filter-date-from', from);
+      await pick('#filter-date-to', to);
+      await page.keyboard.press('Escape');
+      const req = page.waitForRequest((r) => /\/rest\/complianceReport\?/.test(r.url()));
+      await page.locator('main').getByRole('button', { name: /^search$/i }).first().click();
+      const u = new URL((await req).url());
+      expect(u.searchParams.get('dateFrom'), 'From sent as the picked day').toBe(iso(from));
+      expect(u.searchParams.get('dateTo'), 'To sent as the picked day').toBe(iso(to));
+      await page.waitForLoadState('networkidle').catch(() => undefined);
+    };
+    const d = today.getDate();
+    await search(d - 1, d);
+    await expect(page.locator('tbody tr', { hasText: labNo }).first(), `${labNo} listed`).toBeVisible({ timeout: 30_000 });
+    await shot(page, 'ogc1616-compliance-dates');
+    await search(d - 2, d - 1);
+    await expect(page.locator('tbody tr', { hasText: labNo }), `${labNo} not listed before today`).toHaveCount(0);
+  });
+
+  test('TC-CPHL-60: the Compliance Report finds an order by its lab number, typed in lower case, with no dates', async ({ page }) => {
+    const labNo = await envOrder(page, [seed.range]);
+    expect(await enterOn(page, labNo, { [seed.range]: '3.0' }), 'one result entered').toBe(1);
+    expect(await validateOnly(page, labNo), 'one result validated').toBe(1);
+    const row = await screenRow(page, labNo, labNo.toLowerCase());
+    await expect(row, 'graded').toContainText(/compliant/i);
+    // Expanded rows hold their own tables; count the order rows (the ones with an expand button).
+    await expect(page.locator('tbody tr').filter({ has: page.getByRole('button', { name: /expand current row/i }) }), 'only that order').toHaveCount(1);
+    await shot(page, 'ogc1619-lab-number');
+  });
+
+  test('TC-CPHL-61: an unknown lab number says so', async ({ page }) => {
+    await page.goto('/LaporanHasil', { waitUntil: 'domcontentloaded' });
+    const lab = page.locator('#filter-lab-number');
+    await expect(lab).toBeVisible({ timeout: 20_000 });
+    await lab.fill('QAZZ99999');
+    await page.locator('main').getByRole('button', { name: /^search$/i }).first().click();
+    await expect(page.getByTestId('laporan-hasil-empty'), 'empty state').toContainText(/no environmental order with lab number QAZZ99999/i, { timeout: 30_000 });
+  });
+
+  test('TC-CPHL-62: a validated environmental order with no standard is listed as a results report and prints', async ({ page }) => {
+    // OGC-1617: every validated environmental order prints a results report; no compliance
+    // status or conclusion when no standard is linked.
+    const labNo = await envOrder(page, [seed.range], false);
+    expect(await enterOn(page, labNo, { [seed.range]: '3.0' }), 'one result entered').toBe(1);
+    expect(await validateOnly(page, labNo), 'one result validated').toBe(1);
+    const api = await complianceRow(page, labNo);
+    expect(api, `${labNo} listed by the report endpoint`).toBeTruthy();
+    expect(api.reportKind, 'results report').toBe('RESULTS');
+    const row = await screenRow(page, labNo);
+    await expect(row, 'compliance column').toContainText(/results report \(no standard\)/i);
+    await row.locator('button').first().click();
+    await expect(page.getByTestId('laporan-hasil-results-only'), 'expanded row explains it').toBeVisible({ timeout: 15_000 });
+    await shot(page, 'ogc1617-results-report');
+    const pdf = await exportPdf(page, Number(api.sampleId));
+    expect(pdf.status, 'exportPdf').toBe(200);
+    expect(pdf.head, 'a PDF').toBe('%PDF-');
+  });
 });
 
 /* ------------------------------------------------------------------ OGC-1609 */

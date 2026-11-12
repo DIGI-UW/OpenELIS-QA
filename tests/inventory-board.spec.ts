@@ -607,6 +607,39 @@ test.describe('Defining items, tags, count mode and Reports (#4361 to #4365)', (
     }
   });
 
+  test('TC-INVB-33: the tag filter also scopes the Reorder now banner and Reorder suggestions (OGC-1549)', async ({ page }) => {
+    // OGC-1549 (21 Oct): the board narrowed to the tag, but the banner and Reorder suggestions
+    // still named items without it. Fixed by #5014; guard since 12 Nov 2026.
+    await openBoard(page);
+    const other = await makeItem(page, 'OffTag', { tags: ['RDT'], threshold: 5, qty: 1 });
+    const mine = await makeItem(page, 'OnTag', { tags: ['Reagent'], threshold: 5, qty: 1 });
+    cleanup.push(other.id, mine.id);
+    const panel = await openBoard(page);
+    const banner = panel.locator('.board-critical-banner');
+    const suggestions = panel.getByRole('button', { name: /^Reorder suggestions/ });
+    const dialogNames = async () => {
+      await suggestions.click();
+      const dlg = page.getByRole('dialog').filter({ hasText: /reorder/i }).first();
+      await expect(dlg).toBeVisible({ timeout: 15_000 });
+      const text = await dlg.innerText();
+      await page.keyboard.press('Escape');
+      return text;
+    };
+    await expect(banner, 'before filtering the banner names the off-tag item').toContainText(other.name, { timeout: 30_000 });
+    expect(await dialogNames(), 'before filtering, suggestions list the off-tag item').toContain(other.name);
+    const filter = panel.locator('#inventory-board-tag-filter');
+    await filter.click();
+    await page.getByRole('option', { name: /^Reagent$/ }).first().click();
+    await page.keyboard.press('Escape');
+    await expect(itemRow(panel, other.name), 'the off-tag item leaves the table').toHaveCount(0);
+    await expect(banner, 'the banner names the on-tag item').toContainText(mine.name);
+    await expect(banner, 'the banner no longer names the off-tag item').not.toContainText(other.name);
+    const after = await dialogNames();
+    expect(after, 'suggestions list the on-tag item').toContain(mine.name);
+    expect(after, 'suggestions leave out the off-tag item').not.toContain(other.name);
+    if (process.env.QA_SHOTS) await page.screenshot({ path: `${process.env.QA_SHOTS}/ogc1549-tag-banner.png`, fullPage: true });
+  });
+
   test('TC-INVB-35: Count mode: a counted quantity that differs corrects the lot as a physical count and stamps the last count (#4364)', async ({ page }) => {
     await openBoard(page);
     const it = await makeItem(page, 'Count', { qty: 20, threshold: 5 });

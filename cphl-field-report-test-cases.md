@@ -14,15 +14,15 @@ Data: the spec seeds, once per server, two environmental tests on Surface Water 
 | ID | Case | Kind | Ticket |
 | --- | --- | --- | --- |
 | TC-CPHL-01 | A fully resulted, validated order is listed, graded Compliant, offered Generate PDF on the screen, and exportPdf returns a PDF | Guard | OGC-552 |
-| TC-CPHL-02 | An order with one saved but unvalidated result and one test with no result is not eligible, and exportPdf does not return a certificate | Tripwire | OGC-1620 |
+| TC-CPHL-02 | An order with one saved but unvalidated result and one test with no result is not eligible, exportPdf does not return a certificate, and the screen row reads "Results not yet validated" with no Generate PDF | Guard (tripwire until 12 Nov, fixed by #5021) | OGC-1620 |
 
 ## Compliance grading (OGC-1615)
 
 | ID | Case | Kind | Ticket |
 | --- | --- | --- | --- |
 | TC-CPHL-10 | RANGE 0.2 to 5: 6.0 is Non-compliant and 3.0 is Compliant | Guard | OGC-547 |
-| TC-CPHL-11 | RANGE 0.2 to 5: 0.1, below the minimum, is Non-compliant (today Borderline) | Tripwire | OGC-1615 |
-| TC-CPHL-12 | MINIMUM 0.2 plus MAXIMUM 5 on one test: 7.0 is Non-compliant (today Compliant; only the first threshold is read) | Tripwire | OGC-1615 |
+| TC-CPHL-11 | RANGE 0.2 to 5: 0.1, below the minimum, is Non-compliant, from the endpoint and on the screen (Borderline until #5016) | Guard (tripwire until 12 Nov) | OGC-1615 |
+| TC-CPHL-12 | MINIMUM 0.2 plus MAXIMUM 5 on one test: 7.0 is Non-compliant, from the endpoint and on the screen (Compliant until #5016, when only the first threshold was read) | Guard (tripwire until 12 Nov) | OGC-1615 |
 | TC-CPHL-13 | MINIMUM 0.2 plus MAXIMUM 5 on one test: 0.05 is Non-compliant (the first threshold is read) | Guard | OGC-1615 |
 
 ## Removing a test from an environmental order (OGC-1613)
@@ -48,18 +48,29 @@ Data: the spec seeds, once per server, two environmental tests on Surface Water 
 
 ## Date filters follow the site date format (OGC-1616)
 
-The expected placeholder comes from `DEFAULT_DATE_LOCALE`: mm/dd/yyyy for en-US, dd/mm/yyyy otherwise. The tripwires skip on an en-US site, where they cannot tell the two apart.
+The expected placeholder comes from `DEFAULT_DATE_LOCALE`: mm/dd/yyyy for en-US, dd/mm/yyyy otherwise. The guards skip on an en-US site, where they cannot tell the two apart.
 
 | ID | Case | Kind | Ticket |
 | --- | --- | --- | --- |
 | TC-CPHL-40 | Validation From date shows the site format | Guard | OGC-1616 |
-| TC-CPHL-41 | Sample Shipment date filter shows the site format (today mm/dd/yyyy) | Tripwire | OGC-1616 |
-| TC-CPHL-42 | Shipment Report date filter shows the site format (today mm/dd/yyyy) | Tripwire | OGC-1616 |
-| TC-CPHL-43 | Reference Lab Results date filter shows the site format (today mm/dd/yyyy) | Tripwire | OGC-1616 |
-| TC-CPHL-44 | Compliance Report date filter shows the site format (today yyyy-mm-dd) | Tripwire | OGC-1616 |
+| TC-CPHL-41 | Sample Shipment date filter shows the site format (mm/dd/yyyy until 3b7fcf66) | Guard (tripwire until 12 Nov) | OGC-1616 |
+| TC-CPHL-42 | Shipment Report date filter shows the site format (mm/dd/yyyy until 3b7fcf66) | Guard (tripwire until 12 Nov) | OGC-1616 |
+| TC-CPHL-43 | Reference Lab Results date filter shows the site format (mm/dd/yyyy until 3b7fcf66) | Guard (tripwire until 12 Nov) | OGC-1616 |
+| TC-CPHL-44 | Compliance Report date filter shows the site format (yyyy-mm-dd until 3b7fcf66) | Guard (tripwire until 12 Nov) | OGC-1616 |
 
 ## Not covered
 
-- OGC-1617 and OGC-1619 are stories; their cases come when they are built.
+- OGC-1617 AC 2 (a standard plus a test with no threshold) and OGC-1619 with a clinical lab number are not covered yet.
 - The certificate letterhead and label text (comment on OGC-552), the manifest Sample Type clipping (OGC-527) and the unsorted Sample Type list (OGC-1266) are comments on open tickets, not covered here.
 - With e-signatures off on testing, no order counts as released, so Reissue and the archive path are not exercised (noted on OGC-1620).
+
+## Compliance Report search and results reports (added 12 Nov 2026, develop 94a8fdb2)
+
+| ID | Case | Kind | Ticket |
+|---|---|---|---|
+| TC-CPHL-45 | On a dd/MM/yyyy site, days picked from the calendar reach the server as those days: yesterday to today lists today's order, a range ending yesterday does not. Picked, not typed (a typed date not committed with Tab is not sent: lead of 12 Nov) | Guard | OGC-1616 |
+| TC-CPHL-60 | The lab number field finds an order typed in lower case with no dates, and lists only that order | Guard | OGC-1619 |
+| TC-CPHL-61 | An unknown lab number shows "No environmental order with lab number ..." | Guard | OGC-1619 |
+| TC-CPHL-62 | A validated environmental order with no standard is listed as "Results report (no standard)", its expanded row says no standard applies, and exportPdf returns a PDF | Guard | OGC-1617 |
+
+The suite's Compliance Report helper finds orders by lab number since 12 Nov (it searched this month's dates before).
