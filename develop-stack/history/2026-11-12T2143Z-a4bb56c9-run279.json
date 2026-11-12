@@ -1,0 +1,17 @@
+{
+ "when": "2026-11-12T21:43:50.340Z",
+ "sha": "a4bb56c94c3fc64bb68d08843d6f8fcfb35c0fec",
+ "subject": "fix(reference-lab-results): the date range filter has room for both dates (#5061)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43312821126",
+ "tz": "UTC",
+ "bootstrap": false,
+ "noResults": true,
+ "totals": {
+  "failing": 0,
+  "known": 0,
+  "new": 0,
+  "fixed": 0
+ },
+ "knownByTicket": {},
+ "suites": {}
+}

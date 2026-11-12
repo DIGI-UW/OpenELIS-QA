@@ -1,8 +1,8 @@
-# develop-stack: develop `ac2d325c`
+# develop-stack: develop `a4bb56c9`
 
-fix(referrals): two OpenELIS labs exchange referrals without manual pairing (#5053)
+fix(reference-lab-results): the date range filter has room for both dates (#5061)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43238277646 · TZ UTC · 2026-11-12T14:35:18.340Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43312821126 · TZ UTC · 2026-11-12T21:43:50.340Z
 
 **NO RESULTS**: no suite ran, so nothing passed or failed. The stack most likely did not come up; read the "Wait for the stack to be healthy" step of the run above. This is not a green run.
 
