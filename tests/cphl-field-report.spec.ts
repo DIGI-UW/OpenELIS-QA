@@ -28,15 +28,18 @@ import { test, expect, Page } from '@playwright/test';
 import { API, j, enterOn, validateOnly } from '../helpers/report-queue';
 import { buildEnvOrderPayload, ddMMyyyy } from './chains/env-order-payload';
 import { seedOrder } from '../helpers/data-factory';
+import { readPdf, isPdf } from '../helpers/report-pdf';
 
 test.setTimeout(300_000);
 
 const RANGE_TEST = 'QA CPHL FreeCl Range';
 const MINMAX_TEST = 'QA CPHL FreeCl MinMax';
+/** A third Surface Water test with no threshold in the standard (OGC-1617 AC 2). */
+const PLAIN_TEST = 'QA CPHL Turbidity NoThreshold';
 const STANDARD = 'QA CPHL Water Standard';
 const SURFACE_WATER = 'Surface Water';
 
-interface Seed { range: string; minmax: string; standard: string; sampleType: string; site: { id: string; name: string; code: string } }
+interface Seed { range: string; minmax: string; plain: string; standard: string; sampleType: string; site: { id: string; name: string; code: string } }
 let seed: Seed;
 
 /* ------------------------------------------------------------------ seed */
@@ -86,6 +89,7 @@ async function ensureSeed(page: Page): Promise<Seed> {
   const st = await sampleTypeId(page, SURFACE_WATER);
   const range = await ensureEnvTest(page, RANGE_TEST, 'QACPHLFCR', st);
   const minmax = await ensureEnvTest(page, MINMAX_TEST, 'QACPHLFCM', st);
+  const plain = await ensureEnvTest(page, PLAIN_TEST, 'QACPHLTRB', st);
   const stds: any[] = (await j(page, `${API}/compliance/standards/active`)).body ?? [];
   let std = stds.find((s) => s.name === STANDARD);
   if (!std) {
@@ -115,7 +119,7 @@ async function ensureSeed(page: Page): Promise<Seed> {
   const sites: any[] = (await j(page, `${API}/admin/vector/sampling-sites`)).body ?? [];
   const site = sites.find((s) => s.active);
   expect(site, 'an active sampling site').toBeTruthy();
-  return { range, minmax, standard: String(std.id), sampleType: st, site: { id: String(site.id), name: site.name, code: site.code } };
+  return { range, minmax, plain, standard: String(std.id), sampleType: st, site: { id: String(site.id), name: site.name, code: site.code } };
 }
 
 /* ------------------------------------------------------------------ orders */
@@ -146,6 +150,20 @@ async function exportPdf(page: Page, sampleId: number): Promise<{ status: number
     const b = new Uint8Array(await r.arrayBuffer());
     return { status: r.status, type: r.headers.get('content-type'), head: String.fromCharCode(...b.slice(0, 5)) };
   }, { api: API, sampleId });
+}
+
+/** The whole exported PDF, read to text. */
+async function exportPdfText(page: Page, sampleId: number): Promise<{ status: number; text: string }> {
+  const r = await page.evaluate(async ({ api, sampleId }) => {
+    const res = await fetch(`${api}/complianceReport/exportPdf`, { method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': localStorage.getItem('CSRF') || '' },
+      body: JSON.stringify({ sampleId }) });
+    const b = new Uint8Array(await res.arrayBuffer());
+    let s = ''; for (const x of b) s += String.fromCharCode(x);
+    return { status: res.status, b64: btoa(s) };
+  }, { api: API, sampleId });
+  const buf = Buffer.from(r.b64, 'base64');
+  return { status: r.status, text: isPdf(buf) ? (await readPdf(buf)).text : '' };
 }
 
 /** Compliance Report screen: find the order by its lab number (OGC-1619) and return its row. */
@@ -450,6 +468,42 @@ test.describe('Compliance Report search and results reports (OGC-1616, OGC-1619,
     await lab.fill('QAZZ99999');
     await page.locator('main').getByRole('button', { name: /^search$/i }).first().click();
     await expect(page.getByTestId('laporan-hasil-empty'), 'empty state').toContainText(/no environmental order with lab number QAZZ99999/i, { timeout: 30_000 });
+  });
+
+  test('TC-CPHL-63: an order with a standard prints every result; a test with no threshold has no guideline or status (OGC-1617 AC 2)', async ({ page }) => {
+    const labNo = await envOrder(page, [seed.range, seed.plain]);
+    expect(await enterOn(page, labNo, { [seed.range]: '3.0', [seed.plain]: '12.0' }), 'two results entered').toBe(2);
+    expect(await validateOnly(page, labNo), 'two results validated').toBe(2);
+    const api = await complianceRow(page, labNo);
+    expect(api, `${labNo} listed`).toBeTruthy();
+    console.log(`TC-CPHL-63 ${labNo} row: ${JSON.stringify(api).slice(0, 600)}`);
+    expect(String(api.complianceStatus), 'graded on the assessed parameter only').toBe('COMPLIANT');
+    const row = await screenRow(page, labNo);
+    await expect(row, 'graded on screen').toContainText(/compliant/i);
+    await expect(row.getByRole('button', { name: /generate pdf/i }), 'printable').toHaveCount(1);
+    await shot(page, 'ogc1617-ac2-row');
+    const pdf = await exportPdfText(page, Number(api.sampleId));
+    expect(pdf.status, 'exportPdf').toBe(200);
+    console.log(`TC-CPHL-63 ${labNo} PDF text:\n${pdf.text}`);
+    expect(pdf.text, 'the assessed test prints').toContain(RANGE_TEST);
+    // The name wraps in its cell ("QA CPHL Turbidity" / "NoThreshold"), so match its first words.
+    const plainLines = pdf.text.split('\n').filter((l) => l.includes('QA CPHL Turbidity'));
+    expect(plainLines.length, 'the test with no threshold prints in Results').toBeGreaterThan(0);
+    expect(plainLines.some((l) => /\b12\.0\b/.test(l)), 'its result prints').toBe(true);
+    expect(plainLines.join(' '), 'no guideline or status for the test with no threshold').not.toMatch(/mg\/L|non-?compliant|\bcompliant\b|borderline/i);
+    expect(pdf.text, 'the conclusion covers only the assessed parameter').toMatch(/for the 1 parameter assessed/i);
+  });
+
+  test('TC-CPHL-64: a clinical lab number shows the not-found message and no rows (OGC-1619 AC 3)', async ({ page }) => {
+    const o = await seedOrder(page, 'CPHLC', { testIds: ['4'] });
+    await page.goto('/LaporanHasil', { waitUntil: 'domcontentloaded' });
+    const lab = page.locator('#filter-lab-number');
+    await expect(lab).toBeVisible({ timeout: 20_000 });
+    await lab.fill(o.accession);
+    await page.locator('main').getByRole('button', { name: /^search$/i }).first().click();
+    await expect(page.getByTestId('laporan-hasil-empty'), 'empty state').toContainText(new RegExp(`no environmental order with lab number ${o.accession}`, 'i'), { timeout: 30_000 });
+    await expect(page.locator('tbody tr').filter({ has: page.getByRole('button', { name: /expand current row/i }) }), 'no rows').toHaveCount(0);
+    await shot(page, 'ogc1619-clinical-not-found');
   });
 
   test('TC-CPHL-62: a validated environmental order with no standard is listed as a results report and prints', async ({ page }) => {
