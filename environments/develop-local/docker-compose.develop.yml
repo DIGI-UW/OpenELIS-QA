@@ -152,7 +152,10 @@ services:
             default:
                 ipv4_address: 172.22.1.121
         healthcheck:
-            test: ["CMD-SHELL", "curl -k -sf https://localhost:8443/OpenELIS-Global/health > /dev/null"]
+            # Tomcat serves the app only at /api/OpenELIS-Global since OpenELIS-Global-2
+            # d1e2f943 (on develop 4 Nov with #4819; autoDeploy off), so the old
+            # /OpenELIS-Global path answers 404 and the webapp could never turn healthy.
+            test: ["CMD-SHELL", "curl -k -sf https://localhost:8443/api/OpenELIS-Global/health > /dev/null"]
             interval: 15s
             timeout: 15s
             retries: 10
@@ -177,6 +180,9 @@ services:
             - ./volume/odoo/odoo-test-product-mapping.csv:/var/lib/openelis-global/odoo/odoo-test-product-mapping.csv
             - ./volume/configuration:/var/lib/openelis-global/configuration
             - reporting-data:/var/lib/openelis-global/reporting
+            - ./volume/translation:/var/lib/openelis-global/translation:ro
+            - ./volume/modules:/var/lib/openelis-global/modules:ro
+            - modules-data:/var/lib/openelis-global/modules-data
         secrets:
             # Used only when the database has no admin yet (a fresh CI stack).
             - source: initial-admin-password
@@ -280,3 +286,4 @@ volumes:
     certs-vol:
     keys-vol:
     reporting-data:
+    modules-data:
