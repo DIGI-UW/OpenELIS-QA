@@ -1,0 +1,17 @@
+{
+ "when": "2026-11-13T21:11:14.491Z",
+ "sha": "8fcdc737c6c48897830c021431fe5d643757c2d6",
+ "subject": "test(i18n): translation pulls no longer break the role guidance and unbundled-locale tests (#5076)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43508084512",
+ "tz": "UTC",
+ "bootstrap": false,
+ "noResults": true,
+ "totals": {
+  "failing": 0,
+  "known": 0,
+  "new": 0,
+  "fixed": 0
+ },
+ "knownByTicket": {},
+ "suites": {}
+}

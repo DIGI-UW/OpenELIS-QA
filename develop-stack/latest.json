@@ -1,8 +1,8 @@
 {
- "when": "2026-11-13T13:52:22.951Z",
- "sha": "605aac85f0eefeaf3a16ec6e7ded79e5a495f5bd",
- "subject": "feat(validation): a lab unit can override the validation policy (OGC-1364 v1 slice 2) (#5069)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43437233970",
+ "when": "2026-11-13T21:11:14.491Z",
+ "sha": "8fcdc737c6c48897830c021431fe5d643757c2d6",
+ "subject": "test(i18n): translation pulls no longer break the role guidance and unbundled-locale tests (#5076)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43508084512",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": true,
