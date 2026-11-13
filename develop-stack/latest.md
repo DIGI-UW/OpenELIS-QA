@@ -1,8 +1,8 @@
-# develop-stack: develop `a4bb56c9`
+# develop-stack: develop `4e531bf2`
 
-fix(reference-lab-results): the date range filter has room for both dates (#5061)
+feat(order-entry): Prepare Samples proposes the containers the ordered tests need (OGC-1611 P4) (#5062)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43312821126 · TZ UTC · 2026-11-12T21:43:50.340Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43368172366 · TZ UTC · 2026-11-13T04:53:06.223Z
 
 **NO RESULTS**: no suite ran, so nothing passed or failed. The stack most likely did not come up; read the "Wait for the stack to be healthy" step of the run above. This is not a green run.
 

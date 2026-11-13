@@ -1,0 +1,17 @@
+{
+ "when": "2026-11-13T04:53:06.223Z",
+ "sha": "4e531bf2fbf8edb1f71b914a459dd55f50d9c818",
+ "subject": "feat(order-entry): Prepare Samples proposes the containers the ordered tests need (OGC-1611 P4) (#5062)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43368172366",
+ "tz": "UTC",
+ "bootstrap": false,
+ "noResults": true,
+ "totals": {
+  "failing": 0,
+  "known": 0,
+  "new": 0,
+  "fixed": 0
+ },
+ "knownByTicket": {},
+ "suites": {}
+}
