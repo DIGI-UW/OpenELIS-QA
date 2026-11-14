@@ -2,9 +2,9 @@
 
 Update OpenELIS translations from Transifex (#5080)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43558135140 · TZ UTC · 2026-11-14T07:25:55.230Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43597048908 · TZ UTC · 2026-11-14T15:51:47.668Z
 
-**143 NEW FAILURE(S)**: 229 failing = 86 known + 143 new; 9 known reds now pass.
+**145 NEW FAILURE(S)**: 232 failing = 87 known + 145 new; 7 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43558135140 · TZ UTC �
 | guards | 17 | 2 | 0 | 0 |
 | lp | 0 | 10 | 7 | 0 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1264 | 158 | 112 | 5 |
+| modules | 1260 | 160 | 113 | 3 |
 | multicomponent | 3 | 0 | 0 | 0 |
 | ogc1192 | 4 | 1 | 1 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
@@ -29,7 +29,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43558135140 · TZ UTC �
 | preflight | 4 | 0 | 0 | 0 |
 | probe-combo | 3 | 0 | 0 | 0 |
 | qa | 0 | 1 | 0 | 0 |
-| rbac | 55 | 1 | 1 | 0 |
+| rbac | 55 | 2 | 2 | 0 |
 | regression-chains | 84 | 13 | 0 | 1 |
 | regression-seed | 13 | 1 | 0 | 0 |
 | reval2 | 4 | 0 | 0 | 0 |
@@ -38,35 +38,35 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43558135140 · TZ UTC �
 | rtype | 2 | 2 | 0 | 0 |
 | workplan | 2 | 2 | 2 | 0 |
 
-## New failures (143)
+## New failures (145)
 
 - `modules|modules|tests/accessibility.spec.ts|Phase 5 — V-DEEP: Accessibility Audit Tests > TC-V-DEEP-02: Color contrast adequate`
 - `modules|modules|tests/accessibility.spec.ts|Phase 5 — V-DEEP: Accessibility Audit Tests > TC-V-DEEP-03: Heading structure and focus`
 - `modules|modules|tests/admin-config.spec.ts|Admin Configuration (TC-ADMIN) > TC-ADMIN-02: Reference labs list accessible`
-- `modules|modules|tests/admin-config.spec.ts|Suite AQ — Reflex Tests & Analyzer Test Name > TC-RFX-02: Reflex test list or configuration form visible`
 - `modules|modules|tests/admin-config.spec.ts|Suite AR — Lab Number & Program Management > TC-LNM-02: Lab number format/sequence configuration visible`
+- `modules|modules|tests/admin-config.spec.ts|Suite AR — Lab Number & Program Management > TC-PGM-02: Program list or entry form visible`
 - `modules|modules|tests/admin-config.spec.ts|Suite AS — Provider & Barcode Configuration > TC-PROV-02: Provider list with search/filter visible`
 - `modules|modules|tests/admin-config.spec.ts|Suite AS — Provider & Barcode Configuration > TC-BAR-02: Barcode format settings visible`
-- `modules|modules|tests/admin-config.spec.ts|Suite AT — Result Reporting & Menu Configuration > TC-MCF-02: Menu items list editable`
+- `modules|modules|tests/admin-config.spec.ts|Suite AT — Result Reporting & Menu Configuration > TC-RRC-02: Reporting rules or configuration list visible`
 - `modules|modules|tests/admin-config.spec.ts|Suite AU — General Config & App Properties > TC-GCF-02: Configuration key-value list or form visible`
+- `modules|modules|tests/admin-config.spec.ts|Suite AU — General Config & App Properties > TC-APP-02: Properties list with editable values visible`
+- `modules|modules|tests/admin-config.spec.ts|Suite AV — Notifications & Search Index > TC-TNF-02: Notification rules or configuration form visible`
 - `modules|modules|tests/admin-config.spec.ts|Suite AV — Notifications & Search Index > TC-SIM-02: Reindex button or status indicator visible`
+- `modules|modules|tests/admin-config.spec.ts|Suite AX — Localization, Notify User, Batch Reassignment > TC-LOC-02: Localization entries list with language columns visible`
+- `modules|modules|tests/admin-config.spec.ts|Suite AX — Localization, Notify User, Batch Reassignment > TC-NTU-02: User notification form or list visible`
 - `modules|modules|tests/app-shell.spec.ts|Page titles (OGC-1448) > TC-SHELL-10: each screen #4681 walked has exactly one h1, its title`
 - `modules|modules|tests/calculated-values.spec.ts|Calculated Values Management (Phase 28) > TC-CALC-03: Formula builder supports autocomplete test selection`
 - `modules|modules|tests/calculated-values.spec.ts|Calculated Values Management (Phase 28) > TC-CALC-05b: POST /rest/test-calculation creates a new rule`
-- `modules|modules|tests/calculated-values.spec.ts|Calculated Values Extended (TC-CALC-EXT) > TC-CALC-EXT-04: Operation types are enumerated in formula builder`
 - `modules|modules|tests/calculation-rule-integrity.spec.ts|Calculated value rules cannot loop or overwrite entered results > TC-CALCI-04 a value entered for the rule's test before its input is kept (OGC-1587)`
 - `modules|modules|tests/cphl-field-report.spec.ts|Results entry Method list (OGC-1614) > TC-CPHL-31: the Method list offers the test's linked active methods, A to Z`
 - `modules|modules|tests/cytology-workflow.spec.ts|Cytology workflow (TC-CYTW) > TC-CYTW-01: a Cytology order creates a case on the Cytology dashboard`
 - `modules|modules|tests/dashboard.spec.ts|Suite DASH-DEEP — Dashboard API Deep Validation (TC-DASH-DEEP) > TC-DASH-DEEP-02: Dashboard renders all 5 KPI tiles by label`
-- `modules|modules|tests/dashboard.spec.ts|Suite DASH-DEEP — Dashboard API Deep Validation (TC-DASH-DEEP) > TC-DASH-DEEP-03: Dashboard KPI values are numeric (non-negative)`
 - `modules|modules|tests/dashboard.spec.ts|Suite DASH-DEEP — Dashboard API Deep Validation (TC-DASH-DEEP) > TC-DASH-DEEP-04: Dashboard sidebar navigation items cover all major modules`
 - `modules|modules|tests/deep-endpoint-testing.spec.ts|New-test lifecycle (2026-09-22) > TC-DEEP-32: a new test reaches /rest/test-list only after it is complete and activated`
 - `modules|modules|tests/electronic-orders.spec.ts|Suite AH — Electronic / Incoming Orders Core (TC-IO) > TC-IO-01: Incoming Orders page is reachable`
 - `modules|modules|tests/electronic-signature.spec.ts|Suite AY-ESIG-ADMIN — Site Information & Electronic Signature Config > TC-ESIG-02: Site Information sub-sections are visible`
-- `modules|modules|tests/electronic-signature.spec.ts|Suite AY-ESIG-ADMIN — Site Information & Electronic Signature Config > TC-ESIG-03: Modify button is present and opens edit mode`
 - `modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-01: EQA Program Management page loads`
 - `modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-02: EQA Program list or empty state renders`
-- `modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-03: Add / New EQA Program button is present`
 - `modules|modules|tests/fhir-integration.spec.ts|Suite FHIR-RESOURCES — Clinical Resource Queries (TC-FHIR-04–08) > TC-FHIR-07: FHIR Observation search returns a Bundle`
 - `modules|modules|tests/generic-sample-roundtrip.spec.ts|Generic Sample round trip > TC-GSR-00: a generic sample order saves`
 - `modules|modules|tests/generic-sample.spec.ts|Generic Sample — Import Samples (US-GEN-3) > TC-GEN-08: Import page supports CSV and Excel file formats`
@@ -77,8 +77,6 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43558135140 · TZ UTC �
 - `modules|modules|tests/management-overview.spec.ts|Management Overview: access > TC-MGMT-11 a Reports user without the grant does not get the page (guard)`
 - `modules|modules|tests/management-overview.spec.ts|Management Overview: access > TC-MGMT-12 the side nav hides Management Overview from a user without the grant (FRS OGC-897)`
 - `modules|modules|tests/non-conforming.spec.ts|Suite NC-EXT — Non-Conforming Extended Tests (TC-NC-EXT) > TC-NC-EXT-03: NC event naming consistency — heading variants`
-- `modules|modules|tests/non-conforming.spec.ts|Phase 5 — G-DEEP: NCE Interaction Tests > TC-G-DEEP-01: Report NCE form loads with required fields`
-- `modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept`
 - `modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-01: a pending test whose value waits in an open run shows "Waiting in RUN-x" and cannot be entered`
 - `modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-02: the Runs chip counts open and held runs and lists them`
 - `modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-03: the Waiting tag opens the run view with settings, progress, rows and the filters notice`
@@ -100,6 +98,8 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43558135140 · TZ UTC �
 - `modules|modules|tests/ogc1159-save-failure-visibility.spec.ts|OGC-1159 — a failed order save must say so, readably > VEC-2: the message a Vector failure shows is a sentence, not a raw i18n key`
 - `modules|modules|tests/order-creation.spec.ts|Result Entry & BUG-31 Verification (Phase 30) > TC-RESULT-02: Hematology section accessible`
 - `modules|modules|tests/order-creation.spec.ts|Result Entry & BUG-31 Verification (Phase 30) > TC-RESULT-03: Biochemistry section accessible`
+- `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered`
+- `modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)`
 - `modules|modules|tests/order-entry-lab-unit-scope.spec.ts|Orders follow the user's lab units (#4757) > TC-OELU-00 [guard] the admin sees both orders; the Hematology user sees the Hematology order`
 - `modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-10: [guard] Enter Order lists the chosen sample type's tests`
 - `modules|modules|tests/order-entry-v4-handoff.spec.ts|R-TIME one clock > TC-OEV4-TIME-04 order entry and its dashboard use one date format (R-TIME-4)`
@@ -124,6 +124,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43558135140 · TZ UTC �
 - `modules|modules|tests/reports-openpdf.spec.ts|Activity, rejection and referral reports (ManagementReportPdf, ReferredOutReport) > TC-RPTPDF-13 Referred Out Tests Report lists the seeded referrals and names the destination on every page`
 - `modules|modules|tests/reports-openpdf.spec.ts|Printed workplans (WorkplanPdf) > TC-RPTPDF-30 Workplan by unit prints the unit and every row the screen listed`
 - `modules|modules|tests/reports-openpdf.spec.ts|Cold storage temperature log (FreezerTemperatureReportPdf) > TC-RPTPDF-41 Weekly Log on the screen produces the weekly log`
+- `modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January`
 - `modules|modules|tests/reports.spec.ts|Phase 4 — L-DEEP: Reports Generation > TC-L-DEEP-01: Patient Status Report has Report By Lab Number accordion`
 - `modules|modules|tests/reports.spec.ts|Phase 4 — L-DEEP: Reports Generation > TC-L-DEEP-02: Generate Printable Version button is present`
 - `modules|modules|tests/results-worklist-chip-counts.spec.ts|Unified Results status chips (R42) > TC-RWC-01: the All chip is present and covers the rows on screen`
@@ -131,7 +132,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43558135140 · TZ UTC �
 - `modules|modules|tests/sample-shipment.spec.ts|Create Box Form (US-SHIP-1, US-SHIP-2) > TC-SHIP-04: Auto-generated box ID follows expected format`
 - `modules|modules|tests/sample-shipment.spec.ts|Shipment Reports (US-SHIP-4) > TC-SHIP-09: Reports page has filters needed for referral auditing`
 - `modules|modules|tests/storage-crud.spec.ts|Storage CRUD (Phase 28) > TC-STOR-CRUD-06b: Cold Storage has multiple tabs (Dashboard, Corrective Actions, etc.)`
-- `modules|modules|tests/storage-crud.spec.ts|Suite STOR-DEEP — Storage API & Cross-Module > TC-STOR-DEEP-02: Cold Storage (FreezerMonitoring) page loads all tabs`
+- `modules|modules|tests/study-pages.spec.ts|Study legacy pages > TC-STDY-05: View study electronic orders is in English for an English user`
 - `modules|modules|tests/system-misc.spec.ts|Phase 4 — R-DEEP: Alerts Interactions > TC-R-DEEP-01: Alerts dashboard filters and structure`
 - `modules|modules|tests/system-misc.spec.ts|Phase 5 — E2E-DEEP: End-to-End Order Trace Tests > TC-E2E-DEEP-01: Modify Order finds an existing order by lab number`
 - `modules|modules|tests/system-misc.spec.ts|Phase 5 — E2E-DEEP: End-to-End Order Trace Tests > TC-E2E-DEEP-02: Results by lab unit loads rows`
@@ -182,15 +183,14 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43558135140 · TZ UTC �
 - `lp||label-presets.spec.ts|TC-LP-08: a partial update that omits `fields` does not delete them [PERSIST]`
 - `lp||label-presets.spec.ts|TC-LP-10: saving a preset does not alter its name [ROUND-TRIP]`
 - `ogc1192|ogc1192|tests/ogc1192-env-order-visibility.spec.ts|OGC-1192: environmental order routing and patientless samples > OGC1192-3: CANARY the Clinical dashboard lists the newest orders`
-- `rbac|rbac-matrix|tests/rbac/rbac-matrix.spec.ts|RBAC matrix — Receptionist (qa_recept) > INV-02 [invariant] route:/MasterListsPage → expect deny`
+- `rbac|rbac-matrix|tests/rbac/rbac-matrix.spec.ts|RBAC matrix — Lab Technician (qa_labtech) > INV-02 [invariant] route:/MasterListsPage → expect deny`
+- `rbac|rbac-matrix|tests/rbac/rbac-matrix.spec.ts|RBAC matrix — Validator / Biologist (qa_validator) > INV-02 [invariant] route:/MasterListsPage → expect deny`
 
-## Known reds now passing (remove from ci-known-reds.json, check the ticket) (9)
+## Known reds now passing (remove from ci-known-reds.json, check the ticket) (7)
 
 - `modules|modules|tests/calculated-values.spec.ts|Calculated Values Management (Phase 28) > TC-CALC-05c: POST /rest/test-calculation updates existing rule`
-- `modules|modules|tests/order-creation-e2e.spec.ts|Phase 32 — Order Creation E2E via UI > TC-ORD-14: Print labels and Done buttons appear after submission`
 - `modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-02: legacy Add Order: Next then Back keeps an unticked test unticked (OGC-1388) [FIXED OGC-1388]`
 - `modules|modules|tests/order-entry-release-blockers.spec.ts|Order entry — release blockers > BLK-LAB-4 — a field marked required to sighted users is marked required in the DOM`
-- `modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-01: no page in the menu shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading`
 - `regression-chains|chain-w|tests/chains/chain-w-pathology-case.spec.ts|Chain W — Pathology case lifecycle > Step 4 — Case detail endpoint is wired (CROSS-LINK)`
 - `all-tc|test-catalog|test-catalog-lab-unit-visibility.spec.ts|Lab unit visibility — choosers vs viewers (OGC-189) > G-2: [FLIP-WHEN-FIXED] the filtering is inverted — the VIEWER hides inactive units while the CHOOSER offers them`
 - `census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-analyzers: Analyzers List renders`
@@ -198,10 +198,10 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43558135140 · TZ UTC �
 
 ## Known reds by ticket
 
-- untriaged: 60
+- untriaged: 61
 - OGC-730: 12
-- harness: 9
+- harness: 8
+- OGC-1448: 2
 - OGC-189: 2
 - OGC-1446: 1
 - OGC-1367: 1
-- OGC-1448: 1
