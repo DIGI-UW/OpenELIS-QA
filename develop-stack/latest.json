@@ -1,17 +1,512 @@
 {
- "when": "2026-11-13T21:11:14.491Z",
+ "when": "2026-11-14T01:02:16.826Z",
  "sha": "8fcdc737c6c48897830c021431fe5d643757c2d6",
  "subject": "test(i18n): translation pulls no longer break the role guidance and unbundled-locale tests (#5076)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43508084512",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43516268938",
  "tz": "UTC",
  "bootstrap": false,
- "noResults": true,
+ "noResults": false,
  "totals": {
-  "failing": 0,
-  "known": 0,
-  "new": 0,
-  "fixed": 0
+  "failing": 231,
+  "known": 86,
+  "new": 145,
+  "fixed": 8
  },
- "knownByTicket": {},
- "suites": {}
+ "knownByTicket": {
+  "untriaged": 60,
+  "OGC-730": 12,
+  "harness": 8,
+  "OGC-1446": 1,
+  "OGC-1367": 1,
+  "OGC-1448": 2,
+  "OGC-189": 2
+ },
+ "suites": {
+  "modules": {
+   "counts": {
+    "expected": 1191,
+    "unexpected": 163,
+    "flaky": 0,
+    "skipped": 138
+   },
+   "new": [
+    "modules|modules|tests/accessibility.spec.ts|Phase 5 — V-DEEP: Accessibility Audit Tests > TC-V-DEEP-02: Color contrast adequate",
+    "modules|modules|tests/accessibility.spec.ts|Phase 5 — V-DEEP: Accessibility Audit Tests > TC-V-DEEP-03: Heading structure and focus",
+    "modules|modules|tests/admin-config.spec.ts|Admin Configuration (TC-ADMIN) > TC-ADMIN-02: Reference labs list accessible",
+    "modules|modules|tests/admin-config.spec.ts|Suite AQ — Reflex Tests & Analyzer Test Name > TC-RFX-02: Reflex test list or configuration form visible",
+    "modules|modules|tests/admin-config.spec.ts|Suite AR — Lab Number & Program Management > TC-LNM-02: Lab number format/sequence configuration visible",
+    "modules|modules|tests/admin-config.spec.ts|Suite AS — Provider & Barcode Configuration > TC-PROV-02: Provider list with search/filter visible",
+    "modules|modules|tests/admin-config.spec.ts|Suite AS — Provider & Barcode Configuration > TC-BAR-02: Barcode format settings visible",
+    "modules|modules|tests/admin-config.spec.ts|Suite AT — Result Reporting & Menu Configuration > TC-RRC-02: Reporting rules or configuration list visible",
+    "modules|modules|tests/admin-config.spec.ts|Suite AT — Result Reporting & Menu Configuration > TC-MCF-02: Menu items list editable",
+    "modules|modules|tests/admin-config.spec.ts|Suite AU — General Config & App Properties > TC-GCF-02: Configuration key-value list or form visible",
+    "modules|modules|tests/admin-config.spec.ts|Suite AV — Notifications & Search Index > TC-TNF-02: Notification rules or configuration form visible",
+    "modules|modules|tests/admin-config.spec.ts|Suite AV — Notifications & Search Index > TC-SIM-02: Reindex button or status indicator visible",
+    "modules|modules|tests/admin-config.spec.ts|Suite AX — Localization, Notify User, Batch Reassignment > TC-LOC-02: Localization entries list with language columns visible",
+    "modules|modules|tests/admin-config.spec.ts|Suite AX — Localization, Notify User, Batch Reassignment > TC-NTU-02: User notification form or list visible",
+    "modules|modules|tests/calculated-values.spec.ts|Calculated Values Management (Phase 28) > TC-CALC-03: Formula builder supports autocomplete test selection",
+    "modules|modules|tests/calculated-values.spec.ts|Calculated Values Management (Phase 28) > TC-CALC-05b: POST /rest/test-calculation creates a new rule",
+    "modules|modules|tests/calculated-values.spec.ts|Calculated Values Extended (TC-CALC-EXT) > TC-CALC-EXT-04: Operation types are enumerated in formula builder",
+    "modules|modules|tests/calculation-rule-integrity.spec.ts|Calculated value rules cannot loop or overwrite entered results > TC-CALCI-04 a value entered for the rule's test before its input is kept (OGC-1587)",
+    "modules|modules|tests/cytology-workflow.spec.ts|Cytology workflow (TC-CYTW) > TC-CYTW-01: a Cytology order creates a case on the Cytology dashboard",
+    "modules|modules|tests/dashboard.spec.ts|Dashboard Extended Tests (TC-DASH-EXT) > TC-DASH-EXT-06: Logout from dashboard redirects to login page",
+    "modules|modules|tests/dashboard.spec.ts|Suite DASH-DEEP — Dashboard API Deep Validation (TC-DASH-DEEP) > TC-DASH-DEEP-02: Dashboard renders all 5 KPI tiles by label",
+    "modules|modules|tests/deep-endpoint-testing.spec.ts|New-test lifecycle (2026-09-22) > TC-DEEP-32: a new test reaches /rest/test-list only after it is complete and activated",
+    "modules|modules|tests/electronic-orders.spec.ts|Suite AH — Electronic / Incoming Orders Core (TC-IO) > TC-IO-01: Incoming Orders page is reachable",
+    "modules|modules|tests/electronic-signature.spec.ts|Suite AY-ESIG-ADMIN — Site Information & Electronic Signature Config > TC-ESIG-02: Site Information sub-sections are visible",
+    "modules|modules|tests/electronic-signature.spec.ts|Suite AY-ESIG-ADMIN — Site Information & Electronic Signature Config > TC-ESIG-03: Modify button is present and opens edit mode",
+    "modules|modules|tests/eqa-inhouse-deep.spec.ts|In-house blinded EQA, deep (TC-EQAIH) > TC-EQAIH-01: the wizard seals and distributes three blinded samples and names both analysts (OGC-1245)",
+    "modules|modules|tests/eqa-order-intake.spec.ts|EQA order intake on the v4 order flow (TC-EQAOI) > TC-EQAOI-01: the EQA Scheme list is exactly the lab's active enrollments: a withdrawn one is not offered",
+    "modules|modules|tests/eqa-participant-deep.spec.ts|EQA participant lane, deep (TC-EQAPT) > TC-EQAPT-01: enrolling in a scheme fills in the tests the scheme covers (OGC-1260)",
+    "modules|modules|tests/eqa-participant-happy-path.spec.ts|EQA participant happy path (TC-EQAHP) > TC-EQAHP-01: a new cycle for the enrolled scheme is created and listed as Planned",
+    "modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-01: EQA Program Management page loads",
+    "modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-02: EQA Program list or empty state renders",
+    "modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-03: Add / New EQA Program button is present",
+    "modules|modules|tests/fhir-integration.spec.ts|Suite FHIR-RESOURCES — Clinical Resource Queries (TC-FHIR-04–08) > TC-FHIR-07: FHIR Observation search returns a Bundle",
+    "modules|modules|tests/generic-sample-roundtrip.spec.ts|Generic Sample round trip > TC-GSR-00: a generic sample order saves",
+    "modules|modules|tests/generic-sample.spec.ts|Generic Sample — Import Samples (US-GEN-3) > TC-GEN-08: Import page supports CSV and Excel file formats",
+    "modules|modules|tests/management-overview.spec.ts|Management Overview: access > TC-MGMT-10 a Reports user without the grant gets 403 on both endpoints (guard)",
+    "modules|modules|tests/management-overview.spec.ts|Management Overview: access > TC-MGMT-11 a Reports user without the grant does not get the page (guard)",
+    "modules|modules|tests/management-overview.spec.ts|Management Overview: access > TC-MGMT-12 the side nav hides Management Overview from a user without the grant (FRS OGC-897)",
+    "modules|modules|tests/non-conforming.spec.ts|Suite NC-EXT — Non-Conforming Extended Tests (TC-NC-EXT) > TC-NC-EXT-03: NC event naming consistency — heading variants",
+    "modules|modules|tests/non-conforming.spec.ts|Phase 5 — G-DEEP: NCE Interaction Tests > TC-G-DEEP-01: Report NCE form loads with required fields",
+    "modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-01: a pending test whose value waits in an open run shows \"Waiting in RUN-x\" and cannot be entered",
+    "modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-02: the Runs chip counts open and held runs and lists them",
+    "modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-03: the Waiting tag opens the run view with settings, progress, rows and the filters notice",
+    "modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-04: View raw expands the accepted message inline as a JSON document",
+    "modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-05: Back to all results restores the worklist filters",
+    "modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-07: the Runs chip follows the selected lab unit and lists run identities (FR-D1)",
+    "modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-08: saving a waiting test is refused 409 naming the run, on both save paths, and nothing is written",
+    "modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-09: expanding a waiting row offers no way to enter or save its result",
+    "modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-10: in French the run screens show readable text, never raw keys",
+    "modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-11: the analyzer import page breadcrumb names the analyzer without translation errors",
+    "modules|modules|tests/ogc-1515-part3.spec.ts|OGC-1515 part 3: searchable lists (#4929) > TC-1515-22 TAT report: sample type and ordering site are searchable",
+    "modules|modules|tests/ogc-1515-searchable-lists.spec.ts|OGC-1515 part 1: searchable lists (#4922) > TC-1515-04 Activity report activityReportByTest: Search By is searchable and the report prints a PDF",
+    "modules|modules|tests/ogc-1515-searchable-lists.spec.ts|OGC-1515 part 1: searchable lists (#4922) > TC-1515-05 Activity report activityReportByPanel: Search By is searchable and the report prints a PDF",
+    "modules|modules|tests/ogc-1515-searchable-lists.spec.ts|OGC-1515 part 1: searchable lists (#4922) > TC-1515-06 Activity report activityReportByTestSection: Search By is searchable and the report prints a PDF",
+    "modules|modules|tests/ogc-1515-searchable-lists.spec.ts|OGC-1515 part 1: searchable lists (#4922) > TC-1515-07 Referred Out: lab is searchable; printing without a lab asks for it; with a lab prints",
+    "modules|modules|tests/ogc1159-save-failure-visibility.spec.ts|OGC-1159 — a failed order save must say so, readably > ENV-1: an Environmental save rejected with HTTP 400 puts something visible on the screen",
+    "modules|modules|tests/ogc1159-save-failure-visibility.spec.ts|OGC-1159 — a failed order save must say so, readably > ENV-2: the message an Environmental failure shows is a sentence, not a raw i18n key",
+    "modules|modules|tests/ogc1159-save-failure-visibility.spec.ts|OGC-1159 — a failed order save must say so, readably > VEC-1: a Vector save rejected with HTTP 400 puts something visible on the screen",
+    "modules|modules|tests/ogc1159-save-failure-visibility.spec.ts|OGC-1159 — a failed order save must say so, readably > VEC-2: the message a Vector failure shows is a sentence, not a raw i18n key",
+    "modules|modules|tests/order-creation.spec.ts|Result Entry & BUG-31 Verification (Phase 30) > TC-RESULT-02: Hematology section accessible",
+    "modules|modules|tests/order-creation.spec.ts|Result Entry & BUG-31 Verification (Phase 30) > TC-RESULT-03: Biochemistry section accessible",
+    "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered",
+    "modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)",
+    "modules|modules|tests/order-entry-lab-unit-scope.spec.ts|Orders follow the user's lab units (#4757) > TC-OELU-00 [guard] the admin sees both orders; the Hematology user sees the Hematology order",
+    "modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-10: [guard] Enter Order lists the chosen sample type's tests",
+    "modules|modules|tests/order-entry.spec.ts|Multi-Patient Batch Workflow (TC-BATCH) > TC-BATCH-06: List views handle pagination gracefully",
+    "modules|modules|tests/order-entry.spec.ts|Suite AH — Incoming Orders & Batch Order Entry > TC-IO-03: Batch Order Entry screen loads",
+    "modules|modules|tests/pathology-workflow.spec.ts|Pathology workflow (TC-PATHW) > TC-IHCW-01: referring the pathology case to IHC creates the IHC case",
+    "modules|modules|tests/patient-management.spec.ts|Phase 4 — H-DEEP: Patient Interaction Tests > TC-H-DEEP-01: Search by national ID finds known patient",
+    "modules|modules|tests/patient-management.spec.ts|Phase 6 — BD-DEEP: Patient History Tests > TC-BD-DEEP-01: Patient History page has required search fields",
+    "modules|modules|tests/patient-management.spec.ts|Phase 6 — BE-DEEP: Patient Merge Tests > TC-BE-DEEP-01: Patient Merge page has two patient selection areas",
+    "modules|modules|tests/patient-merge.spec.ts|Suite AC — Patient Merge Core (TC-MERGE) > TC-MERGE-01: Patient Merge screen is reachable",
+    "modules|modules|tests/performance.spec.ts|Performance Smoke (TC-PERF) > TC-PERF-04: Validation queue load time",
+    "modules|modules|tests/performance.spec.ts|Phase 4 — X-DEEP: Performance > TC-X-DEEP-02: Large dropdown renders",
+    "modules|modules|tests/performance.spec.ts|Performance Extended — API Latency & Throughput (TC-PERF-EXT) > TC-PERF-EXT-05: SPA navigation does not accumulate DOM nodes",
+    "modules|modules|tests/programs-admin.spec.ts|Programs admin (TC-PRGW) > TC-PRGW-03: Order Programs lists each order once",
+    "modules|modules|tests/reflex-testing.spec.ts|Reflex Tests Management (Phase 28) > TC-REFLEX-01b: Rule builder has required form fields",
+    "modules|modules|tests/reflex-testing.spec.ts|Reflex Testing — Over All Option Validation > Over All Option dropdown has ANY and ALL options",
+    "modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: around the page > TC-RPQ-30 the home Unprinted Results tile counts what the queue lists as Unprinted for today (AC-23)",
+    "modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: through the screens > TC-RPQ-44 a Reports user on Hematology sees no Biochemistry order: not listed, not found by lookup, 404 on detail, print and archived PDF (BR-9)",
+    "modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: through the screens > TC-RPQ-45 a user without the Reports role gets no menu entry and 403 from every queue endpoint (§8)",
+    "modules|modules|tests/report-required-components.spec.ts|Patient report and Required result components (OGC-1608) > TC-RPTCOMP-00 upgrade: on an existing test only the primary component is Required",
+    "modules|modules|tests/report-required-components.spec.ts|Patient report and Required result components (OGC-1608) > TC-RPTCOMP-01 optional blank components leave the report and the heading is final",
+    "modules|modules|tests/reports-openpdf.spec.ts|Activity, rejection and referral reports (ManagementReportPdf, ReferredOutReport) > TC-RPTPDF-10 Activity Report by unit lists the order with its results",
+    "modules|modules|tests/reports-openpdf.spec.ts|Activity, rejection and referral reports (ManagementReportPdf, ReferredOutReport) > TC-RPTPDF-13 Referred Out Tests Report lists the seeded referrals and names the destination on every page",
+    "modules|modules|tests/reports-openpdf.spec.ts|Printed workplans (WorkplanPdf) > TC-RPTPDF-30 Workplan by unit prints the unit and every row the screen listed",
+    "modules|modules|tests/reports-openpdf.spec.ts|Cold storage temperature log (FreezerTemperatureReportPdf) > TC-RPTPDF-41 Weekly Log on the screen produces the weekly log",
+    "modules|modules|tests/reports.spec.ts|Phase 4 — L-DEEP: Reports Generation > TC-L-DEEP-01: Patient Status Report has Report By Lab Number accordion",
+    "modules|modules|tests/reports.spec.ts|Phase 4 — L-DEEP: Reports Generation > TC-L-DEEP-02: Generate Printable Version button is present",
+    "modules|modules|tests/results-worklist-chip-counts.spec.ts|Unified Results status chips (R42) > TC-RWC-01: the All chip is present and covers the rows on screen",
+    "modules|modules|tests/results-worklist-chip-counts.spec.ts|Unified Results status chips (R42) > TC-RWC-02: on a multi-page worklist the All chip counts every page",
+    "modules|modules|tests/sample-shipment.spec.ts|Create Box Form (US-SHIP-1, US-SHIP-2) > TC-SHIP-04: Auto-generated box ID follows expected format",
+    "modules|modules|tests/sample-shipment.spec.ts|Shipment Reports (US-SHIP-4) > TC-SHIP-09: Reports page has filters needed for referral auditing",
+    "modules|modules|tests/storage-crud.spec.ts|Storage CRUD (Phase 28) > TC-STOR-CRUD-06b: Cold Storage has multiple tabs (Dashboard, Corrective Actions, etc.)",
+    "modules|modules|tests/storage-crud.spec.ts|Suite STOR-DEEP — Storage API & Cross-Module > TC-STOR-DEEP-02: Cold Storage (FreezerMonitoring) page loads all tabs",
+    "modules|modules|tests/system-misc.spec.ts|Phase 4 — R-DEEP: Alerts Interactions > TC-R-DEEP-01: Alerts dashboard filters and structure",
+    "modules|modules|tests/system-misc.spec.ts|Phase 5 — E2E-DEEP: End-to-End Order Trace Tests > TC-E2E-DEEP-01: Modify Order finds an existing order by lab number",
+    "modules|modules|tests/system-misc.spec.ts|Phase 5 — E2E-DEEP: End-to-End Order Trace Tests > TC-E2E-DEEP-02: Results by lab unit loads rows",
+    "modules|modules|tests/system-misc.spec.ts|Phase 5 — E2E-DEEP: End-to-End Order Trace Tests > TC-E2E-DEEP-03: Validation by lab unit loads",
+    "modules|modules|tests/validation.spec.ts|Validation workflow (TC-VAL) > TC-VAL-04: Save button is present and clickable on validation screen",
+    "modules|modules|tests/workplan-deep.spec.ts|Suite AJ — Workplan By Panel/Priority Core (TC-WPD) > TC-WPD-02: Workplan By Panel has panel selector with ≥40 options",
+    "modules|modules|tests/workplan-deep.spec.ts|Suite N-DEEP-EXT — Workplan Deep Extended (TC-WPD-06–10) > TC-WPD-06: WorkPlanByTest has ≥200 test types in dropdown",
+    "modules|modules|tests/workplan-deep.spec.ts|Suite N-DEEP-EXT — Workplan Deep Extended (TC-WPD-06–10) > TC-WPD-07: WorkPlanByTestSection has ≥5 section options",
+    "modules|modules|tests/workplan.spec.ts|Workplan and Sample Tracking (TC-WP) > TC-WP-01: the application advertises the four workplan routes, and each renders",
+    "modules|modules|tests/workplan.spec.ts|Workplan and Sample Tracking (TC-WP) > TC-WP-02: each workplan selector is populated from its own display list",
+    "modules|modules|tests/workplan.spec.ts|Workplan and Sample Tracking (TC-WP) > TC-WP-03: a seeded order appears in the workplan for the test it ordered",
+    "modules|modules|tests/workplan.spec.ts|Workplan and Sample Tracking (TC-WP) > TC-WP-04: the workplan queue is scoped to the selection, not the whole lab",
+    "modules|modules|tests/workplan.spec.ts|Suite AI — Workplan By Panel & By Priority > TC-WPP-01: By Panel renders its own screen",
+    "modules|modules|tests/workplan.spec.ts|Suite AI — Workplan By Panel & By Priority > TC-WPP-02: the panel selector offers real panels from PANELS",
+    "modules|modules|tests/workplan.spec.ts|Suite AI — Workplan By Panel & By Priority > TC-WPP-03: selecting a panel queries that panel",
+    "modules|modules|tests/workplan.spec.ts|Phase 4 — J-DEEP: Workplan Interaction Tests > TC-J-DEEP-01: By Test — the selection drives the query parameter",
+    "modules|modules|tests/workplan.spec.ts|Phase 4 — J-DEEP: Workplan Interaction Tests > TC-J-DEEP-02: By Panel — the selection drives the query parameter",
+    "modules|modules|tests/workplan.spec.ts|Phase 5 — N-DEEP: Workplan Interaction Tests > TC-N-DEEP-01: By Test offers the full catalogue, not a truncated list",
+    "modules|modules|tests/workplan.spec.ts|Phase 5 — N-DEEP: Workplan Interaction Tests > TC-N-DEEP-02: By Panel renders what the endpoint actually returned",
+    "modules|modules|tests/workplan.spec.ts|Relocated from gap-suites > TC-WPP-06: the panel selector matches the PANELS display list exactly"
+   ],
+   "fixed": [
+    "modules|modules|tests/calculated-values.spec.ts|Calculated Values Management (Phase 28) > TC-CALC-05c: POST /rest/test-calculation updates existing rule",
+    "modules|modules|tests/order-entry-release-blockers.spec.ts|Order entry — release blockers > BLK-LAB-4 — a field marked required to sighted users is marked required in the DOM"
+   ],
+   "known": 48
+  },
+  "qa": {
+   "counts": {
+    "expected": 0,
+    "unexpected": 1,
+    "flaky": 0,
+    "skipped": 68
+   },
+   "new": [],
+   "fixed": [],
+   "known": 1
+  },
+  "regression-chains": {
+   "counts": {
+    "expected": 84,
+    "unexpected": 13,
+    "flaky": 0,
+    "skipped": 39
+   },
+   "new": [],
+   "fixed": [
+    "regression-chains|chain-w|tests/chains/chain-w-pathology-case.spec.ts|Chain W — Pathology case lifecycle > Step 4 — Case detail endpoint is wired (CROSS-LINK)"
+   ],
+   "known": 13
+  },
+  "all-tc": {
+   "counts": {
+    "expected": 351,
+    "unexpected": 19,
+    "flaky": 0,
+    "skipped": 37
+   },
+   "new": [
+    "all-tc|test-catalog|test-catalog-chaos-results.spec.ts|Test Catalog chaos: Terminology (TC-CX-TM) > TC-CX-TM-01: a Terminology save that meets 500 JSON is reported as failed and stores nothing",
+    "all-tc|test-catalog|test-catalog-chaos-results.spec.ts|Test Catalog chaos: Terminology (TC-CX-TM) > TC-CX-TM-02: a Terminology save that meets login page with a 200 is reported as failed and stores nothing",
+    "all-tc|test-catalog|test-catalog-lab-unit-management.spec.ts|Lab Unit Management — first-increment CRUD contract (OGC-189, PR #4121) > LU-1: list renders known lab units with the editor contract shape (ROUND-TRIP)",
+    "all-tc|test-catalog|test-catalog-mgmt-deep.spec.ts|TC-DEEP-TERMINOLOGY: add a terminology mapping reads back via REST [ROUND-TRIP]",
+    "all-tc|test-catalog|test-catalog-mn-sampletypes.spec.ts|Test Catalog — sample-type many-to-many (Phase 1, OGC-1145) > MN-2: an activated multi-specimen test is orderable under EACH specimen",
+    "all-tc|test-catalog|test-catalog-orderability-semantics.spec.ts|Orderability semantics — active vs orderable > TO-5: [GUARDRAIL] work in a lab unit stays reachable for completion — the Results Lab Unit filter must not hide a unit that holds tests",
+    "all-tc|test-catalog|test-catalog-sample-type-management.spec.ts|Sample Type Management — create flow (OGC-296) > ST-1: GET /sample-types returns known sample types with name/domain/isActive/testCount (ROUND-TRIP)",
+    "all-tc|test-catalog|tests/calculated-results-bounded.spec.ts|Calculated results run on the bounded evaluator (#4852) > TC-CALCB-01 a whole-number result is stored with no trailing .0",
+    "all-tc|test-catalog|tests/results-by-range.spec.ts|Relocated from gap-suites > TC-RBR-14: Filter by test type returns results",
+    "all-tc|test-catalog|tests/results-entry.spec.ts|Suite AJ — Results By Range & By Test/Date/Status > TC-RBR-04: Filter by test type returns results",
+    "all-tc|test-catalog|tests/results-entry.spec.ts|Phase 6 — BG-DEEP: Results By Status Tests > TC-BG-DEEP-01: Results By Status page has all required filters",
+    "all-tc|test-catalog|tests/results-worklist-chip-counts.spec.ts|Unified Results status chips (R42) > TC-RWC-01: the All chip is present and covers the rows on screen",
+    "all-tc|test-catalog|tests/results-worklist-chip-counts.spec.ts|Unified Results status chips (R42) > TC-RWC-02: on a multi-page worklist the All chip counts every page"
+   ],
+   "fixed": [
+    "all-tc|test-catalog|test-catalog-lab-unit-visibility.spec.ts|Lab unit visibility — choosers vs viewers (OGC-189) > G-2: [FLIP-WHEN-FIXED] the filtering is inverted — the VIEWER hides inactive units while the CHOOSER offers them"
+   ],
+   "known": 6
+  },
+  "deep": {
+   "counts": {
+    "expected": 0,
+    "unexpected": 1,
+    "flaky": 0,
+    "skipped": 6
+   },
+   "new": [],
+   "fixed": [],
+   "known": 1
+  },
+  "e2e": {
+   "counts": {
+    "expected": 16,
+    "unexpected": 2,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [
+    "e2e|e2e|test-catalog-sections-roundtrip.spec.ts|Test Catalog editor — section round-trips (A–G) > TCF-03 Methods: Link Method persists"
+   ],
+   "known": 2
+  },
+  "guards": {
+   "counts": {
+    "expected": 18,
+    "unexpected": 1,
+    "flaky": 0,
+    "skipped": 5
+   },
+   "new": [],
+   "fixed": [
+    "guards|guards|test-catalog-sections-roundtrip.spec.ts|Test Catalog editor — section round-trips (A–G) > TCF-03 Methods: Link Method persists"
+   ],
+   "known": 1
+  },
+  "multicomponent": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 1
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "panel-leak": {
+   "counts": {
+    "expected": 5,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 1
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "rtype": {
+   "counts": {
+    "expected": 2,
+    "unexpected": 2,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 2
+  },
+  "workplan": {
+   "counts": {
+    "expected": 2,
+    "unexpected": 2,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [
+    "workplan|workplan|tests/workplan-by-unit-crash.spec.ts|TC-WP-UNIT — Workplan By Unit > TC-WP-UNIT-1: every unit in the picker answers without a 5xx",
+    "workplan|workplan|tests/workplan-by-unit-crash.spec.ts|TC-WP-UNIT — Workplan By Unit > TC-WP-UNIT-2: a 5xx on the workplan query must not unmount the app"
+   ],
+   "fixed": [],
+   "known": 0
+  },
+  "census": {
+   "counts": {
+    "expected": 125,
+    "unexpected": 4,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [
+    "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-PatientEntry-verify: Patient Double Entry renders",
+    "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-PatientEdit-rw: Patient Edit renders",
+    "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-PatientEdit-ro: Patient View renders"
+   ],
+   "fixed": [
+    "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-analyzers: Analyzers List renders",
+    "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-analyzers-types: Analyzer Types renders"
+   ],
+   "known": 1
+  },
+  "cfg": {
+   "counts": {
+    "expected": 0,
+    "unexpected": 3,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [
+    "cfg||config-pages.spec.ts|TC-CFG-01: Result Reporting Configuration renders 3 integrations (RENDER)",
+    "cfg||config-pages.spec.ts|TC-CFG-02: each reporting integration exposes enable + URL + queue (RENDER)",
+    "cfg||config-pages.spec.ts|TC-CFG-03: Order Entry Configuration page loads and lists its items (FUNCTION)"
+   ],
+   "fixed": [],
+   "known": 0
+  },
+  "disc": {
+   "counts": {
+    "expected": 0,
+    "unexpected": 1,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [
+    "disc||_discover.spec.ts|radio label click + mouse-click save"
+   ],
+   "fixed": [],
+   "known": 0
+  },
+  "envseed": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "eqa": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "lp": {
+   "counts": {
+    "expected": 0,
+    "unexpected": 10,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [
+    "lp||label-presets.spec.ts|TC-LP-01: Label Presets list renders with the 5 system presets (RENDER)",
+    "lp||label-presets.spec.ts|TC-LP-02: list columns + Add Preset present (RENDER)",
+    "lp||label-presets.spec.ts|TC-LP-04: \"Add Preset\" opens the create modal with its fields (FUNCTION)",
+    "lp||label-presets.spec.ts|TC-LP-06: PUT accepts the payload shape the editor actually sends [FUNCTION]",
+    "lp||label-presets.spec.ts|TC-LP-07: a second save carrying the same fields is idempotent, not a 500 [PERSIST]",
+    "lp||label-presets.spec.ts|TC-LP-08: a partial update that omits `fields` does not delete them [PERSIST]",
+    "lp||label-presets.spec.ts|TC-LP-10: saving a preset does not alter its name [ROUND-TRIP]"
+   ],
+   "fixed": [],
+   "known": 3
+  },
+  "modify-order": {
+   "counts": {
+    "expected": 7,
+    "unexpected": 1,
+    "flaky": 0,
+    "skipped": 1
+   },
+   "new": [],
+   "fixed": [],
+   "known": 1
+  },
+  "ogc1192": {
+   "counts": {
+    "expected": 4,
+    "unexpected": 1,
+    "flaky": 0,
+    "skipped": 4
+   },
+   "new": [
+    "ogc1192|ogc1192|tests/ogc1192-env-order-visibility.spec.ts|OGC-1192: environmental order routing and patientless samples > OGC1192-3: CANARY the Clinical dashboard lists the newest orders"
+   ],
+   "fixed": [],
+   "known": 0
+  },
+  "personas-admin": {
+   "counts": {
+    "expected": 10,
+    "unexpected": 2,
+    "flaky": 0,
+    "skipped": 6
+   },
+   "new": [],
+   "fixed": [],
+   "known": 2
+  },
+  "personas-roles": {
+   "counts": {
+    "expected": 13,
+    "unexpected": 1,
+    "flaky": 0,
+    "skipped": 10
+   },
+   "new": [],
+   "fixed": [],
+   "known": 1
+  },
+  "pr3987": {
+   "counts": {
+    "expected": 10,
+    "unexpected": 3,
+    "flaky": 0,
+    "skipped": 4
+   },
+   "new": [],
+   "fixed": [],
+   "known": 3
+  },
+  "preflight": {
+   "counts": {
+    "expected": 4,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "probe-combo": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "rbac": {
+   "counts": {
+    "expected": 56,
+    "unexpected": 0,
+    "flaky": 1,
+    "skipped": 2
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "regression-seed": {
+   "counts": {
+    "expected": 13,
+    "unexpected": 1,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 1
+  },
+  "reval2": {
+   "counts": {
+    "expected": 4,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "revalidate-unauth": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  },
+  "revalidate": {
+   "counts": {
+    "expected": 3,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0
+   },
+   "new": [],
+   "fixed": [],
+   "known": 0
+  }
+ }
 }
