@@ -33,11 +33,6 @@
    "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
    "since": "2026-10-15"
   },
-  "all-tc|test-catalog|test-catalog-lab-unit-visibility.spec.ts|Lab unit visibility — choosers vs viewers (OGC-189) > G-2: [FLIP-WHEN-FIXED] the filtering is inverted — the VIEWER hides inactive units while the CHOOSER offers them": {
-   "ticket": "untriaged",
-   "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
-   "since": "2026-10-15"
-  },
   "all-tc|test-catalog|test-catalog-lab-unit-visibility.spec.ts|Lab unit visibility — choosers vs viewers (OGC-189) > G-4: [GUARDRAIL] no lab unit holding content is hidden from every viewer at once": {
    "ticket": "OGC-189",
    "note": "inactive lab units still hold tests (by design question)",
@@ -49,16 +44,6 @@
    "since": "2026-10-15"
   },
   "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-analyzers-errors: Analyzer Error Dashboard renders": {
-   "ticket": "untriaged",
-   "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
-   "since": "2026-10-15"
-  },
-  "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-analyzers-types: Analyzer Types renders": {
-   "ticket": "untriaged",
-   "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
-   "since": "2026-10-15"
-  },
-  "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-analyzers: Analyzers List renders": {
    "ticket": "untriaged",
    "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
    "since": "2026-10-15"
@@ -198,11 +183,6 @@
    "note": "reflex save 500 and calculation save 400, both on OGC-730",
    "since": "2026-10-15"
   },
-  "modules|modules|tests/calculated-values.spec.ts|Calculated Values Management (Phase 28) > TC-CALC-05c: POST /rest/test-calculation updates existing rule": {
-   "ticket": "OGC-730",
-   "note": "reflex save 500 and calculation save 400, both on OGC-730",
-   "since": "2026-10-15"
-  },
   "modules|modules|tests/locations-organizations.spec.ts|Locations & Organizations (OGC-1363) > TC-LORG-04-low: a failed save on a record low in a long list is reported where the user pressed Save (OGC-1263)": {
    "ticket": "untriaged",
    "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
@@ -243,11 +223,6 @@
    "note": "tripwire (R53d) that flips: it passed (labels, not normalCash keys) in 13 of the 23 runs from 16 to 20 Oct on the same develop commits, and failed as expected in the others. Find why the Order step sometimes renders the keys before making it a guard.",
    "since": "2026-10-20"
   },
-  "modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-02: legacy Add Order: Next then Back keeps an unticked test unticked (OGC-1388) [FIXED OGC-1388]": {
-   "ticket": "untriaged",
-   "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
-   "since": "2026-10-15"
-  },
   "modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-11: Enter Order: a late response for the previous sample type does not replace the list (OGC-1266)": {
    "ticket": "untriaged",
    "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
@@ -256,11 +231,6 @@
   "modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-12: Enter Order: a failed tests request does not leave \"Loading\" forever (OGC-1266)": {
    "ticket": "untriaged",
    "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
-   "since": "2026-10-15"
-  },
-  "modules|modules|tests/order-entry-release-blockers.spec.ts|Order entry — release blockers > BLK-LAB-4 — a field marked required to sighted users is marked required in the DOM": {
-   "ticket": "OGC-1240",
-   "note": "required fields not marked in the DOM / National ID",
    "since": "2026-10-15"
   },
   "modules|modules|tests/order-entry-release-blockers.spec.ts|Order entry — the patient blockers > BLK-AL-2 — National ID, when the config requires it, is marked required in the DOM": {
@@ -473,11 +443,6 @@
    "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
    "since": "2026-10-15"
   },
-  "regression-chains|chain-w|tests/chains/chain-w-pathology-case.spec.ts|Chain W — Pathology case lifecycle > Step 4 — Case detail endpoint is wired (CROSS-LINK)": {
-   "ticket": "untriaged",
-   "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
-   "since": "2026-10-15"
-  },
   "regression-chains|chain-y|tests/chains/chain-y-compliance-reporting.spec.ts|Chain Y — SILNAS compliance reporting > Step 1 — Compliance dashboard summary contract (ROUND-TRIP)": {
    "ticket": "untriaged",
    "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
@@ -497,6 +462,371 @@
    "ticket": "untriaged",
    "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
    "since": "2026-10-15"
+  },
+  "modules|modules|tests/accessibility.spec.ts|Phase 5 — V-DEEP: Accessibility Audit Tests > TC-V-DEEP-02: Color contrast adequate": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/accessibility.spec.ts|Phase 5 — V-DEEP: Accessibility Audit Tests > TC-V-DEEP-03: Heading structure and focus": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/admin-config.spec.ts|Admin Configuration (TC-ADMIN) > TC-ADMIN-02: Reference labs list accessible": {
+   "ticket": "untriaged",
+   "note": "A browser set to US English gets frontend/src/languages/en_US.json (App.jsx keeps the region since #4155), and that Transifex bundle reads British ('Locations & Organisations') while en.json reads 'Organizations'. QA lead with Casey, 16 Nov 2026.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/app-shell.spec.ts|Page titles (OGC-1448) > TC-SHELL-10: each screen #4681 walked has exactly one h1, its title": {
+   "ticket": "untriaged",
+   "note": "A browser set to US English gets frontend/src/languages/en_US.json (App.jsx keeps the region since #4155), and that Transifex bundle reads British ('Locations & Organisations') while en.json reads 'Organizations'. QA lead with Casey, 16 Nov 2026.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/calculated-values.spec.ts|Calculated Values Management (Phase 28) > TC-CALC-03: Formula builder supports autocomplete test selection": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/calculated-values.spec.ts|Calculated Values Management (Phase 28) > TC-CALC-05b: POST /rest/test-calculation creates a new rule": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/calculated-values.spec.ts|Calculated Values Extended (TC-CALC-EXT) > TC-CALC-EXT-04: Operation types are enumerated in formula builder": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/calculation-rule-integrity.spec.ts|Calculated value rules cannot loop or overwrite entered results > TC-CALCI-04 a value entered for the rule's test before its input is kept (OGC-1587)": {
+   "ticket": "ci-env",
+   "note": "Passes on testing.openelis-global.org (develop 0937523e6, 16 Nov 2026); red only on the fresh develop stack. A seeding or data gap in CI, not yet traced.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/cphl-field-report.spec.ts|Results entry Method list (OGC-1614) > TC-CPHL-31: the Method list offers the test's linked active methods, A to Z": {
+   "ticket": "ci-env",
+   "note": "Passes on testing.openelis-global.org (develop 0937523e6, 16 Nov 2026); red only on the fresh develop stack. A seeding or data gap in CI, not yet traced.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/cphl-field-report.spec.ts|Site Information: a translated setting saves (OGC-1609) > TC-CPHL-50: changing the banner on Site Information saves, shows in the header and survives a reload": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/dashboard.spec.ts|Suite DASH-DEEP — Dashboard API Deep Validation (TC-DASH-DEEP) > TC-DASH-DEEP-02: Dashboard renders all 5 KPI tiles by label": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/dashboard.spec.ts|Suite DASH-DEEP — Dashboard API Deep Validation (TC-DASH-DEEP) > TC-DASH-DEEP-04: Dashboard sidebar navigation items cover all major modules": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/electronic-signature.spec.ts|Suite AY-ESIG-ADMIN — Site Information & Electronic Signature Config > TC-ESIG-02: Site Information sub-sections are visible": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/electronic-signature.spec.ts|Suite AY-ESIG-ADMIN — Site Information & Electronic Signature Config > TC-ESIG-03: Modify button is present and opens edit mode": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-01: EQA Program Management page loads": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-02: EQA Program list or empty state renders": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-03: Add / New EQA Program button is present": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/fhir-integration.spec.ts|Suite FHIR-RESOURCES — Clinical Resource Queries (TC-FHIR-04–08) > TC-FHIR-07: FHIR Observation search returns a Bundle": {
+   "ticket": "ci-env",
+   "note": "Passes on testing.openelis-global.org (develop 0937523e6, 16 Nov 2026); red only on the fresh develop stack. A seeding or data gap in CI, not yet traced.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/generic-sample.spec.ts|Generic Sample — Import Samples (US-GEN-3) > TC-GEN-08: Import page supports CSV and Excel file formats": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/inventory-board.spec.ts|Defining items, tags, count mode and Reports (#4361 to #4365) > TC-INVB-33: the tag filter also scopes the Reorder now banner and Reorder suggestions (OGC-1549)": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/locations-organizations.spec.ts|Locations & Organizations (OGC-1363) > TC-LORG-01: SideNav, the four routes, the legacy redirects and URL-restored filters (AC1)": {
+   "ticket": "untriaged",
+   "note": "A browser set to US English gets frontend/src/languages/en_US.json (App.jsx keeps the region since #4155), and that Transifex bundle reads British ('Locations & Organisations') while en.json reads 'Organizations'. QA lead with Casey, 16 Nov 2026.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/non-conforming.spec.ts|Suite NC-EXT — Non-Conforming Extended Tests (TC-NC-EXT) > TC-NC-EXT-03: NC event naming consistency — heading variants": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/non-conforming.spec.ts|Phase 5 — G-DEEP: NCE Interaction Tests > TC-G-DEEP-01: Report NCE form loads with required fields": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-01: a pending test whose value waits in an open run shows \"Waiting in RUN-x\" and cannot be entered": {
+   "ticket": "ci-env",
+   "note": "Needs the OGC-1200 fixture run (RUN-16, an open run holding a Creatinine value); a fresh develop stack has no such run.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-02: the Runs chip counts open and held runs and lists them": {
+   "ticket": "ci-env",
+   "note": "Needs the OGC-1200 fixture run (RUN-16, an open run holding a Creatinine value); a fresh develop stack has no such run.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-03: the Waiting tag opens the run view with settings, progress, rows and the filters notice": {
+   "ticket": "ci-env",
+   "note": "Needs the OGC-1200 fixture run (RUN-16, an open run holding a Creatinine value); a fresh develop stack has no such run.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-04: View raw expands the accepted message inline as a JSON document": {
+   "ticket": "ci-env",
+   "note": "Needs the OGC-1200 fixture run (RUN-16, an open run holding a Creatinine value); a fresh develop stack has no such run.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-05: Back to all results restores the worklist filters": {
+   "ticket": "ci-env",
+   "note": "Needs the OGC-1200 fixture run (RUN-16, an open run holding a Creatinine value); a fresh develop stack has no such run.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-07: the Runs chip follows the selected lab unit and lists run identities (FR-D1)": {
+   "ticket": "ci-env",
+   "note": "Needs the OGC-1200 fixture run (RUN-16, an open run holding a Creatinine value); a fresh develop stack has no such run.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-08: saving a waiting test is refused 409 naming the run, on both save paths, and nothing is written": {
+   "ticket": "ci-env",
+   "note": "Needs the OGC-1200 fixture run (RUN-16, an open run holding a Creatinine value); a fresh develop stack has no such run.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-09: expanding a waiting row offers no way to enter or save its result": {
+   "ticket": "ci-env",
+   "note": "Needs the OGC-1200 fixture run (RUN-16, an open run holding a Creatinine value); a fresh develop stack has no such run.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-10: in French the run screens show readable text, never raw keys": {
+   "ticket": "ci-env",
+   "note": "Needs the OGC-1200 fixture run (RUN-16, an open run holding a Creatinine value); a fresh develop stack has no such run.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-11: the analyzer import page breadcrumb names the analyzer without translation errors": {
+   "ticket": "ci-env",
+   "note": "Needs the OGC-1200 fixture run (RUN-16, an open run holding a Creatinine value); a fresh develop stack has no such run.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/ogc-1515-part2.spec.ts|OGC-1515 part 2: searchable lists (#4925) > TC-1515-13b Settings table ResultConfigurationMenu: \"Search settings\" narrows the rows": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/ogc-1515-part3.spec.ts|OGC-1515 part 3: searchable lists (#4929) > TC-1515-22 TAT report: sample type and ordering site are searchable": {
+   "ticket": "ci-env",
+   "note": "Passes on testing.openelis-global.org (develop 0937523e6, 16 Nov 2026); red only on the fresh develop stack. A seeding or data gap in CI, not yet traced.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/ogc-1515-searchable-lists.spec.ts|OGC-1515 part 1: searchable lists (#4922) > TC-1515-04 Activity report activityReportByTest: Search By is searchable and the report prints a PDF": {
+   "ticket": "ci-env",
+   "note": "Passes on testing.openelis-global.org (develop 0937523e6, 16 Nov 2026); red only on the fresh develop stack. A seeding or data gap in CI, not yet traced.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/ogc-1515-searchable-lists.spec.ts|OGC-1515 part 1: searchable lists (#4922) > TC-1515-05 Activity report activityReportByPanel: Search By is searchable and the report prints a PDF": {
+   "ticket": "ci-env",
+   "note": "Passes on testing.openelis-global.org (develop 0937523e6, 16 Nov 2026); red only on the fresh develop stack. A seeding or data gap in CI, not yet traced.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/ogc-1515-searchable-lists.spec.ts|OGC-1515 part 1: searchable lists (#4922) > TC-1515-06 Activity report activityReportByTestSection: Search By is searchable and the report prints a PDF": {
+   "ticket": "ci-env",
+   "note": "Passes on testing.openelis-global.org (develop 0937523e6, 16 Nov 2026); red only on the fresh develop stack. A seeding or data gap in CI, not yet traced.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/ogc-1515-searchable-lists.spec.ts|OGC-1515 part 1: searchable lists (#4922) > TC-1515-07 Referred Out: lab is searchable; printing without a lab asks for it; with a lab prints": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/ogc1159-save-failure-visibility.spec.ts|OGC-1159 — a failed order save must say so, readably > ENV-1: an Environmental save rejected with HTTP 400 puts something visible on the screen": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/ogc1159-save-failure-visibility.spec.ts|OGC-1159 — a failed order save must say so, readably > ENV-2: the message an Environmental failure shows is a sentence, not a raw i18n key": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/ogc1159-save-failure-visibility.spec.ts|OGC-1159 — a failed order save must say so, readably > VEC-1: a Vector save rejected with HTTP 400 puts something visible on the screen": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/ogc1159-save-failure-visibility.spec.ts|OGC-1159 — a failed order save must say so, readably > VEC-2: the message a Vector failure shows is a sentence, not a raw i18n key": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-10: [guard] Enter Order lists the chosen sample type's tests": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/order-entry-v4-handoff.spec.ts|R-TIME one clock > TC-OEV4-TIME-04 order entry and its dashboard use one date format (R-TIME-4)": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/order-entry.spec.ts|Suite AH — Incoming Orders & Batch Order Entry > TC-IO-03: Batch Order Entry screen loads": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/pathology-workflow.spec.ts|Pathology workflow (TC-PATHW) > TC-IHCW-01: referring the pathology case to IHC creates the IHC case": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/patient-management.spec.ts|Phase 4 — H-DEEP: Patient Interaction Tests > TC-H-DEEP-01: Search by national ID finds known patient": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/patient-management.spec.ts|Phase 6 — BD-DEEP: Patient History Tests > TC-BD-DEEP-01: Patient History page has required search fields": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/patient-management.spec.ts|Phase 6 — BE-DEEP: Patient Merge Tests > TC-BE-DEEP-01: Patient Merge page has two patient selection areas": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/performance.spec.ts|Performance Smoke (TC-PERF) > TC-PERF-02: Add Order wizard step transition time": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/performance.spec.ts|Phase 4 — X-DEEP: Performance > TC-X-DEEP-02: Large dropdown renders": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/performance.spec.ts|Performance Extended — API Latency & Throughput (TC-PERF-EXT) > TC-PERF-EXT-05: SPA navigation does not accumulate DOM nodes": {
+   "ticket": "ci-env",
+   "note": "Passes on testing.openelis-global.org (develop 0937523e6, 16 Nov 2026); red only on the fresh develop stack. A seeding or data gap in CI, not yet traced.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/programs-admin.spec.ts|Programs admin (TC-PRGW) > TC-PRGW-03: Order Programs lists each order once": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/reflex-testing.spec.ts|Reflex Tests Management (Phase 28) > TC-REFLEX-01b: Rule builder has required form fields": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/reflex-testing.spec.ts|Reflex Testing — Over All Option Validation > Over All Option dropdown has ANY and ALL options": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/report-required-components.spec.ts|Patient report and Required result components (OGC-1608) > TC-RPTCOMP-00 upgrade: on an existing test only the primary component is Required": {
+   "ticket": "ci-env",
+   "note": "Passes on testing.openelis-global.org (develop 0937523e6, 16 Nov 2026); red only on the fresh develop stack. A seeding or data gap in CI, not yet traced.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/report-required-components.spec.ts|Patient report and Required result components (OGC-1608) > TC-RPTCOMP-01 optional blank components leave the report and the heading is final": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/reports-openpdf.spec.ts|Activity, rejection and referral reports (ManagementReportPdf, ReferredOutReport) > TC-RPTPDF-13 Referred Out Tests Report lists the seeded referrals and names the destination on every page": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/reports-openpdf.spec.ts|Cold storage temperature log (FreezerTemperatureReportPdf) > TC-RPTPDF-41 Weekly Log on the screen produces the weekly log": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/reports.spec.ts|Phase 4 — L-DEEP: Reports Generation > TC-L-DEEP-01: Patient Status Report has Report By Lab Number accordion": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/reports.spec.ts|Phase 4 — L-DEEP: Reports Generation > TC-L-DEEP-02: Generate Printable Version button is present": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/sample-shipment.spec.ts|Create Box Form (US-SHIP-1, US-SHIP-2) > TC-SHIP-04: Auto-generated box ID follows expected format": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/sample-shipment.spec.ts|Shipment Reports (US-SHIP-4) > TC-SHIP-09: Reports page has filters needed for referral auditing": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/storage-crud.spec.ts|Storage CRUD (Phase 28) > TC-STOR-CRUD-06b: Cold Storage has multiple tabs (Dashboard, Corrective Actions, etc.)": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "modules|modules|tests/storage-crud.spec.ts|Suite STOR-DEEP — Storage API & Cross-Module > TC-STOR-DEEP-02: Cold Storage (FreezerMonitoring) page loads all tabs": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "all-tc|test-catalog|test-catalog-orderability-semantics.spec.ts|Orderability semantics — active vs orderable > TO-5: [GUARDRAIL] work in a lab unit stays reachable for completion — the Results Lab Unit filter must not hide a unit that holds tests": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "all-tc|test-catalog|tests/calculated-results-bounded.spec.ts|Calculated results run on the bounded evaluator (#4852) > TC-CALCB-01 a whole-number result is stored with no trailing .0": {
+   "ticket": "ci-env",
+   "note": "Passes on testing.openelis-global.org (develop 0937523e6, 16 Nov 2026); red only on the fresh develop stack. A seeding or data gap in CI, not yet traced.",
+   "since": "2026-11-16"
+  },
+  "all-tc|test-catalog|tests/results-entry.spec.ts|Phase 6 — BG-DEEP: Results By Status Tests > TC-BG-DEEP-01: Results By Status page has all required filters": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
+  },
+  "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-PatientEntry-verify: Patient Double Entry renders": {
+   "ticket": "untriaged",
+   "note": "Legacy study pages (retroCIEntryByProject.jsp): initializeStudySelection() calls selectStudy(null) on a first visit, an uncaught TypeError since 2023 with nothing shown to the user; picking a study works (checked on testing 16 Nov). The census spec that asserts no page errors is new (#242, 9 Nov).",
+   "since": "2026-11-16"
+  },
+  "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-PatientEdit-rw: Patient Edit renders": {
+   "ticket": "untriaged",
+   "note": "Legacy study pages (retroCIEntryByProject.jsp): initializeStudySelection() calls selectStudy(null) on a first visit, an uncaught TypeError since 2023 with nothing shown to the user; picking a study works (checked on testing 16 Nov). The census spec that asserts no page errors is new (#242, 9 Nov).",
+   "since": "2026-11-16"
+  },
+  "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-PatientEdit-ro: Patient View renders": {
+   "ticket": "untriaged",
+   "note": "Legacy study pages (retroCIEntryByProject.jsp): initializeStudySelection() calls selectStudy(null) on a first visit, an uncaught TypeError since 2023 with nothing shown to the user; picking a study works (checked on testing 16 Nov). The census spec that asserts no page errors is new (#242, 9 Nov).",
+   "since": "2026-11-16"
+  },
+  "ogc1192|ogc1192|tests/ogc1192-env-order-visibility.spec.ts|OGC-1192: environmental order routing and patientless samples > OGC1192-3: CANARY the Clinical dashboard lists the newest orders": {
+   "ticket": "untriaged",
+   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
+   "since": "2026-11-16"
   }
  }
 }
