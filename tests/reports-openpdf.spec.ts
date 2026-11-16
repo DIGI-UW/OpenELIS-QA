@@ -23,6 +23,7 @@
  * 1156e683a, #4649).
  */
 import { test, expect, Page } from '@playwright/test';
+import { pickId } from '../helpers/searchable';
 import fs from 'fs';
 import path from 'path';
 import {
@@ -78,11 +79,20 @@ async function patientReport(page: Page, from: string, to: string): Promise<PdfD
   return r.pdf!;
 }
 
+/** The list a report's Search By loads (ReportByDate.jsx), by report. */
+function reportListFor(route: string): string {
+  if (/activityReportByTestSection/i.test(route)) return '/rest/user-test-sections/ALL';
+  if (/activityReportByPanel/i.test(route)) return '/rest/displayList/PANELS';
+  return '/rest/test-list';
+}
+
 async function dateReport(page: Page, route: string, from: string, to: string, select?: string): Promise<{ url: string; r: Awaited<ReturnType<typeof fetchReport>> }> {
   await page.goto(route);
   await setDate(page, 'startDate', from);
   await setDate(page, 'endDate', to);
-  if (select !== undefined) await page.locator('select#type').selectOption(select);
+  // Search By is a searchable list since OGC-1515 (#4922) (input#type); pick the fixture id by
+  // the label the report's own list gives it.
+  if (select !== undefined) await pickId(page.locator('#type'), select, reportListFor(route));
   const url = await generateUrl(page);
   return { url, r: await fetchReport(page, url) };
 }
@@ -308,7 +318,10 @@ test.describe('Aggregate reports (IndicatorReport, StatisticsReport, ValidationB
 test.describe('Printed workplans (WorkplanPdf)', () => {
   async function printWorkplan(page: Page, route: string, value: string): Promise<PdfDoc & { sentLabs: string[] }> {
     await page.goto(route);
-    await page.locator('select#select-1').selectOption(value);
+    // By Test and By Unit are searchable lists since OGC-1515 (#4922) (#workplan-test, #workplan-unit).
+    const unitScreen = /ByTestSection/i.test(route);
+    await pickId(page.locator(unitScreen ? '#workplan-unit' : '#workplan-test'), value,
+      unitScreen ? '/rest/user-test-sections/Results' : '/rest/test-list');
     const print = page.locator('#print-top');
     await expect(print, 'the workplan lists tests and offers Print').toBeVisible({ timeout: 60_000 });
     const resp = page.waitForResponse((x) => x.url().includes('PrintWorkplanReport'), { timeout: 120_000 });

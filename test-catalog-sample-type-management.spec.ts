@@ -140,7 +140,8 @@ test.describe('Sample Type Management — create flow (OGC-296)', () => {
     // Every record exposes the full editor contract, not just the list columns.
     expect(Object.keys(serum).sort()).toEqual(
       // lastUpdated: the version token every save sends back since OGC-1463 (14 Oct 2026).
-      ['abbreviation', 'description', 'domain', 'id', 'isActive', 'lastUpdated', 'name', 'sortOrder', 'testCount'],
+      // microbiologyIsolate: microbiology isolate identification (f31bbb27, 11 Oct 2026)
+      ['abbreviation', 'description', 'domain', 'id', 'isActive', 'lastUpdated', 'microbiologyIsolate', 'name', 'sortOrder', 'testCount'],
     );
   });
 

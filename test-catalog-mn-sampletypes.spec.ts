@@ -41,7 +41,9 @@ async function makeComplete(page: Page, id: string) {
   const sr = (await api(page, `/test-catalog/tests/${id}/sample-results`)).body;
   const pid = sr.components?.[0]?.id;
   const put = await api(page, `/test-catalog/tests/${id}/sample-results`, 'PUT', {
-    testId: id, components: [{ id: pid, code: 'RESULT', label: 'Result', displayOrder: 0, isPrimary: true, showOnReport: true, allowMultipleReadings: false, resultType: 'N', significantDigits: 1, interpretations: [], options: [] }],
+    // reportingDecimalPlaces: the component field was significantDigits until OGC-1574 (#4882, 3 Nov 2026);
+    // the old name now makes the whole body unreadable (400 error.request.unreadable).
+    testId: id, components: [{ id: pid, code: 'RESULT', label: 'Result', displayOrder: 0, isPrimary: true, showOnReport: true, allowMultipleReadings: false, resultType: 'N', reportingDecimalPlaces: 1, interpretations: [], options: [] }],
   });
   expect(put.status).toBe(200);
 }

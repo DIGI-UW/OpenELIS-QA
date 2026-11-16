@@ -1,4 +1,5 @@
 import { test, Page } from '@playwright/test';
+import { loginFormShown, LOGIN_USER_FIELD } from './helpers/login-form';
 const BASE = process.env.BASE || 'https://testing.openelis-global.org';
 const ADMIN = { user: process.env.OE_USER || 'admin', pass: process.env.OE_PASS || 'adminADMIN!' };
 async function login(page: Page) {
@@ -11,8 +12,8 @@ async function login(page: Page) {
   // Check whether the form is actually there before acting on it.
   await page.goto(`${BASE}/login`);
   const pass = page.locator('input[type="password"]').first();
-  if (!(await pass.isVisible({ timeout: 5000 }).catch(() => false))) return; // already signed in
-  await page.locator('input[type="text"], input[placeholder*="user" i]').first().fill(ADMIN.user);
+  if (!(await loginFormShown(page))) return; // a stored session redirected (helpers/login-form.ts)
+  await page.locator(LOGIN_USER_FIELD).first().fill(ADMIN.user);
   await pass.fill(ADMIN.pass);
   await page.locator('button:has-text("Login"), button[type="submit"]').first().click();
   await page.waitForURL('**/MasterListsPage', { timeout: 15000 }).catch(() => {});

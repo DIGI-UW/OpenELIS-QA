@@ -7,6 +7,7 @@
  * checks that the pages render; nothing saved a generic sample and read it back.
  */
 import { test, expect } from '@playwright/test';
+import { pick } from '../helpers/searchable';
 
 const BASE = process.env.BASE_URL || process.env.BASE || 'https://testing.openelis-global.org';
 test.describe.configure({ mode: 'serial' });
@@ -20,7 +21,8 @@ test.describe('Generic Sample round trip', () => {
     await page.getByRole('button', { name: 'Generate Lab Number' }).click();
     await expect(page.locator('#labNo')).not.toHaveValue('', { timeout: 15_000 });
     accession = await page.locator('#labNo').inputValue();
-    await page.locator('#sampleType').selectOption({ label: 'Serum' });
+    // Sample Type is a searchable list since OGC-1515 (#4922).
+    await pick(page.locator('#sampleType'), 'Serum');
     await page.locator('#quantity').fill('3');
     await page.locator('#sampleUnitOfMeasure').selectOption({ label: 'mL' });
     await page.locator('#from').fill('QA_GEN source');

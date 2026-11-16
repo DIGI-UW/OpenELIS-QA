@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { optionTexts, pick } from '../helpers/searchable';
 
 /**
  * TC-WP-UNIT — Workplan By Unit must not 500, and must not blank the app when it does.
@@ -32,14 +33,15 @@ const WORKPLAN_UNIT_API = '**/rest/WorkPlanByTestSection**';
 test.describe('TC-WP-UNIT — Workplan By Unit', () => {
   test('TC-WP-UNIT-1: every unit in the picker answers without a 5xx', async ({ page }) => {
     await page.goto('/WorkPlanByTestSection?type=');
-    const picker = page.locator('#select-1');
-    await expect(picker).toBeVisible();
-
-    const units = await picker.locator('option').evaluateAll((opts) =>
-      opts
-        .filter((o) => (o as HTMLOptionElement).value)
-        .map((o) => ({ id: (o as HTMLOptionElement).value, name: o.textContent?.trim() ?? '' })),
-    );
+    // Since OGC-1515 (#4922) the unit picker is a searchable list (#workplan-unit) that loads
+    // user-test-sections/Results; take the ids from that list and check the picker offers them.
+    const picker = page.locator('#workplan-unit');
+    await expect(picker).toBeVisible({ timeout: 30_000 });
+    const res0 = await page.request.get('/api/OpenELIS-Global/rest/user-test-sections/Results');
+    const units = ((await res0.json().catch(() => [])) as { id: string; value: string }[])
+      .map((u) => ({ id: String(u.id), name: String(u.value ?? '').trim() }));
+    const offered = await optionTexts(picker);
+    expect(offered.length, 'the picker offers the units the list returned').toBe(units.length);
     expect(units.length, 'the unit picker should offer units to test').toBeGreaterThan(0);
 
     const failures: string[] = [];
@@ -71,18 +73,15 @@ test.describe('TC-WP-UNIT — Workplan By Unit', () => {
     });
 
     await page.goto('/WorkPlanByTestSection?type=');
-    const picker = page.locator('main select').first();
-    await expect(picker).toBeVisible();
-    // REWORKED 2026-10-08: the units arrive after mount; reading the options straight away found
-    // only the "Select Unit Type" placeholder in CI. Wait for a real unit before picking one.
-    await picker.locator('option:not([value=""])').first().waitFor({ state: 'attached', timeout: 30_000 });
-
-    const firstUnit = await picker
-      .locator('option')
-      .evaluateAll((opts) => (opts.find((o) => (o as HTMLOptionElement).value) as HTMLOptionElement)?.value);
+    // Since OGC-1515 (#4922) the unit picker is a searchable list (#workplan-unit). The units
+    // arrive after mount, so wait for one before picking it.
+    const picker = page.locator('#workplan-unit');
+    await expect(picker).toBeVisible({ timeout: 30_000 });
+    await expect.poll(async () => (await optionTexts(picker)).length, { timeout: 30_000 }).toBeGreaterThan(0);
+    const firstUnit = (await optionTexts(picker))[0];
     expect(firstUnit, 'the picker should have a selectable unit').toBeTruthy();
 
-    await picker.selectOption(firstUnit as string);
+    await pick(picker, firstUnit);
     await page.waitForTimeout(2000);
 
     const rootChildren = await page.evaluate(

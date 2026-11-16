@@ -44,9 +44,11 @@ import {
  *   - Status values expected: ENTERED, RELEASED, CANCELLED (BC-DEEP confirmed in Phase 6)
  */
 
+// The app's route is /ElectronicOrders (App.jsx). It comes first: navigateWithDiscovery takes the
+// first candidate that answers, and the retired /IncomingOrders now answers a JSON 404 (16 Nov 2026).
 const IO_URLS = [
-  '/IncomingOrders',
   '/ElectronicOrders',
+  '/IncomingOrders',
   '/OrderQueue',
   '/IncomingSamples',
   '/MasterListsPage/incoming-orders',

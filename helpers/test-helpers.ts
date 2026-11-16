@@ -338,6 +338,18 @@ export function lookupAdminUrl(itemName: string): string | undefined {
  * @param itemName Name of the admin item to navigate to
  * @throws Error if admin item not found
  */
+/**
+ * Wait until the route guard has let the page in and the page has drawn something of its own.
+ * SecureRoute shows Carbon's Loading while the session loads; networkidle can come first, and the
+ * callers then read isVisible() (which does not wait) on an empty <main>: 16 Nov 2026, twelve
+ * admin-config "list or form visible" cases read false on the develop stack. Never throws.
+ */
+export async function waitForRouteContent(page: Page, timeout = 20_000): Promise<void> {
+  await page.locator('.cds--loading-overlay').first().waitFor({ state: 'hidden', timeout }).catch(() => {});
+  await page.locator('main h1, main h2, main h3, main h4, main table, main form, main [role="table"], main button')
+    .first().waitFor({ state: 'visible', timeout }).catch(() => {});
+}
+
 export async function navigateToAdminItem(page: Page, itemName: string): Promise<void> {
   // Use confirmed URL if available (Round 4 validated), otherwise click sidebar.
   //
@@ -350,6 +362,7 @@ export async function navigateToAdminItem(page: Page, itemName: string): Promise
   if (confirmedSlug) {
     await page.goto(`${BASE}${confirmedSlug}`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
     return;
   }
 
@@ -413,9 +426,12 @@ export async function navigateWithDiscovery(page: Page, candidates: string[]): P
       if (page.url().includes('Login')) continue;
 
       const body = await page.locator('body').innerText().catch(() => '');
+      // A retired route can answer 200 with a JSON problem document (16 Nov 2026: /IncomingOrders
+      // and /MergePatients gave {"type":"about:blank","title":"Not Found","status":404,...}).
       const isErrorDocument =
         body.includes('NoHandlerFoundException') ||
-        body.includes('problemDetail');
+        body.includes('problemDetail') ||
+        /"title"\s*:\s*"Not Found"/.test(body);
       if (isErrorDocument) continue;
 
       return true;

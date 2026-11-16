@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { pick } from '../helpers/searchable';
 import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange } from '../helpers/test-helpers';
 
 /**
@@ -152,7 +153,8 @@ test.describe('Validation workflow (TC-VAL)', () => {
       if (n > 0) { unitWithWork = u.value; break; }
     }
     expect(unitWithWork, 'precondition: some lab unit has results waiting for validation (enter and save a result first)').not.toBe('');
-    await page.locator('main').getByRole('combobox', { name: 'Lab Unit' }).selectOption({ label: unitWithWork });
+    // The Lab Unit filter is a searchable list since OGC-1515 (#4922); pick by label (helpers/searchable).
+    await pick(page.locator('main').getByRole('combobox', { name: 'Lab Unit' }), unitWithWork);
     await page.locator('main').getByRole('button', { name: 'Load results' }).click();
     await expect(page.locator('main').getByRole('button', { name: /^Release all clear \(\d+\)$/ })).toBeVisible({ timeout: 30_000 });
     await page.locator('main').getByRole('button', { name: 'Expand Row' }).first().click();

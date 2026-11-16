@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { expectOffered, pick } from '../helpers/searchable';
 import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, orderWizardForward } from '../helpers/test-helpers';
 
 /**
@@ -80,9 +81,10 @@ test.describe('Performance Smoke (TC-PERF)', () => {
     const start = Date.now();
     await page.goto(`${BASE}/validation`);
     const unit = page.locator('main').getByRole('combobox', { name: 'Lab Unit' });
-    await unit.locator('option', { hasText: 'Hematology' }).waitFor({ state: 'attached', timeout: 15000 });
+    // The Lab Unit filter is a searchable list since OGC-1515 (#4922); pick by label (helpers/searchable).
+    await expectOffered(unit, 'Hematology', 15000);
     const pageReady = Date.now() - start;
-    await unit.selectOption({ label: 'Hematology' });
+    await pick(unit, 'Hematology');
     const queue = page.waitForResponse((r) => /\/rest\/AccessionValidation\?/.test(r.url()) && r.request().method() === 'GET', { timeout: 15000 });
     await page.locator('main').getByRole('button', { name: 'Load results' }).click();
     expect((await queue).status(), 'the queue answers').toBe(200);

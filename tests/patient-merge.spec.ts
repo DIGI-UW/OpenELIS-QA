@@ -40,9 +40,11 @@ import {
  *   - Merge is a destructive write operation — tests avoid actually submitting
  */
 
+// The app's route is /PatientMerge (App.jsx). It comes first: navigateWithDiscovery takes the
+// first candidate that answers, and the retired /MergePatients now answers a JSON 404 (16 Nov 2026).
 const MERGE_URLS = [
-  '/MergePatients',
   '/PatientMerge',
+  '/MergePatients',
   '/MasterListsPage/mergePatients',
   '/patient-management/merge',
 ];

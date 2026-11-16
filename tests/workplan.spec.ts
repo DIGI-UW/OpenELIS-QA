@@ -1,6 +1,7 @@
 import { test, expect, type Page, type Locator } from '@playwright/test';
 import { BASE, ADMIN, login } from '../helpers/test-helpers';
 import { seedOrder } from '../helpers/data-factory';
+import { optionTexts, pick } from '../helpers/searchable';
 
 /**
  * The total a Carbon pager shows. REWORKED 2026-10-08: develop's pagers dropped "1-17 of 17 items"
@@ -16,6 +17,13 @@ async function pagerTotal(scope: Locator): Promise<number | null> {
   if (!(await onPage.count()) || !(await pages.count())) return null;
   const n = Number((await onPage.innerText()).match(/\d+/)![0]);
   return Number((await pages.innerText()).match(/\d+/)![0]) === 1 ? n : null;
+}
+
+/** The pager's "N items on this page", for a list that spans several pages. */
+async function rowsOnPage(scope: Locator): Promise<number | null> {
+  const onPage = scope.getByText(/^\s*\d+ items? on this page\s*$/).first();
+  if (!(await onPage.count())) return null;
+  return Number((await onPage.innerText()).match(/\d+/)![0]);
 }
 
 /**
@@ -52,9 +60,9 @@ async function pagerTotal(scope: Locator): Promise<number | null> {
  * is the same trap that made a missing gallery mockup look fine (harness 12.30):
  * a 200 is not evidence that a screen exists.
  *
- * Each screen is one Carbon `select#select-1` feeding one endpoint:
+ * Each screen is one selector (see PICKERS below) feeding one endpoint:
  *
- *   By Test      displayList/ALL_TESTS      -> WorkPlanByTest?test_id=
+ *   By Test      test-list (user's units)   -> WorkPlanByTest?test_id=
  *   By Panel     displayList/PANELS         -> WorkPlanByPanel?panel_id=
  *   By Priority  displayList/ORDER_PRIORITY -> WorkPlanByPriority?priority=
  *
@@ -66,28 +74,77 @@ async function pagerTotal(scope: Locator): Promise<number | null> {
 
 /** The four routes the application itself advertises, and what each drives. */
 const SCREENS = [
-  { key: 'test',     route: '/WorkPlanByTest?type=test',         label: /Select Test Type/i,  list: 'ALL_TESTS',      api: 'WorkPlanByTest',        param: 'test_id',  minOptions: 100 },
-  { key: 'panel',    route: '/WorkPlanByPanel?type=panel',       label: /Select Panel/i,      list: 'PANELS',         api: 'WorkPlanByPanel',       param: 'panel_id', minOptions: 2 },
-  { key: 'priority', route: '/WorkPlanByPriority?type=priority', label: /Select Priority/i,   list: 'ORDER_PRIORITY', api: 'WorkPlanByPriority',    param: 'priority', minOptions: 2 },
+  { key: 'test',     route: '/WorkPlanByTest?type=test',         label: /Select Test Type/i,  list: 'test-list',      api: 'WorkPlanByTest',        param: 'test_id',  minOptions: 100 },
+  { key: 'panel',    route: '/WorkPlanByPanel?type=panel',       label: /Select Panel/i,      list: 'displayList/PANELS', api: 'WorkPlanByPanel',       param: 'panel_id', minOptions: 2 },
+  { key: 'priority', route: '/WorkPlanByPriority?type=priority', label: /Select Priority/i,   list: 'displayList/ORDER_PRIORITY', api: 'WorkPlanByPriority',    param: 'priority', minOptions: 2 },
 ] as const;
 
 const BENCH = { key: 'bench', route: '/WorkPlanByTestSection?type=' } as const;
 
+/**
+ * The selector on each screen. Since OGC-1515 (#4922, 3 Nov 2026) By Test, By Panel and By Unit
+ * are searchable lists (WorkplanListSelect, a Carbon ComboBox) with their own ids; By Priority is
+ * still the native `select#select-1`. By Test offers /rest/test-list (the tests in the user's
+ * Results lab units), By Panel displayList/PANELS, By Unit user-test-sections/Results.
+ */
+const PICKERS: Record<string, { sel: string; source?: string }> = {
+  WorkPlanByTest: { sel: '#workplan-test', source: '/rest/test-list' },
+  WorkPlanByPanel: { sel: '#workplan-panel', source: '/rest/displayList/PANELS' },
+  WorkPlanByTestSection: { sel: '#workplan-unit', source: '/rest/user-test-sections/Results' },
+  WorkPlanByPriority: { sel: '#select-1' },
+};
+function pickerFor(route: string) {
+  const key = Object.keys(PICKERS).find((k) => route.toLowerCase().includes(k.toLowerCase()));
+  return PICKERS[key ?? 'WorkPlanByPriority'];
+}
+/** The selector on the screen currently open. */
+function pickerOn(page: Page): Locator {
+  return page.locator(Object.values(PICKERS).map((p) => p.sel).join(', ')).first();
+}
+
 /** Go to a workplan screen and prove it actually rendered, not the SPA shell. */
 async function openWorkplan(page: Page, route: string, label: RegExp): Promise<void> {
   await page.goto(`${BASE}${route}`);
-  const select = page.locator('#select-1');
+  const select = page.locator(pickerFor(route).sel);
   await expect(select, `${route} must render its selector, not the SPA shell`).toBeAttached({ timeout: 20_000 });
   await expect(page.locator('body'), `${route} must show its own heading`).toContainText(/Workplan/i, { timeout: 15_000 });
-  await expect(select, `${route}'s selector must be labelled`).toContainText(label, { timeout: 10_000 });
+  if (await isNativeSelect(select)) {
+    await expect(select, `${route}'s selector must be labelled`).toContainText(label, { timeout: 10_000 });
+  } else {
+    await expect(select, `${route}'s selector must be labelled`).toHaveAttribute('placeholder', label, { timeout: 10_000 });
+  }
 }
 
-/** Options on the screen's single select, minus the "Select ..." placeholder. */
+async function isNativeSelect(target: Locator): Promise<boolean> {
+  return (await target.evaluate((e) => e.tagName)) === 'SELECT';
+}
+
+/** Options on the screen's selector, minus the "Select ..." placeholder, with the id each stands for. */
 async function realOptions(page: Page): Promise<{ value: string; text: string }[]> {
-  return page.locator('#select-1').evaluate((el) =>
-    Array.from((el as HTMLSelectElement).options)
-      .filter((o) => o.value && !/^select /i.test(o.text))
-      .map((o) => ({ value: o.value, text: o.text.trim() })));
+  const select = pickerOn(page);
+  if (await isNativeSelect(select)) {
+    return select.evaluate((el) =>
+      Array.from((el as HTMLSelectElement).options)
+        .filter((o) => o.value && !/^select /i.test(o.text))
+        .map((o) => ({ value: o.value, text: o.text.trim() })));
+  }
+  // A combobox shows labels only; take the ids from the list the component itself loads.
+  const id = await select.getAttribute('id');
+  const source = Object.values(PICKERS).find((p) => p.sel === `#${id}`)?.source;
+  const items = await page.evaluate(async (u) => {
+    const r = await fetch(`/api/OpenELIS-Global${u}`, { headers: { Accept: 'application/json' } });
+    return ((await r.json().catch(() => [])) as { id: string | number; value: string }[]) ?? [];
+  }, source as string);
+  const labels = await optionTexts(select);
+  return labels.map((text) => ({ text, value: String(items.find((i) => i.value?.trim() === text)?.id ?? '') }))
+    .filter((o) => o.value);
+}
+
+/** Choose an option on the open screen, by id on a native select and by label on a combobox. */
+async function choose(page: Page, target: { value: string; text: string }): Promise<void> {
+  const select = pickerOn(page);
+  if (await isNativeSelect(select)) await select.selectOption(target.value);
+  else await pick(select, target.text);
 }
 
 /** Call a workplan endpoint directly and report what came back. */
@@ -151,11 +208,11 @@ test.describe('Workplan and Sample Tracking (TC-WP)', () => {
         .toBeGreaterThanOrEqual(s.minOptions);
       // and the list must come from the server, not be hardcoded in the bundle
       const list = await page.evaluate(async (name) => {
-        const r = await fetch(`/api/OpenELIS-Global/rest/displayList/${name}`, { headers: { Accept: 'application/json' } });
+        const r = await fetch(`/api/OpenELIS-Global/rest/${name}`, { headers: { Accept: 'application/json' } });
         return { status: r.status, n: ((await r.json().catch(() => [])) as unknown[]).length };
       }, s.list);
-      expect(list.status, `displayList/${s.list} must answer`).toBe(200);
-      expect(list.n, `displayList/${s.list} must be non-empty`).toBeGreaterThan(0);
+      expect(list.status, `${s.list} must answer`).toBe(200);
+      expect(list.n, `${s.list} must be non-empty`).toBeGreaterThan(0);
     }
   });
 
@@ -296,7 +353,7 @@ test.describe('Phase 4 — J-DEEP: Workplan Interaction Tests', () => {
       const m = r.url().match(/WorkPlanByTest\?test_id=([^&]*)/);
       if (m) sent.push(m[1]);
     });
-    await page.selectOption('#select-1', target.value);
+    await choose(page, target);
     await page.waitForTimeout(4_000);
     console.log(`TC-J-DEEP-01: chose ${target.text} (${target.value}); requests carried ${JSON.stringify(sent)}`);
     expect(sent.length, `selecting a test must issue a WorkPlanByTest request; none was sent`).toBeGreaterThan(0);
@@ -313,7 +370,7 @@ test.describe('Phase 4 — J-DEEP: Workplan Interaction Tests', () => {
       const m = r.url().match(/WorkPlanByPanel\?panel_id=([^&]*)/);
       if (m) sent.push(m[1]);
     });
-    await page.selectOption('#select-1', target.value);
+    await choose(page, target);
     await page.waitForTimeout(4_000);
     console.log(`TC-J-DEEP-02: chose ${target.text} (${target.value}); requests carried ${JSON.stringify(sent)}`);
     expect(sent.length, 'selecting a panel must issue a WorkPlanByPanel request').toBeGreaterThan(0);
@@ -327,17 +384,19 @@ test.describe('Phase 5 — N-DEEP: Workplan Interaction Tests', () => {
     await login(page, ADMIN.user, ADMIN.pass);
   });
 
-  test('TC-N-DEEP-01: By Test offers the full catalogue, not a truncated list', async ({ page }) => {
+  test('TC-N-DEEP-01: By Test offers every test the user may work on, not a truncated list', async ({ page }) => {
     // 202 options on the local 3.2.2.0 stack. The threshold is 100 rather than
     // an exact count so a catalogue edit does not fail the suite, but a
-    // silently truncated or paginated list still does.
+    // silently truncated or paginated list still does. Since OGC-1515 (#4922)
+    // the list is /rest/test-list, the tests in the user's Results lab units
+    // (an admin holds them all), so that is what the selector is held to.
     await openWorkplan(page, SCREENS[0].route, SCREENS[0].label);
     const opts = await realOptions(page);
     const catalogue = await page.evaluate(async () => {
-      const r = await fetch('/api/OpenELIS-Global/rest/displayList/ALL_TESTS', { headers: { Accept: 'application/json' } });
+      const r = await fetch('/api/OpenELIS-Global/rest/test-list', { headers: { Accept: 'application/json' } });
       return ((await r.json().catch(() => [])) as unknown[]).length;
     });
-    console.log(`TC-N-DEEP-01: selector ${opts.length} options, ALL_TESTS ${catalogue}`);
+    console.log(`TC-N-DEEP-01: selector ${opts.length} options, test-list ${catalogue}`);
     expect(opts.length, 'the By Test selector must offer 100+ tests').toBeGreaterThanOrEqual(100);
     expect(opts.length, `the selector (${opts.length}) must not silently drop tests the catalogue serves (${catalogue})`)
       .toBeGreaterThanOrEqual(catalogue - 1);
@@ -359,10 +418,12 @@ test.describe('Phase 5 — N-DEEP: Workplan Interaction Tests', () => {
     expect(api.rows, 'the endpoint must return a row collection').not.toBeNull();
     const expected = api.rows as number;
 
-    await page.selectOption('#select-1', panel.value);
+    await choose(page, panel);
     await page.waitForTimeout(5_000);
     const body = (await page.locator('body').innerText()).replace(/\s+/g, ' ');
-    const total = await pagerTotal(page.locator('main'));
+    // The workplan pages on the server (100 a page): the endpoint's answer is its first page, so
+    // hold the screen's first page to it ("N items on this page") when there is more than one.
+    const total = (await pagerTotal(page.locator('main'))) ?? (await rowsOnPage(page.locator('main')));
     // develop words the empty state "No appropriate tests were found." (REWORKED 2026-10-08).
     const hasEmpty = /no records to display|no data|nothing to show|no appropriate tests were found/i.test(body);
     console.log(`TC-N-DEEP-02: panel ${panel.text} -> api ${expected} rows; screen count ${total ?? 'none'}, empty=${hasEmpty}`);

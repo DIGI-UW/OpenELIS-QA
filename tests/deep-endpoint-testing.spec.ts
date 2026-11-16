@@ -1230,7 +1230,9 @@ test.describe('New-test lifecycle (2026-09-22)', () => {
         method: 'PUT', headers: H,
         body: JSON.stringify({ testId: id, components: [
           { code: `QAL${stamp}`, label: 'QA lifecycle probe', displayOrder: 1,
-            resultType: 'N', isPrimary: true, significantDigits: 2 },
+            // reportingDecimalPlaces: the component field was significantDigits until OGC-1574 (#4882, 3 Nov 2026);
+            // the old name now makes the whole body unreadable (400 error.request.unreadable).
+            resultType: 'N', isPrimary: true, reportingDecimalPlaces: 2 },
         ] }),
       });
       const complete = await (await fetch(`${B}/tests/${id}/completeness`, { headers: H })).json()

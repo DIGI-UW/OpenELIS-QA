@@ -47,7 +47,9 @@ async function ensureCytologyTest(page: Page): Promise<void> {
   const sr = await apiGet<{ components?: Array<{ id: string }> }>(page, `${TC}/tests/${id}/sample-results`);
   await apiWrite(page, 'PUT', `${TC}/tests/${id}/sample-results`, {
     testId: id, components: [{ id: sr.json?.components?.[0]?.id, code: 'PRIMARY', label: 'Interpretation', resultType: 'R',
-      isPrimary: true, displayOrder: 1, showOnReport: true, significantDigits: 0, allowMultipleReadings: false, options: [], interpretations: [] }],
+      // reportingDecimalPlaces: the component field was significantDigits until OGC-1574 (#4882, 3 Nov 2026);
+      // the old name now makes the whole body unreadable (400 error.request.unreadable).
+      isPrimary: true, displayOrder: 1, showOnReport: true, reportingDecimalPlaces: 0, allowMultipleReadings: false, options: [], interpretations: [] }],
   });
   const act = await apiWrite(page, 'POST', `${TC}/tests/${id}/activate`, { gapsAcknowledged: 'qa' });
   expect(act.status, `activate ${TEST_NAME}`).toBe(200);

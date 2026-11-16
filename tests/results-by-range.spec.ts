@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { optionTexts, pick } from '../helpers/searchable';
 import {
   BASE,
   ADMIN,
@@ -406,8 +407,9 @@ test.describe('Relocated from gap-suites', () => {
       const main = page.locator('main');
       const unit = main.getByRole('combobox', { name: 'Lab Unit' });
       await expect(unit).toBeVisible({ timeout: 30_000 });
-      await unit.locator('option').nth(1).waitFor({ state: 'attached', timeout: 15_000 });
-      await unit.selectOption({ index: 1 });
+      // The Lab Unit filter is a searchable list since OGC-1515 (#4922); pick by label (helpers/searchable).
+      await expect.poll(async () => (await optionTexts(unit)).length, { timeout: 15_000 }).toBeGreaterThan(0);
+      await pick(unit, (await optionTexts(unit))[0]);
       await main.getByRole('button', { name: 'Load results' }).click();
       await expect(main.getByRole('table', { name: 'Results worklist' })).toBeVisible({ timeout: 30_000 });
     });
