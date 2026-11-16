@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { pick } from '../helpers/searchable';
 import { BASE, ADMIN, QA_PREFIX, TIMEOUT, login, orderWizardForward } from '../helpers/test-helpers';
 
 /**
@@ -316,8 +317,8 @@ test.describe('Result Entry & BUG-31 Verification (Phase 30)', () => {
     await expect(page).toHaveURL(/\/(Results|LogbookResults)\b/, { timeout: 30_000 });
     const unit = page.locator('main').getByRole('combobox', { name: 'Lab Unit' });
     await expect(unit).toBeVisible({ timeout: 30_000 });
-    await unit.selectOption({ label: 'Hematology' });
-    await expect(unit.locator('option:checked')).toHaveText('Hematology');
+    // The Lab Unit filter is a searchable list since OGC-1515 (#4922); pick by label (helpers/searchable).
+    await pick(unit, 'Hematology');
   });
 
   test('TC-RESULT-03: Biochemistry section accessible', async ({ page }) => {
@@ -327,8 +328,8 @@ test.describe('Result Entry & BUG-31 Verification (Phase 30)', () => {
     await expect(page).toHaveURL(/\/(Results|LogbookResults)\b/, { timeout: 30_000 });
     const unit = page.locator('main').getByRole('combobox', { name: 'Lab Unit' });
     await expect(unit).toBeVisible({ timeout: 30_000 });
-    await unit.selectOption({ label: 'Biochemistry' });
-    await expect(unit.locator('option:checked')).toHaveText('Biochemistry');
+    // The Lab Unit filter is a searchable list since OGC-1515 (#4922); pick by label (helpers/searchable).
+    await pick(unit, 'Biochemistry');
   });
 
   test('TC-RESULT-04: Validation page loads', async ({ page }) => {

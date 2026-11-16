@@ -132,7 +132,8 @@ test.describe('Lab Unit Management — first-increment CRUD contract (OGC-189, P
     );
     expect(Object.keys(biochem).sort()).toEqual(
       // lastupdated: the version token every save sends back since OGC-1463 (14 Oct 2026).
-      ['description', 'domain', 'id', 'isActive', 'isExternal', 'lastupdated', 'name', 'names', 'sortOrder', 'testCount'],
+      // requireTrackedMedia: Microbiology V2 (OGC-1383, #4646, 9 Oct 2026)
+      ['description', 'domain', 'id', 'isActive', 'isExternal', 'lastupdated', 'name', 'names', 'requireTrackedMedia', 'sortOrder', 'testCount'],
     );
   });
 

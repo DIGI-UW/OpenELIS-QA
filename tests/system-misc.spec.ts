@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { expectOffered, optionTexts, pick } from '../helpers/searchable';
 import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, getFutureDate, navigateViaMenu, tryNavigateToURL, selectSampleType, discoverFhirBase, orderWizardForward, getPrimaryAccession } from '../helpers/test-helpers';
 import { withIsolatedSession, reloginIsolated } from '../helpers/isolated-session';
 
@@ -1339,8 +1340,9 @@ test.describe('Phase 4 — R-DEEP: Alerts Interactions', () => {
     await expect(typeFilter).toBeVisible();
     await expect(page.locator('#alert-severity-filter')).toBeVisible();
     await expect(page.locator('#alert-status-filter')).toBeVisible();
-    await typeFilter.locator('option', { hasText: 'STAT Overdue' }).waitFor({ state: 'attached', timeout: 15000 });
-    const types = (await typeFilter.locator('option').allInnerTexts()).map(t => t.trim());
+    // The type filter may be a searchable list since OGC-1515 (#4922): read what it offers either way.
+    await expectOffered(typeFilter, 'STAT Overdue', 15000);
+    const types = await optionTexts(typeFilter);
     for (const t of ['EQA Deadline', 'Sample Expiration', 'STAT Overdue', 'Unacknowledged Critical']) {
       expect(types).toContain(t);
     }
@@ -1393,8 +1395,8 @@ test.describe('Phase 5 — E2E-DEEP: End-to-End Order Trace Tests', () => {
   test('TC-E2E-DEEP-01: Modify Order finds an existing order by lab number', async ({ page }) => {
     // A real lab number from the Results list: data.setup's seeded accession can be null.
     await page.goto(`${BASE}/Results`);
-    await page.locator('#unifiedResultsLabUnit option', { hasText: 'Hematology' }).waitFor({ state: 'attached' });
-    await page.locator('#unifiedResultsLabUnit').selectOption('Hematology');
+    // The Lab Unit filter is a searchable list since OGC-1515 (#4922); pick by label (helpers/searchable).
+    await pick(page.locator('#unifiedResultsLabUnit'), 'Hematology');
     await page.getByRole('button', { name: 'Load results' }).click();
     const firstRow = page.locator('main tbody tr').first();
     await expect(firstRow).toBeVisible({ timeout: 15000 });
@@ -1409,8 +1411,8 @@ test.describe('Phase 5 — E2E-DEEP: End-to-End Order Trace Tests', () => {
 
   test('TC-E2E-DEEP-02: Results by lab unit loads rows', async ({ page }) => {
     await page.goto(`${BASE}/Results`);
-    await page.locator('#unifiedResultsLabUnit option', { hasText: 'Hematology' }).waitFor({ state: 'attached' });
-    await page.locator('#unifiedResultsLabUnit').selectOption('Hematology');
+    // The Lab Unit filter is a searchable list since OGC-1515 (#4922); pick by label (helpers/searchable).
+    await pick(page.locator('#unifiedResultsLabUnit'), 'Hematology');
     await page.getByRole('button', { name: 'Load results' }).click();
     await expect(page.locator('main tbody tr').first()).toBeVisible({ timeout: 15000 });
   });
@@ -1421,10 +1423,10 @@ test.describe('Phase 5 — E2E-DEEP: End-to-End Order Trace Tests', () => {
     await page.goto(`${BASE}/ResultValidation?type=&test=`);
     await expect(page.getByRole('heading', { name: 'Validation', exact: true })).toBeVisible();
     const unit = page.locator('main').getByRole('combobox', { name: 'Lab Unit' });
-    await unit.locator('option', { hasText: 'Hematology' }).waitFor({ state: 'attached', timeout: 15000 });
-    const opts = (await unit.locator('option').allInnerTexts()).map(t => t.trim()).filter(Boolean);
-    expect(opts).toContain('Hematology');
-    await unit.selectOption({ label: 'Hematology' });
+    // The Lab Unit filter is a searchable list since OGC-1515 (#4922); pick by label (helpers/searchable).
+    await expectOffered(unit, 'Hematology', 15000);
+    expect(await optionTexts(unit)).toContain('Hematology');
+    await pick(unit, 'Hematology');
     const res = page.waitForResponse(r => /AccessionValidation|ResultValidation/i.test(r.url()) && r.request().method() === 'GET');
     await page.locator('main').getByRole('button', { name: 'Load results' }).click();
     expect((await res).status()).toBe(200);

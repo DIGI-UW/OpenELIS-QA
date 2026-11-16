@@ -155,14 +155,6 @@ export function startCapture(
       } catch { /* request body not available */ }
     }
 
-    let responseBodySample: string | undefined;
-    if (captureBodies) {
-      try {
-        const body = await response.text();
-        responseBodySample = body.slice(0, 1024);
-      } catch { /* response body not available — common for redirects */ }
-    }
-
     const entry: CapturedRequest = {
       url,
       pathname,
@@ -174,16 +166,27 @@ export function startCapture(
       requestHeaders: stripCookies(requestHeaders),
       requestBodySample,
       responseHeaders: stripCookies(responseHeaders),
-      responseBodySample,
+      responseBodySample: undefined,
       startedAtMs,
       finishedAtMs,
       startedAt: new Date(startedAtMs).toISOString(),
       finishedAt: new Date(finishedAtMs).toISOString(),
     };
 
+    // Record the request as soon as its response arrives, then read the body into the same entry.
+    // Pushing only after `await response.text()` lost writes whose body was still arriving when a
+    // capture window closed: TC-LP-09 on testing, 16 Nov, reported "no write was issued" while the
+    // trace held the POST.
     session.captures.push(entry);
     if (entry.status >= 400) session.failed.push(entry);
     if (entry.status === 404) session.notFound.push(entry);
+
+    if (captureBodies) {
+      try {
+        const body = await response.text();
+        entry.responseBodySample = body.slice(0, 1024);
+      } catch { /* response body not available, common for redirects */ }
+    }
   };
 
   page.on('request', onRequest);

@@ -31,6 +31,7 @@
  * hard-delete). TC-LP-05 edits a System preset's height and restores it in a finally.
  */
 import { test, expect, Page } from '@playwright/test';
+import { loginFormShown, LOGIN_USER_FIELD } from './helpers/login-form';
 import {
   apiGet,
   apiWrite,
@@ -50,7 +51,9 @@ const LIST = `${BASE}/MasterListsPage/labelPresets`;
 const PRESETS = '/api/labelPresets';
 const WRITE_PATH = /\/api\/labelPresets(\/\d+)?$/;
 
-const SCRATCH_NAME = `QaAuto ${new Date().toISOString().slice(5, 10).replace('-', '')} LP`;
+// Per run, not per day: scratch presets are deactivated after use, and an inactive preset still
+// holds its name (422 "already exists"), so a second run on the same day collided (16 Nov).
+const SCRATCH_NAME = `QaAuto ${new Date().toISOString().slice(5, 16).replace(/[-T:]/g, '')} LP`;
 
 interface Preset {
   id: number;
@@ -98,8 +101,8 @@ async function login(page: Page) {
   // assertion. Check whether the form is actually there before acting on it.
   await page.goto(`${BASE}/login`);
   const pass = page.locator('input[type="password"]').first();
-  if (!(await pass.isVisible({ timeout: 5000 }).catch(() => false))) return; // already signed in
-  await page.locator('input[type="text"], input[placeholder*="user" i]').first().fill(ADMIN.user);
+  if (!(await loginFormShown(page))) return; // a stored session redirected (helpers/login-form.ts)
+  await page.locator(LOGIN_USER_FIELD).first().fill(ADMIN.user);
   await pass.fill(ADMIN.pass);
   await page.locator('button:has-text("Login"), button[type="submit"]').first().click();
   await page.waitForURL('**/MasterListsPage', { timeout: 15000 }).catch(() => {});
@@ -118,6 +121,10 @@ const byName = (all: Preset[], name: string): Preset => {
   if (!hit) throw new Error(`preset "${name}" not found; have: ${all.map((p) => p.name).join(', ')}`);
   return hit;
 };
+
+/** Field rows without their save stamp, for comparing what a save kept. */
+const withoutStamps = (fields: unknown): unknown =>
+  Array.isArray(fields) ? fields.map(({ lastupdated, ...rest }: Record<string, unknown>) => rest) : fields;
 
 // ── RENDER / FUNCTION ────────────────────────────────────────────────────────
 
@@ -141,7 +148,9 @@ test('TC-LP-02: list columns + Add Preset present (RENDER)', async ({ page }) =>
 test('TC-LP-03: filter narrows the list (FUNCTION)', async ({ page }) => {
   await page.goto(LIST);
   await expect(page.getByRole('heading', { name: /label presets/i }).first()).toBeVisible();
-  await page.locator('input[placeholder*="search" i], input[type="text"], input[type="search"]').first().fill('Freezer');
+  // The list's own filter (a Carbon TableToolbarSearch, "Filter table"). The first text input on the
+  // page is now another field (16 Nov), so name the searchbox.
+  await page.getByRole('searchbox', { name: /filter table/i }).fill('Freezer');
   await page.waitForTimeout(1200);
   await expect(page.getByText('Freezer Label').first()).toBeVisible();
   await expect(page.getByText('Order Label')).toHaveCount(0);
@@ -202,13 +211,16 @@ test('TC-LP-05: editing a preset dimension in the UI saves and reads back [ROUND
     assertWriteSucceeded(window.writes, WRITE_PATH, 'TC-LP-05 UI save');
 
     // ROUND-TRIP: re-read on the list endpoint, not the PUT's own response body.
-    const after = byName(await listPresets(page), 'Order Label');
+    const read = byName(await listPresets(page), 'Order Label');
+    const after = { ...read, fields: withoutStamps(read.fields) };
     assertRoundTrip(
       after as unknown as Record<string, unknown>,
       { heightMm: target },
       'TC-LP-05 Order Label height',
       // Nothing else may have moved — this is the collateral-damage check.
-      { widthMm: before.widthMm, name: before.name, fields: before.fields },
+      // `lastupdated` on each field row moves on every save (the editor rewrites the rows), so
+      // compare the rows without it.
+      { widthMm: before.widthMm, name: before.name, fields: withoutStamps(before.fields) },
     );
   } finally {
     const now = (await listPresets(page).catch(() => [] as Preset[])).find((p) => p.id === before.id);
@@ -337,8 +349,15 @@ test('TC-LP-09: a successful save shows a confirmation [FUNCTION]', async ({ pag
   await expect(page.getByText(/Add Label Preset/i).first()).toBeVisible();
   await page.locator('#preset-name').fill(`${SCRATCH_NAME} C`);
 
+  // Wait for the POST's answer rather than a fixed 1.5 s settle (the capture records a write when
+  // its response arrives): on testing (16 Nov) the answer came later than that in 4 of 5 runs, and
+  // the window closed on "no write". A dead Save button
+  // still fails: nothing arrives within 15 s and the window holds no write.
   const window = await captureWrites(page, async () => {
-    await page.getByRole('button', { name: /^save$/i }).click();
+    await Promise.all([
+      page.waitForResponse((r) => r.request().method() === 'POST' && WRITE_PATH.test(new URL(r.url()).pathname), { timeout: 15_000 }).catch(() => {}),
+      page.getByRole('button', { name: /^save$/i }).click(),
+    ]);
   });
   saveWriteEvidence(testInfo, window, 'LP-09-create-feedback');
 

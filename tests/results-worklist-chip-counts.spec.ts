@@ -9,6 +9,7 @@
  * the columns and rows but never compares a chip with the worklist size.
  */
 import { test, expect, Page } from '@playwright/test';
+import { pick } from '../helpers/searchable';
 
 const BASE = process.env.BASE_URL || process.env.BASE || 'https://testing.openelis-global.org';
 
@@ -16,7 +17,8 @@ async function loadUnit(page: Page, unit: string) {
   await page.goto(`${BASE}/Results`, { waitUntil: 'domcontentloaded' });
   const select = page.locator('#unifiedResultsLabUnit');
   await expect(select).toBeVisible({ timeout: 20_000 });
-  await select.selectOption({ label: unit });
+  // The Lab Unit filter is a searchable list since OGC-1515 (#4922); pick by label (helpers/searchable).
+  await pick(select, unit);
   await page.getByRole('button', { name: 'Load results' }).click();
   await expect(page.getByText(/^All \(\d+\)$/).first()).toBeVisible({ timeout: 30_000 });
 }

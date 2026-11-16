@@ -16,6 +16,7 @@
  * Tripwires use test.fail and flip when the product is fixed.
  */
 import { test, expect } from '@playwright/test';
+import { pick } from './helpers/searchable';
 import { apiGet, apiWrite } from './helpers/silentSave';
 import { open, watchToasts, successToasts, rangesOf } from './helpers/catalogUi';
 import {
@@ -270,7 +271,8 @@ test.describe('Test Catalog chaos: Terminology (TC-CX-TM)', () => {
       const t = await seedTest(page, `TM${i + 1}`);
       await open(page, `/MasterListsPage/TestCatalogEditor/${t.id}/terminology`);
       await page.locator('#terminology-code').waitFor({ state: 'visible', timeout: 60_000 });
-      await page.locator('#terminology-source').selectOption('LOINC');
+      // Source is a searchable list since OGC-1515 (#4922).
+      await pick(page.locator('#terminology-source'), 'LOINC');
       await page.locator('#terminology-code').fill(`9${RUN}-${i}`);
       await watchToasts(page);
       const fired = await faultOnce(page, 'PUT', TERM, FAULTS[what]);

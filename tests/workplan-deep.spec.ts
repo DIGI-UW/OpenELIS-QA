@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { optionTexts } from '../helpers/searchable';
 import {
   BASE,
   ADMIN,
@@ -94,20 +95,10 @@ test.describe('Suite AJ — Workplan By Panel/Priority Core (TC-WPD)', () => {
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    const selects = await page.locator('select').all();
-    let maxOptions = 0;
-    for (const sel of selects) {
-      const optCount = await sel.locator('option').count().catch(() => 0);
-      if (optCount > maxOptions) maxOptions = optCount;
-    }
-
+    // Since OGC-1515 (#4922) the panel picker is a searchable list (#workplan-panel), not a <select>.
+    const maxOptions = (await optionTexts(page.locator('#workplan-panel'))).length;
     console.log(`TC-WPD-02: Max panel dropdown options: ${maxOptions}`);
-    if (maxOptions > 0) {
-      expect(maxOptions, 'Panel dropdown must have at least 20 options').toBeGreaterThanOrEqual(20);
-      console.log(`TC-WPD-02: PASS — ${maxOptions} panels in dropdown (expected 40+)`);
-    } else {
-      console.log('TC-WPD-02: NOTE — no select dropdown found (may use custom component)');
-    }
+    expect(maxOptions, 'Panel dropdown must have at least 20 options').toBeGreaterThanOrEqual(20);
   });
 
   test('TC-WPD-03: Workplan By Priority page is reachable', async ({ page }) => {
@@ -184,19 +175,11 @@ test.describe('Suite N-DEEP-EXT — Workplan Deep Extended (TC-WPD-06–10)', ()
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    const selects = await page.locator('select').all();
-    let maxOptions = 0;
-    for (const sel of selects) {
-      const optCount = await sel.locator('option').count().catch(() => 0);
-      if (optCount > maxOptions) maxOptions = optCount;
-    }
-
+    // Since OGC-1515 (#4922) the test picker is a searchable list (#workplan-test) offering
+    // /rest/test-list, the tests in the user's Results lab units (an admin holds them all).
+    const maxOptions = (await optionTexts(page.locator('#workplan-test'))).length;
     console.log(`TC-WPD-06: WorkPlanByTest dropdown options: ${maxOptions}`);
-    if (maxOptions > 0) {
-      expect(maxOptions, 'WorkPlan test dropdown must have at least 100 options (expected 200+)').toBeGreaterThanOrEqual(100);
-    } else {
-      console.log('TC-WPD-06: NOTE — no select found (may use custom component)');
-    }
+    expect(maxOptions, 'WorkPlan test dropdown must have at least 100 options (expected 200+)').toBeGreaterThanOrEqual(100);
   });
 
   test('TC-WPD-07: WorkPlanByTestSection has ≥5 section options', async ({ page }) => {
@@ -211,9 +194,11 @@ test.describe('Suite N-DEEP-EXT — Workplan Deep Extended (TC-WPD-06–10)', ()
 
     // REWORKED 2026-10-08: /rest/test-section-for-logbook went with LogbookResults (404 on develop).
     // The sections the user can pick are the ones the page's own Unit Type picker offers.
-    const picker = page.locator('main select').first();
-    await picker.locator('option:not([value=""])').nth(4).waitFor({ state: 'attached', timeout: 30_000 }).catch(() => {});
-    const count = await picker.locator('option:not([value=""])').count();
+    // Since OGC-1515 (#4922) the Unit Type picker is a searchable list (#workplan-unit).
+    const picker = page.locator('#workplan-unit');
+    await expect(picker).toBeVisible({ timeout: 30_000 });
+    await expect.poll(async () => (await optionTexts(picker)).length, { timeout: 30_000 }).toBeGreaterThanOrEqual(5);
+    const count = (await optionTexts(picker)).length;
 
     console.log(`TC-WPD-07: Test sections available: ${count}`);
     expect(count, 'Must have at least 5 test sections').toBeGreaterThanOrEqual(5);

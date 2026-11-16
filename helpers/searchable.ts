@@ -60,3 +60,23 @@ export async function expectPreselected(target: Locator, id: string, label?: str
   else if (label) await expect(target, 'pre-selected').toHaveValue(new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), { timeout });
   else await expect(target, 'pre-selected').not.toHaveValue('', { timeout });
 }
+
+/**
+ * Pick the option that stands for `id`: by value on a native select; on a combobox, by the label
+ * the component's own list (`source`, e.g. /rest/test-list) gives that id. For specs that know
+ * fixture ids rather than labels.
+ */
+export async function pickId(target: Locator, id: string, source: string, timeout = 30_000): Promise<void> {
+  await expect(target, 'the list is shown').toBeVisible({ timeout });
+  if (await isNativeSelect(target)) {
+    await target.selectOption(id);
+    return;
+  }
+  const label = await target.page().evaluate(async ([u, i]) => {
+    const r = await fetch(`/api/OpenELIS-Global${u}`, { headers: { Accept: 'application/json' } });
+    const items = ((await r.json().catch(() => [])) as { id: string | number; value: string }[]) ?? [];
+    return items.find((x) => String(x.id) === i)?.value?.trim() ?? '';
+  }, [source, id] as const);
+  expect(label, `${source} lists id ${id}`).not.toBe('');
+  await pick(target, label, timeout);
+}

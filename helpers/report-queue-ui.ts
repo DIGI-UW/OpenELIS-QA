@@ -91,6 +91,17 @@ export async function criticalTest(page: Page): Promise<{ id: string; name: stri
   return { id, name };
 }
 
+/**
+ * A last name the server accepts for a QA login. Since OGC-1593 (#4913, 3 Nov 2026) a save whose
+ * first or last name holds a character outside the site's firstNameCharset / lastNameCharset
+ * answers 400 errors.userName.charset; the seeded set has no "_" and no digits, so the login itself
+ * ("qa_rpq_heme") is refused as a last name. Letters only, capitalised: "Qarpqheme".
+ */
+export function lastNameFor(login: string): string {
+  const letters = login.replace(/[^a-z]/gi, '') || 'Qa';
+  return letters[0].toUpperCase() + letters.slice(1).toLowerCase();
+}
+
 export interface QueueUser { login: string; password: string; role: string; section: string }
 /** QA users for the role and scope cases; created by the admin page when they cannot log in yet. Test-only passwords. */
 export const QUEUE_USERS: Record<'heme' | 'bio' | 'reception', QueueUser> = {
@@ -127,7 +138,7 @@ export async function pageAs(browser: Browser, admin: Page, u: QueueUser): Promi
   const dd = String(exp.getDate()).padStart(2, '0'); const mm = String(exp.getMonth() + 1).padStart(2, '0');
   const r = await j(admin, `${API}/UnifiedSystemUser`, { method: 'POST', body: {
     loginUserId: '', systemUserId: '', userLoginName: u.login, userPassword: u.password, confirmPassword: u.password,
-    userFirstName: 'QA', userLastName: u.login, expirationDate: `${dd}/${mm}/${exp.getFullYear()}`,
+    userFirstName: 'QA', userLastName: lastNameFor(u.login), expirationDate: `${dd}/${mm}/${exp.getFullYear()}`,
     accountLocked: 'N', accountDisabled: 'N', accountActive: 'Y', timeout: '480', selectedRoles: [], testSectionId: '',
     selectedLabUnitRoles: [], selectedTestSectionLabUnits: { [u.section]: [String(role.roleId)] }, systemUserIdToCopy: '', allowCopyUserRoles: 'N',
   } });

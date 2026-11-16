@@ -15,6 +15,7 @@
  */
 
 import { test, expect, Page, APIRequestContext } from '@playwright/test';
+import { pick } from './helpers/searchable';
 
 const BASE = process.env.BASE || 'https://testing.openelis-global.org';
 const API = `${BASE}/api/OpenELIS-Global/rest/test-catalog/tests`;
@@ -272,7 +273,8 @@ test('TC-DEEP-TERMINOLOGY: add a terminology mapping reads back via REST [ROUND-
   await openSection(page, 'terminology', /terminology/i);
   const code = `TC-AUTO-${Date.now().toString().slice(-6)}`;
   try {
-    await page.locator('#terminology-source').selectOption({ label: 'LOINC' });
+    // Source is a searchable list since OGC-1515 (#4922).
+    await pick(page.locator('#terminology-source'), 'LOINC');
     await page.locator('#terminology-code').fill(code);
     await clickBtn(page, /add mapping/i);
     await page.waitForTimeout(400);

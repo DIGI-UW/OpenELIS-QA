@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { pick } from '../helpers/searchable';
 import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, orderWizardForward, selectOrderProgram, clickFormSearch, checkCarbonRadio } from '../helpers/test-helpers';
 import { createPatientViaAPI, ensureReferringClinic, seedModifiableOrder } from '../helpers/data-factory';
 import {
@@ -420,7 +421,8 @@ test.describe('Multi-Patient Batch Workflow (TC-BATCH)', () => {
     // lab unit, page with the pager's own Next Page button and compare data rows only.
     await page.goto(`${BASE}/Results`);
     const main = page.locator('main');
-    await main.getByRole('combobox', { name: 'Lab Unit' }).selectOption({ label: 'Hematology' });
+    // The Lab Unit filter is a searchable list since OGC-1515 (#4922); pick by label (helpers/searchable).
+    await pick(main.getByRole('combobox', { name: 'Lab Unit' }), 'Hematology');
     await main.getByRole('button', { name: 'Load results' }).click();
     await expect(main.getByRole('table').first()).toBeVisible({ timeout: 30_000 });
     const next = main.getByRole('button', { name: 'Next Page' });

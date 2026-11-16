@@ -380,6 +380,15 @@ export async function classifyRoute(ctx: BrowserContext, base: string, target: s
   try {
     const resp = await p.goto(`${base}${target}`, { waitUntil: 'domcontentloaded', timeout: 20_000 });
     await p.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {});
+    // Wait for the route guard's decision before reading the page. SecureRoute shows Carbon's
+    // Loading while the session loads, then renders the page or raises the "Access Denied" alert
+    // (react-confirm-alert); the header and side nav are there throughout, so a page read at
+    // networkidle saw 40+ characters of shell and graded the route "allow". 16 Nov 2026: three
+    // bench roles were graded "allow" on /MasterListsPage in CI (INV-02); on testing the same
+    // non-admin got the shell at that moment and "Access Denied" about 8 s later.
+    await p.locator('header, .cds--header').first().waitFor({ timeout: 30_000 }).catch(() => {}); // the app has rendered
+    await p.locator('.cds--loading-overlay, .cds--loading').first().waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => {});
+    await p.locator('.react-confirm-alert').first().waitFor({ state: 'visible', timeout: 3_000 }).catch(() => {});
     const url = p.url();
     const status = resp?.status() ?? 0;
     if (/\/login/i.test(url)) return { verdict: 'deny', detail: `redirected to login (${url})` };
