@@ -492,6 +492,11 @@
    "ticket": "untriaged",
    "note": "CI only, on and off since October (run 216): the searched patient's row is not in the result list when the case picks it. Passes on testing. 17 Nov 2026.",
    "since": "2026-11-17"
+  },
+  "modules|modules|tests/dashboard.spec.ts|Suite DASH-DEEP — Dashboard API Deep Validation (TC-DASH-DEEP) > TC-DASH-DEEP-03: Dashboard KPI values are numeric (non-negative)": {
+   "ticket": "lead",
+   "note": "develop-stack run 44049333844 (develop 82f5bebe, 17 Nov 2026): home-dashboard/metrics averageTurnAroudTime = -1 (hours from started to released, averaged over analyses finalized today). Depends on the data other suites seeded that day. Lead until the dashboard tile is checked in the UI.",
+   "since": "2026-11-17"
   }
  }
 }

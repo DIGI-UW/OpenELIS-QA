@@ -254,6 +254,7 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
   });
 
   test('TC-ORD-09: Check test checkboxes and verify they are checked', async ({ page }) => {
+    test.fixme(true, 'drives the legacy Add Order wizard by test checkbox ids test_0_N, which no longer render (CI 44049333844: none found; TC-ORD-13 submit is already red). Rewrite against Enter Order v4.');
     await login(page, ADMIN.user, ADMIN.pass);
     await page.goto(ORDER_URL);
 
@@ -468,6 +469,7 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
   });
 
   test('TC-ORD-14: Print labels and Done buttons appear after submission', async ({ page }) => {
+    test.fixme(true, 'drives the legacy Add Order wizard by test checkbox ids test_0_N, which no longer render (CI 44049333844: none found; TC-ORD-13 submit is already red). Rewrite against Enter Order v4.');
     await login(page, ADMIN.user, ADMIN.pass);
     await page.goto(ORDER_URL);
 

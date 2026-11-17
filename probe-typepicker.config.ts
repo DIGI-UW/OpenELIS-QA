@@ -20,7 +20,7 @@ export default defineConfig({
     ...devices['Desktop Chrome'],
     baseURL: process.env.BASE || 'https://analyzers.openelis-global.org',
     // Pinned 2026-11-17: specs read English text; an unset locale follows the machine.
-    locale: 'en-US',
+    locale: 'en-US', extraHTTPHeaders: { 'Accept-Language': 'en-US' },
     headless: true,
     ignoreHTTPSErrors: true,
   },

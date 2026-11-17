@@ -16,7 +16,7 @@ export default defineConfig({
   use: {
     baseURL: BASE,
     // Pinned 2026-11-17: specs read English text; an unset locale follows the machine.
-    locale: 'en-US',
+    locale: 'en-US', extraHTTPHeaders: { 'Accept-Language': 'en-US' },
     trace: 'retain-on-failure',
     ignoreHTTPSErrors: true,
   },

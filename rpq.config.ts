@@ -8,7 +8,7 @@ export default defineConfig({
   retries: 0,
   workers: 1,
   reporter: [['line'], ['json', { outputFile: process.env.OUT ? `${process.env.OUT}/results.json` : 'test-results/rpq.json' }]],
-  use: { ...devices['Desktop Chrome'], locale: 'en-US', baseURL: BASE, headless: true, ignoreHTTPSErrors: true, viewport: { width: 1366, height: 768 } },
+  use: { ...devices['Desktop Chrome'], locale: 'en-US', extraHTTPHeaders: { 'Accept-Language': 'en-US' }, baseURL: BASE, headless: true, ignoreHTTPSErrors: true, viewport: { width: 1366, height: 768 } },
   projects: [
     { name: 'setup', testMatch: /auth\.setup\.ts/ },
     { name: 'rpq', testMatch: /tests\/(report-print-queue|probe-rpq)[\w-]*\.spec\.ts/, dependencies: ['setup'], use: { storageState: '.auth/user.json' } },

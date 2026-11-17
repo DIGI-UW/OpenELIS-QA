@@ -32,12 +32,11 @@ test.describe('Localization and i18n (TC-I18N)', () => {
 
     const hasLangSwitch = await langSelector.waitFor({ timeout: 5000 }).then(() => true, () => false);
 
-    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
-    expect(!hasLangSwitch, 'precondition: !hasLangSwitch').toBeTruthy();
-    // Try looking for FR / EN text links
+    // A selector widget or an EN/FR text link both count. (17 Nov 2026: an automatic rewrite turned
+    // this either/or into "no widget may exist", which failed on the app's Select Locale widget.)
     const enLink = page.getByText(/^EN$|^FR$|^English|^Français/i).first();
-    const hasTextLink = await enLink.waitFor({ timeout: 3000 }).then(() => true, () => false);
-    expect(hasTextLink, 'no language switcher: neither a selector widget nor an EN/FR text link was found').toBeTruthy();
+    const hasTextLink = hasLangSwitch || await enLink.waitFor({ timeout: 3000 }).then(() => true, () => false);
+    expect(hasLangSwitch || hasTextLink, 'no language switcher: neither a selector widget nor an EN/FR text link was found').toBeTruthy();
   });
 
   test('TC-I18N-02: Switch to French and verify translations', async ({ page }) => {

@@ -33,7 +33,7 @@ export default defineConfig({
   workers: 1,
   fullyParallel: false,
   reporter: [['line'], ['html', { open: 'never' }]],
-  use: { ...devices['Desktop Chrome'], locale: 'en-US', baseURL: BASE, headless: true, ignoreHTTPSErrors: true },
+  use: { ...devices['Desktop Chrome'], locale: 'en-US', extraHTTPHeaders: { 'Accept-Language': 'en-US' }, baseURL: BASE, headless: true, ignoreHTTPSErrors: true },
   projects: [
     // ANCHORED. `/auth\.setup\.ts/` is unanchored and therefore also matches
     // `analyzer-auth.setup.ts`, which authenticates against a DIFFERENT instance

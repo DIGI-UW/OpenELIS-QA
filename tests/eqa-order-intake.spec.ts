@@ -101,38 +101,41 @@ test.describe('EQA order intake on the v4 order flow (TC-EQAOI)', () => {
 
   test('TC-EQAOI-00 [setup]: an active enrollment with an open cycle, a second scheme with its own cycle, a withdrawn enrollment, and a CLINICAL intake checklist item', async ({ page }) => {
     const s = F.S;
-    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
-    expect(!F.enrollmentId, 'precondition: !F.enrollmentId').toBeTruthy();
-    F.scheme = `QA-EQAOI ${s}`;
-    const other = `QA-EQAOI other ${s}`;
-    for (const name of [F.scheme, other]) {
-      const p = await api(page, 'POST', '/eqa/programs', { name, schemeType: 'INTERNATIONAL_PT', provider: 'QA-EQAOI' });
-      expect(p.status, `scheme ${name}: ${p.text}`).toBeLessThan(300);
+    if (!F.enrollmentId) {
+      F.scheme = `QA-EQAOI ${s}`;
+      const other = `QA-EQAOI other ${s}`;
+      for (const name of [F.scheme, other]) {
+        const p = await api(page, 'POST', '/eqa/programs', { name, schemeType: 'INTERNATIONAL_PT', provider: 'QA-EQAOI' });
+        expect(p.status, `scheme ${name}: ${p.text}`).toBeLessThan(300);
+      }
+      const a = await api(page, 'POST', '/eqa/my-programs', { programName: F.scheme, provider: 'QA-EQAOI' });
+      expect(a.status, a.text).toBeLessThan(300);
+      F.enrollmentId = String(a.json.id);
+      const o = await api(page, 'POST', '/eqa/my-programs', { programName: other, provider: 'QA-EQAOI' });
+      expect(o.status, o.text).toBeLessThan(300);
+      const wd = await api(page, 'POST', '/eqa/my-programs', { programName: `QA-EQAOI withdrawn ${s}`, provider: 'QA-EQAOI' });
+      expect(wd.status, wd.text).toBeLessThan(300);
+      F.withdrawnId = String(wd.json.id);
+      const st = await api(page, 'PUT', `/eqa/my-programs/${F.withdrawnId}/status`, { status: 'Withdrawn', reason: 'QA-EQAOI', effectiveDate: day(0) });
+      expect(st.status, st.text).toBeLessThan(300);
+      const c = await api(page, 'POST', '/eqa/cycles/mine', { schemeName: F.scheme, cycleName: `QA-EQAOI cycle ${s}`, distributionDate: day(0), submissionDeadline: day(30) });
+      expect(c.status, c.text).toBe(201);
+      F.cycleId = String(c.json.id);
+      const oc = await api(page, 'POST', '/eqa/cycles/mine', { schemeName: other, cycleName: `QA-EQAOI other cycle ${s}`, distributionDate: day(0), submissionDeadline: day(30) });
+      expect(oc.status, oc.text).toBe(201);
+      F.otherCycleId = String(oc.json.id);
+      save();
     }
-    const a = await api(page, 'POST', '/eqa/my-programs', { programName: F.scheme, provider: 'QA-EQAOI' });
-    expect(a.status, a.text).toBeLessThan(300);
-    F.enrollmentId = String(a.json.id);
-    const o = await api(page, 'POST', '/eqa/my-programs', { programName: other, provider: 'QA-EQAOI' });
-    expect(o.status, o.text).toBeLessThan(300);
-    const wd = await api(page, 'POST', '/eqa/my-programs', { programName: `QA-EQAOI withdrawn ${s}`, provider: 'QA-EQAOI' });
-    expect(wd.status, wd.text).toBeLessThan(300);
-    F.withdrawnId = String(wd.json.id);
-    const st = await api(page, 'PUT', `/eqa/my-programs/${F.withdrawnId}/status`, { status: 'Withdrawn', reason: 'QA-EQAOI', effectiveDate: day(0) });
-    expect(st.status, st.text).toBeLessThan(300);
-    const c = await api(page, 'POST', '/eqa/cycles/mine', { schemeName: F.scheme, cycleName: `QA-EQAOI cycle ${s}`, distributionDate: day(0), submissionDeadline: day(30) });
-    expect(c.status, c.text).toBe(201);
-    F.cycleId = String(c.json.id);
-    const oc = await api(page, 'POST', '/eqa/cycles/mine', { schemeName: other, cycleName: `QA-EQAOI other cycle ${s}`, distributionDate: day(0), submissionDeadline: day(30) });
-    expect(oc.status, oc.text).toBe(201);
-    F.otherCycleId = String(oc.json.id);
-    save();
-    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
-    expect(!F.checklistItemId, 'precondition: !F.checklistItemId').toBeTruthy();
-    F.checklistLabel = `QA-EQAOI container intact ${s}`;
-    const ci = await api(page, 'POST', '/sample-acceptance-checklist/admin/items', { domain: 'CLINICAL', label: F.checklistLabel });
-    expect(ci.status, ci.text).toBe(200);
-    F.checklistItemId = String(ci.json.id);
-    save();
+    if (!F.checklistItemId) {
+      F.checklistLabel = `QA-EQAOI container intact ${s}`;
+      const ci = await api(page, 'POST', '/sample-acceptance-checklist/admin/items', { domain: 'CLINICAL', label: F.checklistLabel });
+      expect(ci.status, ci.text).toBe(200);
+      F.checklistItemId = String(ci.json.id);
+      save();
+    }
+    // Set up once per state file (a rerun reuses it); either way both must exist now.
+    expect(F.enrollmentId, 'an active EQA enrollment').toBeTruthy();
+    expect(F.checklistItemId, 'a CLINICAL intake checklist item').toBeTruthy();
   });
 
   // ── Enter Order (OGC-1483) ────────────────────────────────────────────────

@@ -96,13 +96,14 @@ test.describe.serial('Persona PF — Lab Administrator (first-time setup)', () =
     // REWORKED 2026-11-17: this POSTed an empty body to /rest/BarcodeConfiguration on the server
     // under test and called any refusal PARTIAL, a silent pass; on a shared server an accepted empty
     // body would overwrite the site's label settings. It now reads the configuration the admin edits.
+    // The Barcode Configuration page reads /api/siteSettings/barcode (SiteWideBarcodeSettingsRestController);
+    // /BarcodeConfiguration is the old server page and is not a REST read (CI 44049333844: 404).
     await page.goto(BASE);
-    const r = await apiCall<Record<string, unknown>>(page, '/api/OpenELIS-Global/rest/BarcodeConfiguration');
+    const r = await apiCall<Record<string, unknown>>(page, '/api/OpenELIS-Global/api/siteSettings/barcode');
     expect(r.ok, `the barcode configuration reads (HTTP ${r.status})`).toBe(true);
     expect(r.body && typeof r.body === 'object' && Object.keys(r.body).length, 'with its settings').toBeTruthy();
     markStep(PERSONA, 2, 'PASS', 'Barcode configuration readable');
   });
-
 
   test('Step 3 — Create a new test (PERSIST, BUG-1/BUG-12 catch)', async ({ page }) => {
     await page.goto(BASE);

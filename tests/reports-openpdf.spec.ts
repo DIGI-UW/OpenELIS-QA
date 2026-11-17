@@ -30,7 +30,7 @@ import {
   API, ERROR_NOTICE, PdfDoc, ReportSeed, SERUM, TEST_IDS, enterResults, fetchReport, generateUrl, placeOrder,
   seedReportData, setDate, validateAll,
 } from '../helpers/report-pdf';
-import { ensureInactiveLabUnitWithTest } from '../helpers/ci-fixtures';
+import { ensureInactiveLabUnitWithTest, findTest, api, NAMES } from '../helpers/ci-fixtures';
 
 // Not serial: one red case must not skip the rest (a cascade-skip hides everything behind it).
 // The seed runs again in a fresh worker after a failure, which is cheap.
@@ -302,11 +302,18 @@ test.describe('Aggregate reports (IndicatorReport, StatisticsReport, ValidationB
     test.fail();
     await page.goto('/');
     await page.waitForFunction(() => !!localStorage.getItem('CSRF'), null, { timeout: 60_000 });
-    const testId = await ensureInactiveLabUnitWithTest(page, []);
+    // The fixture returns the UNIT id; until 17 Nov 2026 this case ordered that number as a test id,
+    // so once the fixture worked (CI 44049333844) it ordered an unrelated test and "passed".
+    await ensureInactiveLabUnitWithTest(page, []);
+    const fixtureTest = await findTest(page, NAMES.inactiveUnitTest);
+    expect(fixtureTest, `the fixture test "${NAMES.inactiveUnitTest}"`).toBeTruthy();
+    const testId = fixtureTest!.id;
     const ctx = { date: seed.date, siteId: seed.siteId, patient: { patientPK: seed.patientPK, nationalId: seed.nationalId, subjectNumber: '', lastName: 'Rptqa', firstName: 'Thérèse', gender: 'F', birthDateForDisplay: '15/03/1985' } };
     const lab = await placeOrder(page, ctx, [{ type: SERUM, tests: [testId] }]);
     try {
       await enterResults(page, lab, { [testId]: '50' });
+      const waiting = await api(page, 'GET', `/AccessionValidation?accessionNumber=${lab}`);
+      expect((waiting.body?.resultList ?? []).length, `precondition: ${lab} has a result waiting for validation`).toBeGreaterThan(0);
       const url = await backlogUrl(page);
       const r = await fetchReport(page, url);
       expect(r.status, `Delayed Validation answers 200 with a result waiting in an inactive unit (${url})`).toBe(200);
