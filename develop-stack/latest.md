@@ -1,27 +1,27 @@
-# develop-stack: develop `9723c251`
+# develop-stack: develop `a2e66aed`
 
-Update OpenELIS translations from Transifex (#5096)
+fix(microbiology): keyboard focus, contrast and offline handling on the V2 case pages (OGC-890)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43850117646 · TZ UTC · 2026-11-16T13:29:19.357Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43961492669 · TZ UTC · 2026-11-17T00:17:55.820Z
 
-**149 NEW FAILURE(S)**: 237 failing = 88 known + 149 new; 7 known reds now pass.
+**6 NEW FAILURE(S)**: 154 failing = 148 known + 6 new; 12 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing |
 | --- | ---: | ---: | ---: | ---: |
-| all-tc | 351 | 19 | 13 | 1 |
-| census | 125 | 4 | 3 | 2 |
-| cfg | 0 | 3 | 3 | 0 |
+| all-tc | 360 | 9 | 0 | 0 |
+| census | 125 | 4 | 0 | 0 |
+| cfg | 3 | 0 | 0 | 0 |
 | deep | 0 | 1 | 0 | 0 |
-| disc | 0 | 1 | 1 | 0 |
+| disc | 1 | 0 | 0 | 0 |
 | e2e | 15 | 3 | 0 | 0 |
 | envseed | 3 | 0 | 0 | 0 |
 | eqa | 3 | 0 | 0 | 0 |
 | guards | 17 | 2 | 0 | 0 |
-| lp | 0 | 10 | 7 | 0 |
+| lp | 10 | 0 | 0 | 3 |
 | modify-order | 7 | 1 | 0 | 0 |
-| modules | 1260 | 165 | 117 | 3 |
+| modules | 1323 | 110 | 6 | 9 |
 | multicomponent | 3 | 0 | 0 | 0 |
-| ogc1192 | 4 | 1 | 1 | 0 |
+| ogc1192 | 4 | 1 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 |
 | personas-admin | 10 | 2 | 0 | 0 |
 | personas-roles | 13 | 1 | 0 | 0 |
@@ -29,183 +29,45 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43850117646 · TZ UTC �
 | preflight | 4 | 0 | 0 | 0 |
 | probe-combo | 3 | 0 | 0 | 0 |
 | qa | 0 | 1 | 0 | 0 |
-| rbac | 55 | 2 | 2 | 0 |
-| regression-chains | 84 | 13 | 0 | 1 |
+| rbac | 57 | 0 | 0 | 0 |
+| regression-chains | 84 | 13 | 0 | 0 |
 | regression-seed | 13 | 1 | 0 | 0 |
 | reval2 | 4 | 0 | 0 | 0 |
 | revalidate | 3 | 0 | 0 | 0 |
 | revalidate-unauth | 3 | 0 | 0 | 0 |
 | rtype | 2 | 2 | 0 | 0 |
-| workplan | 2 | 2 | 2 | 0 |
+| workplan | 4 | 0 | 0 | 0 |
 
-## New failures (149)
+## New failures (6)
 
-- `modules|modules|tests/accessibility.spec.ts|Phase 5 — V-DEEP: Accessibility Audit Tests > TC-V-DEEP-02: Color contrast adequate`
-- `modules|modules|tests/accessibility.spec.ts|Phase 5 — V-DEEP: Accessibility Audit Tests > TC-V-DEEP-03: Heading structure and focus`
-- `modules|modules|tests/admin-config.spec.ts|Admin Configuration (TC-ADMIN) > TC-ADMIN-02: Reference labs list accessible`
-- `modules|modules|tests/admin-config.spec.ts|Suite AQ — Reflex Tests & Analyzer Test Name > TC-RFX-02: Reflex test list or configuration form visible`
-- `modules|modules|tests/admin-config.spec.ts|Suite AR — Lab Number & Program Management > TC-LNM-02: Lab number format/sequence configuration visible`
-- `modules|modules|tests/admin-config.spec.ts|Suite AS — Provider & Barcode Configuration > TC-PROV-02: Provider list with search/filter visible`
-- `modules|modules|tests/admin-config.spec.ts|Suite AS — Provider & Barcode Configuration > TC-BAR-02: Barcode format settings visible`
-- `modules|modules|tests/admin-config.spec.ts|Suite AT — Result Reporting & Menu Configuration > TC-RRC-02: Reporting rules or configuration list visible`
-- `modules|modules|tests/admin-config.spec.ts|Suite AT — Result Reporting & Menu Configuration > TC-MCF-02: Menu items list editable`
-- `modules|modules|tests/admin-config.spec.ts|Suite AU — General Config & App Properties > TC-GCF-02: Configuration key-value list or form visible`
-- `modules|modules|tests/admin-config.spec.ts|Suite AU — General Config & App Properties > TC-APP-02: Properties list with editable values visible`
-- `modules|modules|tests/admin-config.spec.ts|Suite AV — Notifications & Search Index > TC-TNF-02: Notification rules or configuration form visible`
-- `modules|modules|tests/admin-config.spec.ts|Suite AV — Notifications & Search Index > TC-SIM-02: Reindex button or status indicator visible`
-- `modules|modules|tests/admin-config.spec.ts|Suite AX — Localization, Notify User, Batch Reassignment > TC-LOC-02: Localization entries list with language columns visible`
-- `modules|modules|tests/admin-config.spec.ts|Suite AX — Localization, Notify User, Batch Reassignment > TC-NTU-02: User notification form or list visible`
-- `modules|modules|tests/app-shell.spec.ts|Page titles (OGC-1448) > TC-SHELL-10: each screen #4681 walked has exactly one h1, its title`
-- `modules|modules|tests/calculated-values.spec.ts|Calculated Values Management (Phase 28) > TC-CALC-03: Formula builder supports autocomplete test selection`
-- `modules|modules|tests/calculated-values.spec.ts|Calculated Values Management (Phase 28) > TC-CALC-05b: POST /rest/test-calculation creates a new rule`
-- `modules|modules|tests/calculated-values.spec.ts|Calculated Values Extended (TC-CALC-EXT) > TC-CALC-EXT-04: Operation types are enumerated in formula builder`
-- `modules|modules|tests/calculation-rule-integrity.spec.ts|Calculated value rules cannot loop or overwrite entered results > TC-CALCI-04 a value entered for the rule's test before its input is kept (OGC-1587)`
-- `modules|modules|tests/cphl-field-report.spec.ts|Results entry Method list (OGC-1614) > TC-CPHL-31: the Method list offers the test's linked active methods, A to Z`
-- `modules|modules|tests/cphl-field-report.spec.ts|Site Information: a translated setting saves (OGC-1609) > TC-CPHL-50: changing the banner on Site Information saves, shows in the header and survives a reload`
-- `modules|modules|tests/cytology-workflow.spec.ts|Cytology workflow (TC-CYTW) > TC-CYTW-01: a Cytology order creates a case on the Cytology dashboard`
-- `modules|modules|tests/dashboard.spec.ts|Suite DASH-DEEP — Dashboard API Deep Validation (TC-DASH-DEEP) > TC-DASH-DEEP-02: Dashboard renders all 5 KPI tiles by label`
-- `modules|modules|tests/dashboard.spec.ts|Suite DASH-DEEP — Dashboard API Deep Validation (TC-DASH-DEEP) > TC-DASH-DEEP-04: Dashboard sidebar navigation items cover all major modules`
-- `modules|modules|tests/deep-endpoint-testing.spec.ts|New-test lifecycle (2026-09-22) > TC-DEEP-32: a new test reaches /rest/test-list only after it is complete and activated`
-- `modules|modules|tests/electronic-orders.spec.ts|Suite AH — Electronic / Incoming Orders Core (TC-IO) > TC-IO-01: Incoming Orders page is reachable`
-- `modules|modules|tests/electronic-signature.spec.ts|Suite AY-ESIG-ADMIN — Site Information & Electronic Signature Config > TC-ESIG-02: Site Information sub-sections are visible`
-- `modules|modules|tests/electronic-signature.spec.ts|Suite AY-ESIG-ADMIN — Site Information & Electronic Signature Config > TC-ESIG-03: Modify button is present and opens edit mode`
-- `modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-01: EQA Program Management page loads`
-- `modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-02: EQA Program list or empty state renders`
-- `modules|modules|tests/eqa-workflow.spec.ts|Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration > TC-EQA-ADMIN-03: Add / New EQA Program button is present`
-- `modules|modules|tests/fhir-integration.spec.ts|Suite FHIR-RESOURCES — Clinical Resource Queries (TC-FHIR-04–08) > TC-FHIR-07: FHIR Observation search returns a Bundle`
 - `modules|modules|tests/generic-sample-roundtrip.spec.ts|Generic Sample round trip > TC-GSR-00: a generic sample order saves`
-- `modules|modules|tests/generic-sample.spec.ts|Generic Sample — Import Samples (US-GEN-3) > TC-GEN-08: Import page supports CSV and Excel file formats`
-- `modules|modules|tests/inventory-board.spec.ts|Defining items, tags, count mode and Reports (#4361 to #4365) > TC-INVB-33: the tag filter also scopes the Reorder now banner and Reorder suggestions (OGC-1549)`
-- `modules|modules|tests/locations-organizations.spec.ts|Locations & Organizations (OGC-1363) > TC-LORG-01: SideNav, the four routes, the legacy redirects and URL-restored filters (AC1)`
-- `modules|modules|tests/management-overview.spec.ts|Management Overview: access > TC-MGMT-10 a Reports user without the grant gets 403 on both endpoints (guard)`
-- `modules|modules|tests/management-overview.spec.ts|Management Overview: access > TC-MGMT-11 a Reports user without the grant does not get the page (guard)`
-- `modules|modules|tests/management-overview.spec.ts|Management Overview: access > TC-MGMT-12 the side nav hides Management Overview from a user without the grant (FRS OGC-897)`
-- `modules|modules|tests/non-conforming.spec.ts|Suite NC-EXT — Non-Conforming Extended Tests (TC-NC-EXT) > TC-NC-EXT-03: NC event naming consistency — heading variants`
-- `modules|modules|tests/non-conforming.spec.ts|Phase 5 — G-DEEP: NCE Interaction Tests > TC-G-DEEP-01: Report NCE form loads with required fields`
-- `modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-01: a pending test whose value waits in an open run shows "Waiting in RUN-x" and cannot be entered`
-- `modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-02: the Runs chip counts open and held runs and lists them`
-- `modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-03: the Waiting tag opens the run view with settings, progress, rows and the filters notice`
-- `modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-04: View raw expands the accepted message inline as a JSON document`
-- `modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-05: Back to all results restores the worklist filters`
-- `modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-07: the Runs chip follows the selected lab unit and lists run identities (FR-D1)`
-- `modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-08: saving a waiting test is refused 409 naming the run, on both save paths, and nothing is written`
-- `modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-09: expanding a waiting row offers no way to enter or save its result`
-- `modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-10: in French the run screens show readable text, never raw keys`
-- `modules|modules|tests/ogc-1200-runs.spec.ts|OGC-1200 Runs slice 1 > TC-RUN-11: the analyzer import page breadcrumb names the analyzer without translation errors`
-- `modules|modules|tests/ogc-1515-part2.spec.ts|OGC-1515 part 2: searchable lists (#4925) > TC-1515-13b Settings table ResultConfigurationMenu: "Search settings" narrows the rows`
-- `modules|modules|tests/ogc-1515-part3.spec.ts|OGC-1515 part 3: searchable lists (#4929) > TC-1515-22 TAT report: sample type and ordering site are searchable`
-- `modules|modules|tests/ogc-1515-searchable-lists.spec.ts|OGC-1515 part 1: searchable lists (#4922) > TC-1515-04 Activity report activityReportByTest: Search By is searchable and the report prints a PDF`
-- `modules|modules|tests/ogc-1515-searchable-lists.spec.ts|OGC-1515 part 1: searchable lists (#4922) > TC-1515-05 Activity report activityReportByPanel: Search By is searchable and the report prints a PDF`
-- `modules|modules|tests/ogc-1515-searchable-lists.spec.ts|OGC-1515 part 1: searchable lists (#4922) > TC-1515-06 Activity report activityReportByTestSection: Search By is searchable and the report prints a PDF`
-- `modules|modules|tests/ogc-1515-searchable-lists.spec.ts|OGC-1515 part 1: searchable lists (#4922) > TC-1515-07 Referred Out: lab is searchable; printing without a lab asks for it; with a lab prints`
-- `modules|modules|tests/ogc1159-save-failure-visibility.spec.ts|OGC-1159 — a failed order save must say so, readably > ENV-1: an Environmental save rejected with HTTP 400 puts something visible on the screen`
-- `modules|modules|tests/ogc1159-save-failure-visibility.spec.ts|OGC-1159 — a failed order save must say so, readably > ENV-2: the message an Environmental failure shows is a sentence, not a raw i18n key`
-- `modules|modules|tests/ogc1159-save-failure-visibility.spec.ts|OGC-1159 — a failed order save must say so, readably > VEC-1: a Vector save rejected with HTTP 400 puts something visible on the screen`
-- `modules|modules|tests/ogc1159-save-failure-visibility.spec.ts|OGC-1159 — a failed order save must say so, readably > VEC-2: the message a Vector failure shows is a sentence, not a raw i18n key`
-- `modules|modules|tests/order-creation.spec.ts|Result Entry & BUG-31 Verification (Phase 30) > TC-RESULT-02: Hematology section accessible`
-- `modules|modules|tests/order-creation.spec.ts|Result Entry & BUG-31 Verification (Phase 30) > TC-RESULT-03: Biochemistry section accessible`
-- `modules|modules|tests/order-entry-lab-unit-scope.spec.ts|Orders follow the user's lab units (#4757) > TC-OELU-00 [guard] the admin sees both orders; the Hematology user sees the Hematology order`
-- `modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-10: [guard] Enter Order lists the chosen sample type's tests`
-- `modules|modules|tests/order-entry-v4-handoff.spec.ts|R-TIME one clock > TC-OEV4-TIME-04 order entry and its dashboard use one date format (R-TIME-4)`
-- `modules|modules|tests/order-entry.spec.ts|Multi-Patient Batch Workflow (TC-BATCH) > TC-BATCH-06: List views handle pagination gracefully`
-- `modules|modules|tests/order-entry.spec.ts|Suite AH — Incoming Orders & Batch Order Entry > TC-IO-03: Batch Order Entry screen loads`
-- `modules|modules|tests/pathology-workflow.spec.ts|Pathology workflow (TC-PATHW) > TC-IHCW-01: referring the pathology case to IHC creates the IHC case`
-- `modules|modules|tests/patient-management.spec.ts|Phase 4 — H-DEEP: Patient Interaction Tests > TC-H-DEEP-01: Search by national ID finds known patient`
-- `modules|modules|tests/patient-management.spec.ts|Phase 6 — BD-DEEP: Patient History Tests > TC-BD-DEEP-01: Patient History page has required search fields`
-- `modules|modules|tests/patient-management.spec.ts|Phase 6 — BE-DEEP: Patient Merge Tests > TC-BE-DEEP-01: Patient Merge page has two patient selection areas`
-- `modules|modules|tests/patient-merge.spec.ts|Suite AC — Patient Merge Core (TC-MERGE) > TC-MERGE-01: Patient Merge screen is reachable`
+- `modules|modules|tests/generic-sample.spec.ts|Suite GEN-EXT — Generic Sample Extended > TC-GEN-EXT-03: Generic Sample Order form has required accession field`
+- `modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept`
+- `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered`
+- `modules|modules|tests/reports-openpdf.spec.ts|Activity, rejection and referral reports (ManagementReportPdf, ReferredOutReport) > TC-RPTPDF-11 Activity Report by test produces the report (not a 500)`
+- `modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January`
+
+## Known reds now passing (remove from ci-known-reds.json, check the ticket) (12)
+
+- `modules|modules|tests/calculated-values.spec.ts|Calculated Values Management (Phase 28) > TC-CALC-03: Formula builder supports autocomplete test selection`
+- `modules|modules|tests/cphl-field-report.spec.ts|Site Information: a translated setting saves (OGC-1609) > TC-CPHL-50: changing the banner on Site Information saves, shows in the header and survives a reload`
+- `modules|modules|tests/electronic-signature.spec.ts|Suite AY-ESIG-ADMIN — Site Information & Electronic Signature Config > TC-ESIG-02: Site Information sub-sections are visible`
+- `modules|modules|tests/order-creation-e2e.spec.ts|Phase 32 — Order Creation E2E via UI > TC-ORD-13: Submit order and verify success message`
 - `modules|modules|tests/performance.spec.ts|Performance Smoke (TC-PERF) > TC-PERF-02: Add Order wizard step transition time`
-- `modules|modules|tests/performance.spec.ts|Performance Smoke (TC-PERF) > TC-PERF-04: Validation queue load time`
-- `modules|modules|tests/performance.spec.ts|Phase 4 — X-DEEP: Performance > TC-X-DEEP-02: Large dropdown renders`
-- `modules|modules|tests/performance.spec.ts|Performance Extended — API Latency & Throughput (TC-PERF-EXT) > TC-PERF-EXT-05: SPA navigation does not accumulate DOM nodes`
-- `modules|modules|tests/programs-admin.spec.ts|Programs admin (TC-PRGW) > TC-PRGW-03: Order Programs lists each order once`
-- `modules|modules|tests/reflex-testing.spec.ts|Reflex Tests Management (Phase 28) > TC-REFLEX-01b: Rule builder has required form fields`
-- `modules|modules|tests/reflex-testing.spec.ts|Reflex Testing — Over All Option Validation > Over All Option dropdown has ANY and ALL options`
-- `modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: through the screens > TC-RPQ-44 a Reports user on Hematology sees no Biochemistry order: not listed, not found by lookup, 404 on detail, print and archived PDF (BR-9)`
-- `modules|modules|tests/report-print-queue.spec.ts|Report Print Queue: through the screens > TC-RPQ-45 a user without the Reports role gets no menu entry and 403 from every queue endpoint (§8)`
-- `modules|modules|tests/report-required-components.spec.ts|Patient report and Required result components (OGC-1608) > TC-RPTCOMP-00 upgrade: on an existing test only the primary component is Required`
-- `modules|modules|tests/report-required-components.spec.ts|Patient report and Required result components (OGC-1608) > TC-RPTCOMP-01 optional blank components leave the report and the heading is final`
-- `modules|modules|tests/reports-openpdf.spec.ts|Activity, rejection and referral reports (ManagementReportPdf, ReferredOutReport) > TC-RPTPDF-10 Activity Report by unit lists the order with its results`
-- `modules|modules|tests/reports-openpdf.spec.ts|Activity, rejection and referral reports (ManagementReportPdf, ReferredOutReport) > TC-RPTPDF-13 Referred Out Tests Report lists the seeded referrals and names the destination on every page`
-- `modules|modules|tests/reports-openpdf.spec.ts|Printed workplans (WorkplanPdf) > TC-RPTPDF-30 Workplan by unit prints the unit and every row the screen listed`
-- `modules|modules|tests/reports-openpdf.spec.ts|Cold storage temperature log (FreezerTemperatureReportPdf) > TC-RPTPDF-41 Weekly Log on the screen produces the weekly log`
 - `modules|modules|tests/reports.spec.ts|Phase 4 — L-DEEP: Reports Generation > TC-L-DEEP-01: Patient Status Report has Report By Lab Number accordion`
 - `modules|modules|tests/reports.spec.ts|Phase 4 — L-DEEP: Reports Generation > TC-L-DEEP-02: Generate Printable Version button is present`
-- `modules|modules|tests/results-worklist-chip-counts.spec.ts|Unified Results status chips (R42) > TC-RWC-01: the All chip is present and covers the rows on screen`
-- `modules|modules|tests/results-worklist-chip-counts.spec.ts|Unified Results status chips (R42) > TC-RWC-02: on a multi-page worklist the All chip counts every page`
-- `modules|modules|tests/sample-shipment.spec.ts|Create Box Form (US-SHIP-1, US-SHIP-2) > TC-SHIP-04: Auto-generated box ID follows expected format`
-- `modules|modules|tests/sample-shipment.spec.ts|Shipment Reports (US-SHIP-4) > TC-SHIP-09: Reports page has filters needed for referral auditing`
-- `modules|modules|tests/storage-crud.spec.ts|Storage CRUD (Phase 28) > TC-STOR-CRUD-06b: Cold Storage has multiple tabs (Dashboard, Corrective Actions, etc.)`
-- `modules|modules|tests/storage-crud.spec.ts|Suite STOR-DEEP — Storage API & Cross-Module > TC-STOR-DEEP-02: Cold Storage (FreezerMonitoring) page loads all tabs`
-- `modules|modules|tests/system-misc.spec.ts|Phase 4 — R-DEEP: Alerts Interactions > TC-R-DEEP-01: Alerts dashboard filters and structure`
-- `modules|modules|tests/system-misc.spec.ts|Phase 5 — E2E-DEEP: End-to-End Order Trace Tests > TC-E2E-DEEP-01: Modify Order finds an existing order by lab number`
-- `modules|modules|tests/system-misc.spec.ts|Phase 5 — E2E-DEEP: End-to-End Order Trace Tests > TC-E2E-DEEP-02: Results by lab unit loads rows`
-- `modules|modules|tests/system-misc.spec.ts|Phase 5 — E2E-DEEP: End-to-End Order Trace Tests > TC-E2E-DEEP-03: Validation by lab unit loads`
-- `modules|modules|tests/validation.spec.ts|Validation workflow (TC-VAL) > TC-VAL-04: Save button is present and clickable on validation screen`
-- `modules|modules|tests/workplan-deep.spec.ts|Suite AJ — Workplan By Panel/Priority Core (TC-WPD) > TC-WPD-02: Workplan By Panel has panel selector with ≥40 options`
-- `modules|modules|tests/workplan-deep.spec.ts|Suite N-DEEP-EXT — Workplan Deep Extended (TC-WPD-06–10) > TC-WPD-06: WorkPlanByTest has ≥200 test types in dropdown`
-- `modules|modules|tests/workplan-deep.spec.ts|Suite N-DEEP-EXT — Workplan Deep Extended (TC-WPD-06–10) > TC-WPD-07: WorkPlanByTestSection has ≥5 section options`
-- `modules|modules|tests/workplan.spec.ts|Workplan and Sample Tracking (TC-WP) > TC-WP-01: the application advertises the four workplan routes, and each renders`
-- `modules|modules|tests/workplan.spec.ts|Workplan and Sample Tracking (TC-WP) > TC-WP-02: each workplan selector is populated from its own display list`
-- `modules|modules|tests/workplan.spec.ts|Workplan and Sample Tracking (TC-WP) > TC-WP-03: a seeded order appears in the workplan for the test it ordered`
-- `modules|modules|tests/workplan.spec.ts|Workplan and Sample Tracking (TC-WP) > TC-WP-04: the workplan queue is scoped to the selection, not the whole lab`
-- `modules|modules|tests/workplan.spec.ts|Suite AI — Workplan By Panel & By Priority > TC-WPP-01: By Panel renders its own screen`
-- `modules|modules|tests/workplan.spec.ts|Suite AI — Workplan By Panel & By Priority > TC-WPP-02: the panel selector offers real panels from PANELS`
-- `modules|modules|tests/workplan.spec.ts|Suite AI — Workplan By Panel & By Priority > TC-WPP-03: selecting a panel queries that panel`
-- `modules|modules|tests/workplan.spec.ts|Phase 4 — J-DEEP: Workplan Interaction Tests > TC-J-DEEP-01: By Test — the selection drives the query parameter`
-- `modules|modules|tests/workplan.spec.ts|Phase 4 — J-DEEP: Workplan Interaction Tests > TC-J-DEEP-02: By Panel — the selection drives the query parameter`
-- `modules|modules|tests/workplan.spec.ts|Phase 5 — N-DEEP: Workplan Interaction Tests > TC-N-DEEP-01: By Test offers the full catalogue, not a truncated list`
-- `modules|modules|tests/workplan.spec.ts|Phase 5 — N-DEEP: Workplan Interaction Tests > TC-N-DEEP-02: By Panel renders what the endpoint actually returned`
-- `modules|modules|tests/workplan.spec.ts|Relocated from gap-suites > TC-WPP-06: the panel selector matches the PANELS display list exactly`
-- `all-tc|test-catalog|test-catalog-chaos-results.spec.ts|Test Catalog chaos: Terminology (TC-CX-TM) > TC-CX-TM-01: a Terminology save that meets 500 JSON is reported as failed and stores nothing`
-- `all-tc|test-catalog|test-catalog-chaos-results.spec.ts|Test Catalog chaos: Terminology (TC-CX-TM) > TC-CX-TM-02: a Terminology save that meets login page with a 200 is reported as failed and stores nothing`
-- `all-tc|test-catalog|test-catalog-lab-unit-management.spec.ts|Lab Unit Management — first-increment CRUD contract (OGC-189, PR #4121) > LU-1: list renders known lab units with the editor contract shape (ROUND-TRIP)`
-- `all-tc|test-catalog|test-catalog-mgmt-deep.spec.ts|TC-DEEP-TERMINOLOGY: add a terminology mapping reads back via REST [ROUND-TRIP]`
-- `all-tc|test-catalog|test-catalog-mn-sampletypes.spec.ts|Test Catalog — sample-type many-to-many (Phase 1, OGC-1145) > MN-2: an activated multi-specimen test is orderable under EACH specimen`
-- `all-tc|test-catalog|test-catalog-orderability-semantics.spec.ts|Orderability semantics — active vs orderable > TO-5: [GUARDRAIL] work in a lab unit stays reachable for completion — the Results Lab Unit filter must not hide a unit that holds tests`
-- `all-tc|test-catalog|test-catalog-sample-type-management.spec.ts|Sample Type Management — create flow (OGC-296) > ST-1: GET /sample-types returns known sample types with name/domain/isActive/testCount (ROUND-TRIP)`
-- `all-tc|test-catalog|tests/calculated-results-bounded.spec.ts|Calculated results run on the bounded evaluator (#4852) > TC-CALCB-01 a whole-number result is stored with no trailing .0`
-- `all-tc|test-catalog|tests/results-by-range.spec.ts|Relocated from gap-suites > TC-RBR-14: Filter by test type returns results`
-- `all-tc|test-catalog|tests/results-entry.spec.ts|Suite AJ — Results By Range & By Test/Date/Status > TC-RBR-04: Filter by test type returns results`
-- `all-tc|test-catalog|tests/results-entry.spec.ts|Phase 6 — BG-DEEP: Results By Status Tests > TC-BG-DEEP-01: Results By Status page has all required filters`
-- `all-tc|test-catalog|tests/results-worklist-chip-counts.spec.ts|Unified Results status chips (R42) > TC-RWC-01: the All chip is present and covers the rows on screen`
-- `all-tc|test-catalog|tests/results-worklist-chip-counts.spec.ts|Unified Results status chips (R42) > TC-RWC-02: on a multi-page worklist the All chip counts every page`
-- `workplan|workplan|tests/workplan-by-unit-crash.spec.ts|TC-WP-UNIT — Workplan By Unit > TC-WP-UNIT-1: every unit in the picker answers without a 5xx`
-- `workplan|workplan|tests/workplan-by-unit-crash.spec.ts|TC-WP-UNIT — Workplan By Unit > TC-WP-UNIT-2: a 5xx on the workplan query must not unmount the app`
-- `census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-PatientEntry-verify: Patient Double Entry renders`
-- `census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-PatientEdit-rw: Patient Edit renders`
-- `census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-PatientEdit-ro: Patient View renders`
-- `cfg||config-pages.spec.ts|TC-CFG-01: Result Reporting Configuration renders 3 integrations (RENDER)`
-- `cfg||config-pages.spec.ts|TC-CFG-02: each reporting integration exposes enable + URL + queue (RENDER)`
-- `cfg||config-pages.spec.ts|TC-CFG-03: Order Entry Configuration page loads and lists its items (FUNCTION)`
-- `disc||_discover.spec.ts|radio label click + mouse-click save`
-- `lp||label-presets.spec.ts|TC-LP-01: Label Presets list renders with the 5 system presets (RENDER)`
-- `lp||label-presets.spec.ts|TC-LP-02: list columns + Add Preset present (RENDER)`
-- `lp||label-presets.spec.ts|TC-LP-04: "Add Preset" opens the create modal with its fields (FUNCTION)`
-- `lp||label-presets.spec.ts|TC-LP-06: PUT accepts the payload shape the editor actually sends [FUNCTION]`
-- `lp||label-presets.spec.ts|TC-LP-07: a second save carrying the same fields is idempotent, not a 500 [PERSIST]`
-- `lp||label-presets.spec.ts|TC-LP-08: a partial update that omits `fields` does not delete them [PERSIST]`
-- `lp||label-presets.spec.ts|TC-LP-10: saving a preset does not alter its name [ROUND-TRIP]`
-- `ogc1192|ogc1192|tests/ogc1192-env-order-visibility.spec.ts|OGC-1192: environmental order routing and patientless samples > OGC1192-3: CANARY the Clinical dashboard lists the newest orders`
-- `rbac|rbac-matrix|tests/rbac/rbac-matrix.spec.ts|RBAC matrix — Receptionist (qa_recept) > INV-02 [invariant] route:/MasterListsPage → expect deny`
-- `rbac|rbac-matrix|tests/rbac/rbac-matrix.spec.ts|RBAC matrix — Validator / Biologist (qa_validator) > INV-02 [invariant] route:/MasterListsPage → expect deny`
-
-## Known reds now passing (remove from ci-known-reds.json, check the ticket) (7)
-
-- `modules|modules|tests/calculated-values.spec.ts|Calculated Values Management (Phase 28) > TC-CALC-05c: POST /rest/test-calculation updates existing rule`
-- `modules|modules|tests/order-entry-off-happy-path.spec.ts|Order entry off the happy path > TC-OEX-02: legacy Add Order: Next then Back keeps an unticked test unticked (OGC-1388) [FIXED OGC-1388]`
-- `modules|modules|tests/order-entry-release-blockers.spec.ts|Order entry — release blockers > BLK-LAB-4 — a field marked required to sighted users is marked required in the DOM`
-- `regression-chains|chain-w|tests/chains/chain-w-pathology-case.spec.ts|Chain W — Pathology case lifecycle > Step 4 — Case detail endpoint is wired (CROSS-LINK)`
-- `all-tc|test-catalog|test-catalog-lab-unit-visibility.spec.ts|Lab unit visibility — choosers vs viewers (OGC-189) > G-2: [FLIP-WHEN-FIXED] the filtering is inverted — the VIEWER hides inactive units while the CHOOSER offers them`
-- `census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-analyzers: Analyzers List renders`
-- `census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-analyzers-types: Analyzer Types renders`
+- `modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-01: no page in the menu shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading`
+- `modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-02: no Admin page shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading`
+- `lp||label-presets.spec.ts|TC-LP-03: filter narrows the list (FUNCTION)`
+- `lp||label-presets.spec.ts|TC-LP-05: editing a preset dimension in the UI saves and reads back [ROUND-TRIP]`
+- `lp||label-presets.spec.ts|TC-LP-09: a successful save shows a confirmation [FUNCTION]`
 
 ## Known reds by ticket
 
-- untriaged: 61
+- untriaged: 104
+- ci-env: 20
 - OGC-730: 12
-- harness: 9
-- OGC-1448: 2
+- harness: 8
 - OGC-189: 2
 - OGC-1446: 1
 - OGC-1367: 1
