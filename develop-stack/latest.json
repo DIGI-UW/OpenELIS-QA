@@ -1,55 +1,26 @@
 {
- "when": "2026-11-17T00:17:55.820Z",
- "sha": "a2e66aed15f0c2142dfeba4ee7973176ed27aa9b",
- "subject": "fix(microbiology): keyboard focus, contrast and offline handling on the V2 case pages (OGC-890)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43961492669",
+ "when": "2026-11-17T04:55:22.884Z",
+ "sha": "199b15d031c51c6a35ab5290e5a41b8786af1eef",
+ "subject": "Module assets: compressed responses and a 304 before reading the JAR (OGC-1637) (#5103)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/43998431265",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": false,
  "totals": {
-  "failing": 154,
-  "known": 148,
-  "new": 6,
-  "fixed": 12
+  "failing": 43,
+  "known": 40,
+  "new": 3,
+  "fixed": 6
  },
  "knownByTicket": {
-  "untriaged": 104,
-  "OGC-730": 12,
-  "ci-env": 20,
-  "harness": 8,
-  "OGC-1446": 1,
-  "OGC-1367": 1,
-  "OGC-189": 2
+  "untriaged": 33,
+  "harness": 2,
+  "OGC-730": 1,
+  "OGC-189": 2,
+  "question": 1,
+  "lead": 1
  },
  "suites": {
-  "modules": {
-   "counts": {
-    "expected": 1323,
-    "unexpected": 110,
-    "flaky": 0,
-    "skipped": 83
-   },
-   "new": [
-    "modules|modules|tests/generic-sample-roundtrip.spec.ts|Generic Sample round trip > TC-GSR-00: a generic sample order saves",
-    "modules|modules|tests/generic-sample.spec.ts|Suite GEN-EXT — Generic Sample Extended > TC-GEN-EXT-03: Generic Sample Order form has required accession field",
-    "modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept",
-    "modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered",
-    "modules|modules|tests/reports-openpdf.spec.ts|Activity, rejection and referral reports (ManagementReportPdf, ReferredOutReport) > TC-RPTPDF-11 Activity Report by test produces the report (not a 500)",
-    "modules|modules|tests/reports-output-correctness.spec.ts|Date pickers on a full page load (R26) > TC-DP-01: after a full load the picker maxDate is today, not 9 January"
-   ],
-   "fixed": [
-    "modules|modules|tests/calculated-values.spec.ts|Calculated Values Management (Phase 28) > TC-CALC-03: Formula builder supports autocomplete test selection",
-    "modules|modules|tests/cphl-field-report.spec.ts|Site Information: a translated setting saves (OGC-1609) > TC-CPHL-50: changing the banner on Site Information saves, shows in the header and survives a reload",
-    "modules|modules|tests/electronic-signature.spec.ts|Suite AY-ESIG-ADMIN — Site Information & Electronic Signature Config > TC-ESIG-02: Site Information sub-sections are visible",
-    "modules|modules|tests/order-creation-e2e.spec.ts|Phase 32 — Order Creation E2E via UI > TC-ORD-13: Submit order and verify success message",
-    "modules|modules|tests/performance.spec.ts|Performance Smoke (TC-PERF) > TC-PERF-02: Add Order wizard step transition time",
-    "modules|modules|tests/reports.spec.ts|Phase 4 — L-DEEP: Reports Generation > TC-L-DEEP-01: Patient Status Report has Report By Lab Number accordion",
-    "modules|modules|tests/reports.spec.ts|Phase 4 — L-DEEP: Reports Generation > TC-L-DEEP-02: Generate Printable Version button is present",
-    "modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-01: no page in the menu shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading",
-    "modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-02: no Admin page shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading"
-   ],
-   "known": 104
-  },
   "qa": {
    "counts": {
     "expected": 0,
@@ -63,9 +34,9 @@
   },
   "regression-chains": {
    "counts": {
-    "expected": 84,
+    "expected": 83,
     "unexpected": 13,
-    "flaky": 0,
+    "flaky": 1,
     "skipped": 39
    },
    "new": [],
@@ -74,14 +45,20 @@
   },
   "all-tc": {
    "counts": {
-    "expected": 360,
-    "unexpected": 9,
+    "expected": 358,
+    "unexpected": 11,
     "flaky": 0,
     "skipped": 38
    },
-   "new": [],
-   "fixed": [],
-   "known": 9
+   "new": [
+    "all-tc|test-catalog|tests/results-by-range.spec.ts|Suite BF-DEEP — Results By Range API & Cross-Module (TC-RBR-06–10) > TC-RBR-10: Results By Range page loads within acceptable time",
+    "all-tc|test-catalog|tests/results-by-status.spec.ts|Suite BG — Results By Status Core (TC-RBS) > TC-RBS-03: Status dropdown enumerates multiple test types",
+    "all-tc|test-catalog|tests/results-by-status.spec.ts|Suite BG — Results By Status Core (TC-RBS) > TC-RBS-05: Results By Status page loads within acceptable time"
+   ],
+   "fixed": [
+    "all-tc|test-catalog|tests/results-entry.spec.ts|Phase 6 — BG-DEEP: Results By Status Tests > TC-BG-DEEP-01: Results By Status page has all required filters"
+   ],
+   "known": 8
   },
   "deep": {
    "counts": {
@@ -96,25 +73,29 @@
   },
   "e2e": {
    "counts": {
-    "expected": 15,
-    "unexpected": 3,
+    "expected": 16,
+    "unexpected": 2,
     "flaky": 0,
     "skipped": 0
    },
    "new": [],
-   "fixed": [],
-   "known": 3
+   "fixed": [
+    "e2e|e2e|test-catalog-sections-roundtrip.spec.ts|Test Catalog editor — section round-trips (A–G) > TCF-03 Methods: Link Method persists"
+   ],
+   "known": 2
   },
   "guards": {
    "counts": {
-    "expected": 17,
-    "unexpected": 2,
+    "expected": 18,
+    "unexpected": 1,
     "flaky": 0,
     "skipped": 5
    },
    "new": [],
-   "fixed": [],
-   "known": 2
+   "fixed": [
+    "guards|guards|test-catalog-sections-roundtrip.spec.ts|Test Catalog editor — section round-trips (A–G) > TCF-03 Methods: Link Method persists"
+   ],
+   "known": 1
   },
   "multicomponent": {
    "counts": {
@@ -243,14 +224,14 @@
   },
   "ogc1192": {
    "counts": {
-    "expected": 4,
-    "unexpected": 1,
+    "expected": 9,
+    "unexpected": 0,
     "flaky": 0,
-    "skipped": 4
+    "skipped": 0
    },
    "new": [],
    "fixed": [],
-   "known": 1
+   "known": 0
   },
   "personas-admin": {
    "counts": {
