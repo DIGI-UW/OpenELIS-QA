@@ -612,6 +612,11 @@
    "ticket": "untriaged",
    "note": "Legacy study pages (retroCIEntryByProject.jsp): initializeStudySelection() calls selectStudy(null) on a first visit, an uncaught TypeError since 2023 with nothing shown to the user; picking a study works (checked on testing 16 Nov). The census spec that asserts no page errors is new (#242, 9 Nov).",
    "since": "2026-11-16"
+  },
+  "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-PatientEntry-initial: Patient Initial Entry renders": {
+   "ticket": "untriaged",
+   "note": "Legacy study pages (retroCIEntryByProject.jsp): initializeStudySelection() calls selectStudy(null) on a first visit, an uncaught TypeError since 2023 with nothing shown to the user; picking a study works (checked on testing 16 Nov; Initial Entry joined in develop-stack 44020392687, 17 Nov). The census spec that asserts no page errors is new (#242, 9 Nov).",
+   "since": "2026-11-17"
   }
  }
 }
