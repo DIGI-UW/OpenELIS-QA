@@ -11,6 +11,7 @@
  * module pages, extension slots and permission rows are not covered here.
  */
 import { test, expect, Page } from '@playwright/test';
+import { withLocale } from '../helpers/locale';
 import * as fs from 'fs';
 
 const API = '/api/OpenELIS-Global/rest';
@@ -78,15 +79,14 @@ test.describe('OGC-1577 module system, no module installed', () => {
   });
 
   test('TC-MOD-06: in French the Modules page shows readable text, never raw keys', async ({ page }) => {
-    await page.goto('/');
-    await page.evaluate(() => localStorage.setItem('locale', 'fr'));
-    await page.goto('/MasterListsPage/modules');
-    await page.waitForTimeout(3000);
-    const text = await page.locator('main, body').first().innerText();
-    const raw = text.match(/\bmodules\.(admin|error|unavailable)\.[a-zA-Z.]+/g) || [];
-    note('TC-MOD-06', { raw, sample: text.slice(0, 300) });
-    await shot(page, '06-modules-fr');
-    await page.evaluate(() => localStorage.setItem('locale', 'en'));
+    const raw = await withLocale(page, 'fr', async () => {
+      await page.goto('/MasterListsPage/modules');
+      await page.waitForTimeout(3000);
+      const text = await page.locator('main, body').first().innerText();
+      note('TC-MOD-06', { sample: text.slice(0, 300) });
+      await shot(page, '06-modules-fr');
+      return text.match(/\bmodules\.(admin|error|unavailable)\.[a-zA-Z.]+/g) || [];
+    });
     expect(raw).toEqual([]);
   });
 });

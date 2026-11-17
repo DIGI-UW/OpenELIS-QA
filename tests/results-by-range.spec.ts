@@ -179,7 +179,7 @@ test.describe('Suite AK — Results By Range Core (TC-RBR)', () => {
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const searchBtn = page.getByRole('button', { name: /search|submit|find|lookup/i }).first();
-    const hasBtn = await searchBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasBtn = await searchBtn.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     console.log(`TC-RBR-05: Search button present=${hasBtn}`);
     if (!hasBtn) {
@@ -311,11 +311,9 @@ test.describe('Suite BF-DEEP — Results By Range API & Cross-Module (TC-RBR-06�
     const elapsed = Date.now() - start;
 
     console.log(`TC-RBR-10: Results By Range loaded in ${elapsed}ms`);
-    if (loaded) {
-      expect(elapsed, 'Results By Range must load within 5000ms').toBeLessThan(5000);
-    } else {
-      console.log('TC-RBR-10: SKIP — page not reachable');
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(loaded, 'precondition: loaded').toBeTruthy();
+    expect(elapsed, 'Results By Range must load within 5000ms').toBeLessThan(5000);
   });
 });
 

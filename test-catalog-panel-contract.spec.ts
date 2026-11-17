@@ -112,7 +112,7 @@ test.describe('Panel catalogue — API contract', () => {
         const tds = [...tr.querySelectorAll('td')];
         return {
           name: ((tds[0] as any)?.innerText || '').split('\n')[0].trim(),
-          derived: ((tds[4] as any)?.innerText || '').split('\n').map(s => s.trim()).filter(Boolean),
+          derived: ((tds[4] as any)?.innerText || '').split('\n').map((s: string) => s.trim()).filter(Boolean),
         };
       }));
     expect(ui.length, 'the Panel Editor rendered no rows to compare').toBeGreaterThan(0);
@@ -124,7 +124,7 @@ test.describe('Panel catalogue — API contract', () => {
       if (!p) continue;
       const apiTypes = (p.sampleTypes || []).slice().sort();
       // The column renders an em dash when there are none.
-      const uiTypes = row.derived.filter(t => t !== '—' && t !== '-').slice().sort();
+      const uiTypes = row.derived.filter((t: string) => t !== '—' && t !== '-').slice().sort();
       compared++;
       if (JSON.stringify(apiTypes) !== JSON.stringify(uiTypes)) {
         disagreements.push(`${row.name}: UI [${uiTypes.join(', ')}] vs API [${apiTypes.join(', ')}]`);

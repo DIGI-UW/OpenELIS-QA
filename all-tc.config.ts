@@ -16,7 +16,7 @@ export default defineConfig({
   reporter: [['line'], ['./tests/helpers/session-guard-reporter.ts']],
   workers: 1,
   fullyParallel: false,
-  use: { ...devices['Desktop Chrome'], baseURL: BASE, headless: true, ignoreHTTPSErrors: true },
+  use: { ...devices['Desktop Chrome'], locale: 'en-US', extraHTTPHeaders: { 'Accept-Language': 'en-US' }, baseURL: BASE, headless: true, ignoreHTTPSErrors: true },
   projects: [
     // ANCHORED. Unanchored, this also matches `analyzer-auth.setup.ts`, which
     // authenticates against a DIFFERENT instance (analyzers.openelis-global.org)

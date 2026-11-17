@@ -117,12 +117,8 @@ test.describe.serial('Persona PD — Lab Manager', () => {
     // belonging in a dedicated Y-RECON suite. Here we just confirm
     // the KPI is a sensible number (not negative, not absurdly large).
     const tat = (metrics as Record<string, unknown>)['averageTurnAroudTime']; // NOTE-3 typo preserved
-    if (tat === undefined) {
-      markStep(PERSONA, 5, 'PARTIAL',
-        'averageTurnAroudTime field missing from metrics',
-        'KPI may have been renamed; persona walk hits a moving target.');
-      return;
-    }
+    // Was PARTIAL, a silent pass (2026-11-17): a KPI the dashboard no longer sends is contract drift.
+    expect(tat, 'the dashboard metrics carry averageTurnAroudTime (NOTE-3 spelling)').toBeDefined();
     markStep(PERSONA, 5, 'PASS', `TAT KPI present: ${JSON.stringify(tat)}`);
   });
 });

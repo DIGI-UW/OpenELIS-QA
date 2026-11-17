@@ -149,7 +149,7 @@ test.describe('Sample Shipment integrity', () => {
     await page.waitForURL(/create-box/, { timeout: 180_000 });
     await expect(page.locator('main')).toContainText('Samples Added', { timeout: 30_000 });
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('main')).toContainText(/Samples Added:\s*1/, { timeout: 30_000 }).catch(() => {});
+    await expect(page.locator('main')).toContainText(/Samples Added:\s*1/, { timeout: 30_000 });
     const summary = await page.locator('main').innerText();
     await page.getByRole('button', { name: 'Cancel', exact: true }).last().click().catch(() => {});
     expect(summary, `${pick!.accessionNumber} is in the new box`).toMatch(/Samples Added:\s*1/);

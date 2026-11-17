@@ -143,7 +143,7 @@ test.describe('Suite AC — Patient Merge Core (TC-MERGE)', () => {
 
     // Look for merge/confirm button
     const mergeBtn = page.getByRole('button', { name: /merge|confirm|combine/i }).first();
-    const hasMergeBtn = await mergeBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasMergeBtn = await mergeBtn.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     if (hasMergeBtn) {
       // Button should be disabled before patients are selected
@@ -260,11 +260,9 @@ test.describe('Suite AC-DEEP — Patient Merge API & Validation (TC-MERGE-06–1
     const elapsed = Date.now() - start;
 
     console.log(`TC-MERGE-08: Merge screen loaded in ${elapsed}ms`);
-    if (loaded) {
-      expect(elapsed, 'Merge screen must load within 5000ms').toBeLessThan(5000);
-    } else {
-      console.log('TC-MERGE-08: SKIP — merge screen not reachable');
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(loaded, 'precondition: loaded').toBeTruthy();
+    expect(elapsed, 'Merge screen must load within 5000ms').toBeLessThan(5000);
   });
 
   test('TC-MERGE-09: Invalid patient ID search on merge screen does not crash', async ({ page }) => {
@@ -279,7 +277,7 @@ test.describe('Suite AC-DEEP — Patient Merge API & Validation (TC-MERGE-06–1
 
     // Fill any search input with a garbage value
     const searchInput = page.locator('input').first();
-    if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await searchInput.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await searchInput.fill('ZZZZZ_NONEXISTENT_9999');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2000);

@@ -30,7 +30,7 @@ import {
   API, ERROR_NOTICE, PdfDoc, ReportSeed, SERUM, TEST_IDS, enterResults, fetchReport, generateUrl, placeOrder,
   seedReportData, setDate, validateAll,
 } from '../helpers/report-pdf';
-import { ensureInactiveLabUnitWithTest } from '../helpers/ci-fixtures';
+import { ensureInactiveLabUnitWithTest, findTest, api, NAMES } from '../helpers/ci-fixtures';
 
 // Not serial: one red case must not skip the rest (a cascade-skip hides everything behind it).
 // The seed runs again in a fresh worker after a failure, which is cheap.
@@ -193,9 +193,11 @@ test.describe('Activity, rejection and referral reports (ManagementReportPdf, Re
   test('TC-RPTPDF-13 Referred Out Tests Report lists the seeded referrals and names the destination on every page', async ({ page }) => {
     await page.goto('/Report?type=patient&report=referredOut');
     // The laboratory list loads after the screen: wait for it before reading it.
-    await expect(page.locator('select#locationcode option', { hasText: /QA_AUTO Reference Lab Alpha/ })).toHaveCount(1, { timeout: 30_000 }).catch(() => undefined);
+    await expect(page.locator('select#locationcode option', { hasText: /QA_AUTO Reference Lab Alpha/ })).toHaveCount(1, { timeout: 30_000 });
     const options = await page.locator('select#locationcode option').evaluateAll((os) => os.map((o: any) => ({ v: o.value, t: o.textContent })));
-    const lab = options.find((o) => /QA_AUTO Reference Lab Alpha/.test(String(o.t)));
+    // hasText above matches on normalised whitespace; textContent keeps the raw spacing (CI run
+    // 43961492669 found the option by locator and then not by this test), so normalise it too.
+    const lab = options.find((o) => /QA_AUTO Reference Lab Alpha/.test(String(o.t).replace(/\s+/g, ' ')));
     expect(lab, 'the referral seed laboratory is offered (modules.config runs referral-seed.setup first)').toBeTruthy();
     await setDate(page, 'startDate', `01/01/${seed.date.slice(6)}`);
     await setDate(page, 'endDate', seed.date);
@@ -300,11 +302,18 @@ test.describe('Aggregate reports (IndicatorReport, StatisticsReport, ValidationB
     test.fail();
     await page.goto('/');
     await page.waitForFunction(() => !!localStorage.getItem('CSRF'), null, { timeout: 60_000 });
-    const testId = await ensureInactiveLabUnitWithTest(page, []);
+    // The fixture returns the UNIT id; until 17 Nov 2026 this case ordered that number as a test id,
+    // so once the fixture worked (CI 44049333844) it ordered an unrelated test and "passed".
+    await ensureInactiveLabUnitWithTest(page, []);
+    const fixtureTest = await findTest(page, NAMES.inactiveUnitTest);
+    expect(fixtureTest, `the fixture test "${NAMES.inactiveUnitTest}"`).toBeTruthy();
+    const testId = fixtureTest!.id;
     const ctx = { date: seed.date, siteId: seed.siteId, patient: { patientPK: seed.patientPK, nationalId: seed.nationalId, subjectNumber: '', lastName: 'Rptqa', firstName: 'Thérèse', gender: 'F', birthDateForDisplay: '15/03/1985' } };
     const lab = await placeOrder(page, ctx, [{ type: SERUM, tests: [testId] }]);
     try {
       await enterResults(page, lab, { [testId]: '50' });
+      const waiting = await api(page, 'GET', `/AccessionValidation?accessionNumber=${lab}`);
+      expect((waiting.body?.resultList ?? []).length, `precondition: ${lab} has a result waiting for validation`).toBeGreaterThan(0);
       const url = await backlogUrl(page);
       const r = await fetchReport(page, url);
       expect(r.status, `Delayed Validation answers 200 with a result waiting in an inactive unit (${url})`).toBe(200);
@@ -334,7 +343,7 @@ test.describe('Printed workplans (WorkplanPdf)', () => {
       return { status: res.status, b64: btoa(s) };
     }, { url: sent.url(), data: sent.request().postData() || '' });
     expect(again.status, 'PrintWorkplanReport answers 200').toBe(200);
-    const { readPdf, isPdf } = await import('../helpers/report-pdf');
+    const { readPdf, isPdf } = await import('../helpers/report-pdf.js');
     const buf = Buffer.from(again.b64, 'base64');
     expect(isPdf(buf), 'a PDF').toBe(true);
     for (const p of page.context().pages()) if (p !== page) await p.close().catch(() => {});
@@ -381,7 +390,7 @@ test.describe('Cold storage temperature log (FreezerTemperatureReportPdf)', () =
       return { status: res.status, b64: btoa(s) };
     }, { url: req.url(), data: req.postData() || '' });
     expect(again.status, 'the report generates').toBe(200);
-    const { readPdf } = await import('../helpers/report-pdf');
+    const { readPdf } = await import('../helpers/report-pdf.js');
     return { sent, doc: await readPdf(Buffer.from(again.b64, 'base64')) };
   }
 

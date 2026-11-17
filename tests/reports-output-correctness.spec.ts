@@ -42,7 +42,7 @@ async function genReport(page: Page, opts: { from: Date; to: Date; option?: RegE
     await page.waitForFunction(src => [...document.querySelectorAll('main select option')]
       .some(o => new RegExp(src).test((o as HTMLOptionElement).text)), opts.option.source, { timeout: 20_000 });
   }
-  const picked = await page.evaluate(({ from, to, option }) => {
+  const picked = await page.evaluate(({ from, to, option }: { from: string; to: string; option?: { source: string; flags: string } }) => {
     const setFp = (id: string, v: string) => {
       const el = document.getElementById(id) as (HTMLInputElement & { _flatpickr?: any }) | null;
       if (!el || !el._flatpickr) throw new Error(`#${id} has no flatpickr`);

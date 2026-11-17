@@ -131,6 +131,7 @@ test.describe.serial('Chain H — Permission Enforcement', () => {
     }
   });
 
+  // eslint-disable-next-line playwright/expect-expect -- fails through markStep BLOCKED unless known-gaps.ts declares it
   test('Step 1 — Obtain a restricted-role identity (reuse seeded, else create)', async ({ page, browser }) => {
     // (a) REUSE the seeded RBAC role user if it can authenticate. This keeps the
     //     chain testing PERMISSIONS rather than the user-creation endpoint.

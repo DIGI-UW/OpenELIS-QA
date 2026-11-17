@@ -103,7 +103,7 @@ test.describe('Suite BB — Barcode Print Core (TC-BARCODE)', () => {
     const accInput = page.locator(
       'input[id*="accession" i], input[placeholder*="accession" i], input[placeholder*="lab" i], input'
     ).first();
-    const hasInput = await accInput.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasInput = await accInput.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     console.log(`TC-BARCODE-02: Accession input present=${hasInput}`);
     expect(hasInput, 'Barcode screen must have an accession number input').toBe(true);
@@ -120,7 +120,7 @@ test.describe('Suite BB — Barcode Print Core (TC-BARCODE)', () => {
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const accInput = accessionInput(page);
-    if (!await accInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (!await accInput.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       console.log('TC-BARCODE-03: SKIP — no input found');
       test.skip();
       return;
@@ -153,7 +153,7 @@ test.describe('Suite BB — Barcode Print Core (TC-BARCODE)', () => {
 
     console.log(`TC-BARCODE-04: Accession-like patterns found: [${matches.slice(0, 5).join(', ')}]`);
     if (matches.length > 0) {
-      const first = matches[0];
+      const first = matches[0]!;
       expect(first.length, 'Accession must be at least 8 characters').toBeGreaterThanOrEqual(8);
       console.log('TC-BARCODE-04: PASS — valid accession format confirmed on barcode page');
     } else {
@@ -172,7 +172,7 @@ test.describe('Suite BB — Barcode Print Core (TC-BARCODE)', () => {
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const printBtn = page.getByRole('button', { name: /print|generate|label/i }).first();
-    const hasPrint = await printBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasPrint = await printBtn.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     if (hasPrint) {
       const isDisabled = await printBtn.isDisabled().catch(() => false);
@@ -231,7 +231,7 @@ test.describe('Suite BB-DEEP — Barcode API & Label Content (TC-BARCODE-06–10
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const accInput = accessionInput(page);
-    if (!await accInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (!await accInput.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       test.skip(); return;
     }
 
@@ -266,11 +266,9 @@ test.describe('Suite BB-DEEP — Barcode API & Label Content (TC-BARCODE-06–10
     const elapsed = Date.now() - start;
 
     console.log(`TC-BARCODE-09: Barcode screen loaded in ${elapsed}ms`);
-    if (loaded) {
-      expect(elapsed, 'Barcode screen must load within 5000ms').toBeLessThan(5000);
-    } else {
-      console.log('TC-BARCODE-09: SKIP — barcode screen not reachable');
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(loaded, 'precondition: loaded').toBeTruthy();
+    expect(elapsed, 'Barcode screen must load within 5000ms').toBeLessThan(5000);
   });
 
   test('TC-BARCODE-10: AccessionResults API data matches what barcode would print', async ({ page }) => {
@@ -327,14 +325,14 @@ test.describe('Suite BB-EXT — Barcode Extended (TC-BARCODE-EXT)', () => {
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const input = accessionInput(page);
-    if (await input.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await input.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await input.fill(KNOWN_ACCESSION);
       await page.keyboard.press('Enter');
       await page.waitForTimeout(1500);
 
       // Look for a Clear or Reset button
       const clearBtn = page.getByRole('button', { name: /clear|reset|new/i }).first();
-      if (await clearBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await clearBtn.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await clearBtn.click();
         await page.waitForTimeout(500);
         const value = await input.inputValue().catch(() => '');
@@ -382,7 +380,7 @@ test.describe('Suite BB-EXT — Barcode Extended (TC-BARCODE-EXT)', () => {
     const accessions = ['26CPHL00008V', '26CPHL00008A', 'ZZINVALID999'];
     for (const acc of accessions) {
       const input = accessionInput(page);
-      if (!await input.isVisible({ timeout: 2000 }).catch(() => false)) break;
+      if (!await input.waitFor({ timeout: 2000 }).then(() => true, () => false)) break;
       await input.fill(acc);
       await page.keyboard.press('Enter');
       await page.waitForTimeout(1500);
@@ -426,7 +424,7 @@ test.describe('Suite BB-EXT — Barcode Extended (TC-BARCODE-EXT)', () => {
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const input = accessionInput(page);
-    if (await input.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await input.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await input.fill(KNOWN_ACCESSION);
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2500);

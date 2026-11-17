@@ -130,7 +130,7 @@ test.describe('Accessibility WCAG Smoke (TC-A11Y)', () => {
 
     // Try to advance without filling required fields
     const nextBtn = orderWizardForward(page);
-    if (await nextBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await nextBtn.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await nextBtn.click();
       await page.waitForTimeout(1000);
     }
@@ -148,6 +148,8 @@ test.describe('Accessibility WCAG Smoke (TC-A11Y)', () => {
     });
 
     console.log(`TC-A11Y-05: ${errAssociated.total} error element(s), ${errAssociated.associated} associated via aria`);
+    // Was a console verdict only (2026-11-17).
+    expect(errAssociated.associated, 'every error shown is tied to its field by aria').toBe(errAssociated.total);
     if (errAssociated.total === 0) {
       console.log('TC-A11Y-05: NOTE — no error elements triggered (form may not validate at this step)');
     }
@@ -234,13 +236,11 @@ test.describe('Accessibility Extended (TC-A11Y-EXT)', () => {
       console.log(`  Table ${i + 1}: ${t.thCount} th elements, hasScope=${t.hasScope}, roleColumnHeaders=${t.roleRows}`);
     });
 
-    if (tableAudit.length > 0) {
-      // At least one table must have column headers
-      const anyHasHeaders = tableAudit.some(t => t.thCount > 0 || t.roleRows > 0);
-      expect(anyHasHeaders, 'At least one table must have column header elements').toBe(true);
-    } else {
-      console.log('TC-A11Y-EXT-01: GAP — no tables found on LogbookResults page');
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(tableAudit.length > 0, 'precondition: tableAudit.length > 0').toBeTruthy();
+    // At least one table must have column headers
+    const anyHasHeaders = tableAudit.some(t => t.thCount > 0 || t.roleRows > 0);
+    expect(anyHasHeaders, 'At least one table must have column header elements').toBe(true);
   });
 
   test('TC-A11Y-EXT-02: Modal dialogs trap focus correctly', async ({ page }) => {
@@ -255,7 +255,7 @@ test.describe('Accessibility Extended (TC-A11Y-EXT)', () => {
 
     // Open Add modal if available
     const addBtn = page.getByRole('button', { name: /add|create|new/i }).first();
-    const btnVisible = await addBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const btnVisible = await addBtn.waitFor({ timeout: 3000 }).then(() => true, () => false);
     if (!btnVisible) {
       console.log('TC-A11Y-EXT-02: GAP — no Add button to trigger modal');
       return;
@@ -264,7 +264,7 @@ test.describe('Accessibility Extended (TC-A11Y-EXT)', () => {
     await addBtn.click();
     await page.waitForTimeout(500);
 
-    const modalVisible = await page.locator('[role="dialog"], [class*="modal"]').first().isVisible({ timeout: 2000 }).catch(() => false);
+    const modalVisible = await page.locator('[role="dialog"], [class*="modal"]').first().waitFor({ timeout: 2000 }).then(() => true, () => false);
     if (!modalVisible) {
       console.log('TC-A11Y-EXT-02: GAP — modal did not open');
       return;
@@ -274,7 +274,7 @@ test.describe('Accessibility Extended (TC-A11Y-EXT)', () => {
     await page.keyboard.press('Escape');
     await page.waitForTimeout(500);
 
-    const modalStillOpen = await page.locator('[role="dialog"], [class*="modal"]').first().isVisible({ timeout: 1000 }).catch(() => false);
+    const modalStillOpen = await page.locator('[role="dialog"], [class*="modal"]').first().waitFor({ timeout: 1000 }).then(() => true, () => false);
     console.log(`TC-A11Y-EXT-02: ${modalStillOpen ? 'FAIL — modal still open after Escape' : 'PASS — modal closed on Escape'}`);
     expect(modalStillOpen, 'Escape key must close modal dialog').toBe(false);
   });
@@ -291,7 +291,7 @@ test.describe('Accessibility Extended (TC-A11Y-EXT)', () => {
 
     // Submit the form without filling required fields to trigger validation errors
     const nextBtn = orderWizardForward(page);
-    if (await nextBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await nextBtn.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await nextBtn.click();
       await page.waitForTimeout(1000);
     }

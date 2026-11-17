@@ -67,8 +67,8 @@ test('probe: PREFIX or SUBSTRING — queries only a substring match can satisfy'
     await input.pressSequentially(q, { delay: 90 });
     await page.waitForTimeout(900);
     const shown = await options.allInnerTexts();
-    const substring = all.filter((t) => t.toLowerCase().includes(q.toLowerCase())).length;
-    const prefix = all.filter((t) => t.toLowerCase().startsWith(q.toLowerCase())).length;
+    const substring = all.filter((t: any) => t.toLowerCase().includes(q.toLowerCase())).length;
+    const prefix = all.filter((t: any) => t.toLowerCase().startsWith(q.toLowerCase())).length;
     console.log(
       `[shape] "${q}": ${all.length} → ${shown.length}   (substring predicts ${substring}, prefix predicts ${prefix})`,
     );

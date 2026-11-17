@@ -76,6 +76,7 @@ test.describe('Test Catalog — downstream cross-links', () => {
   // it drives create→ranges→order→results and asserts a critical value is styled identically to an
   // abnormal one (PASS while the bug is present; flips when a distinct critical marker ships).
   // The outline below is kept for reference only.
+  // eslint-disable-next-line playwright/expect-expect -- a declared gap: test.fixme never runs.
   test.fixme('TCG-02: ranges -> Results Entry flags (patient safety) [see test-catalog-critical-indicator.spec.ts]', async ({ page }) => {
     // 1) Editor: /TestCatalogEditor/<id>/ranges -> Add/Edit range Normal 5-100 Critical 2-150, Any age -> section Save.
     // 2) /order/enter: Sample Category Clinical; select patient; page.selectOption('#sampleType-0', '2') (Serum);
@@ -85,10 +86,14 @@ test.describe('Test Catalog — downstream cross-links', () => {
     //    120 -> assert abnormal (yellow) flag; 2 -> assert abnormal flag. Do NOT click Accept (overwrites state).
     // 4) Restore the test's original ranges.
   });
+  // eslint-disable-next-line playwright/expect-expect -- a declared gap: test.fixme never runs.
   test.fixme('TCG-03: result type -> Results Entry control renders per config', async () => {
     // Numeric -> number field; dictionary -> dropdown; titer -> titer field; multi-select -> multi control.
   });
+  // eslint-disable-next-line playwright/expect-expect -- a declared gap: test.fixme never runs.
   test.fixme('TCG-04: panels -> Worklist / order-by-panel', async () => {});
+  // eslint-disable-next-line playwright/expect-expect -- a declared gap: test.fixme never runs.
   test.fixme('TCG-06: display order -> order-entry test order', async () => {});
+  // eslint-disable-next-line playwright/expect-expect -- a declared gap: test.fixme never runs.
   test.fixme('TCG-07: localization -> runtime label (fr/id) in Order + Results', async () => {});
 });

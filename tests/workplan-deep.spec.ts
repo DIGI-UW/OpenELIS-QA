@@ -145,7 +145,7 @@ test.describe('Suite AJ — Workplan By Panel/Priority Core (TC-WPD)', () => {
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const firstSelect = page.locator('select').first();
-    if (await firstSelect.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await firstSelect.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await firstSelect.selectOption({ index: 1 });
       await page.waitForTimeout(2000);
     }
@@ -339,6 +339,10 @@ test.describe('Suite N-DEEP-EXT2 — Workplan Cross-Module & API (TC-WPD-11–16
   });
 
   test('TC-WPD-13: WorkPlanByPanel API endpoint responds for first panel', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'WorkPlanByPanel at the candidate path answers 404 (the app calls /rest/WorkPlanByPanel?panel_id=)');
     /**
      * US-WP-1: The workplan API for an individual panel must respond without
      * a server error. Uses panel ID 1 as a probe.
@@ -360,11 +364,9 @@ test.describe('Suite N-DEEP-EXT2 — Workplan Cross-Module & API (TC-WPD-11–16
     });
 
     console.log(`TC-WPD-13: Workplan panel API → ${result.url} HTTP ${result.status}`);
-    if (result.status !== 404) {
-      expect(result.status, 'Workplan panel API must not 5xx').not.toBeGreaterThanOrEqual(500);
-    } else {
-      console.log('TC-WPD-13: NOTE — panel workplan API not found at expected paths');
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(result.status !== 404, 'precondition: result.status !== 404').toBeTruthy();
+    expect(result.status, 'Workplan panel API must not 5xx').not.toBeGreaterThanOrEqual(500);
   });
 
   test('TC-WPD-14: Workplan is accessible to admin (RBAC)', async ({ page }) => {

@@ -15,6 +15,8 @@ export default defineConfig({
   reporter: [['list']],
   use: {
     baseURL: process.env.BASE_URL || 'https://testing.openelis-global.org',
+    // Pinned 2026-11-17: specs read English text; an unset locale follows the machine.
+    locale: 'en-US', extraHTTPHeaders: { 'Accept-Language': 'en-US' },
     ignoreHTTPSErrors: true,
     // The sandbox ships a pinned Chrome; the Playwright browser CDN is not reachable.
     launchOptions: process.env.PW_CHROME

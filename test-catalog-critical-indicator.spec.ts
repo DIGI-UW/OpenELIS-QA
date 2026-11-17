@@ -44,7 +44,7 @@ async function login(page: Page) {
   // With a preloaded storageState (guards.config.ts) we're already authenticated, so /login
   // redirects away and no username field appears — skip fast instead of hanging on fill().
   const userField = page.locator('input[name="loginName"], #loginName, input[placeholder*="ser" i]').first();
-  if (!(await userField.isVisible({ timeout: 4000 }).catch(() => false))) return;
+  if (!(await userField.waitFor({ timeout: 4000 }).then(() => true, () => false))) return;
   // Short timeouts + catches: the testing login page intermittently hangs ("Loginloading"); never
   // let that stall a test for 150s — storageState already authenticates us.
   await userField.fill(ADMIN.user, { timeout: 8000 }).catch(() => {});

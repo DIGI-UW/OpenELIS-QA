@@ -64,6 +64,17 @@ jobs:
       - name: No logout on the shared session
         run: npm run check:no-shared-logout
 
+      # BLOCKING: locator.isVisible({ timeout }) ignores its timeout and answers at once, so it
+      # reads as a wait and is not one. 410 such calls judged pages before they drew (the
+      # render-race reds of the Oct to Nov dark period). Covers helpers too, which lint skips.
+      - name: No isVisible({ timeout }) calls
+        run: npm run check:no-isvisible-timeout
+
+      # BLOCKING: a spec that switches the UI language must do it through withLocale()
+      # (helpers/locale.ts), which puts the shared login's server session back in English.
+      - name: Language switches restore English
+        run: npm run check:locale-restore
+
       # BLOCKING: every spec file must be runnable by at least one config. An
       # audit on 2026-09-04 found 46 spec files (866 tests — the bulk of the
       # module coverage) that no config could run; they had been dead a long
@@ -112,28 +123,8 @@ jobs:
       - name: Coverage gaps (catalogue vs code)
         run: npm run check:coverage-gaps
 
-      # NON-BLOCKING: the rest of the repo. ~166 errors as of 2026-07-31,
-      # mostly missing type imports in older specs. Reported so the number is
-      # visible and can only go down; widen tsconfig.json's include as files
-      # are fixed.
-      - name: Measure whole-repo backlog (informational)
-        continue-on-error: true
-        run: |
-          set +e
-          npm run typecheck:all > /tmp/all.txt 2>&1
-          COUNT=$(grep -c "error TS" /tmp/all.txt)
-          echo "Whole-repo type errors: $COUNT"
-          {
-            echo "### Whole-repo typecheck backlog"
-            echo ""
-            echo "**$COUNT** errors outside the gated surface (non-blocking)."
-            echo ""
-            echo "Top offenders:"
-            echo '```'
-            grep -oE "^[a-zA-Z0-9_./-]+\.ts" /tmp/all.txt | sort | uniq -c | sort -rn | head -10
-            echo '```'
-            echo "By error code:"
-            echo '```'
-            grep -oE "error TS[0-9]+" /tmp/all.txt | sort | uniq -c | sort -rn | head -8
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+      # BLOCKING since 2026-11-17: the whole repo typechecks clean. It was a non-blocking count
+      # (~166 errors on 2026-07-31, 56 on 2026-11-16); the last ones included a real bug
+      # (electronic-orders destructured a Promise, so its date range was always undefined).
+      - name: Whole-repo typecheck
+        run: npm run typecheck:all

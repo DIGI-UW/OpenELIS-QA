@@ -61,6 +61,7 @@ test.describe.serial('Persona PC — Validating Biologist', () => {
     markStep(PERSONA, 1, 'PASS', `${queueItems.length} hematology results waiting for validation`);
   });
 
+  // eslint-disable-next-line playwright/expect-expect -- fails through markStep BLOCKED unless known-gaps.ts declares it
   test('Step 2 — Reject first result for retest with note (PERSIST)', async ({ page }) => {
     if (queueItems.length === 0) test.skip();
     await page.goto(BASE);

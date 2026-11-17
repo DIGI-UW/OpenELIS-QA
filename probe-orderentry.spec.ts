@@ -10,7 +10,7 @@ const BASE = process.env.BASE || 'https://34.212.225.107';
 async function login(page: any) {
   await page.goto(`${BASE}/login`);
   const pass = page.locator('input[type="password"]').first();
-  if (!(await pass.isVisible({ timeout: 5000 }).catch(() => false))) return;
+  if (!(await pass.waitFor({ timeout: 5000 }).then(() => true, () => false))) return;
   await page.locator('input[type="text"], input[placeholder*="user" i]').first().fill(ADMIN.user);
   await pass.fill(ADMIN.pass);
   await page.locator('button:has-text("Login"), button[type="submit"]').first().click();

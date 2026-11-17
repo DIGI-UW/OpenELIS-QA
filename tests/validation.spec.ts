@@ -67,9 +67,9 @@ test.describe('Validation workflow (TC-VAL)', () => {
 
     // A table or search input is required — without either, the validator has nothing to act on
     const hasTable = await page.locator('main table, main .cds--data-table, main [role="table"]').first()
-      .isVisible({ timeout: 3000 }).catch(() => false);
+      .waitFor({ timeout: 3000 }).then(() => true, () => false);
     const hasSearch = await page.locator('main').getByRole('searchbox', { name: /lab number|accession/i }).first()
-      .isVisible({ timeout: 3000 }).catch(() => false);
+      .waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     expect(
       hasTable || hasSearch,
@@ -86,7 +86,7 @@ test.describe('Validation workflow (TC-VAL)', () => {
       .locator('input[placeholder*="accession" i], input[id*="accession" i], input[placeholder*="number" i]')
       .first();
 
-    if (!(await accInput.isVisible({ timeout: 3000 }).catch(() => false))) {
+    if (!(await accInput.waitFor({ timeout: 3000 }).then(() => true, () => false))) {
       console.log('TC-VAL-02: SKIP — By Order view has no accession input field; page structure differs from expected');
       return;
     }
@@ -102,11 +102,15 @@ test.describe('Validation workflow (TC-VAL)', () => {
     // The known accession (26CPHL00008V) has an HGB test — it must appear or
     // we get an empty state (already validated), never a crash
     const hasResults = await page.getByText(/HGB|Hemoglobin|No.*result|0.*result/i).first()
-      .isVisible({ timeout: 5000 }).catch(() => false);
+      .waitFor({ timeout: 5000 }).then(() => true, () => false);
     expect(hasResults, 'Search must return either a result row or a clear empty-state message — not a blank page').toBe(true);
   });
 
   test('TC-VAL-03: Accept checkbox is present on result rows', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'the unified Validation page replaced the per-row checkbox layout this reads; rewrite against validation-review');
     await goToValidation(page, 'order');
 
     // Accept checkbox — typically a checkbox in each result row
@@ -115,21 +119,12 @@ test.describe('Validation workflow (TC-VAL)', () => {
       '.cds--checkbox[id*="accept"]'
     ).first();
 
-    const hasAccept = await acceptCheckbox.isVisible({ timeout: 5000 }).catch(() => false);
+    const hasAccept = await acceptCheckbox.waitFor({ timeout: 5000 }).then(() => true, () => false);
 
-    if (hasAccept) {
-      console.log('TC-VAL-03: PASS — Accept checkbox found on validation row');
-      expect(hasAccept).toBe(true);
-    } else {
-      // May need to load a result row first
-      const accInput = page.locator('input').first();
-      await accInput.fill(VAL_ACCESSION);
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(2000);
-      const hasAcceptAfterSearch = await page.getByRole('checkbox').first().isVisible({ timeout: 3000 }).catch(() => false);
-      console.log(`TC-VAL-03: Accept checkbox after search = ${hasAcceptAfterSearch}`);
-      // Don't hard-fail — just record
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(hasAccept, 'precondition: hasAccept').toBeTruthy();
+    console.log('TC-VAL-03: PASS — Accept checkbox found on validation row');
+    expect(hasAccept).toBe(true);
   });
 
   test('TC-VAL-04: Save button is present and clickable on validation screen', async ({ page }) => {
@@ -164,6 +159,10 @@ test.describe('Validation workflow (TC-VAL)', () => {
   });
 
   test('TC-VAL-05: Notes / comment field is accessible on result row', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'unified Validation page; notes live in the expanded row (validation-review covers it)');
     await goToValidation(page, 'order');
 
     // Load a result
@@ -177,32 +176,33 @@ test.describe('Validation workflow (TC-VAL)', () => {
       'input[id*="note"], textarea[id*="note"], input[placeholder*="note" i], textarea[placeholder*="note" i]'
     ).first();
 
-    const hasNotes = await notesInput.isVisible({ timeout: 3000 }).catch(() => false);
-    if (hasNotes) {
-      await notesInput.fill('QA automated validation note');
-      console.log('TC-VAL-05: PASS — Notes field found and filled');
-      expect(hasNotes).toBe(true);
-    } else {
-      // Check for a Notes column header at least
-      const hasNotesHeader = await page.getByText(/Notes|Comment/i).isVisible({ timeout: 2000 }).catch(() => false);
-      console.log(`TC-VAL-05: Notes input visible = ${hasNotes}; Notes header visible = ${hasNotesHeader}`);
-      // Document without hard-fail — notes UI varies
-    }
+    const hasNotes = await notesInput.waitFor({ timeout: 3000 }).then(() => true, () => false);
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(hasNotes, 'precondition: hasNotes').toBeTruthy();
+    await notesInput.fill('QA automated validation note');
+    console.log('TC-VAL-05: PASS — Notes field found and filled');
+    expect(hasNotes).toBe(true);
   });
 
   test('TC-VAL-07: Routine validation view loads', async ({ page }) => {
     await goToValidation(page, 'routine');
     expect(page.url()).not.toMatch(/LoginPage|login/i);
-    const hasTable = await page.locator('table, .cds--data-table, th').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await page.locator('table, .cds--data-table, th').first().waitFor({ timeout: 5000 }).then(() => true, () => false);
     console.log(`TC-VAL-07: Routine validation — URL: ${page.url()}, table visible: ${hasTable}`);
   });
 
   test('TC-VAL-08: Date range filter is present on validation screen', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'unified Validation page filters by lab unit and lab number, not a date range; rewrite or retire');
     await goToValidation(page);
     // Look for any date picker inputs
     const dateInputs = page.locator('input[type="date"], input[placeholder*="dd/mm/yyyy" i], .cds--date-picker__input');
     const count = await dateInputs.count();
     console.log(`TC-VAL-08: Date input count on validation screen = ${count}`);
+    // Was a console verdict only (2026-11-17).
+    expect(count, 'the validation screen offers a date range (two date inputs)').toBeGreaterThanOrEqual(2);
     if (count >= 2) {
       console.log('TC-VAL-08: PASS — Date range inputs found');
     } else {
@@ -217,16 +217,20 @@ test.describe('Suite AB — Validation By Order & By Date', () => {
   });
 
   test('TC-VBO-01: Validation > By Order screen loads', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'Validation By Order screen retired into the unified Validation page');
     // Navigate via menu
     await page.getByRole('button', { name: /menu/i }).click();
     await page.waitForTimeout(500);
 
     const validationLink = page.getByText(/^Validation$/i, { exact: true });
-    if (await validationLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await validationLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await validationLink.click();
       await page.waitForTimeout(500);
       const byOrderLink = page.getByText('By Order', { exact: true });
-      if (await byOrderLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await byOrderLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await byOrderLink.click();
       }
     }
@@ -247,12 +251,14 @@ test.describe('Suite AB — Validation By Order & By Date', () => {
     const accessionField = page.locator(
       'input[placeholder*="accession" i], input[id*="accession" i], input'
     ).first();
-    await expect(accessionField).toBeVisible({ timeout: 3000 }).catch(() => {
-      console.log('Accession field not visible on Validation > By Order');
-    });
+    await expect(accessionField).toBeVisible({ timeout: 3000 });
   });
 
   test('TC-VBO-02: Enter accession number shows results for validation', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'Validation By Order screen retired into the unified Validation page');
     const candidates = [
       '/ValidationByAccession',
       '/ValidationByOrder',
@@ -268,35 +274,35 @@ test.describe('Suite AB — Validation By Order & By Date', () => {
     ];
     const success = await fillSearchField(page, ACCESSION, selectors);
 
-    if (success) {
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(2000);
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(success, 'precondition: success').toBeTruthy();
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(2000);
 
-      // Verify validation queue displays
-      const queueRow = page.locator('tr, [role="row"]').first();
-      await expect(queueRow).toBeVisible({ timeout: 8000 }).catch(() => {
-        console.log('No validation queue results found');
-      });
+    // Verify validation queue displays
+    const queueRow = page.locator('tr, [role="row"]').first();
+    await expect(queueRow).toBeVisible({ timeout: 8000 });
 
-      // Verify accession visible
-      const accessionVisible = page.getByText(ACCESSION, { exact: false });
-      await expect(accessionVisible).toBeVisible({ timeout: 3000 }).catch(() => {
-        console.log('Accession not visible in validation queue');
-      });
-    }
+    // Verify accession visible
+    const accessionVisible = page.getByText(ACCESSION, { exact: false });
+    await expect(accessionVisible).toBeVisible({ timeout: 3000 });
   });
 
   test('TC-VBR-03: Validation > By Range of Order Numbers screen loads', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'Validation By Range screen retired into the unified Validation page');
     // Navigate via menu
     await page.getByRole('button', { name: /menu/i }).click();
     await page.waitForTimeout(500);
 
     const validationLink = page.getByText(/^Validation$/i, { exact: true });
-    if (await validationLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await validationLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await validationLink.click();
       await page.waitForTimeout(500);
       const byRangeLink = page.getByText(/By Range|Range of Order/i);
-      if (await byRangeLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await byRangeLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await byRangeLink.click();
       }
     }
@@ -320,26 +326,26 @@ test.describe('Suite AB — Validation By Order & By Date', () => {
       'input[placeholder*="to" i], input[id*="to" i]'
     ).first();
 
-    await expect(fromField).toBeVisible({ timeout: 3000 }).catch(() => {
-      console.log('From field not visible on Validation > By Range');
-    });
+    await expect(fromField).toBeVisible({ timeout: 3000 });
 
-    await expect(toField).toBeVisible({ timeout: 3000 }).catch(() => {
-      console.log('To field not visible on Validation > By Range');
-    });
+    await expect(toField).toBeVisible({ timeout: 3000 });
   });
 
   test('TC-VBD-04: Validation > By Date screen loads', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'Validation By Date screen retired into the unified Validation page');
     // Navigate via menu
     await page.getByRole('button', { name: /menu/i }).click();
     await page.waitForTimeout(500);
 
     const validationLink = page.getByText(/^Validation$/i, { exact: true });
-    if (await validationLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await validationLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await validationLink.click();
       await page.waitForTimeout(500);
       const byDateLink = page.getByText('By Date', { exact: true });
-      if (await byDateLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await byDateLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await byDateLink.click();
       }
     }
@@ -359,12 +365,14 @@ test.describe('Suite AB — Validation By Order & By Date', () => {
     const dateField = page.locator(
       'input[type="date"], input[placeholder*="date" i], input[id*="date" i]'
     ).first();
-    await expect(dateField).toBeVisible({ timeout: 3000 }).catch(() => {
-      console.log('Date field not visible on Validation > By Date');
-    });
+    await expect(dateField).toBeVisible({ timeout: 3000 });
   });
 
   test('TC-VBD-05: Select date range shows validation queue', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'Validation By Date screen retired into the unified Validation page');
     const candidates = ['/ValidationByDate', '/ValidationDate', '/validation/date'];
     await navigateWithDiscoveryLocal(page, candidates);
 
@@ -373,18 +381,18 @@ test.describe('Suite AB — Validation By Order & By Date', () => {
 
     // Fill from date
     const dateFields = page.locator('input[type="date"], input[placeholder*="date" i]');
-    if (await dateFields.first().isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await dateFields.first().waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await dateFields.first().fill(today);
     }
 
     // Fill to date
-    if (await dateFields.nth(1).isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await dateFields.nth(1).waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await dateFields.nth(1).fill(tomorrow);
     }
 
     // Click search/submit
     const submitBtn = page.getByRole('button', { name: /Search|Submit|Find/i }).first();
-    if (await submitBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await submitBtn.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await submitBtn.click();
     } else {
       await page.keyboard.press('Enter');
@@ -394,15 +402,11 @@ test.describe('Suite AB — Validation By Order & By Date', () => {
 
     // Verify validation queue displays (or is empty but not error)
     const queueTable = page.locator('table, [role="grid"], [role="table"]').first();
-    await expect(queueTable).toBeVisible({ timeout: 8000 }).catch(() => {
-      console.log('Validation queue table not found for date range');
-    });
+    await expect(queueTable).toBeVisible({ timeout: 8000 });
 
     // Check for error messages
     const errorMsg = page.getByText(/error|failed|exception/i);
-    await expect(errorMsg).not.toBeVisible({ timeout: 1000 }).catch(() => {
-      console.log('Possible error on validation by date');
-    });
+    await expect(errorMsg).not.toBeVisible({ timeout: 1000 });
   });
 });
 
@@ -483,7 +487,7 @@ test.describe('Validation Extended — Result Rejection & API Verification', () 
       .locator('input[placeholder*="accession" i], input[id*="accession" i], input[name*="accession" i]')
       .first();
 
-    if (await accessionInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await accessionInput.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await accessionInput.fill('26CPHL00008V');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2000);
@@ -519,7 +523,7 @@ test.describe('Validation Extended — Result Rejection & API Verification', () 
       .or(page.locator('button').filter({ hasText: /approve|accept/i }))
       .first();
 
-    if (!(await approveBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
+    if (!(await approveBtn.waitFor({ timeout: 3000 }).then(() => true, () => false))) {
       console.log('TC-VAL-EXT-04: PARTIAL — No Approve button visible (empty queue or different UI state)');
       expect(page.url()).not.toMatch(/LoginPage|login/i);
       return;

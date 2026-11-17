@@ -135,7 +135,7 @@ test.describe('Suite BG — Results By Status Core (TC-RBS)', () => {
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const firstSelect = page.locator('select').first();
-    if (await firstSelect.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await firstSelect.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       // Select the second option (first non-empty option)
       await firstSelect.selectOption({ index: 1 });
       await page.waitForTimeout(1500);
@@ -157,11 +157,9 @@ test.describe('Suite BG — Results By Status Core (TC-RBS)', () => {
     const elapsed = Date.now() - start;
 
     console.log(`TC-RBS-05: Results By Status loaded in ${elapsed}ms`);
-    if (loaded) {
-      expect(elapsed, 'Results By Status must load within 5000ms').toBeLessThan(5000);
-    } else {
-      console.log('TC-RBS-05: SKIP — page not reachable');
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(loaded, 'precondition: loaded').toBeTruthy();
+    expect(elapsed, 'Results By Status must load within 5000ms').toBeLessThan(5000);
   });
 });
 
@@ -243,13 +241,13 @@ test.describe('Suite BG-DEEP — Results By Status API & Validation (TC-RBS-06�
 
     // Apply status filter
     const statusSelect = page.locator('select').first();
-    if (await statusSelect.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await statusSelect.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await statusSelect.selectOption({ index: 1 });
     }
 
     // Apply date if available
     const dateInput = page.locator('input[type="date"]').first();
-    if (await dateInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await dateInput.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       const today = new Date().toISOString().slice(0, 10);
       await dateInput.fill(today);
     }

@@ -211,12 +211,20 @@ export async function ensureInactiveLabUnitWithTest(page: Page, log: string[]): 
   }
   const id = String(unit.id);
   const serum = await sampleTypeId(page);
+  // Made in an active unit, the way the editor does (its unit picker lists active units only),
+  // then moved into the inactive one through Basic Info.
   const found = await findTest(page, NAMES.inactiveUnitTest);
-  if (!found) {
-    // Made in an active unit, the way the editor does (its unit picker lists active units only),
-    // then moved into the inactive one through Basic Info.
-    const testId = await ensureTest(page, { name: NAMES.inactiveUnitTest, code: 'QACILUT', labUnitId: await labUnitId(page), sampleTypeId: serum,
+  const testId = found ? found.id : await ensureTest(page, { name: NAMES.inactiveUnitTest, code: 'QACILUT', labUnitId: await labUnitId(page), sampleTypeId: serum,
       components: [{ code: 'PRIMARY', label: 'Result', resultType: 'N' }] }, log);
+  const where = (await api(page, 'GET', `/test-catalog/tests/${testId}/basic-info`)).body ?? {};
+  if (String(where.labUnitId ?? '') !== id) {
+    // The server refuses a move into an inactive unit, so switch the unit on for the move; the
+    // block below switches it off again.
+    const cur = list((await api(page, 'GET', '/lab-units-management')).body).find((u) => String(u.id) === id);
+    if (cur && !cur.isActive) {
+      const on = await api(page, 'PUT', `/lab-units-management/${id}`, { names: cur.names ?? { en: NAMES.inactiveUnit }, domain: cur.domain ?? 'CLINICAL', description: cur.description ?? '', isActive: true });
+      expect(on.status, `switch ${NAMES.inactiveUnit} on for the move: ${on.text}`).toBeLessThan(300);
+    }
     const basic = (await api(page, 'GET', `/test-catalog/tests/${testId}/basic-info`)).body ?? {};
     const put = await api(page, 'PUT', `/test-catalog/tests/${testId}/basic-info`, { ...basic, labUnitId: id });
     expect(put.status, `move ${NAMES.inactiveUnitTest} into ${NAMES.inactiveUnit}: ${put.text}`).toBeLessThan(300);
@@ -224,7 +232,8 @@ export async function ensureInactiveLabUnitWithTest(page: Page, log: string[]): 
   // Re-assert inactive (an edit elsewhere may have switched it on).
   const now = list((await api(page, 'GET', '/lab-units-management')).body).find((u) => String(u.id) === id);
   if (now?.isActive) {
-    await api(page, 'PUT', `/lab-units-management/${id}`, { names: now.names ?? { en: NAMES.inactiveUnit }, domain: now.domain ?? 'CLINICAL', description: now.description ?? '', isActive: false });
+    const off = await api(page, 'PUT', `/lab-units-management/${id}`, { names: now.names ?? { en: NAMES.inactiveUnit }, domain: now.domain ?? 'CLINICAL', description: now.description ?? '', isActive: false });
+    expect(off.status, `switch ${NAMES.inactiveUnit} off: ${off.text}`).toBeLessThan(300);
   }
   const check = list((await api(page, 'GET', '/lab-units-management')).body).find((u) => String(u.id) === id);
   expect(check?.isActive, 'the fixture unit is inactive').toBe(false);
@@ -390,4 +399,46 @@ export async function ensureEqaEnabled(page: Page, log: string[]): Promise<void>
   expect((await save).status(), 'eqaEnabled save').toBeLessThan(300);
   expect(await read(), 'eqaEnabled reads back true').toBe('true');
   log.push('eqaEnabled set to true');
+}
+
+/**
+ * TC-1515-22 (TAT report ordering site is a searchable list with a choice to make): a second
+ * referring clinic, since a fresh stack has one at most (added 2026-11-17).
+ */
+export async function ensureSecondReferringClinic(page: Page, log: string[]): Promise<number> {
+  const clinics = async () => list((await api(page, 'GET', '/displayList/SAMPLE_PATIENT_REFERRING_CLINIC')).body);
+  let have = await clinics();
+  for (const name of ['QA_AUTO Referring Clinic', 'QA_AUTO Referring Clinic B']) {
+    if (have.length >= 2) break;
+    if (have.some((c) => String(c.value ?? c.name) === name)) continue;
+    const c = await api(page, 'POST', '/Organization?ID=0&startingRecNo=1', {
+      organizationName: name, shortName: name.endsWith('B') ? 'QAARCB' : 'QAARC', isActive: 'Y', commune: '', village: '',
+      department: '', formName: 'organizationForm', formMethod: 'POST', cancelAction: 'CancelOrganization',
+      submitOnCancel: false, cancelMethod: 'POST', mlsSentinelLabFlag: 'N', parentOrgName: '', state: 'MN', selectedTypes: ['5'],
+    }, { 'Accept-Language': 'en' });
+    log.push(`created referring clinic ${name} (${c.status})`);
+    have = await clinics();
+  }
+  expect(have.length, 'at least two referring clinics').toBeGreaterThanOrEqual(2);
+  return have.length;
+}
+
+/**
+ * TC-CPHL-31 (the Results Method list offers the test's linked active methods): Creatinine
+ * (test 4 in the foundational data) with one active linked method (added 2026-11-17).
+ */
+export async function ensureCreatinineMethod(page: Page, log: string[], testId = '4'): Promise<string> {
+  const linked = list((await api(page, 'GET', `/test/${testId}/methods`)).body);
+  const inactive = new Set(list((await api(page, 'GET', '/displayList/METHODS_INACTIVE')).body).map((m) => String(m.id)));
+  const live = linked.find((l) => !inactive.has(String(l.methodId)));
+  if (live) return String(live.methodId);
+  const all = list((await api(page, 'GET', '/displayList/METHODS')).body).filter((m) => !inactive.has(String(m.id)));
+  const pick = all[0];
+  expect(pick, 'an active method to link').toBeTruthy();
+  const c = await api(page, 'POST', `/test/${testId}/methods`, {
+    methodId: String(pick.id), isDefault: false, effectiveDate: new Date().toISOString().slice(0, 10),
+  });
+  expect(c.status, `link method ${pick.value} to test ${testId}: ${c.text}`).toBeLessThan(300);
+  log.push(`linked method ${pick.value} to test ${testId}`);
+  return String(pick.id);
 }

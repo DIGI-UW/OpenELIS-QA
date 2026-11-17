@@ -51,6 +51,7 @@ const LOINC_URLS = [
 ];
 
 const DICT_URLS = [
+  '/MasterListsPage/DictionaryMenu', // the Dictionary Menu page (admin menu link)
   '/MasterListsPage/dictionary',
   '/DictionaryManagement',
   '/dictionary',
@@ -58,6 +59,11 @@ const DICT_URLS = [
 ];
 
 async function goToLOINC(page: any): Promise<boolean> {
+  // 17 Nov 2026: the app has no LOINC mapping page. Every candidate route answers 200 with an empty
+  // main, and these cases passed on that blank page (the load-time case measured a 20 s wait for
+  // content that never came). LOINC codes are set per test in the Test Catalog and per sample type
+  // (Terminology section). Not run, with the reason, until rewritten against those screens.
+  test.fixme(true, 'No LOINC mapping page in the app; LOINC is set per test in the Test Catalog. Rewrite against it.');
   return navigateWithDiscovery(page, LOINC_URLS);
 }
 
@@ -118,7 +124,7 @@ test.describe('Suite O — LOINC Mapping Core (TC-LOINC)', () => {
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const input = page.locator('input[type="text"], input[placeholder*="search" i], input[placeholder*="filter" i]').first();
-    const hasInput = await input.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasInput = await input.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     console.log(`TC-LOINC-03: search input visible=${hasInput}`);
     if (hasInput) {
@@ -209,7 +215,7 @@ test.describe('Suite O — LOINC Mapping Core (TC-LOINC)', () => {
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const searchInput = page.locator('input').first();
-    if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await searchInput.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       // fillSearchField(page, value, selectors). This passed a Locator as the
       // value and the value as the selector list, so the helper iterated the
       // STRING 'blood' and asked for elements matching 'b', 'l', 'o'... The
@@ -294,9 +300,9 @@ test.describe('Suite O-DEEP — LOINC & Dictionary Deep Validation (TC-LOINC-09�
     const elapsed = Date.now() - start;
 
     console.log(`TC-LOINC-10: LOINC page loaded in ${elapsed}ms`);
-    if (loaded) {
-      expect(elapsed, 'LOINC page must load within 8000ms').toBeLessThan(8000);
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(loaded, 'precondition: loaded').toBeTruthy();
+    expect(elapsed, 'LOINC page must load within 8000ms').toBeLessThan(8000);
   });
 
   test('TC-LOINC-11: Dictionary management page loads within acceptable time', async ({ page }) => {
@@ -306,9 +312,9 @@ test.describe('Suite O-DEEP — LOINC & Dictionary Deep Validation (TC-LOINC-09�
     const elapsed = Date.now() - start;
 
     console.log(`TC-LOINC-11: Dictionary page loaded in ${elapsed}ms`);
-    if (loaded) {
-      expect(elapsed, 'Dictionary page must load within 8000ms').toBeLessThan(8000);
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(loaded, 'precondition: loaded').toBeTruthy();
+    expect(elapsed, 'Dictionary page must load within 8000ms').toBeLessThan(8000);
   });
 
   test('TC-LOINC-12: Dictionary is accessible to admin (RBAC)', async ({ page }) => {
@@ -331,8 +337,9 @@ test.describe('Suite O-DEEP — LOINC & Dictionary Deep Validation (TC-LOINC-09�
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    // Collect first-column text from any visible table
-    const cells = await page.locator('table tbody tr td:first-child').allTextContents().catch(() => [] as string[]);
+    // Whole-row text: the Dictionary Menu's first column is the selection box (17 Nov 2026: the
+    // first cells were all empty, so the check read 20 identical rows on the real page).
+    const cells = await page.locator('table tbody tr').allInnerTexts().catch(() => [] as string[]);
     const trimmed = cells.map(c => c.trim()).filter(c => c.length > 0);
     const unique = new Set(trimmed);
 
@@ -351,25 +358,29 @@ test.describe('Suite O-DEEP — LOINC & Dictionary Deep Validation (TC-LOINC-09�
      * traces — even on boundary conditions. Stack traces reveal server internals.
      */
     const loincLoaded = await goToLOINC(page);
-    if (loincLoaded) {
-      const bodyText = await page.locator('body').innerText();
-      expect(bodyText).not.toContain('at org.');
-      expect(bodyText).not.toContain('at java.');
-      expect(bodyText).not.toContain('NullPointerException');
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(loincLoaded, 'precondition: loincLoaded').toBeTruthy();
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText).not.toContain('at org.');
+    expect(bodyText).not.toContain('at java.');
+    expect(bodyText).not.toContain('NullPointerException');
 
     await page.goto(`${BASE}`);
     await login(page, ADMIN.user, ADMIN.pass);
     const dictLoaded = await goToDictionary(page);
-    if (dictLoaded) {
-      const bodyText = await page.locator('body').innerText();
-      expect(bodyText).not.toContain('at org.');
-      expect(bodyText).not.toContain('at java.');
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(dictLoaded, 'precondition: dictLoaded').toBeTruthy();
+    const dictText = await page.locator('body').innerText();
+    expect(dictText).not.toContain('at org.');
+    expect(dictText).not.toContain('at java.');
     console.log('TC-LOINC-14: PASS — no stack traces on LOINC or Dictionary pages');
   });
 
   test('TC-LOINC-15: Concurrent dictionary API requests are stable', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'the dictionary endpoint at the candidate path answers 404');
     /**
      * US-LOINC-3 (performance): Multiple simultaneous dictionary lookups (e.g.,
      * from different browser tabs) must not cause server errors.
@@ -387,11 +398,9 @@ test.describe('Suite O-DEEP — LOINC & Dictionary Deep Validation (TC-LOINC-09�
 
     console.log(`TC-LOINC-15: 5 concurrent dictionary requests → statuses: [${results.join(', ')}]`);
     const allNon5xx = results.every(s => s < 500);
-    if (results[0] !== 404) {
-      expect(allNon5xx, 'All concurrent dictionary requests must be non-5xx').toBe(true);
-    } else {
-      console.log('TC-LOINC-15: NOTE — dictionary endpoint returned 404 (not available)');
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(results[0] !== 404, 'precondition: results[0] !== 404').toBeTruthy();
+    expect(allNon5xx, 'All concurrent dictionary requests must be non-5xx').toBe(true);
   });
 
   test('TC-LOINC-16: LOINC page Add/Edit control is present for admin', async ({ page }) => {
@@ -405,7 +414,7 @@ test.describe('Suite O-DEEP — LOINC & Dictionary Deep Validation (TC-LOINC-09�
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const addBtn = page.getByRole('button', { name: /add|new|create|edit|save/i }).first();
-    const hasAdd = await addBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasAdd = await addBtn.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     // Alternatively look for an icon button or link
     const hasLink = await page.locator('a[href*="edit" i], a[href*="add" i], [class*="edit"]').count() > 0;

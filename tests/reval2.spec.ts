@@ -85,6 +85,7 @@ test('LEG 1 - 3x in one session', async ({ page }) => {
   for (let i = 1; i <= 3; i++) { await probe(page, 'leg1-' + i); await page.waitForTimeout(1500); }
 });
 
+// eslint-disable-next-line playwright/expect-expect -- a discovery probe: it prints what it finds for a person to read.
 test('LEG 2 - fresh browser context', async ({ browser }) => {
   const ctx = await browser.newContext({ storageState: '.auth/user.json', ignoreHTTPSErrors: true, baseURL: BASE });
   const p = await ctx.newPage();

@@ -17,7 +17,10 @@ import playwright from 'eslint-plugin-playwright';
 import { ASSERT_FUNCTION_NAMES } from './scripts/assertions.mjs';
 
 export default tseslint.config(
-  { ignores: ['node_modules/**', 'test-results/**', 'playwright-report/**', 'regression-results/**', 'archive/**', 'evals/**'] },
+  { ignores: ['node_modules/**', 'test-results/**', 'playwright-report/**', 'regression-results/**', 'archive/**', 'evals/**',
+    // One-off exploration probes at the repo root (2026-11-17): no CI suite runs them and they
+    // assert nothing by design; they print what a person asked to see.
+    'probe-*.spec.ts', 'capture-*.spec.ts', 'tc-dom-probe.spec.ts'] },
   js.configs.recommended,
   // The repo carries `// eslint-disable-next-line no-console` comments from an
   // era when no-console was on. It is off here (specs log deliberately), so
@@ -54,6 +57,15 @@ export default tseslint.config(
       'playwright/no-skipped-test': 'off',   // handled by the declared-gaps work, not here
       'playwright/no-focused-test': 'error',
       'playwright/no-conditional-expect': 'off', // large existing backlog; separate pass
+      // locator.isVisible({ timeout }) does not wait: the option is ignored and the call answers
+      // at once. 410 call sites read it as a wait (2026-11-17), which is how pages were judged
+      // before they drew. Use waitFor({ timeout }).then(() => true, () => false), or a web-first
+      // expect(...).toBeVisible({ timeout }). scripts/check-no-isvisible-timeout.mjs holds the
+      // same line for helpers, which this lint does not read.
+      'no-restricted-syntax': ['error', {
+        selector: "CallExpression[callee.property.name='isVisible'] > ObjectExpression.arguments",
+        message: 'isVisible() does not wait; its timeout is ignored. Use locator.waitFor({ timeout }) or expect(locator).toBeVisible({ timeout }).',
+      }],
       // Noise that would bury the signal in a repo this size.
       'no-unused-vars': 'off',
       'no-empty': 'off',
@@ -61,5 +73,12 @@ export default tseslint.config(
       'no-useless-escape': 'off',
       'no-undef': 'off',
     },
+  },
+  {
+    // The docs tier captures screenshots and videos for the user manual. Its checks are the
+    // manual's review gate (openelis-docs page-reviewer), not expect(); a capture spec that
+    // asserted would stop on a moved button and leave the figure stale instead.
+    files: ['tests/docs/**/*.ts'],
+    rules: { 'playwright/expect-expect': 'off' },
   },
 );

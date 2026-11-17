@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { seedDuplicatePair, seedMergedPair, findPatientIdsByNationalId, findPatientIdsByLastName } from '../helpers/data-factory';
 import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, QA_ID_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, navigateToAdminItem, getDateRange, getFutureDateRange, clickFormSearch, checkCarbonRadio, waitForRouteContent } from '../helpers/test-helpers';
 
@@ -31,7 +32,7 @@ test.describe('Patient Management (TC-PAT)', () => {
     '/SamplePatientEntry',
   ];
 
-  async function goToPatientSearch(page): Promise<string> {
+  async function goToPatientSearch(page: Page): Promise<string> {
     for (const u of PATIENT_URLS) {
       const res = await page.goto(`${BASE}${u}`).catch(() => null);
       if (res && res.ok() && !page.url().includes('LoginPage')) {
@@ -41,7 +42,7 @@ test.describe('Patient Management (TC-PAT)', () => {
     // Try hamburger nav as fallback
     await page.goto(`${BASE}`);
     const patientMenu = page.getByRole('link', { name: /Patient/i }).first();
-    if (await patientMenu.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await patientMenu.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await patientMenu.click();
       await page.waitForTimeout(1000);
     }
@@ -107,7 +108,7 @@ test.describe('Patient Management (TC-PAT)', () => {
       'input[id*="lastName" i], input[id*="last_name" i], input[placeholder*="last" i], input[placeholder*="surname" i]'
     ).first();
 
-    if (!(await lastNameField.isVisible({ timeout: 3000 }).catch(() => false))) {
+    if (!(await lastNameField.waitFor({ timeout: 3000 }).then(() => true, () => false))) {
       console.log('TC-PAT-03: GAP — no last-name field; partial search not supported');
       return; // not a hard fail — document as GAP
     }
@@ -120,7 +121,7 @@ test.describe('Patient Management (TC-PAT)', () => {
     expect(searched, 'the patient search form must have a Search button').toBe(true);
     await page.waitForTimeout(3000);
 
-    const hasAbby = await page.getByText(/Sebby/i).first().isVisible({ timeout: 8000 }).catch(() => false);
+    const hasAbby = await page.getByText(/Sebby/i).first().waitFor({ timeout: 8000 }).then(() => true, () => false);
     expect(
       hasAbby,
       `partial last-name search for "Seb" did not return ${PATIENT_NAME} (url=${page.url()})`
@@ -152,7 +153,7 @@ test.describe('Patient Management (TC-PAT)', () => {
     // copy. An empty state says something like "no patients found"; require
     // that shape, and print what matched so the log can be checked.
     const emptyMessage = page.getByText(/\b(no|zero)\s+(patients?|results?|records?)\b[^.]{0,20}\b(found|match(?:ed|es)?|available)\b/i);
-    const hasEmptyMessage = await emptyMessage.first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasEmptyMessage = await emptyMessage.first().waitFor({ timeout: 3000 }).then(() => true, () => false);
     console.log(hasEmptyMessage
       ? `TC-PAT-03 empty state: message present — "${(await emptyMessage.first().innerText()).trim().slice(0, 80)}"`
       : 'TC-PAT-03 empty state: GAP — zero results are shown only as "0-0 of 0 items", with no message');
@@ -235,9 +236,9 @@ test.describe('Patient Management (TC-PAT)', () => {
     // states. Asserting "has orders" would make this case depend on seed data;
     // asserting the region rendered does not.
     const hasResultRows = await page.locator('table tbody tr').first()
-      .isVisible({ timeout: 5_000 }).catch(() => false);
+      .waitFor({ timeout: 5_000 }).then(() => true, () => false);
     const hasEmptyState = await page.getByText(/no test results? data to display/i)
-      .isVisible({ timeout: 5_000 }).catch(() => false);
+      .waitFor({ timeout: 5_000 }).then(() => true, () => false);
     expect(
       hasResultRows || hasEmptyState,
       'patient history must render either a test-results table or an explicit empty state'
@@ -357,7 +358,7 @@ test.describe('Suite AC — Merge Patient', () => {
    * unchecked, second panel still offering the "selected" patient). Click the input
    * itself in the page and prove it took.
    */
-  async function pickMergeRadio(page, panel: 1 | 2, patientId: string): Promise<void> {
+  async function pickMergeRadio(page: Page, panel: 1 | 2, patientId: string): Promise<void> {
     const radio = page.locator(`input[name="patient${panel}-radio-group"][id="patient${panel}-${patientId}"]`);
     await expect(radio, `panel ${panel} offers patient ${patientId}`).toBeAttached({ timeout: 15_000 });
     // Click the LABEL, in the page. Clicking the input itself flips its checked flag without
@@ -370,7 +371,7 @@ test.describe('Suite AC — Merge Patient', () => {
     await expect(radio, `panel ${panel} registers patient ${patientId} (result list replaced)`).toHaveCount(0, { timeout: 10_000 });
   }
 
-  async function searchMergePanel(page, panel: 1 | 2, subjectNumber: string): Promise<string[]> {
+  async function searchMergePanel(page: Page, panel: 1 | 2, subjectNumber: string): Promise<string[]> {
     const field = `#patient${panel}-patientId`;
     await page.locator(field).fill(subjectNumber);
     // clickFormSearch, not nth(). My first attempt used
@@ -401,7 +402,7 @@ test.describe('Suite AC — Merge Patient', () => {
     await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
 
     const mergeItem = page.locator('[data-cy="menu_patient_merge"]');
-    if (!(await mergeItem.isVisible({ timeout: 3_000 }).catch(() => false))) {
+    if (!(await mergeItem.waitFor({ timeout: 3_000 }).then(() => true, () => false))) {
       await page.getByRole('button', { name: /^\s*Patient\s*$/ }).first().click();
     }
     await expect(
@@ -775,7 +776,7 @@ test.describe('Suite AC — Merge Patient', () => {
   // A person confirming an irreversible merge could not see the IDs that tell the
   // records apart. Neither case executes the merge: both stop at Step 3.
   // ---------------------------------------------------------------------------
-  async function openConfirmStep(page, pair: { subjectNumber: string; ids: [string, string] }) {
+  async function openConfirmStep(page: Page, pair: { subjectNumber: string; ids: [string, string] }) {
     await page.goto(`${BASE}/PatientMerge`, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#patient1-lastName')).toBeVisible({ timeout: 15_000 });
     await searchMergePanel(page, 1, pair.subjectNumber);
@@ -839,7 +840,7 @@ test.describe('Phase 4 — H-DEEP: Patient Interaction Tests', () => {
 
     // Patient Abby Sebby (ID 0123456) must appear in results
     const patientVisible = await page.getByText(/Sebby|0123456/i).first()
-      .isVisible({ timeout: 5000 }).catch(() => false);
+      .waitFor({ timeout: 5000 }).then(() => true, () => false);
     expect(patientVisible, 'Known patient (national ID 0123456) must be found in search results').toBe(true);
   });
 
@@ -902,7 +903,7 @@ test.describe('Phase 6 — BD-DEEP: Patient History Tests', () => {
     for (const field of requiredFields) {
       const fieldVisible = /Last Name|First Name/.test(bodyText) ||
         await page.locator(`label:has-text("${field}"), text=${field}`).first()
-          .isVisible({ timeout: 2000 }).catch(() => false);
+          .waitFor({ timeout: 2000 }).then(() => true, () => false);
       console.log(`TC-BD-DEEP-01: "${field}" visible = ${fieldVisible}`);
     }
   });
@@ -913,7 +914,7 @@ test.describe('Phase 6 — BD-DEEP: Patient History Tests', () => {
     await waitForRouteContent(page);
 
     const lastNameInput = page.locator('input[placeholder*="Last Name" i]').first();
-    if (!(await lastNameInput.isVisible({ timeout: 3000 }).catch(() => false))) {
+    if (!(await lastNameInput.waitFor({ timeout: 3000 }).then(() => true, () => false))) {
       console.log('TC-BD-DEEP-02: SKIP — Last Name field not found');
       return;
     }
@@ -926,7 +927,7 @@ test.describe('Phase 6 — BD-DEEP: Patient History Tests', () => {
 
     // Results table or patient list must appear
     const hasResults = await page.locator('table, [role="table"]').first()
-      .isVisible({ timeout: 5000 }).catch(() => false);
+      .waitFor({ timeout: 5000 }).then(() => true, () => false);
     const hasResultsText = /Patient Results|Results/i.test(await page.locator('body').innerText());
     expect(hasResults || hasResultsText,
       'Searching by last name must show a results table'

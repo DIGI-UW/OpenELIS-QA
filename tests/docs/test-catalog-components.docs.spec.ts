@@ -5,7 +5,7 @@ import { go, shot, saveWalkthrough } from './capture';
 
 test('User manual — Test Catalog result components walkthrough', async ({ page }, info) => {
   info.annotations.push({ type: 'capability', description: 'test-catalog-components' });
-  const step = async (name, fn) => {
+  const step = async (name: string, fn: () => Promise<unknown>) => {
     try { await fn(); } catch (e) { console.log('STEP SKIPPED: ' + name + ' :: ' + String(e).slice(0, 200)); }
   };
 

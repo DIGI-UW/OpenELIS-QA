@@ -17,8 +17,8 @@ test('User manual — Env order populated', async ({ page }, info) => {
     const site = page.getByPlaceholder(/site name or code/i).first();
     await site.click({ timeout: 2000 }); await site.fill('MUL', { timeout: 2000 }); await page.waitForTimeout(1300);
     const sel = page.locator('.search-results').getByRole('button', { name: /select/i }).first();
-    if (await sel.isVisible({ timeout: 1500 })) await sel.click({ timeout: 1500 });
-    else { const t = page.locator('.search-results').getByText(/^Select$/).first(); if (await t.isVisible({ timeout: 1000 })) await t.click(); }
+    if (await sel.waitFor({ timeout: 1500 }).then(() => true, () => false)) await sel.click({ timeout: 1500 });
+    else { const t = page.locator('.search-results').getByText(/^Select$/).first(); if (await t.waitFor({ timeout: 1000 }).then(() => true, () => false)) await t.click(); }
     await page.waitForTimeout(700);
   } catch {}
 

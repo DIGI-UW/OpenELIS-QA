@@ -45,6 +45,8 @@ import {
  */
 
 const REPORT_URLS = [
+  // A bare /Report says "This report link is incomplete" (17 Nov 2026); open a real routine report.
+  '/Report?type=patient&report=patientCILNSP_vreduit',
   '/Report',
   '/reports',
   '/MasterListsPage/reports',
@@ -107,6 +109,10 @@ test.describe('Suite S — Data Export Core (TC-EXP)', () => {
   });
 
   test('TC-EXP-03: Patient report date range form accepts valid dates', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'no date input with the old locators on the patient report; rewrite to its dd/mm/yyyy pickers');
     /**
      * US-EXP-2: The report form must accept valid date inputs without triggering
      * a format validation error on a correctly-formatted date.
@@ -121,17 +127,15 @@ test.describe('Suite S — Data Export Core (TC-EXP)', () => {
     const { from: startDate } = await getDateRange();
     const dateInput = page.locator('input[type="date"], input[placeholder*="mm/dd" i]').first();
 
-    if (await dateInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await dateInput.fill(startDate);
-      await page.waitForTimeout(500);
-      const bodyText = await page.locator('body').innerText();
-      expect(bodyText).not.toContain('Internal Server Error');
-      const hasFormatError = /invalid.*date|format.*error/i.test(bodyText);
-      console.log(`TC-EXP-03: dateFormatError=${hasFormatError}`);
-      expect(hasFormatError, 'Valid date must not trigger format error').toBe(false);
-    } else {
-      console.log('TC-EXP-03: NOTE — date input not found on patient report page');
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(await dateInput.waitFor({ timeout: 3000 }).then(() => true, () => false), 'precondition: dateInput is visible').toBeTruthy();
+    await dateInput.fill(startDate);
+    await page.waitForTimeout(500);
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText).not.toContain('Internal Server Error');
+    const hasFormatError = /invalid.*date|format.*error/i.test(bodyText);
+    console.log(`TC-EXP-03: dateFormatError=${hasFormatError}`);
+    expect(hasFormatError, 'Valid date must not trigger format error').toBe(false);
   });
 
   test('TC-EXP-04: Generate report does not cause 500 for valid date range', async ({ page }) => {
@@ -156,7 +160,7 @@ test.describe('Suite S — Data Export Core (TC-EXP)', () => {
 
     // Try to submit
     const generateBtn = page.getByRole('button', { name: /generate|submit|print|run/i }).first();
-    if (await generateBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await generateBtn.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await generateBtn.click();
       await page.waitForTimeout(3000);
     }
@@ -188,11 +192,9 @@ test.describe('Suite S — Data Export Core (TC-EXP)', () => {
     });
 
     console.log(`TC-EXP-05: Reports API → ${result.url} HTTP ${result.status}`);
-    if (result.status !== 404) {
-      expect(result.status, 'Reports API must not 5xx').not.toBeGreaterThanOrEqual(500);
-    } else {
-      console.log('TC-EXP-05: NOTE — reports metadata API not found (may be embedded in page)');
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(result.status !== 404, 'precondition: result.status !== 404').toBeTruthy();
+    expect(result.status, 'Reports API must not 5xx').not.toBeGreaterThanOrEqual(500);
   });
 
   test('TC-EXP-06: WHONET export page is reachable or gracefully absent', async ({ page }) => {
@@ -228,6 +230,8 @@ test.describe('Suite S — Data Export Core (TC-EXP)', () => {
     const hasExportTerm = /export|print|pdf|csv|download/i.test(bodyText);
 
     console.log(`TC-EXP-07: export controls=${exportControls}, hasExportTerm=${hasExportTerm}`);
+    // Was a console verdict only (2026-11-17).
+    expect(exportControls > 0 || hasExportTerm, 'no export controls found on reports landing page').toBeTruthy();
     if (exportControls > 0 || hasExportTerm) {
       console.log('TC-EXP-07: PASS — export controls/terms found on reports page');
     } else {
@@ -242,9 +246,9 @@ test.describe('Suite S — Data Export Core (TC-EXP)', () => {
     const elapsed = Date.now() - start;
 
     console.log(`TC-EXP-08: Reports page loaded in ${elapsed}ms`);
-    if (loaded) {
-      expect(elapsed, 'Reports page must load within 8000ms').toBeLessThan(8000);
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(loaded, 'precondition: loaded').toBeTruthy();
+    expect(elapsed, 'Reports page must load within 8000ms').toBeLessThan(8000);
   });
 });
 
@@ -258,6 +262,10 @@ test.describe('Suite S-DEEP — Export Deep Validation (TC-EXP-09–16)', () => 
   });
 
   test('TC-EXP-09: Patient results report API endpoint is healthy', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'the patient results report endpoint at the candidate path answers 404; find the real one');
     /**
      * US-EXP-2: The patient results report API must exist and respond.
      * This endpoint backs the print-patient-results button.
@@ -279,11 +287,9 @@ test.describe('Suite S-DEEP — Export Deep Validation (TC-EXP-09–16)', () => 
     });
 
     console.log(`TC-EXP-09: Patient report API → ${result.url} HTTP ${result.status}`);
-    if (result.status !== 404) {
-      expect(result.status, 'Patient report API must not 5xx').not.toBeGreaterThanOrEqual(500);
-    } else {
-      console.log('TC-EXP-09: NOTE — patient report API endpoint not at expected paths');
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(result.status !== 404, 'precondition: result.status !== 404').toBeTruthy();
+    expect(result.status, 'Patient report API must not 5xx').not.toBeGreaterThanOrEqual(500);
   });
 
   test('TC-EXP-10: Statistics report page is accessible', async ({ page }) => {
@@ -357,6 +363,8 @@ test.describe('Suite S-DEEP — Export Deep Validation (TC-EXP-09–16)', () => 
     });
 
     console.log(`TC-EXP-12: Invalid date range → HTTP ${result.status}, hasStack=${result.hasStack}`);
+    // Was a console verdict only (2026-11-17).
+    expect(result.hasStack, `a refused report request shows no stack trace (HTTP ${result.status})`).toBe(false);
     if (result.hasStack) {
       console.log(`TC-EXP-12: NOTE-7 PATTERN — response contains "Exception" keyword`);
     } else {
@@ -380,6 +388,8 @@ test.describe('Suite S-DEEP — Export Deep Validation (TC-EXP-09–16)', () => 
     ];
     const foundTerms = terms.filter(t => t.test(bodyText));
     console.log(`TC-EXP-13: ${foundTerms.length} distinct report category terms found`);
+    // Was a console verdict only (2026-11-17).
+    expect(foundTerms.length, 'the reports UI lists several report types').toBeGreaterThanOrEqual(2);
     if (foundTerms.length >= 2) {
       console.log('TC-EXP-13: PASS — multiple report types visible');
     } else {
@@ -426,6 +436,10 @@ test.describe('Suite S-DEEP — Export Deep Validation (TC-EXP-09–16)', () => 
   });
 
   test('TC-EXP-16: Empty date range shows validation, not 500', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'no Generate button on the reached screen; rewrite with TC-EXP-03');
     /**
      * US-EXP-4: Submitting the report form with empty/blank dates must show
      * a validation message, not an Internal Server Error.
@@ -434,16 +448,14 @@ test.describe('Suite S-DEEP — Export Deep Validation (TC-EXP-09–16)', () => 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const generateBtn = page.getByRole('button', { name: /generate|submit|print|run/i }).first();
-    if (await generateBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await generateBtn.click();
-      await page.waitForTimeout(2000);
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(await generateBtn.waitFor({ timeout: 3000 }).then(() => true, () => false), 'precondition: generateBtn is visible').toBeTruthy();
+    await generateBtn.click();
+    await page.waitForTimeout(2000);
 
-      const bodyText = await page.locator('body').innerText();
-      expect(bodyText, 'Empty date range must not cause Internal Server Error').not.toContain('Internal Server Error');
-      const hasValidation = /required|select|date|please|error/i.test(bodyText);
-      console.log(`TC-EXP-16: validationShown=${hasValidation}`);
-    } else {
-      console.log('TC-EXP-16: NOTE — generate button not found on patient report page');
-    }
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText, 'Empty date range must not cause Internal Server Error').not.toContain('Internal Server Error');
+    const hasValidation = /required|select|date|please|error/i.test(bodyText);
+    console.log(`TC-EXP-16: validationShown=${hasValidation}`);
   });
 });

@@ -16,6 +16,7 @@ import * as path from 'path';
 import {
   ready, api, ensureDictionaryTests, ensureMultiComponentTest, ensureInactiveLabUnitWithTest, ensureLeakPanel,
   ensureRoom, ensureNotebookProject, ensureSamplingSite, ensureWard, ensureEqaSchemes, ensureEqaEnabled, NAMES,
+  ensureSecondReferringClinic, ensureCreatinineMethod,
 } from './helpers/ci-fixtures';
 import { ensureReferringClinic } from './helpers/data-factory';
 import { ensureInventoryFixtures, redateHistory } from './helpers/inventory-fixtures';
@@ -120,4 +121,16 @@ setup('ci-fixture: inventory board items and usage history (TC-INVB)', async ({ 
   const redate = redateHistory();
   console.log(`[ci-fixtures] inventory ${JSON.stringify(ids)} ${log.join('; ')}; history ${redate ?? 'not re-dated (no DB)'}`);
   record('inventory', { ids, redate });
+});
+
+setup('ci-fixture: two referring clinics (TC-1515-22)', async ({ page }) => {
+  const log: string[] = [];
+  record('referringClinics', await ensureSecondReferringClinic(page, log));
+  console.log(`[ci-fixtures] referring clinics ${log.join('; ')}`);
+});
+
+setup('ci-fixture: Creatinine with a linked active method (TC-CPHL-31)', async ({ page }) => {
+  const log: string[] = [];
+  record('creatinineMethod', await ensureCreatinineMethod(page, log));
+  console.log(`[ci-fixtures] Creatinine method ${log.join('; ')}`);
 });

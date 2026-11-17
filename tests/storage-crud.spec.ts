@@ -130,7 +130,7 @@ test.describe('Storage Extended — Room Creation & Tab Navigation', () => {
       .or(page.locator('[role="tab"]').filter({ hasText: /device/i }))
       .first();
 
-    if (await devicesTab.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await devicesTab.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await devicesTab.click();
       await page.waitForTimeout(500);
       const bodyText = await page.locator('body').innerText();
@@ -153,7 +153,7 @@ test.describe('Storage Extended — Room Creation & Tab Navigation', () => {
       .getByRole('button', { name: /add room|add/i })
       .first();
 
-    if (!(await addBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
+    if (!(await addBtn.waitFor({ timeout: 3000 }).then(() => true, () => false))) {
       console.log('TC-STOR-EXT-02: SKIP — Add button not visible on rooms page');
       test.skip();
       return;
@@ -213,7 +213,7 @@ test.describe('Storage Extended — Room Creation & Tab Navigation', () => {
       .or(page.locator('[role="tab"]').filter({ hasText: /sample/i }))
       .first();
 
-    if (await sampleTab.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await sampleTab.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await sampleTab.click();
       await page.waitForTimeout(800);
       const bodyText = await page.locator('body').innerText();
@@ -335,12 +335,12 @@ test.describe('Suite STOR-DEEP — Storage API & Cross-Module', () => {
     await waitForRouteContent(page);
 
     const addBtn = page.getByRole('button', { name: /add|create|new/i }).first();
-    if (await addBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await addBtn.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await addBtn.click();
       await page.waitForTimeout(1000);
 
       const nameInput = page.locator('input[id*="name" i], input[placeholder*="name" i]').first();
-      const hasNameInput = await nameInput.isVisible({ timeout: 2000 }).catch(() => false);
+      const hasNameInput = await nameInput.waitFor({ timeout: 2000 }).then(() => true, () => false);
       console.log(`TC-STOR-DEEP-06: room name input visible=${hasNameInput}`);
     } else {
       console.log('TC-STOR-DEEP-06: NOTE — no Add button found on rooms page');

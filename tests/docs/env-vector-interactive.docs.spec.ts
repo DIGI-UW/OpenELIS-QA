@@ -19,14 +19,14 @@ test('User manual — Vector Surveillance (interactive)', async ({ page }, info)
     page.locator('table button').first(),
   ];
   for (const ex of expanders) {
-    try { if (await ex.isVisible({ timeout: 1500 })) { await ex.click({ timeout: 2000 }); await page.waitForTimeout(1200); break; } } catch {}
+    try { if (await ex.waitFor({ timeout: 1500 }).then(() => true, () => false)) { await ex.click({ timeout: 2000 }); await page.waitForTimeout(1200); break; } } catch {}
   }
   await shot(page, info, 'Expanded lot — Species Distribution and specimen table');
 
   // Open the Identify form on a specimen row (do not save).
   try {
     const identify = page.getByRole('button', { name: /identif/i }).first();
-    if (await identify.isVisible({ timeout: 2000 })) { await identify.click({ timeout: 2000 }); await page.waitForTimeout(1000); }
+    if (await identify.waitFor({ timeout: 2000 }).then(() => true, () => false)) { await identify.click({ timeout: 2000 }); await page.waitForTimeout(1000); }
   } catch {}
   await shot(page, info, 'Identify form — species, method, confidence');
   await dismissModals(page);
@@ -34,12 +34,12 @@ test('User manual — Vector Surveillance (interactive)', async ({ page }, info)
   // Open the Split (deconvolution) modal and preview (do not save pools).
   try {
     const split = page.getByRole('button', { name: /split/i }).first();
-    if (await split.isVisible({ timeout: 2000 })) { await split.click({ timeout: 2000 }); await page.waitForTimeout(1000); }
+    if (await split.waitFor({ timeout: 2000 }).then(() => true, () => false)) { await split.click({ timeout: 2000 }); await page.waitForTimeout(1000); }
   } catch {}
   await shot(page, info, 'Split into sub-pools — options');
   try {
     const preview = page.getByRole('button', { name: /preview/i }).first();
-    if (await preview.isVisible({ timeout: 2000 })) { await preview.click({ timeout: 2000 }); await page.waitForTimeout(1000); }
+    if (await preview.waitFor({ timeout: 2000 }).then(() => true, () => false)) { await preview.click({ timeout: 2000 }); await page.waitForTimeout(1000); }
   } catch {}
   await shot(page, info, 'Split — proposed grouping preview');
   await dismissModals(page);
@@ -47,9 +47,9 @@ test('User manual — Vector Surveillance (interactive)', async ({ page }, info)
   // Show existing deconvoluted sub-pools via the Deconvolution status filter, if present.
   try {
     const filter = page.locator('select, [role="combobox"]').first();
-    if (await filter.isVisible({ timeout: 1500 })) { await filter.click({ timeout: 1500 }); await page.waitForTimeout(400);
+    if (await filter.waitFor({ timeout: 1500 }).then(() => true, () => false)) { await filter.click({ timeout: 1500 }); await page.waitForTimeout(400);
       const opt = page.getByText(/deconvolution|decon/i).first();
-      if (await opt.isVisible({ timeout: 1000 })) { await opt.click({ timeout: 1000 }); await page.waitForTimeout(1000); } }
+      if (await opt.waitFor({ timeout: 1000 }).then(() => true, () => false)) { await opt.click({ timeout: 1000 }); await page.waitForTimeout(1000); } }
   } catch {}
   await shot(page, info, 'Sub-pools after deconvolution');
   await saveWalkthrough(page, info);
@@ -64,10 +64,10 @@ test('User manual — Vector Field Survey indices (interactive)', async ({ page 
   // Select the Vector Field Survey program to reveal the survey block.
   try {
     const prog = page.getByLabel(/program/i).first();
-    if (await prog.isVisible({ timeout: 2000 })) {
+    if (await prog.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await prog.click({ timeout: 2000 }); await page.waitForTimeout(400);
       const opt = page.getByText(/vector field survey/i).first();
-      if (await opt.isVisible({ timeout: 1500 })) { await opt.click({ timeout: 1500 }); await page.waitForTimeout(1000); }
+      if (await opt.waitFor({ timeout: 1500 }).then(() => true, () => false)) { await opt.click({ timeout: 1500 }); await page.waitForTimeout(1000); }
     }
   } catch {}
   await shot(page, info, 'Vector Field Survey block revealed');
@@ -79,7 +79,7 @@ test('User manual — Vector Field Survey indices (interactive)', async ({ page 
     [/pupae/i, '50'], [/population/i, '200'],
   ];
   for (const [re, val] of fills) {
-    try { const f = page.getByLabel(re).first(); if (await f.isVisible({ timeout: 800 })) { await f.fill(val, { timeout: 1500 }); await page.waitForTimeout(200); } } catch {}
+    try { const f = page.getByLabel(re).first(); if (await f.waitFor({ timeout: 800 }).then(() => true, () => false)) { await f.fill(val, { timeout: 1500 }); await page.waitForTimeout(200); } } catch {}
   }
   await page.waitForTimeout(800);
   await shot(page, info, 'Computed indices — HI CI BI ABJ PPI and Kemenkes flag');
@@ -94,9 +94,9 @@ test('User manual — Environmental compliance rows (interactive)', async ({ pag
     await go(page, '/AccessionResults');
     try {
       const box = page.getByRole('textbox').first();
-      if (await box.isVisible({ timeout: 2000 })) { await box.fill(acc, { timeout: 2000 }); await page.waitForTimeout(300);
+      if (await box.waitFor({ timeout: 2000 }).then(() => true, () => false)) { await box.fill(acc, { timeout: 2000 }); await page.waitForTimeout(300);
         const search = page.getByRole('button', { name: /search|submit|go/i }).first();
-        if (await search.isVisible({ timeout: 1500 })) { await search.click({ timeout: 1500 }); await page.waitForTimeout(1500); } }
+        if (await search.waitFor({ timeout: 1500 }).then(() => true, () => false)) { await search.click({ timeout: 1500 }); await page.waitForTimeout(1500); } }
     } catch {}
     await shot(page, info, label);
   }

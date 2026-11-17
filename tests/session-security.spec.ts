@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { LOGIN_USER_FIELD } from '../helpers/login-form';
 import {
   BASE,
   ADMIN,
@@ -133,7 +134,11 @@ test.describe('Suite U — Session Lifecycle (TC-SESS)', () => {
     expect(onDashboard, 'Successful login must redirect away from login page').toBe(true);
   });
 
-  test('TC-SESS-03: Invalid login credentials do not expose server internals', async ({ page }) => {
+  test('TC-SESS-03: Invalid login credentials do not expose server internals', async ({ browser }) => {
+    // Signed out on purpose (2026-11-17): with the shared login, /LoginPage redirects into the app
+    // and the form this case types into never appears.
+    const ctx = await browser.newContext({ ignoreHTTPSErrors: true, storageState: { cookies: [], origins: [] } });
+    const page = await ctx.newPage();
     /**
      * US-SESS-6: Entering wrong credentials must show a user-facing error message,
      * not an Internal Server Error or Java stack trace.
@@ -141,25 +146,23 @@ test.describe('Suite U — Session Lifecycle (TC-SESS)', () => {
     await page.goto(`${BASE}/LoginPage`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    const userInput = page.locator('input[name="username"], input[id*="username" i], input[placeholder*="user" i]').first();
+    const userInput = page.locator(LOGIN_USER_FIELD).first();
     const passInput = page.locator('input[type="password"]').first();
 
-    if (await userInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await userInput.fill('baduser_qa_test');
-      await passInput.fill('WrongPassword123!');
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(2500);
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(await userInput.waitFor({ timeout: 3000 }).then(() => true, () => false), 'precondition: userInput is visible').toBeTruthy();
+    await userInput.fill('baduser_qa_test');
+    await passInput.fill('WrongPassword123!');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(2500);
 
-      const bodyText = await page.locator('body').innerText();
-      expect(bodyText).not.toContain('Internal Server Error');
-      expect(bodyText).not.toContain('at org.');
-      expect(bodyText).not.toContain('NullPointerException');
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText).not.toContain('Internal Server Error');
+    expect(bodyText).not.toContain('at org.');
+    expect(bodyText).not.toContain('NullPointerException');
 
-      const hasError = /invalid|incorrect|failed|wrong|error|denied/i.test(bodyText);
-      console.log(`TC-SESS-03: errorShown=${hasError}`);
-    } else {
-      console.log('TC-SESS-03: NOTE — login form not found at /LoginPage');
-    }
+    const hasError = /invalid|incorrect|failed|wrong|error|denied/i.test(bodyText);
+    console.log(`TC-SESS-03: errorShown=${hasError}`);
   });
 
   test('TC-SESS-04: Logout endpoint redirects to login page', async ({ browser }) => {
@@ -180,7 +183,7 @@ test.describe('Suite U — Session Lifecycle (TC-SESS)', () => {
       const bodyText = await page.locator('body').innerText();
 
       const isOnLoginPage = url.includes('LoginPage') || url.includes('login') ||
-                            await page.locator('input[type="password"]').isVisible({ timeout: 2000 }).catch(() => false);
+                            await page.locator('input[type="password"]').waitFor({ timeout: 2000 }).then(() => true, () => false);
       console.log(`TC-SESS-04: Post-logout URL=${url}, onLogin=${isOnLoginPage}`);
       expect(bodyText).not.toContain('Internal Server Error');
       console.log('TC-SESS-04: PASS — logout handled without server error');
@@ -277,6 +280,9 @@ test.describe('Suite U — Session Lifecycle (TC-SESS)', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–16)', () => {
+  // Descriptive on purpose: the QA repo is public, and security findings go to restricted tickets,
+  // not to a red CI line (project rule, 2026-11-17).
+  // eslint-disable-next-line playwright/expect-expect -- see the line above
   test('TC-SESS-09: Security headers are present on dashboard response', async ({ page }) => {
     /**
      * US-SESS-7: Key security headers must be set.
@@ -339,6 +345,9 @@ test.describe('Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–1
     expect(result.status, 'Login endpoint must not 500').not.toBeGreaterThanOrEqual(500);
   });
 
+  // Descriptive on purpose: the QA repo is public, and security findings go to restricted tickets,
+  // not to a red CI line (project rule, 2026-11-17).
+  // eslint-disable-next-line playwright/expect-expect -- see the line above
   test('TC-SESS-11: Rate limiting behavior documented (BUG-22 tracking)', async ({ page }) => {
     /**
      * US-SESS-5: BUG-22 — No rate limiting detected in Phase 10.
@@ -373,7 +382,11 @@ test.describe('Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–1
     // Non-failing test — documents the current state
   });
 
-  test('TC-SESS-12: XSS payload in login fields does not cause server error', async ({ page }) => {
+  test('TC-SESS-12: XSS payload in login fields does not cause server error', async ({ browser }) => {
+    // Signed out on purpose (2026-11-17): with the shared login, /LoginPage redirects into the app
+    // and the form this case types into never appears.
+    const ctx = await browser.newContext({ ignoreHTTPSErrors: true, storageState: { cookies: [], origins: [] } });
+    const page = await ctx.newPage();
     /**
      * US-SESS-3 (edge case): XSS payloads in the login form must be handled
      * gracefully — the server must sanitize input, not crash.
@@ -381,25 +394,27 @@ test.describe('Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–1
     await page.goto(`${BASE}/LoginPage`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    const userInput = page.locator('input[name="username"], input[placeholder*="user" i]').first();
+    const userInput = page.locator(LOGIN_USER_FIELD).first();
     const passInput = page.locator('input[type="password"]').first();
 
-    if (await userInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await userInput.fill('<script>alert(1)</script>');
-      await passInput.fill('password123');
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(2000);
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(await userInput.waitFor({ timeout: 3000 }).then(() => true, () => false), 'precondition: userInput is visible').toBeTruthy();
+    await userInput.fill('<script>alert(1)</script>');
+    await passInput.fill('password123');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(2000);
 
-      const bodyText = await page.locator('body').innerText();
-      expect(bodyText).not.toContain('Internal Server Error');
-      expect(bodyText).not.toContain('<script>'); // Reflected XSS check
-      console.log('TC-SESS-12: PASS — XSS payload in login handled without 500');
-    } else {
-      console.log('TC-SESS-12: NOTE — login form not found');
-    }
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText).not.toContain('Internal Server Error');
+    expect(bodyText).not.toContain('<script>'); // Reflected XSS check
+    console.log('TC-SESS-12: PASS — XSS payload in login handled without 500');
   });
 
-  test('TC-SESS-13: SQL injection payload in login does not cause server error', async ({ page }) => {
+  test('TC-SESS-13: SQL injection payload in login does not cause server error', async ({ browser }) => {
+    // Signed out on purpose (2026-11-17): with the shared login, /LoginPage redirects into the app
+    // and the form this case types into never appears.
+    const ctx = await browser.newContext({ ignoreHTTPSErrors: true, storageState: { cookies: [], origins: [] } });
+    const page = await ctx.newPage();
     /**
      * US-SESS-3: SQL injection in login credentials must be blocked.
      * Parameterized queries should prevent this — test confirms no 500.
@@ -407,29 +422,27 @@ test.describe('Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–1
     await page.goto(`${BASE}/LoginPage`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    const userInput = page.locator('input[name="username"], input[placeholder*="user" i]').first();
+    const userInput = page.locator(LOGIN_USER_FIELD).first();
     const passInput = page.locator('input[type="password"]').first();
 
-    if (await userInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await userInput.fill("admin' OR '1'='1");
-      await passInput.fill("' OR '1'='1' --");
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(2000);
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(await userInput.waitFor({ timeout: 3000 }).then(() => true, () => false), 'precondition: userInput is visible').toBeTruthy();
+    await userInput.fill("admin' OR '1'='1");
+    await passInput.fill("' OR '1'='1' --");
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(2000);
 
-      const url = page.url();
-      const bodyText = await page.locator('body').innerText();
-      expect(bodyText).not.toContain('Internal Server Error');
-      expect(bodyText).not.toContain('SQL');
+    const url = page.url();
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText).not.toContain('Internal Server Error');
+    expect(bodyText).not.toContain('SQL');
 
-      // Must NOT have logged in (that would be a critical security bug)
-      const injectionSucceeded = !url.includes('LoginPage') && !url.includes('login') &&
-                                  !bodyText.toLowerCase().includes('invalid') &&
-                                  !bodyText.toLowerCase().includes('failed');
-      console.log(`TC-SESS-13: SQLi injection succeeded=${injectionSucceeded}`);
-      expect(injectionSucceeded, 'SQL injection must not bypass authentication').toBe(false);
-    } else {
-      console.log('TC-SESS-13: NOTE — login form not found');
-    }
+    // Must NOT have logged in (that would be a critical security bug)
+    const injectionSucceeded = !url.includes('LoginPage') && !url.includes('login') &&
+                                !bodyText.toLowerCase().includes('invalid') &&
+                                !bodyText.toLowerCase().includes('failed');
+    console.log(`TC-SESS-13: SQLi injection succeeded=${injectionSucceeded}`);
+    expect(injectionSucceeded, 'SQL injection must not bypass authentication').toBe(false);
   });
 
   test('TC-SESS-14: Stale CSRF token does not allow data modification', async ({ page }) => {
@@ -456,7 +469,8 @@ test.describe('Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–1
     // If CSRF is enforced: 403. If not enforced but payload invalid: 500 (BUG-1).
     // We only check it doesn't return 200 with a new test created.
     // (500 here is documented BUG-1, not a new issue)
-    console.log('TC-SESS-14: PASS — stale CSRF token did not result in successful write');
+    // Was a console verdict only (2026-11-17): it printed PASS whatever the status was.
+    expect(result.status, 'a write with an invalid CSRF token is refused').toBeGreaterThanOrEqual(400);
   });
 
   test('TC-SESS-15: Multiple concurrent session requests are stable', async ({ page }) => {

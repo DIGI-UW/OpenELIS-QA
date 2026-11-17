@@ -20,6 +20,7 @@ async function login(page: any) {
   await page.locator('button:has-text("Login"), button[type="submit"]').first().click();
   await page.waitForURL('**/MasterListsPage', { timeout: 15000 }).catch(() => {});
 }
+// eslint-disable-next-line playwright/expect-expect -- a discovery probe: it prints what it finds for a person to read.
 test('audit editor sections', async ({ page }) => {
   test.setTimeout(220000);
   const rest: string[] = [];

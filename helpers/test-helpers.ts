@@ -6,7 +6,7 @@
  * to support split feature-specific test files.
  */
 
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, test } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -344,12 +344,31 @@ export function lookupAdminUrl(itemName: string): string | undefined {
  * callers then read isVisible() (which does not wait) on an empty <main>: 16 Nov 2026, twelve
  * admin-config "list or form visible" cases read false on the develop stack. Never throws.
  */
-export async function waitForRouteContent(page: Page, timeout = 20_000): Promise<void> {
+export async function waitForRouteContent(page: Page, timeout = 20_000): Promise<boolean> {
+  const started = Date.now();
   await page.locator('.cds--loading-overlay').first().waitFor({ state: 'hidden', timeout }).catch(() => {});
   // The first match in the DOM can be a hidden element (CI run 43998431265: Results kept a hidden
   // one first, so every caller waited the full 20 s); wait for the first visible one.
-  await page.locator('main').locator('h1, h2, h3, h4, table, form, [role="table"], button, select, input, [role="combobox"]')
-    .locator('visible=true').first().waitFor({ state: 'visible', timeout }).catch(() => {});
+  const shown = await page.locator('main').locator('h1, h2, h3, h4, table, form, [role="table"], button, select, input, [role="combobox"]')
+    .locator('visible=true').first().waitFor({ state: 'visible', timeout }).then(() => true, () => false);
+  noteSlowWait('waitForRouteContent', page.url(), Date.now() - started);
+  return shown;
+}
+
+/**
+ * Records a helper wait over 5 s as a "slow-wait" annotation on the running test. The CI report
+ * (scripts/ci-known-reds.mjs) counts them per suite and lists the slowest tests, so a helper
+ * that starts waiting out its timeout shows up in the next run, not at the job limit
+ * (2026-11-17: waitForRouteContent waited 20 s per navigation and the modules suite ran past
+ * three hours with nothing saying why).
+ */
+export function noteSlowWait(helper: string, where: string, ms: number): void {
+  if (ms < 5_000) return;
+  try {
+    test.info().annotations.push({ type: 'slow-wait', description: `${helper} ${Math.round(ms / 1000)} s at ${where}` });
+  } catch {
+    // outside a test (global setup): nothing to annotate
+  }
 }
 
 export async function navigateToAdminItem(page: Page, itemName: string): Promise<void> {
@@ -389,7 +408,7 @@ export async function navigateToAdminItem(page: Page, itemName: string): Promise
     .filter({ hasText: itemName })
     .first();
 
-  const present = await adminItem.isVisible({ timeout: 5_000 }).catch(() => false);
+  const present = await adminItem.waitFor({ timeout: 5_000 }).then(() => true, () => false);
   if (!present) {
     throw new Error(
       `Admin item "${itemName}" not found in the sidebar, and it has no entry in ` +
@@ -436,7 +455,10 @@ export async function navigateWithDiscovery(page: Page, candidates: string[]): P
         /"title"\s*:\s*"Not Found"/.test(body);
       if (isErrorDocument) continue;
 
-      await waitForRouteContent(page); // callers read the page right away
+      // A route the app does not have still answers 200 with an empty main (17 Nov 2026:
+      // /MasterListsPage/LOINC and /MasterListsPage/dictionary). Such a candidate is not the page;
+      // try the next one instead of reporting it loaded after a 20 s wait.
+      if (!(await waitForRouteContent(page, 8_000))) continue;
       return true;
     } catch (e) {
       // Try next candidate
@@ -679,7 +701,7 @@ export async function login(page: Page, user: string, pass: string): Promise<voi
   await page.fill('input[name="loginName"], #loginName', user);
   await page.fill('input[name="password"], #password, input[type="password"]', pass);
   const submit = page.getByRole('button', { name: /submit|login|sign in|save|next|accept/i }).first();
-  if (await submit.isVisible({ timeout: 2_000 }).catch(() => false)) {
+  if (await submit.waitFor({ timeout: 2_000 }).then(() => true, () => false)) {
     await submit.click();
   } else {
     await page.locator('#submitButton, button[type="submit"], input[type="submit"]').first().click();
@@ -706,7 +728,7 @@ export async function fillSearchField(
 ): Promise<boolean> {
   for (const selector of selectors) {
     const field = page.locator(selector).first();
-    if (await field.isVisible({ timeout: 1000 }).catch(() => false)) {
+    if (await field.waitFor({ timeout: 1000 }).then(() => true, () => false)) {
       await field.click();
       await field.fill(value);
       return true;
@@ -729,7 +751,7 @@ export async function fillDateField(
 ): Promise<boolean> {
   for (const selector of selectors) {
     const field = page.locator(selector).first();
-    if (await field.isVisible({ timeout: 1000 }).catch(() => false)) {
+    if (await field.waitFor({ timeout: 1000 }).then(() => true, () => false)) {
       await field.click();
       await field.fill(date);
       return true;
@@ -748,7 +770,7 @@ export async function fillDateField(
 export async function clickButton(page: Page, labels: string[]): Promise<boolean> {
   for (const label of labels) {
     const button = page.getByRole('button', { name: new RegExp(label, 'i') }).first();
-    if (await button.isVisible({ timeout: 1000 }).catch(() => false)) {
+    if (await button.waitFor({ timeout: 1000 }).then(() => true, () => false)) {
       await button.click();
       return true;
     }
@@ -829,14 +851,14 @@ export async function navigateViaMenu(page: Page, menuItems: string[]): Promise<
   const hamburger = page
     .locator('button[aria-label*="menu" i], button[aria-label*="Menu"], [class*="hamburger"]')
     .first();
-  if (await hamburger.isVisible({ timeout: 2_000 }).catch(() => false)) {
+  if (await hamburger.waitFor({ timeout: 2_000 }).then(() => true, () => false)) {
     await hamburger.click();
     await page.waitForTimeout(500);
   }
 
   for (const item of menuItems) {
     const menuItem = page.locator('button, a, [role="menuitem"]').filter({ hasText: item }).first();
-    if (await menuItem.isVisible({ timeout: 1_000 }).catch(() => false)) {
+    if (await menuItem.waitFor({ timeout: 1_000 }).then(() => true, () => false)) {
       await menuItem.click();
       await page.waitForTimeout(300);
     }
@@ -879,7 +901,7 @@ export async function tryNavigateToURL(page: Page, candidates: string[]): Promis
 /** Select a sample type by its option id on the order form, if the select is present. */
 export async function selectSampleType(page: Page, typeId: string): Promise<void> {
   const typeSelect = page.locator('select[id*="sample"], select[id*="type"]').first();
-  if (await typeSelect.isVisible({ timeout: 3_000 }).catch(() => false)) {
+  if (await typeSelect.waitFor({ timeout: 3_000 }).then(() => true, () => false)) {
     await typeSelect.selectOption(typeId);
   }
 }
@@ -930,7 +952,7 @@ export async function clickFormSearch(page: Page, fieldSelector: string): Promis
   // AFTER the fields are filled does NOT clear them, so callers fill first.
 
   const modeBtn = page.getByRole('button', { name: /^\s*Search for Patient\s*$/i }).first();
-  if (await modeBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
+  if (await modeBtn.waitFor({ timeout: 2_000 }).then(() => true, () => false)) {
     await modeBtn.click().catch(() => { /* mode already active */ });
     await page.waitForTimeout(600);
   }
@@ -1071,7 +1093,7 @@ export function orderWizardForward(page: Page): Locator {
  */
 export async function selectOrderProgram(page: Page, label = 'Routine Testing'): Promise<boolean> {
   const select = page.locator('#additionalQuestionsSelect');
-  if (!(await select.isVisible({ timeout: 5_000 }).catch(() => false))) return false;
+  if (!(await select.waitFor({ timeout: 5_000 }).then(() => true, () => false))) return false;
   await select.selectOption({ label });
   return true;
 }

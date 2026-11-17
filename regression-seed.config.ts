@@ -5,7 +5,7 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   reporter: [['list']],
-  use: { ...devices['Desktop Chrome'], baseURL: BASE, headless: true, ignoreHTTPSErrors: true },
+  use: { ...devices['Desktop Chrome'], locale: 'en-US', extraHTTPHeaders: { 'Accept-Language': 'en-US' }, baseURL: BASE, headless: true, ignoreHTTPSErrors: true },
   projects: [
     { name: 'setup', testDir: '.', testMatch: /auth\.setup\.ts/ },
     { name: 'seed-data', testDir: '.', testMatch: /seed-data\.setup\.ts/, dependencies: ['setup'], use: { storageState: '.auth/user.json' } },

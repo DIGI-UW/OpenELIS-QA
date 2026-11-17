@@ -68,6 +68,7 @@ test.describe.serial('Persona PE — QA Officer', () => {
     markStep(PERSONA, 2, 'PASS', `${nceCount} NCEs in queue, ${rejectedToday} rejections today — sane`);
   });
 
+  // eslint-disable-next-line playwright/expect-expect -- fails through markStep BLOCKED unless known-gaps.ts declares it
   test('Step 3 — Document corrective action on first NCE (PERSIST)', async ({ page }) => {
     if (!firstNceId) test.skip();
     await page.goto(BASE);

@@ -88,7 +88,7 @@ test.describe.serial('Chain AB — Env Holding-Time + Sertifikat Hasil Uji', () 
     await page.waitForLoadState('networkidle').catch(() => {});
 
     const exceededToast = page.getByText(/Holding Time Exceeded/i).first();
-    const sawToast = await exceededToast.isVisible({ timeout: 8000 }).catch(() => false);
+    const sawToast = await exceededToast.waitFor({ timeout: 8000 }).then(() => true, () => false);
     // The red box is a styled wrapper around the boxed result input; the toast
     // text is the robust, locale-stable signal, so we assert on that.
     if (sawToast) {
@@ -133,15 +133,15 @@ test.describe.serial('Chain AB — Env Holding-Time + Sertifikat Hasil Uji', () 
     await page.waitForLoadState('networkidle').catch(() => {});
 
     const searchBtn = page.getByRole('button', { name: /^search$/i }).first();
-    if (await searchBtn.isVisible({ timeout: 8000 }).catch(() => false)) {
+    if (await searchBtn.waitFor({ timeout: 8000 }).then(() => true, () => false)) {
       await searchBtn.click().catch(() => {});
       await page.waitForLoadState('networkidle').catch(() => {});
     }
 
     const emptyState = await page.getByText(/No orders found for the selected filters/i)
-      .isVisible({ timeout: 6000 }).catch(() => false);
+      .waitFor({ timeout: 6000 }).then(() => true, () => false);
     const certRowVisible = CERT_ACCESSION
-      ? await page.getByText(CERT_ACCESSION, { exact: false }).isVisible({ timeout: 4000 }).catch(() => false)
+      ? await page.getByText(CERT_ACCESSION, { exact: false }).waitFor({ timeout: 4000 }).then(() => true, () => false)
       : false;
 
     if (certRowVisible) {

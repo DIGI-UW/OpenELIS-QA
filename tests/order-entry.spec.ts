@@ -15,20 +15,20 @@ import {
 // Helper function
 async function selectSampleType(page: any, typeId: string) {
   const typeSelect = page.locator('select[id*="sample"], select[id*="type"]').first();
-  if (await typeSelect.isVisible({ timeout: 3000 }).catch(() => false)) {
+  if (await typeSelect.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
     await typeSelect.selectOption(typeId);
   }
 }
 
 async function navigateViaMenu(page: any, menuPath: string[]) {
   const menu = page.getByRole('button', { name: /menu|hamburger|navigation/i }).first();
-  if (await menu.isVisible({ timeout: 2000 }).catch(() => false)) {
+  if (await menu.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
     await menu.click();
     await page.waitForTimeout(300);
   }
   for (const item of menuPath) {
     const link = page.getByText(item, { exact: true });
-    if (await link.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await link.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await link.click();
       await page.waitForTimeout(300);
     }
@@ -141,13 +141,16 @@ test.describe('Edit Order (ModifyOrder)', () => {
       }
       await orderWizardForward(page).last().click(); // to Add Order
       const generate = page.getByRole('button', { name: /Generate/i });
-      if (await generate.isVisible({ timeout: 3000 }).catch(() => false)) await generate.click();
+      if (await generate.waitFor({ timeout: 3000 }).then(() => true, () => false)) await generate.click();
       await orderWizardForward(page).last().click(); // Submit
 
       // Confirm accession changed (BUG-4)
       const newAccession = await page.locator('[class*="accession"], [id*="accession"]').first().textContent().catch(() => '');
       // BUG-4: newAccession !== the original. When fixed, assert expect(newAccession).toContain(accession).
       console.log(`BUG-4: accession ${accession} after ModifyOrder = ${newAccession}`);
+      // Was a console line only (2026-11-17). This asserts the path completes and shows a lab
+      // number; whether it is the same number (BUG-4) is printed, not asserted (no ruling yet).
+      expect(newAccession, 'a lab number is shown after Modify Order submits').toBeTruthy();
     }
   );
 });
@@ -346,7 +349,9 @@ test.describe('Multi-Patient Batch Workflow (TC-BATCH)', () => {
     }
 
     const saveBtn = page.getByRole('button', { name: /save|submit/i }).first();
-    if (await saveBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    // Was a console verdict only (2026-11-17).
+    expect(await saveBtn.waitFor({ timeout: 2000 }).then(() => true, () => false), 'the check this case reports').toBeTruthy();
+    if (await saveBtn.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await saveBtn.click();
       await page.waitForTimeout(2000);
       console.log(`TC-BATCH-03: PASS — saved ${fillCount} results from By Unit worklist`);
@@ -354,6 +359,8 @@ test.describe('Multi-Patient Batch Workflow (TC-BATCH)', () => {
   });
 
   test('TC-BATCH-04: Validation queue shows multiple pending results', async ({ page }) => {
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+    test.fixme(true, 'Drives Validation by Order (/ResultValidation?type=order), which is retired. Rewrite against the unified Validation page.');
     const valUrls = ['/ResultValidation?type=order', '/ResultValidation', '/ResultsValidation'];
     let valUrl = '';
     for (const u of valUrls) {
@@ -363,14 +370,13 @@ test.describe('Multi-Patient Batch Workflow (TC-BATCH)', () => {
         break;
       }
     }
-    if (!valUrl) {
-      console.log('TC-BATCH-04: SKIP — validation screen not accessible');
-      return;
-    }
+    // Was a console verdict only (2026-11-17).
+    expect(valUrl, 'the validation screen opens').toBeTruthy();
 
     await page.waitForTimeout(2000);
     const pendingRows = await page.getByRole('row').count();
     console.log(`TC-BATCH-04: ${pendingRows} row(s) in validation queue`);
+    expect(pendingRows, 'the validation queue shows pending rows').toBeGreaterThanOrEqual(1);
     console.log(pendingRows >= 1
       ? 'TC-BATCH-04: PASS — pending results visible in validation queue'
       : 'TC-BATCH-04: NOTE — validation queue is empty (all may already be validated)');
@@ -407,7 +413,9 @@ test.describe('Multi-Patient Batch Workflow (TC-BATCH)', () => {
     }
 
     const saveBtn = page.getByRole('button', { name: /save|validate|accept/i }).first();
-    if (await saveBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    // Was a console verdict only (2026-11-17).
+    expect(await saveBtn.waitFor({ timeout: 2000 }).then(() => true, () => false), 'the check this case reports').toBeTruthy();
+    if (await saveBtn.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await saveBtn.click();
       await page.waitForTimeout(2000);
       console.log(`TC-BATCH-05: PASS — approved ${approveCount} result(s) in one validation session`);
@@ -464,8 +472,8 @@ test.describe('Suite AH — Incoming Orders & Batch Order Entry', () => {
     expect(page.url()).not.toContain('signin');
 
     // Check for page heading or table
-    const heading = await page.locator('[class*="heading"], h1, h2, [role="heading"]').first().isVisible({ timeout: 3000 }).catch(() => false);
-    const table = await page.locator('table, [role="table"], [class*="list"], [class*="grid"]').first().isVisible({ timeout: 3000 }).catch(() => false);
+    const heading = await page.locator('[class*="heading"], h1, h2, [role="heading"]').first().waitFor({ timeout: 3000 }).then(() => true, () => false);
+    const table = await page.locator('table, [role="table"], [class*="list"], [class*="grid"]').first().waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     expect(heading || table).toBeTruthy();
   });
@@ -479,7 +487,7 @@ test.describe('Suite AH — Incoming Orders & Batch Order Entry', () => {
     await page.waitForTimeout(1000);
 
     // Check for key columns in table
-    const tableVisible = await page.locator('table').first().isVisible({ timeout: 3000 }).catch(() => false);
+    const tableVisible = await page.locator('table').first().waitFor({ timeout: 3000 }).then(() => true, () => false);
     if (!tableVisible) {
       test.skip();
       return;
@@ -508,8 +516,8 @@ test.describe('Suite AH — Incoming Orders & Batch Order Entry', () => {
     await page.locator('main textarea, main [role="textbox"], main input[type="text"]').first().waitFor({ timeout: 30_000 }).catch(() => {});
 
     // Check for form or input field
-    const textarea = await page.locator('textarea, [role="textbox"]').first().isVisible({ timeout: 3000 }).catch(() => false);
-    const input = await page.locator('input[type="text"]').first().isVisible({ timeout: 3000 }).catch(() => false);
+    const textarea = await page.locator('textarea, [role="textbox"]').first().waitFor({ timeout: 3000 }).then(() => true, () => false);
+    const input = await page.locator('input[type="text"]').first().waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     expect(textarea || input).toBeTruthy();
   });
@@ -526,7 +534,7 @@ test.describe('Suite AH — Incoming Orders & Batch Order Entry', () => {
     await page.waitForTimeout(1000);
 
     const textareaLocator = page.locator('textarea').first();
-    const textareaVisible = await textareaLocator.isVisible({ timeout: 3000 }).catch(() => false);
+    const textareaVisible = await textareaLocator.waitFor({ timeout: 3000 }).then(() => true, () => false);
     if (!textareaVisible) {
       test.skip();
       return;
@@ -537,13 +545,13 @@ test.describe('Suite AH — Incoming Orders & Batch Order Entry', () => {
 
     // Look for submit/process button
     const button = page.getByRole('button', { name: /submit|process|parse/i }).first();
-    if (await button.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await button.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await button.click();
       await page.waitForTimeout(2000);
     }
 
     // Check if form processed (no immediate error)
-    const hasError = await page.locator('[class*="error"], .error').first().isVisible({ timeout: 1000 }).catch(() => false);
+    const hasError = await page.locator('[class*="error"], .error').first().waitFor({ timeout: 1000 }).then(() => true, () => false);
     expect(hasError).toBe(false);
   });
 
@@ -559,7 +567,7 @@ test.describe('Suite AH — Incoming Orders & Batch Order Entry', () => {
     await page.waitForTimeout(1000);
 
     const textareaLocator = page.locator('textarea').first();
-    const textareaVisible = await textareaLocator.isVisible({ timeout: 3000 }).catch(() => false);
+    const textareaVisible = await textareaLocator.waitFor({ timeout: 3000 }).then(() => true, () => false);
     if (!textareaVisible) {
       test.skip();
       return;
@@ -569,7 +577,7 @@ test.describe('Suite AH — Incoming Orders & Batch Order Entry', () => {
     await textareaLocator.fill('INVALID\n\n');
 
     const button = page.getByRole('button', { name: /submit|process|parse/i }).first();
-    if (await button.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await button.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await button.click();
       await page.waitForTimeout(2000);
     }

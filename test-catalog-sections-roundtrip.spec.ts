@@ -50,7 +50,7 @@ async function login(page: Page) {
   // With a preloaded storageState (guards.config.ts) we're already authenticated, so /login
   // redirects away and no username field appears — skip fast instead of hanging on fill().
   const userField = page.locator('input[name="loginName"], #loginName, input[placeholder*="ser" i]').first();
-  if (!(await userField.isVisible({ timeout: 4000 }).catch(() => false))) return;
+  if (!(await userField.waitFor({ timeout: 4000 }).then(() => true, () => false))) return;
   // Short timeouts + catches: the testing login page intermittently hangs ("Loginloading"); never
   // let that stall a test for 150s — storageState already authenticates us.
   await userField.fill(ADMIN.user, { timeout: 8000 }).catch(() => {});
@@ -191,7 +191,7 @@ async function createTest(page: Page, name: string, code: string, sampleType = '
     // Maybe a prior attempt already created it (Save fired but redirect/lookup raced).
     const pre = await findTestIdByName(page, name); if (pre) return pre;
     await nav(page, url);
-    if (!(await nameField().isVisible({ timeout: 8000 }).catch(() => false))) {
+    if (!(await nameField().waitFor({ timeout: 8000 }).then(() => true, () => false))) {
       // 2026-08-12: DIAGNOSE BEFORE REACTING. This used to assume "logged out" and always ran
       // login() + nav() — more navigation on top of a still-bootstrapping SPA, which is what kept
       // the shell empty. Only log in when a login form is actually on screen; for an empty shell the
@@ -502,10 +502,14 @@ test.describe('Test Catalog editor — section round-trips (A–G)', () => {
     const linkBtn = page.getByRole('dialog', { name: 'Link Method' }).getByRole('button', { name: /link method/i });
     await expect(linkBtn, 'Link Method enables once a method and a date are chosen').toBeEnabled({ timeout: 10_000 });
     await linkBtn.click();
-    await page.waitForTimeout(1200);
-    const methods = await getJson(request, `${REST}/test/${id}/methods`);
-    expect(Array.isArray(methods)).toBeTruthy();
-    expect(methods.some((m: any) => /EIA/i.test(m.methodName || '')), 'EIA method linked').toBeTruthy();
+    await expect(page.getByText('Method linked.'), 'the page reports the link').toBeVisible({ timeout: 15_000 });
+    // 2026-11-17 (CI 44049333844 and testing): the link was saved, but the bare request fixture sent
+    // no Accept-Language and the server answered with the French method name ("EIE"). Every config
+    // now sends Accept-Language en-US. The read-back is polled rather than read after a fixed wait.
+    await expect.poll(async () => {
+      const methods = await getJson(request, `${REST}/test/${id}/methods`);
+      return Array.isArray(methods) && methods.some((m: any) => /EIA/i.test(m.methodName || ''));
+    }, { message: 'EIA method linked', timeout: 15_000 }).toBe(true);
   });
 
   test('TCF-04 Labels: preset + override toggle persist', async ({ page, request }) => {

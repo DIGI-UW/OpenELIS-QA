@@ -236,7 +236,7 @@ test.describe('API CRUD Survey — GET Endpoints (Phase 29)', () => {
         sampleTypeNames: names(data.existingSampleTypeList, 'value'),
         // A group's panels, when present, must be a list — not a scalar.
         badPanelsShape: groups
-          ? groups.filter(g => g.panels !== undefined && g.panels !== null && !Array.isArray(g.panels)).length
+          ? groups.filter((g: any) => g.panels !== undefined && g.panels !== null && !Array.isArray(g.panels)).length
           : -1,
       };
     });
@@ -502,9 +502,9 @@ test.describe('API CRUD Survey — Cross-Module Data Consistency (Phase 29)', ()
 
     console.log(`TC-XMOD-04: ${result.ruleCount} reflex rules, ${result.testCount} tests. Invalid refs: ${result.invalidRefs.length}`);
     // All test IDs referenced in rules should exist in the test catalog
-    if (result.ruleCount > 0) {
-      expect(result.invalidRefs).toHaveLength(0);
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(result.ruleCount > 0, 'precondition: result.ruleCount > 0').toBeTruthy();
+    expect(result.invalidRefs).toHaveLength(0);
   });
 });
 

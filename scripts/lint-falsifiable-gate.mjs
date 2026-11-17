@@ -58,6 +58,9 @@ const CANNOT_FAIL = [
   ['expect-true',      (c) => /expect\(\s*(true|1)\s*\)\s*\.toBe/.test(c)],
   ['zero-or-ok',       (c) => /===\s*0\s*\|\|/.test(c)],
   ['either-or-pass',   (c) => /\|\|[^;\n]{0,90}\)?\s*,?[^;]{0,120}\)\s*\.toBe\(\s*true\s*\)/.test(c)],
+  ['conditional-only', (c, n) => n > 0 && !hasUnconditionalAssertion(c)],
+  // `await expect(x).toBeVisible().catch(() => console.log(...))` turns a failed assertion into a log line.
+  ['swallowed-expect', (c) => /\bexpect\s*\((?:[^;]|\n)*?\)\s*\.\s*(?:not\s*\.\s*)?to[A-Za-z]+\s*\((?:[^;]|\n)*?\)\s*\.\s*catch\s*\(/.test(c)],
 ];
 
 /**
@@ -129,6 +132,81 @@ function hasSilentGuard(code) {
   return false;
 }
 
+/**
+ * Does the case assert anything on EVERY path? (added 2026-11-17)
+ *
+ * TC-RBS-03 passed for months with its only expect inside
+ *   if (maxOptions > 0) { expect(maxOptions)...; } else { console.log('NOTE ...'); }
+ * because the page had not drawn when it counted. Nothing failed on the path the run took.
+ *
+ * The walker blanks every if / else-if / else chain whose branches do not ALL raise
+ * (expect, throw, requireStep, a failing markStep). A chain that ends in a final `else`
+ * and raises in every branch is kept: whichever path runs, something is asserted. Then
+ * the case is falsifiable if an assertion is left in what remains. Loops are left as
+ * they are (an expect in a loop over an empty list is the self-skip gate's business).
+ */
+function hasUnconditionalAssertion(code) {
+  const RAISES = /\bexpect\s*[.(]|\bthrow\b|\brequireStep\s*\(|\bmarkStep\s*\([^;]*?['"](FAIL|BLOCKED|GAP)['"]|\btest\s*\.\s*skip\s*\(\s*\S/;
+  const STRONG = /\bthrow\b|\brequireStep\s*\(|\bmarkStep\s*\([^;]*?['"](FAIL|BLOCKED|GAP)['"]|\btest\s*\.\s*skip\s*\(\s*\S|\bexpect\s*\(\s*false\b|\bexpect\.soft\s*\(\s*false\b/;
+  const close = (from, open, shut) => {
+    let d = 0;
+    for (let e = from; e < code.length; e++) {
+      if (code[e] === open) d++;
+      else if (code[e] === shut) { d--; if (d === 0) return e; }
+    }
+    return -1;
+  };
+  const skipWs = (k) => { while (k < code.length && /\s/.test(code[k])) k++; return k; };
+  // one branch body starting at k: a {block} or a single statement; returns [start, end]
+  const branch = (k) => {
+    k = skipWs(k);
+    if (code[k] === '{') { const e = close(k, '{', '}'); return e < 0 ? null : [k, e + 1]; }
+    const semi = code.indexOf(';', k);
+    return semi < 0 ? null : [k, semi + 1];
+  };
+  const cuts = [];
+  const re = /\bif\s*\(/g;
+  let m;
+  while ((m = re.exec(code))) {
+    const start = m.index;
+    if (cuts.some(([a, b]) => start >= a && start < b)) continue; // inside a chain already cut
+    if (/\belse\s*$/.test(code.slice(Math.max(0, start - 10), start))) continue; // handled by its chain
+    const parens = close(code.indexOf('(', start), '(', ')');
+    if (parens < 0) continue;
+    const branches = [];
+    let b = branch(parens + 1);
+    if (!b) continue;
+    branches.push(b);
+    let end = b[1], finalElse = false;
+    for (;;) {
+      const k = skipWs(end);
+      if (!code.startsWith('else', k)) break;
+      const after = skipWs(k + 4);
+      if (code.startsWith('if', after) && /\s|\(/.test(code[after + 2] || '')) {
+        const p = close(code.indexOf('(', after), '(', ')');
+        if (p < 0) break;
+        b = branch(p + 1);
+      } else {
+        b = branch(after);
+        finalElse = true;
+      }
+      if (!b) break;
+      branches.push(b);
+      end = b[1];
+      if (finalElse) break;
+    }
+    const allRaise = finalElse && branches.every(([a, z]) => RAISES.test(code.slice(a, z)));
+    // A guard that fails, or skips with a stated reason, on its own path is an assertion:
+    // `if (!order) { markStep(..., 'FAIL', ...); return; }` fails the case when it fires.
+    const guard = branches.some(([a, z]) => STRONG.test(code.slice(a, z)));
+    if (!allRaise && !guard) cuts.push([start, end]);
+  }
+  let rest = '', at = 0;
+  for (const [a, z] of cuts.sort((x, y) => x[0] - y[0])) { if (a < at) continue; rest += code.slice(at, a); at = z; }
+  rest += code.slice(at);
+  return /\bexpect\s*[.(]|\bthrow\b|\brequireStep\s*\(|\bmarkStep\s*\([^;]*?['"](FAIL|BLOCKED|GAP)['"]/.test(rest);
+}
+
 function specFiles(dir, out = []) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     if (e.name.startsWith('.') || e.name === 'node_modules') continue;
@@ -179,9 +257,10 @@ for (const f of files) {
 }
 
 const mode = process.argv.includes('--update') ? 'update'
-  : process.argv.includes('--report') ? 'report' : 'check';
+  : process.argv.includes('--report') ? 'report' : process.argv.includes('--list-conditional') ? 'list' : 'check';
 
-if (mode === 'report') {
+if (mode === "list") { for (const [f, d] of Object.entries(detail)) for (const c of d.hollowCases) if (c.flags.includes("conditional-only")) console.log(f + " :: " + c.title + " :: " + c.flags.join(",")); process.exit(0); }
+if (mode === "report") {
   const rows = Object.entries(current).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
   console.log(`${total} test blocks · ${hollowTotal} cannot fail (${(100 * hollowTotal / total).toFixed(1)}%) · ${tripwires} deliberate tripwires\n`);
   for (const [f, n] of rows) {
@@ -245,6 +324,11 @@ What each flag means, and the fix:
   zero-or-ok        \`status === 0 || (status >= 200 && status < 300)\` passes when no
                     request fired at all.
   either-or-pass    "either outcome is a pass" — pick the one the product must do.
+  swallowed-expect  \`await expect(...).toX().catch(() => ...)\` logs a failed assertion and
+                    passes. Drop the .catch, or use expect.soft if the case must go on.
+  conditional-only  every assertion sits under an if with no asserting else: on the path
+                    the run takes, nothing is checked (TC-RBS-03 counted 0 selects and
+                    passed). Assert the condition itself, or assert in every branch.
 
 If a case genuinely documents a KNOWN DEFECT, put \`test.fail()\` inside its body and
 assert the correct behaviour. That is not hollow: it turns red the day the bug is fixed.

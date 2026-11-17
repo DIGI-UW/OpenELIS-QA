@@ -53,7 +53,7 @@ interface LogbookRow {
   resultValue?: string;
 }
 
-async function readComponents(page, labNumber: string): Promise<LogbookRow[]> {
+async function readComponents(page: import('@playwright/test').Page, labNumber: string): Promise<LogbookRow[]> {
   const res = await page.request.get(
     `/api/OpenELIS-Global/rest/LogbookResults?labNumber=${labNumber}&doRange=false&finished=false`,
   );

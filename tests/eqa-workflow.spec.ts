@@ -70,7 +70,7 @@ async function goToEQAProgramManagement(page: any): Promise<boolean> {
     .locator('a, li, span')
     .filter({ hasText: /eqa program|external quality/i })
     .first();
-  if (await link.isVisible({ timeout: 3000 }).catch(() => false)) {
+  if (await link.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
     await link.click();
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
     await waitForRouteContent(page);
@@ -136,7 +136,7 @@ test.describe('Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration'
       .getByRole('button', { name: /^add scheme$|add|new|create/i })
       .first();
 
-    const addVisible = await addBtn.isVisible({ timeout: 5000 }).catch(() => false);
+    const addVisible = await addBtn.waitFor({ timeout: 5000 }).then(() => true, () => false);
 
     if (!addVisible) {
       const body = await page.locator('body').innerText();
@@ -162,7 +162,7 @@ test.describe('Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration'
       .or(page.locator('a, button').filter({ hasText: /add|new|create/i }))
       .first();
 
-    if (!(await addBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
+    if (!(await addBtn.waitFor({ timeout: 3000 }).then(() => true, () => false))) {
       console.log('TC-EQA-ADMIN-04: SKIP — Add button not found');
       test.skip();
       return;
@@ -204,7 +204,7 @@ test.describe('Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration'
       .or(page.locator('a, button').filter({ hasText: /add|new|create/i }))
       .first();
 
-    if (!(await addBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
+    if (!(await addBtn.waitFor({ timeout: 3000 }).then(() => true, () => false))) {
       console.log('TC-EQA-ADMIN-05: SKIP — Add button not found, cannot test CRUD create');
       test.skip();
       return;
@@ -219,12 +219,12 @@ test.describe('Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration'
       .locator('input[name*="name"], input[placeholder*="name"], input[id*="name"]')
       .first();
 
-    if (await nameInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await nameInput.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await nameInput.fill(programName);
     } else {
       // Try first text input as fallback
       const firstInput = page.locator('input[type="text"]').first();
-      if (await firstInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await firstInput.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await firstInput.fill(programName);
       }
     }
@@ -234,7 +234,7 @@ test.describe('Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration'
       .getByRole('button', { name: /save|submit|add|create/i })
       .first();
 
-    if (await saveBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await saveBtn.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await saveBtn.click();
       await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
       await waitForRouteContent(page);
@@ -264,7 +264,7 @@ test.describe('Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration'
         .locator('a, li, span')
         .filter({ hasText: /distribution/i })
         .first();
-      if (await distLink.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await distLink.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
         await distLink.click();
         await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
         await waitForRouteContent(page);
@@ -311,7 +311,7 @@ test.describe('Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration'
       .or(page.locator('a, button').filter({ hasText: /add|new|create|ship/i }))
       .first();
 
-    const addVisible = await addBtn.isVisible({ timeout: 5000 }).catch(() => false);
+    const addVisible = await addBtn.waitFor({ timeout: 5000 }).then(() => true, () => false);
 
     if (addVisible) {
       await addBtn.click();

@@ -33,7 +33,7 @@ test.describe('Performance Smoke (TC-PERF)', () => {
     const nextBtn = orderWizardForward(page);
 
     for (let step = 0; step < 3; step++) {
-      if (!(await nextBtn.isVisible({ timeout: 2000 }).catch(() => false))) break;
+      if (!(await nextBtn.waitFor({ timeout: 2000 }).then(() => true, () => false))) break;
       const start = Date.now();
       await nextBtn.click();
       await page.waitForTimeout(300);
@@ -58,7 +58,7 @@ test.describe('Performance Smoke (TC-PERF)', () => {
     await page.waitForTimeout(1000);
 
     const accField = page.locator('input[id*="accession" i]').first();
-    if (!(await accField.isVisible({ timeout: 3000 }).catch(() => false))) {
+    if (!(await accField.waitFor({ timeout: 3000 }).then(() => true, () => false))) {
       console.log('TC-PERF-03: SKIP — no accession field');
       return;
     }
@@ -121,6 +121,10 @@ test.describe('Performance Smoke (TC-PERF)', () => {
       });
     };
 
+    // The baseline is the app already drawn once (2026-11-17): read right after login, the heap
+    // held only the sign-in page, so any first visit to the app read as 50x "growth".
+    await page.goto(`${BASE}/Dashboard`).catch(() => {});
+    await page.waitForTimeout(2000);
     const initialMem = await getMemory();
 
     const urls = [
@@ -135,6 +139,12 @@ test.describe('Performance Smoke (TC-PERF)', () => {
     }
 
     const finalMem = await getMemory();
+
+    // Was a console verdict only (2026-11-17).
+
+    expect(initialMem > 0 && finalMem > 0, 'Chrome reports heap size (performance.memory)').toBe(true);
+
+    expect(finalMem / initialMem, 'heap at most doubles after 10 navigations').toBeLessThan(2.0);
 
     if (initialMem > 0 && finalMem > 0) {
       const ratio = finalMem / initialMem;
@@ -163,7 +173,7 @@ test.describe('Data Integrity and Cross-Module Consistency (TC-DI)', () => {
     await page.goto(`${BASE}/AccessionResults`);
     await page.waitForTimeout(1000);
     const accField = page.locator('input[id*="accession" i]').first();
-    if (await accField.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await accField.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await accField.fill(ACC);
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2000);
@@ -177,7 +187,7 @@ test.describe('Data Integrity and Cross-Module Consistency (TC-DI)', () => {
       const res = await page.goto(`${BASE}${u}`).catch(() => null);
       if (res && res.ok() && !page.url().includes('LoginPage')) {
         const searchField = page.locator('input[id*="accession" i]').first();
-        if (await searchField.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await searchField.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
           await searchField.fill(ACC);
           await page.keyboard.press('Enter');
           await page.waitForTimeout(2000);
@@ -206,12 +216,13 @@ test.describe('Data Integrity and Cross-Module Consistency (TC-DI)', () => {
     expect(orderHasHGB, `test visible in Results (${resultHasHGB}) but not Order Search (${orderHasHGB}) for ${ACC}`).toBe(resultHasHGB);
   });
 
+  // eslint-disable-next-line playwright/expect-expect -- prints only: an integer result is valid, so 'has a decimal' is no check; needs a seeded decimal result to assert on.
   test('TC-DI-03: Result value round-trip (decimal precision)', async ({ page }) => {
     await page.goto(`${BASE}/AccessionResults`);
     await page.waitForTimeout(1000);
 
     const accField = page.locator('input[id*="accession" i]').first();
-    if (await accField.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await accField.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await accField.fill(ACC);
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2000);
@@ -219,7 +230,7 @@ test.describe('Data Integrity and Cross-Module Consistency (TC-DI)', () => {
 
     // Check if a result value is displayed and examine its precision
     const resultCell = page.locator('td, [class*="result"]').filter({ hasText: /^\d+\.?\d*$/ }).first();
-    if (await resultCell.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await resultCell.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       const val = await resultCell.textContent() ?? '';
       console.log(`TC-DI-03: Displayed result value = "${val.trim()}"`);
       // Check that decimal isn't truncated
@@ -232,6 +243,7 @@ test.describe('Data Integrity and Cross-Module Consistency (TC-DI)', () => {
     }
   });
 
+  // eslint-disable-next-line playwright/expect-expect -- prints only: the dashboard counts orders and the workplan pages its tests, so the two numbers are not comparable as written.
   test('TC-DI-04: Order count consistency (Dashboard vs Workplan)', async ({ page }) => {
     // Dashboard count
     await page.goto(`${BASE}`);
@@ -280,6 +292,8 @@ test.describe('Data Integrity and Cross-Module Consistency (TC-DI)', () => {
       return issues;
     });
 
+    // Was a console verdict only (2026-11-17).
+    expect(orphans, 'result rows with empty critical cells').toBe(0);
     console.log(orphans === 0
       ? 'TC-DI-06: PASS — no orphaned/malformed result rows detected'
       : `TC-DI-06: WARN — ${orphans} row(s) with empty critical cells`);
@@ -329,9 +343,9 @@ test.describe('Phase 4 — X-DEEP: Performance', () => {
       const mem = (performance as any).memory;
       return mem ? (mem.usedJSHeapSize / mem.jsHeapSizeLimit * 100) : -1;
     });
-    if (heapPct >= 0) {
-      expect(heapPct).toBeLessThan(50); // Under 50% heap usage
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(heapPct >= 0, 'precondition: heapPct >= 0').toBeTruthy();
+    expect(heapPct).toBeLessThan(50); // Under 50% heap usage
   });
 });
 
@@ -351,7 +365,7 @@ test.describe('Phase 4 — Y-DEEP: Data Integrity', () => {
     // (#4513); its Routine submenu and "Select Test Unit" picker became the Lab Unit filter.
     await page.getByRole('navigation', { name: 'Side navigation' }).getByText('Validation', { exact: true }).first().click();
     const routine = page.getByRole('navigation', { name: 'Side navigation' }).getByText('Routine', { exact: true });
-    if (await routine.isVisible({ timeout: 2000 }).catch(() => false)) await routine.click();
+    if (await routine.waitFor({ timeout: 2000 }).then(() => true, () => false)) await routine.click();
     await expect(page).toHaveURL(/\/validation\b|ResultValidation/i);
     await expect(page.getByRole('heading', { name: 'Validation', exact: true })).toBeVisible();
     await expect(page.locator('main').getByRole('combobox', { name: 'Lab Unit' })).toBeVisible();
@@ -517,6 +531,10 @@ test.describe('Performance Extended — API Latency & Throughput (TC-PERF-EXT)',
   });
 
   test('TC-PERF-EXT-06: Report generation API responds within 5s', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'the report endpoint at the candidate path answers 404');
     /**
      * US-PERF-6: Report generation is batch-heavy but must complete in reasonable
      * time. A supervisor waiting more than 5s for a report will abandon it.
@@ -537,10 +555,8 @@ test.describe('Performance Extended — API Latency & Throughput (TC-PERF-EXT)',
     });
 
     console.log(`TC-PERF-EXT-06: Report API status=${result.status} in ${result.elapsed}ms`);
-    if (result.status !== 404) {
-      expect(result.elapsed, 'Report generation must respond within 5000ms').toBeLessThan(5000);
-    } else {
-      console.log('TC-PERF-EXT-06: NOTE — Report API not found at tested path');
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(result.status !== 404, 'precondition: result.status !== 404').toBeTruthy();
+    expect(result.elapsed, 'Report generation must respond within 5000ms').toBeLessThan(5000);
   });
 });

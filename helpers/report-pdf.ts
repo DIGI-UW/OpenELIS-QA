@@ -204,6 +204,10 @@ export async function placeOrder(page: Page, ctx: OrderContext, samples: Array<{
 export async function enterResults(page: Page, labNo: string, values: Record<string, string>): Promise<void> {
   const g = await j(page, `${API}/LogbookResults?labNumber=${labNo}`);
   const form = g.body;
+  // Every requested test must be on the results form (2026-11-17): a test the form did not list was
+  // skipped silently, and TC-RPTPDF-24 then read a report with nothing waiting.
+  const listed = new Set(((form?.testResult ?? []) as any[]).map((it) => String(it.testId)));
+  expect(Object.keys(values).filter((t) => !listed.has(t)), `tests missing from the results form of ${labNo}`).toEqual([]);
   for (const it of (form?.testResult ?? []) as any[]) {
     const v = values[String(it.testId)];
     if (v === undefined) continue;

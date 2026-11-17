@@ -73,10 +73,11 @@ setup('bulk seed (Phase E1)', async ({ page }) => {
     : undefined;
 
   const state = await runSeed(page, {
+    // Cast: the targets type is the literal defaults; any count from the environment is allowed.
     targets: {
       ...(targetPatients !== undefined ? { patients: targetPatients } : {}),
       ...(targetOrders !== undefined ? { orders: targetOrders } : {}),
-    },
+    } as any,
     dryRun,
     verifyOnly,
   });

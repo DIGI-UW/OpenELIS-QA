@@ -43,7 +43,7 @@ export default defineConfig({
   workers: 1,              // §10.9 keep the 6-connection pool calm
   retries: 1,
   reporter: [['list'], ['json', { outputFile: 'regression-results/chains.json' }], ['./tests/helpers/session-guard-reporter.ts']],
-  use: { ...devices['Desktop Chrome'], baseURL: BASE, headless: true, ignoreHTTPSErrors: true, trace: 'retain-on-failure' },
+  use: { ...devices['Desktop Chrome'], locale: 'en-US', extraHTTPHeaders: { 'Accept-Language': 'en-US' }, baseURL: BASE, headless: true, ignoreHTTPSErrors: true, trace: 'retain-on-failure' },
   projects: [
     // A fixture is not a check, so it does not get the test-policy timeout.
     //

@@ -17,11 +17,11 @@ test('User manual — Vector order populated', async ({ page }, info) => {
     const site = page.getByLabel(/site name/i).first();
     await site.click({ timeout: 2000 }); await site.fill('MULAGO', { timeout: 2000 }); await page.waitForTimeout(1000);
     const opt = page.getByText(/^MULAGO/).first();
-    if (await opt.isVisible({ timeout: 1500 })) await opt.click({ timeout: 1500 });
+    if (await opt.waitFor({ timeout: 1500 }).then(() => true, () => false)) await opt.click({ timeout: 1500 });
   } catch {}
 
   // Requester — Marvel demo provider name.
-  try { const pn = page.getByLabel(/provider name/i).first(); if (await pn.isVisible({ timeout: 1500 })) { await pn.fill('Tony Stark', { timeout: 1500 }); } } catch {}
+  try { const pn = page.getByLabel(/provider name/i).first(); if (await pn.waitFor({ timeout: 1500 }).then(() => true, () => false)) { await pn.fill('Tony Stark', { timeout: 1500 }); } } catch {}
 
   // Sample Type — whichever VECTOR type this instance offers with orderable tests.
   // "Adult Mosquito" is an indonesiademo label, so it is a preference hint, not a requirement.
@@ -34,7 +34,7 @@ test('User manual — Vector order populated', async ({ page }, info) => {
   // Lifecycle Stage, Trap Type — pick the first real option; Quantity in Pool = 25.
   try { const ls = page.getByLabel(/lifecycle stage/i).first(); await ls.selectOption({ index: 1 }).catch(() => {}); } catch {}
   try { const tt = page.getByLabel(/trap type/i).first(); await tt.selectOption({ index: 1 }).catch(() => {}); } catch {}
-  try { const q = page.getByLabel(/quantity in pool/i).first(); if (await q.isVisible({ timeout: 1500 })) await q.fill('25', { timeout: 1500 }); } catch {}
+  try { const q = page.getByLabel(/quantity in pool/i).first(); if (await q.waitFor({ timeout: 1500 }).then(() => true, () => false)) await q.fill('25', { timeout: 1500 }); } catch {}
   await page.waitForTimeout(800);
 
   // Tick the first available test via DOM (never .click a Carbon checkbox — it hangs).

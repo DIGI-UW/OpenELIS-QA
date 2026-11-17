@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 // Revalidation for OGC-1120: GET /rest/sample-type-tests with NO param used to 500.
 // Gate: fresh context (this run logs in from scratch) + 3x API repeat + a UI-context read.
@@ -13,6 +13,9 @@ test('OGC-1120 revalidate', async ({ page, request }) => {
   }
   console.log('OGC1120_NOPARAM', JSON.stringify(noParam));
   console.log('OGC1120_WITHPARAM', JSON.stringify(withParam));
+  // Was console lines only (2026-11-17).
+  expect(withParam, 'sample-type-tests with a sample type answers 200 every time').toEqual([200, 200, 200]);
+  expect(noParam.every((s) => s < 500), `without a sample type it never answers 5xx (${noParam})`).toBe(true);
   await page.goto('/MasterListsPage', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(3000);
   const inPage = await page.evaluate(async () => {

@@ -16,6 +16,7 @@
  * on the same order has no staged value. Nothing here saves a result.
  */
 import { test, expect, Page } from '@playwright/test';
+import { withLocale } from '../helpers/locale';
 import * as fs from 'fs';
 
 const API = '/api/OpenELIS-Global/rest';
@@ -204,9 +205,9 @@ test.describe('OGC-1200 Runs slice 1', () => {
   });
 
   test('TC-RUN-10: in French the run screens show readable text, never raw keys', async ({ page }) => {
-    try {
-      await page.goto('/');
-      await page.evaluate(() => localStorage.setItem('locale', 'fr'));
+    // withLocale puts the browser and the server session back in English afterwards: the
+    // session keeps the language of its last request, and the stored login is shared.
+    await withLocale(page, 'fr', async () => {
       await page.goto(`/Results?accessionNumber=${ORDER}`);
       await expect(page.getByTestId(`waiting-run-${RUN}`).first()).toBeVisible({ timeout: 30_000 });
       const wl = await page.locator('main, body').first().innerText();
@@ -219,13 +220,7 @@ test.describe('OGC-1200 Runs slice 1', () => {
       note('TC-RUN-10.settingsHeading', (rv.match(/.*(Run settings|Paramètres).*/g) || []).slice(0, 2));
       note('TC-RUN-10.rawKeys', rawKeys);
       expect(rawKeys).toEqual([]);
-    } finally {
-      // Back to English on the server too: the session keeps the language of its last request,
-      // and the stored login is shared by every later spec.
-      await page.evaluate(() => localStorage.setItem('locale', 'en')).catch(() => {});
-      await page.goto(`/Results?run=${RUN}`);
-      await expect(page.getByTestId('run-settings')).toContainText(/Run settings/, { timeout: 30_000 });
-    }
+    });
   });
 
   test('TC-RUN-11: the analyzer import page breadcrumb names the analyzer without translation errors', async ({ page }) => {

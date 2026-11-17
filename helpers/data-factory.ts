@@ -212,7 +212,7 @@ export async function createPatientViaUI(page: Page, state: TestDataState): Prom
     // kept as a fallback but must not be the primary — it also matches the
     // search screen's field of the same name.
     const lastNameField = page.locator('#lastName, input[name*="lastName" i]').first();
-    if (await lastNameField.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await lastNameField.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       // Carbon controlled input requires native value setter
       await lastNameField.focus();
       await page.keyboard.type(TEST_PATIENT.lastName);
@@ -223,7 +223,7 @@ export async function createPatientViaUI(page: Page, state: TestDataState): Prom
     // kept as a fallback but must not be the primary — it also matches the
     // search screen's field of the same name.
     const firstNameField = page.locator('#firstName, input[name*="firstName" i]').first();
-    if (await firstNameField.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await firstNameField.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await firstNameField.focus();
       await page.keyboard.type(TEST_PATIENT.firstName);
     }
@@ -233,7 +233,7 @@ export async function createPatientViaUI(page: Page, state: TestDataState): Prom
     // kept as a fallback but must not be the primary — it also matches the
     // search screen's field of the same name.
     const nationalIdField = page.locator('#nationalId, input[name*="nationalId" i]').first();
-    if (await nationalIdField.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await nationalIdField.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await nationalIdField.focus();
       await page.keyboard.type(TEST_PATIENT.nationalId);
     }
@@ -249,7 +249,7 @@ export async function createPatientViaUI(page: Page, state: TestDataState): Prom
     // was never filled. `legacy-order-helper.ts` has driven this same picker
     // correctly for a long time; this now uses that pattern.
     const dobField = page.locator('#date-picker-default-id').last();
-    if (await dobField.isVisible({ timeout: 5_000 }).catch(() => false)) {
+    if (await dobField.waitFor({ timeout: 5_000 }).then(() => true, () => false)) {
       await dobField.fill(TEST_PATIENT.dateOfBirth);
     } else {
       state.setupErrors.push('createPatient: date-of-birth picker not found (#date-picker-default-id)');
@@ -269,11 +269,11 @@ export async function createPatientViaUI(page: Page, state: TestDataState): Prom
     // which radio index the sex happens to occupy.
     const wantFemale = TEST_PATIENT.gender.toUpperCase().startsWith('F');
     const genderLabel = page.getByText(wantFemale ? /^Female$/ : /^Male$/).first();
-    if (await genderLabel.isVisible({ timeout: 5_000 }).catch(() => false)) {
+    if (await genderLabel.waitFor({ timeout: 5_000 }).then(() => true, () => false)) {
       await genderLabel.click();
     } else {
       const fallback = page.locator(`label[for="${wantFemale ? 'radio-2' : 'radio-1'}"]`).first();
-      if (await fallback.isVisible({ timeout: 2_000 }).catch(() => false)) await fallback.click();
+      if (await fallback.waitFor({ timeout: 2_000 }).then(() => true, () => false)) await fallback.click();
       else state.setupErrors.push('createPatient: gender radio not found by label or index');
     }
 
@@ -293,7 +293,7 @@ export async function createPatientViaUI(page: Page, state: TestDataState): Prom
     // ANCHOR the name. A loose alternation over button labels will eventually
     // match a button you did not mean, and `.first()` hides which one it hit.
     const saveBtn = page.getByRole('button', { name: /^\s*Save\s*$/i }).first();
-    if (!(await saveBtn.isVisible({ timeout: 5_000 }).catch(() => false))) {
+    if (!(await saveBtn.waitFor({ timeout: 5_000 }).then(() => true, () => false))) {
       state.setupErrors.push('createPatient: no Save button on the create form');
       return false;
     }
@@ -370,20 +370,20 @@ export async function createOrderViaUI(
     // ─── Step 1: Patient Info ───────────────────────────────────────────────
     // Search for the existing patient first
     const searchPatientBtn = page.getByRole('button', { name: /search.*patient|find.*patient/i }).first();
-    const hasSearch = await searchPatientBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSearch = await searchPatientBtn.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     if (hasSearch) {
       await searchPatientBtn.click();
       await page.waitForTimeout(1000);
       // Fill national ID in the search popup
       const searchInput = page.locator('input[placeholder*="national" i], input[placeholder*="id" i]').first();
-      if (await searchInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await searchInput.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
         await searchInput.fill(TEST_PATIENT.nationalId);
         await page.keyboard.press('Enter');
         await page.waitForTimeout(2000);
         // Click first result row
         const firstRow = page.locator('table tbody tr, [role="row"]').first();
-        if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await firstRow.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
           await firstRow.click();
           await page.waitForTimeout(1000);
         }
@@ -391,22 +391,22 @@ export async function createOrderViaUI(
     } else {
       // Fill patient fields directly
       const lastNameField = page.locator('input[id*="lastName" i], input[name*="lastName" i]').first();
-      if (await lastNameField.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await lastNameField.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
         await lastNameField.fill(TEST_PATIENT.lastName);
       }
       const firstNameField = page.locator('input[id*="firstName" i], input[name*="firstName" i]').first();
-      if (await firstNameField.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await firstNameField.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
         await firstNameField.fill(TEST_PATIENT.firstName);
       }
       const nationalIdField = page.locator('input[id*="nationalId" i], input[name*="nationalId" i]').first();
-      if (await nationalIdField.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await nationalIdField.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
         await nationalIdField.fill(TEST_PATIENT.nationalId);
       }
     }
 
     // Proceed to step 2
     const nextBtn = page.getByRole('button', { name: /next|continue|proceed/i }).first();
-    if (await nextBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await nextBtn.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await nextBtn.click();
       await page.waitForTimeout(1500);
     }
@@ -414,13 +414,13 @@ export async function createOrderViaUI(
     // ─── Step 2: Program Selection ──────────────────────────────────────────
     // Select the first available program (or skip if not required)
     const programSelect = page.locator('select[id*="program" i], select[name*="program" i], [role="combobox"]').first();
-    if (await programSelect.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await programSelect.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await programSelect.selectOption({ index: 1 }).catch(() => {});
       await page.waitForTimeout(500);
     }
 
     const nextBtn2 = page.getByRole('button', { name: /next|continue/i }).first();
-    if (await nextBtn2.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await nextBtn2.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await nextBtn2.click();
       await page.waitForTimeout(1500);
     }
@@ -430,13 +430,13 @@ export async function createOrderViaUI(
     const collectionDate = page.locator(
       'input[id*="collectionDate" i], input[name*="collectionDate" i], input[placeholder*="collection" i]'
     ).first();
-    if (await collectionDate.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await collectionDate.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       const today = new Date().toISOString().slice(0, 10);
       await collectionDate.fill(today);
     }
 
     const nextBtn3 = page.getByRole('button', { name: /next|continue/i }).first();
-    if (await nextBtn3.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await nextBtn3.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await nextBtn3.click();
       await page.waitForTimeout(1500);
     }
@@ -444,12 +444,12 @@ export async function createOrderViaUI(
     // ─── Step 4: Tests Selection ────────────────────────────────────────────
     // Search for the test by name (HGB or WBC)
     const testSearch = page.locator('input[placeholder*="test" i], input[placeholder*="search" i]').first();
-    if (await testSearch.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await testSearch.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await testSearch.fill(testName);
       await page.waitForTimeout(1000);
       // Select the first matching test
       const testOption = page.locator(`text=${testName}`).first();
-      if (await testOption.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await testOption.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await testOption.click();
         await page.waitForTimeout(500);
       }
@@ -457,7 +457,7 @@ export async function createOrderViaUI(
 
     // Submit the order
     const submitBtn = page.getByRole('button', { name: /submit|save|add order|place order/i }).first();
-    if (await submitBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await submitBtn.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await submitBtn.click();
       await page.waitForTimeout(3000);
     }

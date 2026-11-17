@@ -23,7 +23,7 @@ import { BASE, ADMIN, QA_PREFIX, QA_ID_PREFIX, login, orderWizardForward } from 
 const ORDER_URL = `${BASE}/SamplePatientEntry`;
 
 // Helper: Set React controlled input value via native setter
-async function setReactInput(page, selector: string, value: string) {
+async function setReactInput(page: import('@playwright/test').Page, selector: string, value: string) {
   // 3.2.3: Add Order opens on "Search for Patient"; the new-patient fields (#nationalId,
   // #lastName ...) exist only after "New Patient" is chosen, and #lastName is also a search
   // field. Open the New Patient form whenever the national ID box is not there yet.
@@ -35,7 +35,7 @@ async function setReactInput(page, selector: string, value: string) {
       await page.locator('#nationalId').waitFor({ timeout: 10000 }).catch(() => undefined);
     }
   }
-  await page.evaluate(({ sel, val }) => {
+  await page.evaluate(({ sel, val }: { sel: string; val: string }) => {
     const el = document.querySelector(sel) as HTMLInputElement;
     if (!el) throw new Error(`Element not found: ${sel}`);
     const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!;
@@ -46,8 +46,8 @@ async function setReactInput(page, selector: string, value: string) {
 }
 
 // Helper: Set Carbon DatePicker value (wrapper is DIV, input is nested)
-async function setCarbonDate(page, wrapperId: string, value: string) {
-  await page.evaluate(({ id, val }) => {
+async function setCarbonDate(page: import('@playwright/test').Page, wrapperId: string, value: string) {
+  await page.evaluate(({ id, val }: { id: string; val: string }) => {
     const wrapper = document.getElementById(id);
     if (!wrapper) return; // Not found, skip silently
     const input = wrapper.querySelector('input') as HTMLInputElement;
@@ -72,7 +72,7 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
 
     // Click "New Patient" tab if present
     const newPatientTab = page.locator('button', { hasText: 'New Patient' });
-    if (await newPatientTab.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await newPatientTab.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await newPatientTab.click();
     }
 
@@ -211,7 +211,7 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
 
     // Look for New Patient tab/button
     const newPatientTab = page.locator('button', { hasText: 'New Patient' });
-    if (await newPatientTab.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await newPatientTab.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await newPatientTab.click();
       await page.waitForTimeout(500);
     }
@@ -240,7 +240,7 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
     // Select Serum — may not have any sample type selects if wizard isn't there
     // 3.2.3: the first <select> on this step is not the sample type; pick the one that offers Serum.
     const selectEl = page.locator('select:has(option:text-is("Serum"))').first();
-    if (await selectEl.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await selectEl.waitFor({ timeout: 5000 }).then(() => true, () => false)) {
       await selectEl.selectOption({ label: 'Serum' }).catch(() => {});
       await page.waitForTimeout(500);
 
@@ -254,6 +254,7 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
   });
 
   test('TC-ORD-09: Check test checkboxes and verify they are checked', async ({ page }) => {
+    test.fixme(true, 'drives the legacy Add Order wizard by test checkbox ids test_0_N, which no longer render (CI 44049333844: none found; TC-ORD-13 submit is already red). Rewrite against Enter Order v4.');
     await login(page, ADMIN.user, ADMIN.pass);
     await page.goto(ORDER_URL);
 
@@ -288,12 +289,9 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
     const existingAndChecked = checkedStates.filter(s => s.exists && s.checked);
     // At least the ones that exist should be checked
     const existing = checkedStates.filter(s => s.exists);
-    if (existing.length > 0) {
-      expect(existingAndChecked.length).toBe(existing.length);
-    } else {
-      // Tests may not exist under these IDs; log and pass
-      console.log('TC-ORD-09: No test checkboxes found with IDs test_0_1/2/4 — step may not have rendered');
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(existing.length > 0, 'precondition: existing.length > 0').toBeTruthy();
+    expect(existingAndChecked.length).toBe(existing.length);
   });
 
   test('TC-ORD-10: Test checkboxes persist after page scroll', async ({ page }) => {
@@ -360,7 +358,7 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
 
     // Click Generate link
     const generateLink = page.locator('text=Generate, a:has-text("Generate"), button:has-text("Generate")').first();
-    if (await generateLink.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await generateLink.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await generateLink.click();
       await page.waitForTimeout(1000);
 
@@ -434,7 +432,7 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
 
     // Generate lab number
     const generateLink = page.locator('text=Generate, a:has-text("Generate"), button:has-text("Generate")').first();
-    if (await generateLink.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await generateLink.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await generateLink.click();
       await page.waitForTimeout(1000);
     }
@@ -471,6 +469,7 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
   });
 
   test('TC-ORD-14: Print labels and Done buttons appear after submission', async ({ page }) => {
+    test.fixme(true, 'drives the legacy Add Order wizard by test checkbox ids test_0_N, which no longer render (CI 44049333844: none found; TC-ORD-13 submit is already red). Rewrite against Enter Order v4.');
     await login(page, ADMIN.user, ADMIN.pass);
     await page.goto(ORDER_URL);
 
@@ -490,7 +489,7 @@ test.describe('Phase 32 — Order Creation E2E via UI', () => {
     await page.waitForTimeout(1000);
 
     const generateLink = page.locator('text=Generate, a:has-text("Generate"), button:has-text("Generate")').first();
-    if (await generateLink.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await generateLink.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await generateLink.click();
       await page.waitForTimeout(1000);
     }
@@ -566,16 +565,16 @@ test.describe('Suite ORD-E2E-EXT — Order Creation E2E Extended', () => {
 
     // Click Next without filling in patient info
     const nextBtn = orderWizardForward(page);
-    if (await nextBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await nextBtn.click();
-      await page.waitForTimeout(1000);
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(await nextBtn.waitFor({ timeout: 3000 }).then(() => true, () => false), 'precondition: nextBtn is visible').toBeTruthy();
+    await nextBtn.click();
+    await page.waitForTimeout(1000);
 
-      // Should still be on step 1 or show a validation message
-      const bodyText = await page.locator('body').innerText();
-      const stillOnStep1 = /national id|patient id|last name|step 1|required/i.test(bodyText);
-      console.log(`TC-ORD-EXT-01: stillOnStep1=${stillOnStep1}`);
-      expect(bodyText).not.toContain('Internal Server Error');
-    }
+    // Should still be on step 1 or show a validation message
+    const bodyText = await page.locator('body').innerText();
+    const stillOnStep1 = /national id|patient id|last name|step 1|required/i.test(bodyText);
+    console.log(`TC-ORD-EXT-01: stillOnStep1=${stillOnStep1}`);
+    expect(bodyText).not.toContain('Internal Server Error');
   });
 
   test('TC-ORD-EXT-02: SamplePatientEntry metadata API includes all expected programs', async ({ page }) => {
@@ -639,13 +638,13 @@ test.describe('Suite ORD-E2E-EXT — Order Creation E2E Extended', () => {
     // 3.2.3: the first input on the page is the EQA checkbox, so the old "or any input"
     // fallback picked it; the search box is #patientId.
     const patientInput = page.locator('#patientId, input[placeholder*="patient id" i]').first();
-    if (await patientInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await patientInput.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await patientInput.fill('0123456');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(1500);
 
       const nextBtn = orderWizardForward(page);
-      if (await nextBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await nextBtn.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
         await nextBtn.click();
         await page.waitForTimeout(1500);
       }
@@ -668,7 +667,7 @@ test.describe('Suite ORD-E2E-EXT — Order Creation E2E Extended', () => {
     // 3.2.3: the first input on the page is the EQA checkbox, so the old "or any input"
     // fallback picked it; the search box is #patientId.
     const patientInput = page.locator('#patientId, input[placeholder*="patient id" i]').first();
-    if (await patientInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await patientInput.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await patientInput.fill('0123456');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2000);

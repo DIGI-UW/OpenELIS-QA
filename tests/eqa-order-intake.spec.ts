@@ -133,6 +133,9 @@ test.describe('EQA order intake on the v4 order flow (TC-EQAOI)', () => {
       F.checklistItemId = String(ci.json.id);
       save();
     }
+    // Set up once per state file (a rerun reuses it); either way both must exist now.
+    expect(F.enrollmentId, 'an active EQA enrollment').toBeTruthy();
+    expect(F.checklistItemId, 'a CLINICAL intake checklist item').toBeTruthy();
   });
 
   // ── Enter Order (OGC-1483) ────────────────────────────────────────────────

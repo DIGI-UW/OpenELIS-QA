@@ -345,6 +345,8 @@ jobs:
           set +e +o pipefail
           mkdir -p out
           sudo chmod -R a+rX "$APP_DIR/volume" || true
+          # The stack is develop HEAD, so every merged commit is in it (helpers/build.ts).
+          export OE_BUILD_INCLUDES_DEVELOP=1
 
           WANT="${{ inputs.suite || 'all' }}"
           SHARD="${{ matrix.shard }}"
@@ -367,11 +369,23 @@ jobs:
             name="${cfg%.config.ts}"
             echo "::group::$name"
             allow_zero=$(jq -r --arg c "$cfg" '(.suites[] | select(.config==$c) | .allowZero) // false' ci-suites.json)
+            # TIME BUDGET (2026-11-17). Run 43998431265's modules suite ran past three hours
+            # because a harness helper waited 20 s on every navigation; nothing flagged it until
+            # the job limit. Each suite has budgetMinutes in ci-suites.json (1.5x its last full
+            # run, at least 10); past it the suite is interrupted (SIGINT, so Playwright still
+            # writes its JSON) and Verdict fails the shard on it.
+            budget=$(jq -r --arg c "$cfg" '(.suites[] | select(.config==$c) | .budgetMinutes) // 60' ci-suites.json)
+            started=$(date +%s)
             env_pairs=$(jq -r --arg c "$cfg" '(.suites[] | select(.config==$c) | .env // {}) | to_entries[] | "\(.key)=\(.value)"' ci-suites.json)
             # shellcheck disable=SC2086
             # JSON beside the line output: ci-known-reds.mjs reads it to tell known reds from new.
-            env $env_pairs PLAYWRIGHT_JSON_OUTPUT_NAME="out/$name.json" npx playwright test -c "$cfg" --reporter=line,json 2>&1 | tee "out/$name.txt"
+            timeout -s INT -k 120 "${budget}m" env $env_pairs PLAYWRIGHT_JSON_OUTPUT_NAME="out/$name.json" npx playwright test -c "$cfg" --reporter=line,json 2>&1 | tee "out/$name.txt"
             code=${PIPESTATUS[0]}
+            mins=$(( ($(date +%s) - started + 59) / 60 ))
+            printf '%s %s\n' "$mins" "$budget" > "out/$name.minutes"
+            if [ "$code" = "124" ] || [ "$code" = "130" ] && [ "$mins" -ge "$budget" ]; then
+              printf '%s\n' "$budget" > "out/$name.overbudget"
+            fi
             printf '%s\n' "$code" > "out/$name.exit"
             printf '%s\n' "$allow_zero" > "out/$name.allowzero"
             echo "$name exit=$code"
@@ -380,13 +394,14 @@ jobs:
 
       # Known reds are failures already ticketed or ruled, listed in ci-known-reds.json.
       # This step writes out/reds.json; Verdict fails only on failures NOT in that list.
-      # The commit and subject go in out/ too, for the report job.
+      # The commit and subject go in out/ too, for the report job. Not as .txt: every
+      # out/*.txt is read as a suite log, and these two read as suites that ran nothing.
       - name: Sort failures into known and new
         if: always() && (steps.seen.outputs.cache-hit != 'true' || inputs.force == true)
         run: |
           mkdir -p out
-          echo "${{ steps.head.outputs.sha }}" > out/sha.txt
-          gh api "repos/$APP_REPO/commits/${{ steps.head.outputs.sha }}" --jq '.commit.message' | head -1 > out/subject.txt || true
+          echo "${{ steps.head.outputs.sha }}" > out/commit.sha
+          gh api "repos/$APP_REPO/commits/${{ steps.head.outputs.sha }}" --jq '.commit.message' | head -1 > out/commit.subject || true
           node scripts/ci-known-reds.mjs check --out out
         env:
           GH_TOKEN: ${{ github.token }}
@@ -585,7 +600,11 @@ jobs:
             if [[ "$fixed" =~ ^[0-9]+$ ]] && [ "$fixed" -gt 0 ]; then
               echo "::notice::$n: $fixed known red(s) now pass. Take them out of ci-known-reds.json and check their tickets."
             fi
-            echo "$n: exit=$code passed=$passed failed=$failed known=$known new=$new fixed=$fixed"
+            if [ -f "out/$n.overbudget" ]; then
+              echo "::error::$n ran past its time budget of $(cat "out/$n.overbudget") minutes (budgetMinutes in ci-suites.json) and was stopped. A harness wait or a slow page made the suite slower than its last full run by half again; the slowest tests are in the report."
+              bad=1
+            fi
+            echo "$n: exit=$code passed=$passed failed=$failed known=$known new=$new fixed=$fixed minutes=$(cut -d' ' -f1 "out/$n.minutes" 2>/dev/null)"
           done
 
           if [ "$ran" -eq 0 ]; then
@@ -633,6 +652,8 @@ jobs:
     permissions:
       contents: write
       actions: read
+      issues: write
+      pull-requests: write
     env:
       TZ: ${{ inputs.lab_tz || (github.event.schedule == '30 2 * * 3' && 'Pacific/Port_Moresby') || 'UTC' }}
     steps:
@@ -645,12 +666,71 @@ jobs:
           path: shards
       - name: Merge the shards
         run: |
-          SHA=$(cat shards/*/out/sha.txt 2>/dev/null | head -1)
-          SUBJ=$(cat shards/*/out/subject.txt 2>/dev/null | head -1)
+          SHA=$(cat shards/*/out/commit.sha 2>/dev/null | head -1)
+          SUBJ=$(cat shards/*/out/commit.subject 2>/dev/null | head -1)
           node scripts/ci-known-reds.mjs report --shards shards --out report \
             --sha "$SHA" --subject "$SUBJ" \
             --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           [ -f report/latest.md ] && cat report/latest.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      # NO RESULTS ALARM (2026-11-17). Runs 218 to 282 (27 Oct to 13 Nov) produced no results and
+      # every one looked like any other run; it took the Monday digest to notice, 13 days in.
+      # A run with no results now fails this job and opens (or comments on) one issue labelled
+      # ci-no-results, so watchers get mail; a Slack incoming webhook in the secret
+      # QA_ALERT_WEBHOOK is posted to as well when it is set. The first run with results closes it.
+      - name: Alarm when the run produced no results
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WEBHOOK: ${{ secrets.QA_ALERT_WEBHOOK }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set +e
+          [ -f report/latest.json ] || { echo "no report (develop had not moved); nothing to judge"; exit 0; }
+          NORES=$(jq -r '.noResults' report/latest.json)
+          SHORT=$(jq -r '.sha[0:8]' report/latest.json)
+          gh label create ci-no-results --color B60205 --description "develop-stack produced no results" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1
+          OPEN=$(gh issue list -R "$GITHUB_REPOSITORY" --label ci-no-results --state open --json number --jq '.[0].number')
+          if [ "$NORES" = "true" ]; then
+            MSG="develop-stack produced NO RESULTS on develop $SHORT (run ${{ github.run_number }}): no suite ran, so nothing was tested. $RUN_URL"
+            if [ -n "$OPEN" ]; then
+              gh issue comment "$OPEN" -R "$GITHUB_REPOSITORY" --body "$MSG"
+            else
+              gh issue create -R "$GITHUB_REPOSITORY" --label ci-no-results \
+                --title "develop-stack: no results since develop $SHORT" \
+                --body "$MSG"$'\n\n'"Read the \"Wait for the stack to be healthy\" step first. This issue closes on the next run with results."
+            fi
+            if [ -n "$WEBHOOK" ]; then
+              curl -sS -X POST -H 'Content-Type: application/json' -d "$(jq -n --arg t "$MSG" '{text:$t}')" "$WEBHOOK" >/dev/null
+            fi
+            echo "::error::$MSG"
+            exit 1
+          fi
+          if [ -n "$OPEN" ]; then
+            gh issue close "$OPEN" -R "$GITHUB_REPOSITORY" --comment "Results again on develop $SHORT (run ${{ github.run_number }}): $RUN_URL"
+          fi
+      # KNOWN REDS THAT PASS (2026-11-17). Every report listed "known reds now passing" and
+      # someone had to take them out by hand in a QA PR; 7 sat there from 14 to 16 Nov. On a
+      # run of main (the Sunday forced run and every scheduled run) this now opens one PR that
+      # removes them. A person still merges it, and checks the tickets they name. GITHUB_TOKEN
+      # PRs do not start other workflows, so its typecheck runs when someone pushes or reruns.
+      - name: Propose removing known reds that now pass
+        if: always() && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          [ -d shards ] || exit 0
+          node scripts/ci-known-reds.mjs prune --from shards --baseline ci-known-reds.json | tee /tmp/prune.txt
+          git diff --quiet -- ci-known-reds.json && { echo "nothing to remove"; exit 0; }
+          BR="qa/known-reds-prune-run${{ github.run_number }}"
+          git -c user.name='github-actions[bot]' -c user.email='41898283+github-actions[bot]@users.noreply.github.com' checkout -q -b "$BR"
+          git -c user.name='github-actions[bot]' -c user.email='41898283+github-actions[bot]@users.noreply.github.com' commit -qam "Known reds: remove those that passed in develop-stack run ${{ github.run_number }}"
+          git push -q origin "$BR" || exit 0
+          gh pr create -R "$GITHUB_REPOSITORY" --base main --head "$BR" \
+            --title "Known reds: remove those that passed in run ${{ github.run_number }}" \
+            --body "$(printf 'develop-stack run %s reported these known reds as passing:\n\n```\n%s\n```\n\nCheck each entry'"'"'s ticket before merging (close it with evidence if QA verified the fix).' '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}' "$(cat /tmp/prune.txt)")"
+
       - name: Publish to the ci-reports branch
         env:
           GH_TOKEN: ${{ github.token }}
