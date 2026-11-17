@@ -37,7 +37,7 @@ const ABSENT_SAMPLE = 'DEV01269999999999999';
 interface ApiResult<T> { ok: boolean; status: number; body: T }
 
 async function api<T = any>(page: Page, path: string, init?: { method?: string; body?: unknown }): Promise<ApiResult<T>> {
-  return page.evaluate(async ({ path, init }) => {
+  return page.evaluate(async ({ path, init }: { path: string; init?: { method?: string; body?: unknown } }) => {
     const r = await fetch(path, {
       method: init?.method ?? 'GET',
       credentials: 'include',

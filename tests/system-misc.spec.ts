@@ -139,21 +139,23 @@ test.describe('LOINC and Dictionary CRUD (TC-LOINC)', () => {
 
     // Find HGB in the test list
     const hgbRow = page.getByText(/HGB|Haemoglobin|Hemoglobin/i).first();
-    if (!(await hgbRow.isVisible({ timeout: 3000 }).catch(() => false))) {
+    if (!(await hgbRow.waitFor({ timeout: 3000 }).then(() => true, () => false))) {
       console.log('TC-LOINC-03: SKIP — HGB test not found in Modify Test Entry list');
       return;
     }
 
     // Check if LOINC field is present in wizard
     const loincField = page.locator('input[id*="loinc" i], select[id*="loinc" i], [class*="loinc" i]').first();
-    const hasLoinc = await loincField.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasLoinc = await loincField.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     if (!hasLoinc) {
       // Navigate into the wizard
       await hgbRow.click();
       await page.waitForTimeout(1500);
       const loincAfterNav = await page.locator('input[id*="loinc" i], [class*="loinc" i]').first()
-        .isVisible({ timeout: 3000 }).catch(() => false);
+        .waitFor({ timeout: 3000 }).then(() => true, () => false);
+      // Was a console verdict only (2026-11-17).
+      expect(loincAfterNav, 'no LOINC field in HGB test wizard').toBeTruthy();
       console.log(loincAfterNav
         ? 'TC-LOINC-03: PASS — LOINC field visible in HGB test record'
         : 'TC-LOINC-03: GAP — no LOINC field in HGB test wizard');
@@ -171,7 +173,7 @@ test.describe('LOINC and Dictionary CRUD (TC-LOINC)', () => {
     }
 
     const addBtn = page.getByRole('button', { name: /add|new/i }).first();
-    if (!(await addBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
+    if (!(await addBtn.waitFor({ timeout: 3000 }).then(() => true, () => false))) {
       console.log('TC-LOINC-04: GAP — no Add button on LOINC screen');
       return;
     }
@@ -182,10 +184,10 @@ test.describe('LOINC and Dictionary CRUD (TC-LOINC)', () => {
     const codeField = page.locator('input[id*="code" i], input[placeholder*="code" i]').first();
     const descField = page.locator('input[id*="desc" i], input[placeholder*="desc" i], input[id*="name" i]').first();
 
-    if (await codeField.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await codeField.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await codeField.fill('QA-AUTO-9999');
     }
-    if (await descField.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await descField.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await descField.fill('QA Automated LOINC Test Code');
     }
 
@@ -195,12 +197,14 @@ test.describe('LOINC and Dictionary CRUD (TC-LOINC)', () => {
     });
 
     const saveBtn = page.getByRole('button', { name: /save|accept|add/i }).first();
-    if (await saveBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await saveBtn.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await saveBtn.click();
       await page.waitForTimeout(2000);
     }
 
-    const persisted = await page.getByText(/QA-AUTO-9999/i).isVisible({ timeout: 3000 }).catch(() => false);
+    const persisted = await page.getByText(/QA-AUTO-9999/i).waitFor({ timeout: 3000 }).then(() => true, () => false);
+    // Was a console verdict only (2026-11-17).
+    expect(persisted, 'entry not found after save (POST …)').toBeTruthy();
     console.log(persisted
       ? `TC-LOINC-04: PASS — LOINC entry created (POST ${postStatus})`
       : `TC-LOINC-04: FAIL — entry not found after save (POST ${postStatus})`);
@@ -213,13 +217,15 @@ test.describe('LOINC and Dictionary CRUD (TC-LOINC)', () => {
       if (res && res.ok() && !page.url().includes('LoginPage')) {
         const text = await page.textContent('body') ?? '';
         const catCount = (text.match(/reject|reason|interpretation|referral/gi) ?? []).length;
+        // Was a console verdict only (2026-11-17).
+        expect(catCount, `several dictionary categories at ${page.url()}`).toBeGreaterThanOrEqual(2);
         console.log(catCount >= 2
           ? `TC-LOINC-05: PASS — multiple dictionary categories at ${page.url()}`
           : `TC-LOINC-05: NOTE — only ${catCount} category-like terms at ${page.url()}`);
         return;
       }
     }
-    console.log('TC-LOINC-05: GAP — dictionary screen not accessible');
+    expect(false, 'the dictionary screen opens at one of its known URLs').toBe(true);
   });
 
   test('TC-LOINC-06: Edit and deactivate dictionary entry', async ({ page }) => {
@@ -228,32 +234,21 @@ test.describe('LOINC and Dictionary CRUD (TC-LOINC)', () => {
     test.skip(!res || page.url().includes('LoginPage'), 'dictionary screen not accessible');
 
     const qaEntry = page.getByText(/QA_AUTO_RejReason/i).first();
-    const haveFixture = await qaEntry.isVisible({ timeout: 3000 }).catch(() => false);
+    const haveFixture = await qaEntry.waitFor({ timeout: 3000 }).then(() => true, () => false);
     // Ordering dependency, not a defect: TC-ADMIN-06 seeds this entry.
     test.skip(!haveFixture, 'QA_AUTO_RejReason not present — run TC-ADMIN-06 first to seed it');
 
     // Click edit on this entry
     const row = page.locator('tr', { has: page.getByText(/QA_AUTO_RejReason/i) }).first();
     const editBtn = row.getByRole('button', { name: /edit/i }).first();
-    if (await editBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await editBtn.click();
-      await page.waitForTimeout(1000);
-
-      const inputField = page.locator('input[type="text"]').first();
-      if (await inputField.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await inputField.fill('QA_EDITED_ENTRY');
-        await page.getByRole('button', { name: /save|accept/i }).first().click();
-        await page.waitForTimeout(1500);
-      }
-
-      const edited = await page.getByText(/QA_EDITED_ENTRY/i).isVisible({ timeout: 3000 }).catch(() => false);
-      expect(edited, 'dictionary edit did not persist after save (BUG-8 class)').toBeTruthy();
-      console.log(edited
-        ? 'TC-LOINC-06 edit: PASS'
-        : 'TC-LOINC-06 edit: FAIL — edit not persisted (BUG-8 class?)');
-    } else {
-      console.log('TC-LOINC-06: GAP — no Edit button on dictionary entry row');
-    }
+    // Was conditional (2026-11-17): with no Edit button the case asserted nothing.
+    await expect(editBtn, 'the dictionary row offers Edit').toBeVisible({ timeout: 5000 });
+    await editBtn.click();
+    const inputField = page.locator('input[type="text"]').first();
+    await expect(inputField, 'the edit form opens').toBeVisible({ timeout: 5000 });
+    await inputField.fill('QA_EDITED_ENTRY');
+    await page.getByRole('button', { name: /save|accept/i }).first().click();
+    await expect(page.getByText(/QA_EDITED_ENTRY/i).first(), 'dictionary edit did not persist after save (BUG-8 class)').toBeVisible({ timeout: 5000 });
   });
 });
 
@@ -299,6 +294,8 @@ test.describe('Audit Log and System Configuration (TC-SYS)', () => {
   test('TC-SYS-03: System configuration screen accessible', async ({ page }) => {
     for (const u of SYS_CONFIG_URLS) {
       const res = await page.goto(`${BASE}${u}`).catch(() => null);
+      // Was a console verdict only (2026-11-17).
+      expect(res && res.ok() && !page.url().includes('LoginPage'), 'the check this case reports').toBeTruthy();
       if (res && res.ok() && !page.url().includes('LoginPage')) {
         const text = await page.textContent('body') ?? '';
         if (/config|setting|parameter|module/i.test(text)) {
@@ -318,6 +315,8 @@ test.describe('Audit Log and System Configuration (TC-SYS)', () => {
     ];
     for (const u of analysisUrls) {
       const res = await page.goto(`${BASE}${u}`).catch(() => null);
+      // Was a console verdict only (2026-11-17).
+      expect(res && res.ok() && !page.url().includes('LoginPage'), 'the check this case reports').toBeTruthy();
       if (res && res.ok() && !page.url().includes('LoginPage')) {
         const text = await page.textContent('body') ?? '';
         if (/analysis|test name|test code|result type/i.test(text)) {
@@ -337,6 +336,8 @@ test.describe('Audit Log and System Configuration (TC-SYS)', () => {
     ];
     for (const u of providerUrls) {
       const res = await page.goto(`${BASE}${u}`).catch(() => null);
+      // Was a console verdict only (2026-11-17).
+      expect(res && res.ok() && !page.url().includes('LoginPage'), 'the check this case reports').toBeTruthy();
       if (res && res.ok() && !page.url().includes('LoginPage')) {
         const text = await page.textContent('body') ?? '';
         if (/provider|requester|doctor|first name|last name/i.test(text)) {
@@ -384,6 +385,8 @@ test.describe('FHIR Integration (TC-EO)', () => {
   test('TC-EO-01: FHIR metadata endpoint responds', async ({ page }) => {
     const res = await fhirText(page, '/metadata');
     const reachable = !!res && /CapabilityStatement|fhirVersion/i.test(res.text);
+    // Was a console verdict only (2026-11-17).
+    expect(reachable, 'FHIR metadata endpoint not accessible').toBeTruthy();
     console.log(reachable
       ? 'TC-EO-01: PASS — FHIR metadata reachable'
       : 'TC-EO-01: GAP — FHIR metadata endpoint not accessible');
@@ -391,6 +394,8 @@ test.describe('FHIR Integration (TC-EO)', () => {
 
   test('TC-EO-02: FHIR Patient lookup by national ID', async ({ page }) => {
     const res = await fhirText(page, '/Patient?identifier=0123456');
+    // Was a console verdict only (2026-11-17).
+    expect(res && /Sebby|Abby/i.test(res.text), 'the check this case reports').toBeTruthy();
     if (res && /Sebby|Abby/i.test(res.text)) {
       console.log('TC-EO-02: PASS — FHIR Patient found');
       return;
@@ -400,6 +405,8 @@ test.describe('FHIR Integration (TC-EO)', () => {
 
   test('TC-EO-03: FHIR ServiceRequest for lab order', async ({ page }) => {
     const sr = await fhirText(page, '/ServiceRequest?subject:Patient.identifier=0123456');
+    // Was a console verdict only (2026-11-17).
+    expect(sr && /ServiceRequest|entry/i.test(sr.text), 'the check this case reports').toBeTruthy();
     if (sr && /ServiceRequest|entry/i.test(sr.text)) {
       console.log('TC-EO-03: PASS — FHIR ServiceRequest found');
       return;
@@ -414,6 +421,8 @@ test.describe('FHIR Integration (TC-EO)', () => {
 
   test('TC-EO-04: FHIR DiagnosticReport includes result values', async ({ page }) => {
     const res = await fhirText(page, '/DiagnosticReport?subject:Patient.identifier=0123456');
+    // Was a console verdict only (2026-11-17).
+    expect(res && /result|Observation|valueQuantity/i.test(res.text), 'the check this case reports').toBeTruthy();
     if (res && /result|Observation|valueQuantity/i.test(res.text)) {
       console.log('TC-EO-04: PASS — DiagnosticReport with result references');
       return;
@@ -439,9 +448,11 @@ test.describe('Export and Download (TC-EXP)', () => {
     const exportBtn = page.getByRole('button', { name: /export|download|csv/i }).first();
     const exportLink = page.getByRole('link', { name: /export|download|csv/i }).first();
 
-    const hasExport = (await exportBtn.isVisible({ timeout: 3000 }).catch(() => false)) ||
-                      (await exportLink.isVisible({ timeout: 3000 }).catch(() => false));
+    const hasExport = (await exportBtn.waitFor({ timeout: 3000 }).then(() => true, () => false)) ||
+                      (await exportLink.waitFor({ timeout: 3000 }).then(() => true, () => false));
 
+    // Was a console verdict only (2026-11-17).
+    expect(hasExport, 'no export button in Results By Order view').toBeTruthy();
     console.log(hasExport
       ? 'TC-EXP-01: PASS — export option found on Results view'
       : 'TC-EXP-01: GAP — no export button in Results By Order view');
@@ -456,8 +467,10 @@ test.describe('Export and Download (TC-EXP)', () => {
     await page.waitForTimeout(1500);
 
     const exportBtn = page.getByRole('button', { name: /export|download|csv|print/i }).first();
-    const hasExport = await exportBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasExport = await exportBtn.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
+    // Was a console verdict only (2026-11-17).
+    expect(hasExport, 'no export button on workplan').toBeTruthy();
     console.log(hasExport
       ? 'TC-EXP-02: PASS — export option on workplan'
       : 'TC-EXP-02: GAP — no export button on workplan');
@@ -472,9 +485,11 @@ test.describe('Export and Download (TC-EXP)', () => {
     let hasPdf = false;
     for (const u of reportUrls) {
       const res = await page.goto(`${BASE}${u}`).catch(() => null);
+      // Was a console verdict only (2026-11-17).
+      expect(res && res.ok() && !page.url().includes('LoginPage'), 'the check this case reports').toBeTruthy();
       if (res && res.ok() && !page.url().includes('LoginPage')) {
         const pdfBtn = page.getByRole('button', { name: /pdf|export|download|print/i }).first();
-        hasPdf = await pdfBtn.isVisible({ timeout: 3000 }).catch(() => false);
+        hasPdf = await pdfBtn.waitFor({ timeout: 3000 }).then(() => true, () => false);
         if (hasPdf) {
           console.log(`TC-EXP-03: PASS — PDF export at ${page.url()}`);
           return;
@@ -493,8 +508,10 @@ test.describe('Export and Download (TC-EXP)', () => {
     await page.waitForTimeout(1500);
 
     const exportBtn = page.getByRole('button', { name: /export|download|csv|print/i }).first();
-    const hasExport = await exportBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasExport = await exportBtn.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
+    // Was a console verdict only (2026-11-17).
+    expect(hasExport, 'no export on validation screen').toBeTruthy();
     console.log(hasExport
       ? 'TC-EXP-04: PASS — export on validation screen'
       : 'TC-EXP-04: GAP — no export on validation screen');
@@ -505,8 +522,10 @@ test.describe('Export and Download (TC-EXP)', () => {
     await page.waitForTimeout(2000);
 
     const exportBtn = page.getByRole('button', { name: /export|download|csv/i }).first();
-    const hasExport = await exportBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasExport = await exportBtn.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
+    // Was a console verdict only (2026-11-17).
+    expect(hasExport, 'no export on dashboard (common)').toBeTruthy();
     console.log(hasExport
       ? 'TC-EXP-05: PASS — export on dashboard'
       : 'TC-EXP-05: GAP — no export on dashboard (common)');
@@ -530,18 +549,18 @@ test.describe('Session Management (TC-SESS)', () => {
       const logoutLink = page.getByRole('link', { name: /logout|log out|sign out/i }).first();
       const logoutBtn = page.getByRole('button', { name: /logout|log out|sign out/i }).first();
 
-      if (await logoutLink.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await logoutLink.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
         await logoutLink.click();
-      } else if (await logoutBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      } else if (await logoutBtn.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
         await logoutBtn.click();
       } else {
         // Try hamburger → logout
         const hamburger = page.locator('[class*="hamburger"], [class*="menu-toggle"], button[aria-label*="menu" i]').first();
-        if (await hamburger.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await hamburger.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
           await hamburger.click();
           await page.waitForTimeout(500);
           const logoutInMenu = page.getByText(/logout|log out|sign out/i).first();
-          if (await logoutInMenu.isVisible({ timeout: 2000 }).catch(() => false)) {
+          if (await logoutInMenu.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
             await logoutInMenu.click();
           }
         }
@@ -613,7 +632,7 @@ test.describe('Session Management (TC-SESS)', () => {
     const PASS_SEL = 'input[name="password"], #password, input[type="password"]';
     const submit = async () => {
       const byRole = page.getByRole('button', { name: /submit|login|sign in|save|next|accept/i }).first();
-      if (await byRole.isVisible({ timeout: 1_000 }).catch(() => false)) return byRole.click();
+      if (await byRole.waitFor({ timeout: 1_000 }).then(() => true, () => false)) return byRole.click();
       return page.locator('#submitButton, button[type="submit"], input[type="submit"]').first().click();
     };
 
@@ -639,6 +658,8 @@ test.describe('Session Management (TC-SESS)', () => {
     const errMsg2 = await page.locator(ERROR_SEL).first().textContent({ timeout: 3000 }).catch(() => '');
 
     const consistent = errMsg1 === errMsg2;
+    // Was a console verdict only (2026-11-17).
+    expect(consistent, 'different errors: "…" vs "…" (credential enumeration risk)').toBeTruthy();
     console.log(consistent
       ? `TC-SESS-04: PASS — consistent error messages ("${errMsg1!.trim().slice(0, 50)}")`
       : `TC-SESS-04: FAIL — different errors: "${errMsg1!.trim().slice(0, 40)}" vs "${errMsg2!.trim().slice(0, 40)}" (credential enumeration risk)`);
@@ -662,6 +683,8 @@ test.describe('Session Management (TC-SESS)', () => {
     await page1.reload();
     await page1.waitForTimeout(1000);
     const page1Ok = !page1.url().includes('Login');
+    // Was a console verdict only (2026-11-17).
+    expect(page1Ok, 'the first session stays signed in after a second sign-in').toBe(true);
     console.log(page1Ok
       ? 'TC-SESS-05: PASS — concurrent sessions both remain active'
       : 'TC-SESS-05: NOTE — first session invalidated by second login');
@@ -686,7 +709,7 @@ test.describe('Error Handling and Edge Cases (TC-ERR)', () => {
     await page.waitForTimeout(1000);
 
     const accField = page.locator('input[id*="accession" i]').first();
-    if (await accField.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await accField.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await accField.fill('INVALID_ACCESSION_999');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2000);
@@ -733,7 +756,7 @@ test.describe('Error Handling and Edge Cases (TC-ERR)', () => {
     await page.waitForTimeout(2000);
 
     const nameField = page.getByRole('textbox', { name: /last.*name/i }).first();
-    if (!(await nameField.isVisible({ timeout: 3000 }).catch(() => false))) {
+    if (!(await nameField.waitFor({ timeout: 3000 }).then(() => true, () => false))) {
       console.log('TC-ERR-03: SKIP — no last name field found');
       return;
     }
@@ -749,7 +772,7 @@ test.describe('Error Handling and Edge Cases (TC-ERR)', () => {
 
     // Try to advance
     const nextBtn = orderWizardForward(page);
-    if (await nextBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await nextBtn.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await nextBtn.click();
       await page.waitForTimeout(1500);
     }
@@ -766,14 +789,14 @@ test.describe('Error Handling and Edge Cases (TC-ERR)', () => {
 
     // Find any pending result input
     const accField = page.locator('input[id*="accession" i]').first();
-    if (await accField.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await accField.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await accField.fill('26CPHL00008V');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2000);
     }
 
     const resultInput = page.locator('input[id*="result" i], table input[type="text"]').first();
-    if (!(await resultInput.isVisible({ timeout: 3000 }).catch(() => false))) {
+    if (!(await resultInput.waitFor({ timeout: 3000 }).then(() => true, () => false))) {
       console.log('TC-ERR-04: SKIP — no result input visible');
       return;
     }
@@ -790,6 +813,8 @@ test.describe('Error Handling and Edge Cases (TC-ERR)', () => {
 
     const bodyText = await page.textContent('body') ?? '';
     const hasValidation = /invalid|numeric|number|must be/i.test(bodyText);
+    // Was a console verdict only (2026-11-17).
+    expect(hasValidation, 'no immediate validation for non-numeric (may validate on save)').toBeTruthy();
     console.log(hasValidation
       ? 'TC-ERR-04: PASS — non-numeric input rejected with validation message'
       : 'TC-ERR-04: NOTE — no immediate validation for non-numeric (may validate on save)');
@@ -830,13 +855,13 @@ test.describe('Cleanup and Teardown (TC-CLEAN)', () => {
     }
 
     const idField = page.locator('input[id*="national" i], input[id*="patientId" i]').first();
-    if (await idField.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await idField.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await idField.fill('QA_PAT_0324');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2000);
     }
 
-    const found = await page.getByText(/QA_Patient|QA_PAT_0324/i).isVisible({ timeout: 3000 }).catch(() => false);
+    const found = await page.getByText(/QA_Patient|QA_PAT_0324/i).waitFor({ timeout: 3000 }).then(() => true, () => false);
     if (!found) {
       console.log('TC-CLEAN-01: SKIP — QA patient QA_PAT_0324 not found (was never created or already cleaned)');
       return;
@@ -844,7 +869,9 @@ test.describe('Cleanup and Teardown (TC-CLEAN)', () => {
 
     // Try to deactivate
     const deactivateBtn = page.getByRole('button', { name: /deactivate|disable|remove/i }).first();
-    if (await deactivateBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    // Was a console verdict only (2026-11-17).
+    expect(await deactivateBtn.waitFor({ timeout: 2000 }).then(() => true, () => false), 'no deactivate button available; QA patient remains active').toBeTruthy();
+    if (await deactivateBtn.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await deactivateBtn.click();
       await page.waitForTimeout(1500);
       console.log('TC-CLEAN-01: PASS — QA patient deactivated');
@@ -869,14 +896,16 @@ test.describe('Cleanup and Teardown (TC-CLEAN)', () => {
       return;
     }
 
-    const qaEntry = await page.getByText(/QA-AUTO-9999/i).isVisible({ timeout: 3000 }).catch(() => false);
+    const qaEntry = await page.getByText(/QA-AUTO-9999/i).waitFor({ timeout: 3000 }).then(() => true, () => false);
     if (!qaEntry) {
       console.log('TC-CLEAN-02: SKIP — QA LOINC entry not found');
       return;
     }
 
     const deactivateBtn = page.getByRole('button', { name: /deactivate|delete|remove/i }).first();
-    if (await deactivateBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    // Was a console verdict only (2026-11-17).
+    expect(await deactivateBtn.waitFor({ timeout: 2000 }).then(() => true, () => false), 'no deactivate option; QA LOINC entry remains').toBeTruthy();
+    if (await deactivateBtn.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await deactivateBtn.click();
       await page.waitForTimeout(1500);
       console.log('TC-CLEAN-02: PASS — QA LOINC entry deactivated');
@@ -885,6 +914,7 @@ test.describe('Cleanup and Teardown (TC-CLEAN)', () => {
     }
   });
 
+  // eslint-disable-next-line playwright/expect-expect -- housekeeping, not a check: it tidies and lists QA data.
   test('TC-CLEAN-03: Deactivate QA dictionary entries', async ({ page }) => {
     const res = await page.goto(`${BASE}/MasterListsPage/Dictionary`).catch(() => null);
     if (!res || page.url().includes('LoginPage')) {
@@ -894,12 +924,12 @@ test.describe('Cleanup and Teardown (TC-CLEAN)', () => {
 
     const qaEntries = ['QA_AUTO_RejReason', 'QA_EDITED_ENTRY'];
     for (const entry of qaEntries) {
-      const exists = await page.getByText(new RegExp(entry, 'i')).isVisible({ timeout: 2000 }).catch(() => false);
+      const exists = await page.getByText(new RegExp(entry, 'i')).waitFor({ timeout: 2000 }).then(() => true, () => false);
       if (exists) {
         console.log(`TC-CLEAN-03: Found ${entry} — attempting deactivation`);
         const row = page.locator('tr', { has: page.getByText(new RegExp(entry, 'i')) }).first();
         const deactBtn = row.getByRole('button', { name: /deactivate|delete/i }).first();
-        if (await deactBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
+        if (await deactBtn.waitFor({ timeout: 1000 }).then(() => true, () => false)) {
           await deactBtn.click();
           await page.waitForTimeout(1000);
         }
@@ -908,6 +938,7 @@ test.describe('Cleanup and Teardown (TC-CLEAN)', () => {
     console.log('TC-CLEAN-03: Cleanup attempt complete');
   });
 
+  // eslint-disable-next-line playwright/expect-expect -- housekeeping, not a check: it tidies and lists QA data.
   test('TC-CLEAN-05: Document residual QA data', async ({ page }) => {
     const residual: string[] = [];
 
@@ -920,11 +951,11 @@ test.describe('Cleanup and Teardown (TC-CLEAN)', () => {
       const res = await page.goto(`${BASE}${u}`).catch(() => null);
       if (res && res.ok() && !page.url().includes('LoginPage')) {
         const idField = page.locator('input[id*="national" i]').first();
-        if (await idField.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await idField.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
           await idField.fill('QA_PAT_0324');
           await page.keyboard.press('Enter');
           await page.waitForTimeout(1500);
-          if (await page.getByText(/QA_Patient/i).isVisible({ timeout: 2000 }).catch(() => false)) {
+          if (await page.getByText(/QA_Patient/i).waitFor({ timeout: 2000 }).then(() => true, () => false)) {
             residual.push('QA patient QA_PAT_0324 still active');
           }
         }
@@ -1070,7 +1101,7 @@ test.describe('Suite AO — Aliquot', () => {
     await page.waitForTimeout(1000);
 
     const buttonLocator2 = page.locator('button:has-text("Create"), button:has-text("New")').first();
-    const buttonVisible2 = await buttonLocator2.isVisible({ timeout: 3000 }).catch(() => false);
+    const buttonVisible2 = await buttonLocator2.waitFor({ timeout: 3000 }).then(() => true, () => false);
     if (buttonVisible2) {
       await buttonLocator2.click();
       await page.waitForTimeout(1000);
@@ -1082,14 +1113,14 @@ test.describe('Suite AO — Aliquot', () => {
     }
 
     const submitBtnLocator = page.locator('button:has-text("Submit"), button:has-text("Save")').first();
-    const submitBtnVisible = await submitBtnLocator.isVisible({ timeout: 3000 }).catch(() => false);
+    const submitBtnVisible = await submitBtnLocator.waitFor({ timeout: 3000 }).then(() => true, () => false);
     if (submitBtnVisible) {
       await submitBtnLocator.click();
       await page.waitForTimeout(2000);
     }
 
     // Check for error or success
-    const error = await page.locator('[class*="error"]').first().isVisible({ timeout: 3000 }).catch(() => false);
+    const error = await page.locator('[class*="error"]').first().waitFor({ timeout: 3000 }).then(() => true, () => false);
     expect(!error).toBeTruthy();
   });
 });

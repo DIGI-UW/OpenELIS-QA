@@ -261,7 +261,7 @@ test.describe('Suite R-DEEP — Alert Config & Notification (TC-ALERT-06 through
     const searchInput = page.locator(
       'input[type="search"], input[placeholder*="search" i], input[aria-label*="search" i], input[type="text"]'
     ).first();
-    const hasSearch = await searchInput.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSearch = await searchInput.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     console.log(`TC-ALERT-07: Search input visible=${hasSearch}`);
     if (hasSearch) {
@@ -302,6 +302,8 @@ test.describe('Suite R-DEEP — Alert Config & Notification (TC-ALERT-06 through
 
     // Either severity terms in body or severity options in dropdowns counts as PASS
     const hasSeverityFilter = hasSeverityTerms || severityOptions.length > 0;
+    // Was a console verdict only (2026-11-17).
+    expect(hasSeverityFilter, 'no severity filter terminology found').toBeTruthy();
     if (!hasSeverityFilter) {
       console.log('TC-ALERT-08: GAP — no severity filter terminology found');
     } else {
@@ -494,7 +496,7 @@ test.describe('Suite R-EXT — Alerts Extended (TC-ALERT-EXT)', () => {
       'button[aria-label*="notification" i], button[aria-label*="alert" i], [data-testid*="notification"], button svg'
     ).first();
 
-    if (await bell.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await bell.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await bell.click();
       await page.waitForTimeout(1000);
     }
@@ -511,11 +513,9 @@ test.describe('Suite R-EXT — Alerts Extended (TC-ALERT-EXT)', () => {
     const elapsed = Date.now() - start;
 
     console.log(`TC-ALERT-EXT-05: Alerts page loaded in ${elapsed}ms`);
-    if (loaded) {
-      expect(elapsed, 'Alerts page must load within 5000ms').toBeLessThan(5000);
-    } else {
-      console.log('TC-ALERT-EXT-05: SKIP — alerts page not reachable');
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(loaded, 'precondition: loaded').toBeTruthy();
+    expect(elapsed, 'Alerts page must load within 5000ms').toBeLessThan(5000);
   });
 
   test('TC-ALERT-EXT-06: acknowledging an alert is accepted', async ({ page }) => {

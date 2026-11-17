@@ -72,7 +72,7 @@ test.describe('Suite F — Results By Unit (TC-BU)', () => {
     const sectionDropdown = page.locator(
       'select, [role="combobox"], [aria-haspopup="listbox"]'
     ).first();
-    const hasDropdown = await sectionDropdown.isVisible({ timeout: TIMEOUT }).catch(() => false);
+    const hasDropdown = await sectionDropdown.waitFor({ timeout: TIMEOUT }).then(() => true, () => false);
 
     expect(hasDropdown, 'Test section selector must be present').toBe(true);
     console.log(`TC-BU-01: PASS — LogbookResults at ${page.url()}, section dropdown present`);
@@ -554,14 +554,14 @@ test.describe('Suite BU-EXT — Results By Unit Extended (TC-BU-EXT)', () => {
 
     // Select a section first
     const sectionSelect = page.locator('select').first();
-    if (await sectionSelect.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await sectionSelect.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await sectionSelect.selectOption({ index: 1 });
       await page.waitForTimeout(2000);
     }
 
     // Look for a numeric result input
     const resultInput = page.locator('input[type="text"], input[type="number"]').first();
-    if (await resultInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await resultInput.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await resultInput.fill('12.5');
       await page.waitForTimeout(500);
     }

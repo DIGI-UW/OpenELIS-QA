@@ -20,7 +20,7 @@ test.describe('Lab Reports and Print (TC-RPT)', () => {
     await page.goto(`${BASE}/AccessionResults`);
     await page.waitForTimeout(1000);
     const accField = page.locator('input[id*="accession" i], input[placeholder*="accession" i]').first();
-    if (await accField.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await accField.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await accField.fill(accession);
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2000);
@@ -33,9 +33,11 @@ test.describe('Lab Reports and Print (TC-RPT)', () => {
     const printBtn = page.getByRole('button', { name: /print|report|lab report/i }).first();
     const printLink = page.getByRole('link', { name: /print|report|lab report/i }).first();
 
-    const hasPrint = (await printBtn.isVisible({ timeout: 3000 }).catch(() => false)) ||
-                     (await printLink.isVisible({ timeout: 3000 }).catch(() => false));
+    const hasPrint = (await printBtn.waitFor({ timeout: 3000 }).then(() => true, () => false)) ||
+                     (await printLink.waitFor({ timeout: 3000 }).then(() => true, () => false));
 
+    // Was a console verdict only (2026-11-17).
+    expect(hasPrint, 'no print/lab report option visible in Results By Order view').toBeTruthy();
     if (!hasPrint) {
       console.log('TC-RPT-01: GAP — no print/lab report option visible in Results By Order view');
     } else {
@@ -55,6 +57,8 @@ test.describe('Lab Reports and Print (TC-RPT)', () => {
     let reportLoaded = false;
     for (const u of reportUrls) {
       const res = await page.goto(`${BASE}${u}`).catch(() => null);
+      // Was a console verdict only (2026-11-17).
+      expect(res && res.ok() && !page.url().includes('LoginPage'), 'the check this case reports').toBeTruthy();
       if (res && res.ok() && !page.url().includes('LoginPage')) {
         const text = await page.textContent('body') ?? '';
         if (/Sebby|Abby|0123456/i.test(text)) {
@@ -78,6 +82,8 @@ test.describe('Lab Reports and Print (TC-RPT)', () => {
 
     for (const u of reportUrls) {
       const res = await page.goto(`${BASE}${u}`).catch(() => null);
+      // Was a console verdict only (2026-11-17).
+      expect(res && res.ok() && !page.url().includes('LoginPage'), 'the check this case reports').toBeTruthy();
       if (res && res.ok() && !page.url().includes('LoginPage')) {
         const text = await page.textContent('body') ?? '';
         // Check for HGB and a numeric result value
@@ -96,7 +102,7 @@ test.describe('Lab Reports and Print (TC-RPT)', () => {
     await page.waitForTimeout(1500);
 
     const accField = page.locator('input[id*="accession" i], input[placeholder*="accession" i]').first();
-    if (await accField.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await accField.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await accField.fill(KNOWN_ACCESSION);
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2000);
@@ -105,9 +111,11 @@ test.describe('Lab Reports and Print (TC-RPT)', () => {
     const labelBtn = page.getByRole('button', { name: /label|print label/i }).first();
     const labelLink = page.getByRole('link', { name: /label|print label/i }).first();
 
-    const hasLabel = (await labelBtn.isVisible({ timeout: 3000 }).catch(() => false)) ||
-                     (await labelLink.isVisible({ timeout: 3000 }).catch(() => false));
+    const hasLabel = (await labelBtn.waitFor({ timeout: 3000 }).then(() => true, () => false)) ||
+                     (await labelLink.waitFor({ timeout: 3000 }).then(() => true, () => false));
 
+    // Was a console verdict only (2026-11-17).
+    expect(hasLabel, 'no label print button in order view').toBeTruthy();
     console.log(hasLabel
       ? 'TC-RPT-04: PASS — label print accessible from order view'
       : 'TC-RPT-04: GAP — no label print button in order view');
@@ -119,7 +127,7 @@ test.describe('Lab Reports and Print (TC-RPT)', () => {
     await page.waitForTimeout(1000);
 
     const reportsMenu = page.getByRole('link', { name: /reports?/i }).first();
-    const hasReports = await reportsMenu.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasReports = await reportsMenu.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     if (!hasReports) {
       console.log('TC-RPT-05: GAP — no Reports menu item found in navigation');
@@ -133,6 +141,8 @@ test.describe('Lab Reports and Print (TC-RPT)', () => {
     const bodyText = await page.textContent('body') ?? '';
     const hasDateFilter = /date|from|to|range/i.test(bodyText);
 
+    // Was a console verdict only (2026-11-17).
+    expect(hasDateFilter, 'Reports section loaded but no date filter (…)').toBeTruthy();
     console.log(hasDateFilter
       ? `TC-RPT-05: PASS — Reports section loaded with date controls (${page.url()})`
       : `TC-RPT-05: FAIL — Reports section loaded but no date filter (${page.url()})`);
@@ -151,20 +161,20 @@ test.describe('Suite AE — Routine Reports', () => {
 
     // Try to find and click Reports menu
     const reportsLink = page.getByText(/^Reports$/i, { exact: true });
-    if (await reportsLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await reportsLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await reportsLink.click();
       await page.waitForTimeout(500);
 
       // Click Routine
       const routineLink = page.getByText('Routine', { exact: true });
-      if (await routineLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await routineLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await routineLink.click();
         await page.waitForTimeout(500);
       }
 
       // Click Patient Status Report
       const patientStatusLink = page.getByText(/Patient Status|Status Report/i);
-      if (await patientStatusLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await patientStatusLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await patientStatusLink.click();
       }
     }
@@ -195,17 +205,13 @@ test.describe('Suite AE — Routine Reports', () => {
     const datePicker = page.locator(
       'input[type="date"], input[placeholder*="date" i], [role="button"][aria-label*="date" i]'
     ).first();
-    await expect(datePicker).toBeVisible({ timeout: 3000 }).catch(() => {
-      console.log('Note: Date picker selector may need adjustment');
-    });
+    await expect(datePicker).toBeVisible({ timeout: 3000 });
 
     // Verify patient field exists
     const patientField = page.locator(
       'input[placeholder*="patient" i], select[id*="patient" i], input[id*="patient" i]'
     ).first();
-    await expect(patientField).toBeVisible({ timeout: 3000 }).catch(() => {
-      console.log('Note: Patient field selector may need adjustment');
-    });
+    await expect(patientField).toBeVisible({ timeout: 3000 });
   });
 
   test('TC-RPT-R02: Generate Patient Status Report with date range', async ({ page }) => {
@@ -247,9 +253,7 @@ test.describe('Suite AE — Routine Reports', () => {
 
       // Verify report output
       const reportContent = page.locator('canvas, [role="document"], table, [class*="report"]').first();
-      await expect(reportContent).toBeVisible({ timeout: 8000 }).catch(() => {
-        console.log('Note: Report content may be in PDF viewer or external frame');
-      });
+      await expect(reportContent).toBeVisible({ timeout: 8000 });
     } else {
       console.log('SKIP: Could not interact with report generation form');
     }
@@ -261,24 +265,24 @@ test.describe('Suite AE — Routine Reports', () => {
     await page.waitForTimeout(500);
 
     const reportsLink = page.getByText(/^Reports$/i, { exact: true });
-    if (await reportsLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await reportsLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await reportsLink.click();
       await page.waitForTimeout(500);
 
       const routineLink = page.getByText('Routine', { exact: true });
-      if (await routineLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await routineLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await routineLink.click();
         await page.waitForTimeout(500);
 
         // Find Aggregate Reports submenu
         const aggregateLink = page.getByText(/Aggregate|Statistics/i);
-        if (await aggregateLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await aggregateLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
           await aggregateLink.click();
           await page.waitForTimeout(500);
 
           // Find Statistics Report
           const statsLink = page.getByText(/Statistics|Aggregate Statistics/i);
-          if (await statsLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+          if (await statsLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
             await statsLink.click();
           }
         }
@@ -306,9 +310,7 @@ test.describe('Suite AE — Routine Reports', () => {
 
     // Verify date fields
     const dateFields = page.locator('input[type="date"], input[placeholder*="date" i]');
-    await expect(dateFields.first()).toBeVisible({ timeout: 3000 }).catch(() => {
-      console.log('Note: Date fields not visible');
-    });
+    await expect(dateFields.first()).toBeVisible({ timeout: 3000 });
   });
 
   test('TC-RPT-R04: Generate Statistics Report — verify table/data output', async ({ page }) => {
@@ -342,9 +344,7 @@ test.describe('Suite AE — Routine Reports', () => {
 
       // Verify table appears
       const table = page.locator('table, [role="table"], [class*="table"]').first();
-      await expect(table).toBeVisible({ timeout: 8000 }).catch(() => {
-        console.log('Note: Table not visible or data not loaded');
-      });
+      await expect(table).toBeVisible({ timeout: 8000 });
 
       // Verify table has rows
       const rows = page.locator('tbody tr, [role="row"]');
@@ -363,23 +363,23 @@ test.describe('Suite AE — Routine Reports', () => {
     await page.waitForTimeout(500);
 
     const reportsLink = page.getByText(/^Reports$/i, { exact: true });
-    if (await reportsLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await reportsLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await reportsLink.click();
       await page.waitForTimeout(500);
 
       const routineLink = page.getByText('Routine', { exact: true });
-      if (await routineLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await routineLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await routineLink.click();
         await page.waitForTimeout(500);
 
         // Navigate to Aggregate Reports > Summary
         const aggregateLink = page.getByText(/Aggregate|Summary/i);
-        if (await aggregateLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await aggregateLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
           await aggregateLink.click();
           await page.waitForTimeout(500);
 
           const summaryLink = page.getByText(/Summary of All Tests|All Tests Summary/i);
-          if (await summaryLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+          if (await summaryLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
             await summaryLink.click();
           }
         }
@@ -435,22 +435,22 @@ test.describe('Suite AF — Management Reports', () => {
     await page.waitForTimeout(500);
 
     const reportsLink = page.getByText(/^Reports$/i, { exact: true });
-    if (await reportsLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await reportsLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await reportsLink.click();
       await page.waitForTimeout(500);
 
       const routineLink = page.getByText('Routine', { exact: true });
-      if (await routineLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await routineLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await routineLink.click();
         await page.waitForTimeout(500);
 
         const mgmtLink = page.getByText(/Management Reports/i);
-        if (await mgmtLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await mgmtLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
           await mgmtLink.click();
           await page.waitForTimeout(500);
 
           const rejectionLink = page.getByText(/Rejection Report/i);
-          if (await rejectionLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+          if (await rejectionLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
             await rejectionLink.click();
           }
         }
@@ -477,9 +477,7 @@ test.describe('Suite AF — Management Reports', () => {
 
     // Verify date picker
     const datePicker = page.locator('input[type="date"], input[placeholder*="date" i]').first();
-    await expect(datePicker).toBeVisible({ timeout: 3000 }).catch(() => {
-      console.log('Note: Date picker not found');
-    });
+    await expect(datePicker).toBeVisible({ timeout: 3000 });
   });
 
   test('TC-RPT-M02: Generate Rejection Report — verify rejection data', async ({ page }) => {
@@ -502,9 +500,7 @@ test.describe('Suite AF — Management Reports', () => {
       await page.waitForTimeout(2000);
 
       const table = page.locator('table, [role="table"]').first();
-      await expect(table).toBeVisible({ timeout: 8000 }).catch(() => {
-        console.log('Note: Rejection report table not visible or no data for date range');
-      });
+      await expect(table).toBeVisible({ timeout: 8000 });
 
       const rows = page.locator('tbody tr, [role="row"]');
       const rowCount = await rows.count().catch(() => 0);
@@ -520,27 +516,27 @@ test.describe('Suite AF — Management Reports', () => {
     await page.waitForTimeout(500);
 
     const reportsLink = page.getByText(/^Reports$/i, { exact: true });
-    if (await reportsLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await reportsLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await reportsLink.click();
       await page.waitForTimeout(500);
 
       const routineLink = page.getByText('Routine', { exact: true });
-      if (await routineLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await routineLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await routineLink.click();
         await page.waitForTimeout(500);
 
         const mgmtLink = page.getByText(/Management Reports/i);
-        if (await mgmtLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await mgmtLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
           await mgmtLink.click();
           await page.waitForTimeout(500);
 
           const activityLink = page.getByText(/Activity Reports/i);
-          if (await activityLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+          if (await activityLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
             await activityLink.click();
             await page.waitForTimeout(500);
 
             const referredLink = page.getByText(/Referred Out Tests|Referred Out/i);
-            if (await referredLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+            if (await referredLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
               await referredLink.click();
             }
           }
@@ -579,9 +575,7 @@ test.describe('Suite AF — Management Reports', () => {
       await page.waitForTimeout(2000);
 
       const table = page.locator('table, [role="table"]').first();
-      await expect(table).toBeVisible({ timeout: 8000 }).catch(() => {
-        console.log('Note: Referred Out report table not visible');
-      });
+      await expect(table).toBeVisible({ timeout: 8000 });
     }
   });
 
@@ -591,27 +585,27 @@ test.describe('Suite AF — Management Reports', () => {
     await page.waitForTimeout(500);
 
     const reportsLink = page.getByText(/^Reports$/i, { exact: true });
-    if (await reportsLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await reportsLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await reportsLink.click();
       await page.waitForTimeout(500);
 
       const routineLink = page.getByText('Routine', { exact: true });
-      if (await routineLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await routineLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await routineLink.click();
         await page.waitForTimeout(500);
 
         const mgmtLink = page.getByText(/Management Reports/i);
-        if (await mgmtLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await mgmtLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
           await mgmtLink.click();
           await page.waitForTimeout(500);
 
           const ncLink = page.getByText(/Non Conformity|Non-Conformity/i);
-          if (await ncLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+          if (await ncLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
             await ncLink.click();
             await page.waitForTimeout(500);
 
             const delayedLink = page.getByText(/Delayed Validation/i);
-            if (await delayedLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+            if (await delayedLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
               await delayedLink.click();
             }
           }
@@ -650,9 +644,7 @@ test.describe('Suite AF — Management Reports', () => {
       await page.waitForTimeout(2000);
 
       const table = page.locator('table, [role="table"]').first();
-      await expect(table).toBeVisible({ timeout: 8000 }).catch(() => {
-        console.log('Note: Delayed Validation report not visible');
-      });
+      await expect(table).toBeVisible({ timeout: 8000 });
     }
   });
 
@@ -662,27 +654,27 @@ test.describe('Suite AF — Management Reports', () => {
     await page.waitForTimeout(500);
 
     const reportsLink = page.getByText(/^Reports$/i, { exact: true });
-    if (await reportsLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await reportsLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await reportsLink.click();
       await page.waitForTimeout(500);
 
       const routineLink = page.getByText('Routine', { exact: true });
-      if (await routineLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await routineLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await routineLink.click();
         await page.waitForTimeout(500);
 
         const mgmtLink = page.getByText(/Management Reports/i);
-        if (await mgmtLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await mgmtLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
           await mgmtLink.click();
           await page.waitForTimeout(500);
 
           const ncLink = page.getByText(/Non Conformity|Non-Conformity/i);
-          if (await ncLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+          if (await ncLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
             await ncLink.click();
             await page.waitForTimeout(500);
 
             const auditLink = page.getByText(/Audit Trail/i);
-            if (await auditLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+            if (await auditLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
               await auditLink.click();
             }
           }
@@ -708,16 +700,12 @@ test.describe('Suite AF — Management Reports', () => {
 
     // Verify filters exist
     const dateFields = page.locator('input[type="date"], input[placeholder*="date" i]');
-    await expect(dateFields.first()).toBeVisible({ timeout: 3000 }).catch(() => {
-      console.log('Note: Date filter not visible');
-    });
+    await expect(dateFields.first()).toBeVisible({ timeout: 3000 });
 
     const userField = page.locator(
       'input[placeholder*="user" i], select[id*="user" i], input[id*="user" i]'
     ).first();
-    await expect(userField).toBeVisible({ timeout: 2000 }).catch(() => {
-      console.log('Note: User filter may not be visible');
-    });
+    await expect(userField).toBeVisible({ timeout: 2000 });
 
     // Generate audit trail
     const dateSelectors = ['input[type="date"], input[placeholder*="date" i]'];
@@ -731,9 +719,7 @@ test.describe('Suite AF — Management Reports', () => {
       await page.waitForTimeout(2000);
 
       const table = page.locator('table, [role="table"]').first();
-      await expect(table).toBeVisible({ timeout: 8000 }).catch(() => {
-        console.log('Note: Audit Trail table not visible');
-      });
+      await expect(table).toBeVisible({ timeout: 8000 });
     }
   });
 });
@@ -749,12 +735,12 @@ test.describe('Suite AG — WHONET & Export Reports', () => {
     await page.waitForTimeout(500);
 
     const reportsLink = page.getByText(/^Reports$/i, { exact: true });
-    if (await reportsLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await reportsLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await reportsLink.click();
       await page.waitForTimeout(500);
 
       const whonetLink = page.getByText(/WHONET/i, { exact: true });
-      if (await whonetLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await whonetLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await whonetLink.click();
       }
     }
@@ -779,23 +765,17 @@ test.describe('Suite AG — WHONET & Export Reports', () => {
     const organismField = page.locator(
       'select[id*="organism" i], input[placeholder*="organism" i], [aria-label*="organism" i]'
     ).first();
-    await expect(organismField).toBeVisible({ timeout: 3000 }).catch(() => {
-      console.log('Note: Organism selector not clearly visible');
-    });
+    await expect(organismField).toBeVisible({ timeout: 3000 });
 
     // Verify antibiotic selector
     const antibioticField = page.locator(
       'select[id*="antibiotic" i], input[placeholder*="antibiotic" i], [aria-label*="antibiotic" i]'
     ).first();
-    await expect(antibioticField).toBeVisible({ timeout: 3000 }).catch(() => {
-      console.log('Note: Antibiotic selector not clearly visible');
-    });
+    await expect(antibioticField).toBeVisible({ timeout: 3000 });
 
     // Verify date fields
     const dateFields = page.locator('input[type="date"]');
-    await expect(dateFields.first()).toBeVisible({ timeout: 3000 }).catch(() => {
-      console.log('Note: Date fields not visible');
-    });
+    await expect(dateFields.first()).toBeVisible({ timeout: 3000 });
   });
 
   test('TC-RPT-W02: Generate WHONET Report — verify data export', async ({ page }) => {
@@ -829,9 +809,7 @@ test.describe('Suite AG — WHONET & Export Reports', () => {
 
       // Verify export/output
       const reportContent = page.locator('canvas, [role="document"], table, [class*="export"]').first();
-      await expect(reportContent).toBeVisible({ timeout: 8000 }).catch(() => {
-        console.log('Note: WHONET export content not visible');
-      });
+      await expect(reportContent).toBeVisible({ timeout: 8000 });
     }
   });
 
@@ -839,10 +817,8 @@ test.describe('Suite AG — WHONET & Export Reports', () => {
     const candidates = ['/WHONETReport', '/Report/WHONET', '/reports/whonet'];
     const navigated = await navigateWithDiscovery(page, candidates);
 
-    if (!navigated) {
-      console.log('SKIP: WHONET Report not found');
-      return;
-    }
+    // Was a console verdict only (2026-11-17).
+    expect(navigated, 'the WHONET report screen opens').toBe(true);
 
     // Generate initial report
     const dateRange = await getDateRange();
@@ -851,6 +827,7 @@ test.describe('Suite AG — WHONET & Export Reports', () => {
     await fillDateField(page, dateRange.to, dateSelectors);
 
     let buttonClicked = await clickButton(page, ['Generate', 'View']);
+    expect(buttonClicked, 'the report offers Generate or View').toBe(true);
 
     if (buttonClicked) {
       await page.waitForTimeout(2000);
@@ -871,7 +848,7 @@ test.describe('Suite AG — WHONET & Export Reports', () => {
 
         // Verify filter was applied (no old data visible, or empty state shown)
         const oldData = page.getByText(dateRange.from);
-        const isVisible = await oldData.isVisible({ timeout: 1000 }).catch(() => false);
+        const isVisible = await oldData.waitFor({ timeout: 1000 }).then(() => true, () => false);
 
         if (!isVisible) {
           console.log('Filter applied successfully');
@@ -918,8 +895,8 @@ test.describe('Suite AG — WHONET & Export Reports', () => {
       const emptyTable = page.locator('table:has(tbody:empty)').first();
 
       const hasEmptyState = await Promise.race([
-        emptyMessage.isVisible({ timeout: 2000 }),
-        emptyTable.isVisible({ timeout: 2000 }),
+        emptyMessage.waitFor({ timeout: 2000 }).then(() => true, () => false),
+        emptyTable.waitFor({ timeout: 2000 }).then(() => true, () => false),
       ]).catch(() => false);
 
       if (!hasEmptyState) {
@@ -955,7 +932,7 @@ test.describe('Suite AG — WHONET & Export Reports', () => {
         name: /download|export|pdf|csv|excel/i,
       }).first();
 
-      if (await downloadButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await downloadButton.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         // Set up download listener
         const downloadPromise = page.waitForEvent('download', { timeout: 10000 });
 
@@ -1004,12 +981,12 @@ test.describe('Phase 4 — L-DEEP: Reports Generation', () => {
     // If section exists, click it and check From/To fields
     if (hasLabNumber) {
       const labNumberSection = page.getByText(/Report By Lab Number/i).first();
-      if (await labNumberSection.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await labNumberSection.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await labNumberSection.click();
         await page.waitForTimeout(500);
 
-        const fromVisible = await page.locator('text=From').first().isVisible({ timeout: 2000 }).catch(() => false);
-        const toVisible = await page.locator('text=To').first().isVisible({ timeout: 2000 }).catch(() => false);
+        const fromVisible = await page.locator('text=From').first().waitFor({ timeout: 2000 }).then(() => true, () => false);
+        const toVisible = await page.locator('text=To').first().waitFor({ timeout: 2000 }).then(() => true, () => false);
         console.log(`TC-L-DEEP-01: From visible=${fromVisible}, To visible=${toVisible}`);
       }
     }
@@ -1027,20 +1004,20 @@ test.describe('Phase 4 — L-DEEP: Reports Generation', () => {
 
     // Try to expand Report By Lab Number section
     const labSection = page.getByText(/Report By Lab Number/i).first();
-    if (await labSection.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await labSection.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await labSection.click();
       await page.waitForTimeout(500);
     }
 
     // Fill a lab number
     const fromInput = page.locator('input').first();
-    if (await fromInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await fromInput.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await fromInput.fill('26CPHL00008');
     }
 
     // Generate button must be present — clicking it is optional (may open popup)
     const generateBtn = page.getByRole('button', { name: /Generate Printable Version|Generate/i }).first();
-    const generateVisible = await generateBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const generateVisible = await generateBtn.waitFor({ timeout: 3000 }).then(() => true, () => false);
     expect(generateVisible, '"Generate Printable Version" button must be present in report form').toBe(true);
   });
 });
@@ -1184,7 +1161,7 @@ test.describe('Reports Extended — API & Edge Cases (TC-RPT-EXT)', () => {
 
     // Look for the "Report By Lab Number" section/accordion
     const labNumberSection = page.getByText(/Report By Lab Number|By Lab Number/i).first();
-    const hasSection = await labNumberSection.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSection = await labNumberSection.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     if (hasSection) {
       // Try to expand it if it's an accordion
@@ -1193,7 +1170,7 @@ test.describe('Reports Extended — API & Edge Cases (TC-RPT-EXT)', () => {
 
       // Look for lab number input
       const labInput = page.locator('input[placeholder*="lab" i], input[id*="labNo" i], input[id*="accession" i]').first();
-      const hasInput = await labInput.isVisible({ timeout: 2000 }).catch(() => false);
+      const hasInput = await labInput.waitFor({ timeout: 2000 }).then(() => true, () => false);
       console.log(`TC-RPT-EXT-05: PASS — Lab Number section found, input=${hasInput}`);
     } else {
       console.log('TC-RPT-EXT-05: GAP — Report By Lab Number section not found');
@@ -1259,6 +1236,8 @@ test.describe('Reports Extended — API & Edge Cases (TC-RPT-EXT)', () => {
       const hasAccession = /26CPHL00008V/i.test(bodyText);
 
       console.log(`TC-RPT-EXT-07: ${path} — patient=${hasPatient}, test=${hasTest}, accession=${hasAccession}`);
+      // Was a console verdict only (2026-11-17).
+      expect(hasPatient || hasAccession, 'the check this case reports').toBeTruthy();
       if (hasPatient || hasAccession) {
         console.log('TC-RPT-EXT-07: PASS — baseline accession data found in report');
         return;

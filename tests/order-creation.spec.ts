@@ -426,29 +426,29 @@ test.describe('Order Wizard Extended (TC-ORDER-EXT)', () => {
     // Fill Step 1: patient search by last name pattern. The first input on the page is now
     // the "EQA Sample" checkbox, so target the Last Name field.
     const searchInput = page.locator('main input[placeholder*="Last Name"]').first();
-    if (await searchInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await searchInput.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await searchInput.fill('Sebby');
       await page.waitForTimeout(1000);
       const suggestion = page.locator('[class*="suggestion"], [role="option"]').first();
-      if (await suggestion.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await suggestion.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await suggestion.click();
       }
     }
 
     // Advance to Step 2
     const nextBtn = orderWizardForward(page);
-    if (await nextBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await nextBtn.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await nextBtn.click();
       await page.waitForTimeout(1000);
     }
 
     // Select first program
     const program = page.locator('[class*="program"], [id*="program"]').first();
-    if (await program.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await program.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await program.click();
     }
 
-    if (await nextBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await nextBtn.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await nextBtn.click();
       await page.waitForTimeout(1000);
     }
@@ -526,26 +526,24 @@ test.describe('Order Wizard Extended (TC-ORDER-EXT)', () => {
       'input[id*="patientId" i], input[placeholder*="national" i], input[placeholder*="patient id" i]'
     ).first();
 
-    if (await idInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await idInput.fill('0123456');
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(2000);
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(await idInput.waitFor({ timeout: 3000 }).then(() => true, () => false), 'precondition: idInput is visible').toBeTruthy();
+    await idInput.fill('0123456');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(2000);
 
-      const bodyText = await page.locator('body').innerText();
-      // Should find the existing patient (Abby Sebby) or show a search result
-      const foundExisting =
-        /Abby|Sebby|0123456/i.test(bodyText) ||
-        (await page.locator('[class*="suggestion"], [role="option"], [class*="result"]').count()) > 0;
+    const bodyText = await page.locator('body').innerText();
+    // Should find the existing patient (Abby Sebby) or show a search result
+    const foundExisting =
+      /Abby|Sebby|0123456/i.test(bodyText) ||
+      (await page.locator('[class*="suggestion"], [role="option"], [class*="result"]').count()) > 0;
 
-      console.log(`TC-ORDER-EXT-06: Existing patient surfaced=${foundExisting}`);
-      if (foundExisting) {
-        console.log('TC-ORDER-EXT-06: PASS — existing patient found, duplicate creation blocked');
-      } else {
-        console.log('TC-ORDER-EXT-06: NOTE — existing patient not surfaced (may need explicit search trigger)');
-      }
-      expect(bodyText).not.toContain('Internal Server Error');
+    console.log(`TC-ORDER-EXT-06: Existing patient surfaced=${foundExisting}`);
+    if (foundExisting) {
+      console.log('TC-ORDER-EXT-06: PASS — existing patient found, duplicate creation blocked');
     } else {
-      console.log('TC-ORDER-EXT-06: SKIP — patient ID input not found');
+      console.log('TC-ORDER-EXT-06: NOTE — existing patient not surfaced (may need explicit search trigger)');
     }
+    expect(bodyText).not.toContain('Internal Server Error');
   });
 });

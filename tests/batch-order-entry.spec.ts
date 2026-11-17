@@ -131,8 +131,8 @@ test.describe('Suite BA — Batch Order Entry Core (TC-BOE)', () => {
     const submitBtn = page.locator('main').getByRole('button', { name: /submit|save|process|next/i }).first();
     const clearBtn = page.locator('main').getByRole('button', { name: /clear|reset|cancel/i }).first();
 
-    const hasSubmit = await submitBtn.isVisible({ timeout: 3000 }).catch(() => false);
-    const hasClear = await clearBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSubmit = await submitBtn.waitFor({ timeout: 3000 }).then(() => true, () => false);
+    const hasClear = await clearBtn.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     console.log(`TC-BOE-04: Submit=${hasSubmit}, Clear=${hasClear}`);
     expect(hasSubmit, 'Batch form must have a Submit button').toBe(true);
@@ -214,7 +214,7 @@ test.describe('Suite BA-DEEP — Batch Entry API & Validation (TC-BOE-06–10)',
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const submitBtn = page.getByRole('button', { name: /submit|save|process/i }).first();
-    const hasSubmit = await submitBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSubmit = await submitBtn.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     if (hasSubmit) {
       await submitBtn.click();
@@ -239,7 +239,7 @@ test.describe('Suite BA-DEEP — Batch Entry API & Validation (TC-BOE-06–10)',
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const dateInput = page.locator('input[type="date"], input[placeholder*="mm/dd" i]').first();
-    const hasDate = await dateInput.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasDate = await dateInput.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     if (hasDate) {
       const today = new Date().toISOString().slice(0, 10);

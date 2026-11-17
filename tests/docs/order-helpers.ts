@@ -70,14 +70,14 @@ export async function selectSite(page: Page, query = 'MUL'): Promise<boolean> {
     await site.fill(query, { timeout: 2500 });
     await page.waitForTimeout(1300);
     const sel = page.locator('.search-results').getByRole('button', { name: /select/i }).first();
-    if (await sel.isVisible({ timeout: 1500 })) { await sel.click({ timeout: 1500 }); }
+    if (await sel.waitFor({ timeout: 1500 }).then(() => true, () => false)) { await sel.click({ timeout: 1500 }); }
     else {
       const t = page.locator('.search-results').getByText(/^Select$/).first();
-      if (await t.isVisible({ timeout: 1000 })) await t.click({ timeout: 1000 });
+      if (await t.waitFor({ timeout: 1000 }).then(() => true, () => false)) await t.click({ timeout: 1000 });
     }
     await page.waitForTimeout(700);
     // confirm a "Selected" chip appeared
-    return await page.getByText(/selected/i).first().isVisible({ timeout: 1500 }).catch(() => false);
+    return await page.getByText(/selected/i).first().waitFor({ timeout: 1500 }).then(() => true, () => false);
   } catch { return false; }
 }
 
@@ -100,13 +100,13 @@ export async function selectOrAddSite(page: Page, query = 'QA_AUTO Site'): Promi
     await page.waitForTimeout(1800);                 // allow the async site lookup to settle
     const sel = page.getByRole('button', { name: /^select$/i }).first();
     const add = page.getByRole('button', { name: /add new site/i }).first();
-    if (await sel.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await sel.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await sel.click({ timeout: 2000 }); outcome = 'selected-existing';
-    } else if (await add.isVisible({ timeout: 2000 }).catch(() => false)) {
+    } else if (await add.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await add.click({ timeout: 2000 }); outcome = 'added-new';
     }
     await page.waitForTimeout(800);
-    const chip = await page.getByText(/^(selected|new)$/i).first().isVisible({ timeout: 2500 }).catch(() => false);
+    const chip = await page.getByText(/^(selected|new)$/i).first().waitFor({ timeout: 2500 }).then(() => true, () => false);
     console.log('SITE_RESULT=' + outcome + ' chip=' + chip);
     return chip;
   } catch (e) {
@@ -140,12 +140,12 @@ export async function checkByLabel(page: Page, labelRe: RegExp): Promise<boolean
   // Carbon renders <input class="cds--checkbox" id=x> + <label for=x>text</label>.
   const label = page.locator('label').filter({ hasText: labelRe }).first();
   try {
-    if (await label.isVisible({ timeout: 1500 })) { await label.click({ timeout: 2000 }); await page.waitForTimeout(250); return true; }
+    if (await label.waitFor({ timeout: 1500 }).then(() => true, () => false)) { await label.click({ timeout: 2000 }); await page.waitForTimeout(250); return true; }
   } catch {}
   // Fallback: getByText on the label text
   try {
     const t = page.getByText(labelRe).first();
-    if (await t.isVisible({ timeout: 1000 })) { await t.click({ timeout: 1500 }); await page.waitForTimeout(250); return true; }
+    if (await t.waitFor({ timeout: 1000 }).then(() => true, () => false)) { await t.click({ timeout: 1500 }); await page.waitForTimeout(250); return true; }
   } catch {}
   return false;
 }
@@ -161,7 +161,7 @@ export async function completeQaChecklist(page: Page): Promise<void> {
 export async function clickButton(page: Page, nameRe: RegExp, waitMs = 1800): Promise<boolean> {
   try {
     const b = page.getByRole('button', { name: nameRe }).first();
-    if (await b.isVisible({ timeout: 2500 })) { await b.click({ timeout: 2500 }); await page.waitForTimeout(waitMs); return true; }
+    if (await b.waitFor({ timeout: 2500 }).then(() => true, () => false)) { await b.click({ timeout: 2500 }); await page.waitForTimeout(waitMs); return true; }
   } catch {}
   return false;
 }
@@ -212,9 +212,9 @@ export async function newPatient(page: Page, opts: { last?: string; first?: stri
   // silently refuses to advance past Enter Order (no inline error). Fill it (and the optional
   // Unique Health ID) so seeded clinical orders can progress.
   for (const [re, val] of [[/nationality identifier/i, natId], [/unique health identifier/i, natId.replace('NID', 'UHID')], [/last name/i, last], [/first name/i, first]] as [RegExp, string][]) {
-    try { const f = page.getByPlaceholder(re).first(); if (await f.isVisible({ timeout: 1500 })) await f.fill(val, { timeout: 1500 }); } catch {}
+    try { const f = page.getByPlaceholder(re).first(); if (await f.waitFor({ timeout: 1500 }).then(() => true, () => false)) await f.fill(val, { timeout: 1500 }); } catch {}
   }
-  try { const d = page.getByPlaceholder(/dd\/mm\/yyyy/i).first(); if (await d.isVisible({ timeout: 1500 })) await d.fill(dob, { timeout: 1500 }); } catch {}
+  try { const d = page.getByPlaceholder(/dd\/mm\/yyyy/i).first(); if (await d.waitFor({ timeout: 1500 }).then(() => true, () => false)) await d.fill(dob, { timeout: 1500 }); } catch {}
   // Gender radio — click its visible label.
   await checkByLabel(page, gender).catch(() => {});
 }
@@ -230,7 +230,7 @@ export async function selectComplianceStandard(page: Page, optionRe: RegExp): Pr
     await clickMarked(page, 2500);
     await page.waitForTimeout(700);
     const opt = page.locator('[role="option"]').filter({ hasText: optionRe }).first();
-    if (await opt.isVisible({ timeout: 1500 })) { await opt.click({ timeout: 1500 }); await page.waitForTimeout(400); return true; }
+    if (await opt.waitFor({ timeout: 1500 }).then(() => true, () => false)) { await opt.click({ timeout: 1500 }); await page.waitForTimeout(400); return true; }
   } catch {}
   return false;
 }
@@ -274,9 +274,9 @@ export function assertOrderPersisted(writes: WriteRec[], label = 'order'): void 
 export async function fillRequestor(page: Page, first = 'QA', last = 'Tester'): Promise<boolean> {
   const tryFill = async (re: RegExp, val: string) => {
     const byRole = page.getByRole('textbox', { name: re }).first();
-    if (await byRole.isVisible({ timeout: 1500 }).catch(() => false)) { await byRole.fill(val); return true; }
+    if (await byRole.waitFor({ timeout: 1500 }).then(() => true, () => false)) { await byRole.fill(val); return true; }
     const byLabel = page.getByLabel(re).first();
-    if (await byLabel.isVisible({ timeout: 800 }).catch(() => false)) { await byLabel.fill(val); return true; }
+    if (await byLabel.waitFor({ timeout: 800 }).then(() => true, () => false)) { await byLabel.fill(val); return true; }
     return false;
   };
   const f = await tryFill(/^first name$/i, first);
@@ -315,7 +315,7 @@ export async function fillRequester(
     inputSel: string, which: 'first' | 'last', query: string,
   ): Promise<boolean> => {
     const input = page.locator(inputSel).first();
-    if (!(await input.isVisible({ timeout: 1500 }).catch(() => false))) return false;
+    if (!(await input.waitFor({ timeout: 1500 }).then(() => true, () => false))) return false;
     for (let attempt = 0; attempt < 2; attempt++) {
       await input.click().catch(() => {});
       await input.fill('').catch(() => {});
@@ -325,14 +325,14 @@ export async function fillRequester(
       // WAIT for a matching result row to actually render (not a blind timeout).
       const row = page.getByRole('row', { name: new RegExp(query, 'i') }).first();
       const sel = row.getByRole('button', { name: /^select$/i }).first();
-      const seen = await sel.isVisible({ timeout: 4000 }).catch(() => false);
+      const seen = await sel.waitFor({ timeout: 4000 }).then(() => true, () => false);
       if (!seen) { await page.waitForTimeout(600); continue; }
       await sel.click().catch(() => {});
       // Confirm the selection committed: a "Selected" chip appears. Report HONESTLY — do not
       // pretend success if the chip never shows (a false "committed" is what let the empty-sample
       // slip through before). The real gate is assertSamplePersisted() downstream.
-      const committed = await page.getByText(/^\s*selected\s*$/i).first().isVisible({ timeout: 3000 }).catch(() => false)
-        || await row.getByText(/selected/i).first().isVisible({ timeout: 1500 }).catch(() => false);
+      const committed = await page.getByText(/^\s*selected\s*$/i).first().waitFor({ timeout: 3000 }).then(() => true, () => false)
+        || await row.getByText(/selected/i).first().waitFor({ timeout: 1500 }).then(() => true, () => false);
       await page.waitForTimeout(700);
       if (committed) return true;
     }

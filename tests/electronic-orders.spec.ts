@@ -141,7 +141,7 @@ test.describe('Suite AH — Electronic / Incoming Orders Core (TC-IO)', () => {
     await waitForRouteContent(page);
 
     const dateInput = page.locator('input[type="date"], input[placeholder*="mm/dd" i], input[placeholder*="date" i]').first();
-    const hasDateInput = await dateInput.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasDateInput = await dateInput.waitFor({ timeout: 3000 }).then(() => true, () => false);
     const bodyText = await page.locator('body').innerText();
     const hasDateTerm = /date|from|to\b|period|range/i.test(bodyText);
 
@@ -161,11 +161,9 @@ test.describe('Suite AH — Electronic / Incoming Orders Core (TC-IO)', () => {
     const elapsed = Date.now() - start;
 
     console.log(`TC-IO-05: Incoming Orders loaded in ${elapsed}ms`);
-    if (loaded) {
-      expect(elapsed, 'Incoming Orders must load within 5000ms').toBeLessThan(5000);
-    } else {
-      console.log('TC-IO-05: SKIP — page not reachable');
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(loaded, 'precondition: loaded').toBeTruthy();
+    expect(elapsed, 'Incoming Orders must load within 5000ms').toBeLessThan(5000);
   });
 });
 
@@ -241,7 +239,9 @@ test.describe('Suite BC-DEEP — Electronic Orders API & Integration (TC-IO-06�
      */
     await page.goto(`${BASE}`);
 
-    const { start: dateFrom, end: dateTo } = getDateRange(30);
+    // Was `getDateRange(30)` destructured as {start, end} without await (2026-11-17): both dates were
+    // undefined, so the search ran with no range. getDateRange() gives the last 30 days.
+    const { from: dateFrom, to: dateTo } = await getDateRange();
 
     const result = await page.evaluate(async ([from, to]: string[]) => {
       const csrf = localStorage.getItem('CSRF') || '';

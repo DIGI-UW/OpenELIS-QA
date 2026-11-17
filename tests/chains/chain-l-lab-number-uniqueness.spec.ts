@@ -142,7 +142,7 @@ test.describe.serial('Chain L — Lab Number Uniqueness', () => {
       Array.from({ length: BURST_SIZE }, async (_unused, i) => {
         const state = emptyState();
         state.patient.systemId = patientPK;
-        state.patient.nationalId = patientNationalId;
+        state.patient.nationalId = patientNationalId ?? '';
         try {
           const accession = await createOrderViaAPI(page, state, `chain-L burst ${i}`, 'primaryOrder');
           return { accession, detail: state.setupErrors.join(' | ') };

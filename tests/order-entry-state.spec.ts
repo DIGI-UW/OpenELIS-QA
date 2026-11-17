@@ -125,7 +125,7 @@ async function selectFirstSite(page: Page): Promise<boolean> {
   await page.waitForTimeout(2_500);
 
   const sel = page.getByRole('button', { name: /^\s*Select\s*$/ }).first();
-  if (!(await sel.isVisible({ timeout: 8_000 }).catch(() => false))) return false;
+  if (!(await sel.waitFor({ timeout: 8_000 }).then(() => true, () => false))) return false;
   await sel.click();
   await page.waitForTimeout(3_000);
   return true;
@@ -272,7 +272,7 @@ test.describe('Order entry — state reset and lab number lifecycle (TC-OE)', ()
     await continueFirstOrder(page);
     await navToEntryInApp(page);
     const np = page.locator('button').filter({ hasText: /^\s*New Patient\s*$/ }).first();
-    if (await np.isVisible({ timeout: 8_000 }).catch(() => false)) await np.click();
+    if (await np.waitFor({ timeout: 8_000 }).then(() => true, () => false)) await np.click();
 
     // Guard the oracle: "no POSTs" is only meaningful if the entry form really is on screen.
     await expect(page.locator('#labNumber'), 'the entry form must be on screen while we wait').toBeAttached({ timeout: 15_000 });

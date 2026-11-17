@@ -91,7 +91,7 @@ test.describe('Suite AP — Aliquot Management Core (TC-ALQ)', () => {
     const searchInput = page.locator(
       'input[placeholder*="accession" i], input[placeholder*="lab" i], input[placeholder*="search" i], input'
     ).first();
-    const hasInput = await searchInput.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasInput = await searchInput.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     console.log(`TC-ALQ-02: accession input visible=${hasInput}`);
     expect(hasInput, 'Aliquot page must have an accession search input').toBe(true);
@@ -108,7 +108,7 @@ test.describe('Suite AP — Aliquot Management Core (TC-ALQ)', () => {
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const searchInput = page.locator('input').first();
-    if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await searchInput.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await searchInput.fill(ACCESSION);
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2500);
@@ -137,9 +137,9 @@ test.describe('Suite AP — Aliquot Management Core (TC-ALQ)', () => {
     const elapsed = Date.now() - start;
 
     console.log(`TC-ALQ-05: Aliquot page loaded in ${elapsed}ms`);
-    if (loaded) {
-      expect(elapsed, 'Aliquot page must load within 5000ms').toBeLessThan(5000);
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(loaded, 'precondition: loaded').toBeTruthy();
+    expect(elapsed, 'Aliquot page must load within 5000ms').toBeLessThan(5000);
   });
 
   test('TC-ALQ-06: Aliquot page shows Create/Add Aliquot control', async ({ page }) => {
@@ -153,7 +153,7 @@ test.describe('Suite AP — Aliquot Management Core (TC-ALQ)', () => {
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const addBtn = page.getByRole('button', { name: /add|create|new|save/i }).first();
-    const hasAdd = await addBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasAdd = await addBtn.waitFor({ timeout: 3000 }).then(() => true, () => false);
     const bodyText = await page.locator('body').innerText();
     const hasAliquotTerm = /aliquot|split|sub-sample|container/i.test(bodyText);
 
@@ -176,7 +176,7 @@ test.describe('Suite AP — Aliquot Management Core (TC-ALQ)', () => {
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const searchInput = page.locator('input').first();
-    if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await searchInput.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await searchInput.fill('ZZZZZ99999NON_EXISTENT');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2000);
@@ -212,11 +212,9 @@ test.describe('Suite AP — Aliquot Management Core (TC-ALQ)', () => {
     });
 
     console.log(`TC-ALQ-08: Aliquot API → ${result.url} HTTP ${result.status}`);
-    if (result.status !== 404) {
-      expect(result.status, 'Aliquot API must not 5xx').not.toBeGreaterThanOrEqual(500);
-    } else {
-      console.log('TC-ALQ-08: NOTE — aliquot API endpoint not at expected paths');
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(result.status !== 404, 'precondition: result.status !== 404').toBeTruthy();
+    expect(result.status, 'Aliquot API must not 5xx').not.toBeGreaterThanOrEqual(500);
   });
 });
 
@@ -256,9 +254,9 @@ test.describe('Suite AP-DEEP — Aliquot Deep Validation (TC-ALQ-09–16)', () =
     });
 
     console.log(`TC-ALQ-09: Container types → ${result.url} HTTP ${result.status}, count=${result.count}`);
-    if (result.status !== 404) {
-      expect(result.status, 'Container types API must not 5xx').not.toBeGreaterThanOrEqual(500);
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(result.status !== 404, 'precondition: result.status !== 404').toBeTruthy();
+    expect(result.status, 'Container types API must not 5xx').not.toBeGreaterThanOrEqual(500);
   });
 
   test('TC-ALQ-10: Aliquot page does not expose stack traces', async ({ page }) => {
@@ -292,6 +290,8 @@ test.describe('Suite AP-DEEP — Aliquot Deep Validation (TC-ALQ-09–16)', () =
 
     console.log(`TC-ALQ-11: Aliquot in sidebar=${hasSidebarLink}`);
     // Non-blocking — document state
+    // Was a console verdict only (2026-11-17).
+    expect(hasSidebarLink, 'Aliquot link not found in navigation text').toBeTruthy();
     if (hasSidebarLink) {
       console.log('TC-ALQ-11: PASS — Aliquot link present in navigation');
     } else {
@@ -317,9 +317,9 @@ test.describe('Suite AP-DEEP — Aliquot Deep Validation (TC-ALQ-09–16)', () =
 
     const serverErrors = results.filter(s => s >= 500);
     console.log(`TC-ALQ-12: 5 concurrent aliquot requests → [${results.join(', ')}], errors=${serverErrors.length}`);
-    if (!results.every(s => s === 404)) {
-      expect(serverErrors.length, 'Concurrent aliquot requests must not cause 5xx').toBe(0);
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(!results.every(s => s === 404), 'precondition: !results.every(s => s === 404)').toBeTruthy();
+    expect(serverErrors.length, 'Concurrent aliquot requests must not cause 5xx').toBe(0);
   });
 
   test('TC-ALQ-13: Empty aliquot form submit shows validation, not 500', async ({ page }) => {
@@ -333,7 +333,7 @@ test.describe('Suite AP-DEEP — Aliquot Deep Validation (TC-ALQ-09–16)', () =
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const submitBtn = page.getByRole('button', { name: /submit|save|create|add/i }).first();
-    if (await submitBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await submitBtn.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await submitBtn.click();
       await page.waitForTimeout(2000);
 

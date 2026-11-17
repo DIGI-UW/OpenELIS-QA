@@ -297,7 +297,7 @@ test.describe('Generic Sample — Enter Results (US-GEN-4)', () => {
     // When fixed, the resolved label "Generic Sample" should appear in breadcrumb instead
     const breadcrumb = page.locator('[aria-label*="breadcrumb" i], nav, .cds--breadcrumb, [class*="breadcrumb"]').first();
 
-    if (await breadcrumb.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await breadcrumb.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       const breadcrumbText = await breadcrumb.innerText();
       const hasRawKey = breadcrumbText.includes('sample.label.generic');
       const hasResolvedLabel = /generic sample/i.test(breadcrumbText);
@@ -440,7 +440,7 @@ test.describe('Suite GEN-EXT — Generic Sample Extended', () => {
     await waitForRouteContent(page);
 
     const searchInput = page.locator('input[placeholder*="accession" i], input').first();
-    if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await searchInput.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await searchInput.fill('26CPHL00008V');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2000);
@@ -462,7 +462,7 @@ test.describe('Suite GEN-EXT — Generic Sample Extended', () => {
 
     const bodyText = await page.locator('body').innerText();
     const hasUpload = /upload|import|file|csv|excel/i.test(bodyText);
-    const hasFileInput = await page.locator('input[type="file"]').isVisible({ timeout: 2000 }).catch(() => false);
+    const hasFileInput = await page.locator('input[type="file"]').waitFor({ timeout: 2000 }).then(() => true, () => false);
 
     console.log(`TC-GEN-EXT-05: hasUpload=${hasUpload}, hasFileInput=${hasFileInput}`);
     expect(bodyText).not.toContain('Internal Server Error');

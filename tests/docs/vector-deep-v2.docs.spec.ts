@@ -32,7 +32,7 @@ test('User manual — Vector deep states v2', async ({ page }, info) => {
   // Identify (now that specimen rows are visible).
   try {
     const id = page.getByRole('button', { name: /identif/i }).first();
-    if (await id.isVisible({ timeout: 2500 })) { await id.click({ timeout: 2000 }); await page.waitForTimeout(1200); }
+    if (await id.waitFor({ timeout: 2500 }).then(() => true, () => false)) { await id.click({ timeout: 2000 }); await page.waitForTimeout(1200); }
   } catch {}
   await shot(page, info, 'Identify form — species, method, confidence');
   await dismissModals(page);
@@ -40,12 +40,12 @@ test('User manual — Vector deep states v2', async ({ page }, info) => {
   // Split + preview (do not save pools).
   try {
     const sp = page.getByRole('button', { name: /split/i }).first();
-    if (await sp.isVisible({ timeout: 2500 })) { await sp.click({ timeout: 2000 }); await page.waitForTimeout(1200); }
+    if (await sp.waitFor({ timeout: 2500 }).then(() => true, () => false)) { await sp.click({ timeout: 2000 }); await page.waitForTimeout(1200); }
   } catch {}
   await shot(page, info, 'Split into sub-pools — options');
   try {
     const pv = page.getByRole('button', { name: /preview/i }).first();
-    if (await pv.isVisible({ timeout: 2000 })) { await pv.click({ timeout: 2000 }); await page.waitForTimeout(1200); }
+    if (await pv.waitFor({ timeout: 2000 }).then(() => true, () => false)) { await pv.click({ timeout: 2000 }); await page.waitForTimeout(1200); }
   } catch {}
   await shot(page, info, 'Split — proposed grouping preview');
   await saveWalkthrough(page, info);

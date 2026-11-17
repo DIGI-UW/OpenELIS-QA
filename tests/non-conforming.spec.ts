@@ -41,8 +41,8 @@ test.describe('Non-conforming samples (TC-NC)', () => {
     const rejectCheckbox = page.getByRole('checkbox', { name: /reject/i }).first();
     const rejectLabel = page.getByText('Reject Sample', { exact: false });
 
-    const hasRejectCb = await rejectCheckbox.isVisible({ timeout: 3000 }).catch(() => false);
-    const hasRejectLabel = await rejectLabel.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasRejectCb = await rejectCheckbox.waitFor({ timeout: 3000 }).then(() => true, () => false);
+    const hasRejectLabel = await rejectLabel.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     console.log(`TC-NC-01: Reject Sample checkbox visible = ${hasRejectCb || hasRejectLabel}`);
     expect(hasRejectCb || hasRejectLabel).toBe(true);
@@ -60,7 +60,7 @@ test.describe('Non-conforming samples (TC-NC)', () => {
 
     // Click the Reject Sample checkbox/label
     const rejectLabel = page.getByText('Reject Sample', { exact: false });
-    if (await rejectLabel.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await rejectLabel.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await rejectLabel.click();
     } else {
       const rejectCb = page.getByRole('checkbox', { name: /reject/i }).first();
@@ -73,10 +73,12 @@ test.describe('Non-conforming samples (TC-NC)', () => {
     const reasonSelect = page.getByRole('combobox', { name: /reason|reject/i }).first();
     const reasonInput = page.getByRole('textbox', { name: /reason/i }).first();
 
-    const hasReasonSelect = await reasonSelect.isVisible({ timeout: 3000 }).catch(() => false);
-    const hasReasonInput = await reasonInput.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasReasonSelect = await reasonSelect.waitFor({ timeout: 3000 }).then(() => true, () => false);
+    const hasReasonInput = await reasonInput.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     console.log(`TC-NC-02: Rejection reason UI — select: ${hasReasonSelect}, input: ${hasReasonInput}`);
+    // Was a console verdict only (2026-11-17).
+    expect([hasReasonSelect, hasReasonInput], 'rejecting a sample asks for a reason (a list or a field)').toContain(true);
     // Document without hard assert — some builds show a select, some show a text input
     if (hasReasonSelect) {
       const opts = await reasonSelect.locator('option').allTextContents();
@@ -132,13 +134,13 @@ test.describe('Non-conforming samples (TC-NC)', () => {
 
     // Check for the NC warning legend that we know exists in the UI
     const legendText = page.getByText(/nonconforming|been rejected/i);
-    const hasLegend = await legendText.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasLegend = await legendText.waitFor({ timeout: 3000 }).then(() => true, () => false);
     console.log(`TC-NC-04: NC legend visible in Results By Order = ${hasLegend}`);
 
-    if (hasLegend) {
-      console.log('TC-NC-04: PASS — NC indicator legend exists in Results By Order view');
-      expect(hasLegend).toBe(true);
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(hasLegend, 'precondition: hasLegend').toBeTruthy();
+    console.log('TC-NC-04: PASS — NC indicator legend exists in Results By Order view');
+    expect(hasLegend).toBe(true);
   });
 });
 
@@ -153,11 +155,11 @@ test.describe('Suite AD — Non-Conform Corrective Actions + View NC Events', ()
     await page.waitForTimeout(500);
 
     const nonConformLink = page.getByText(/Non-Conform|NC/i);
-    if (await nonConformLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await nonConformLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await nonConformLink.click();
       await page.waitForTimeout(500);
       const viewEventsLink = page.getByText(/View.*Non-Conforming|NC.*Events|View.*Events/i);
-      if (await viewEventsLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await viewEventsLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await viewEventsLink.click();
       }
     }
@@ -176,9 +178,7 @@ test.describe('Suite AD — Non-Conform Corrective Actions + View NC Events', ()
 
     // Verify queue table exists
     const queueTable = page.locator('table, [role="grid"], [role="table"]').first();
-    await expect(queueTable).toBeVisible({ timeout: 3000 }).catch(() => {
-      console.log('NC events queue table not visible');
-    });
+    await expect(queueTable).toBeVisible({ timeout: 3000 });
   });
 
   test('TC-NCA-02: NC events list shows recent events', async ({ page }) => {
@@ -193,23 +193,19 @@ test.describe('Suite AD — Non-Conform Corrective Actions + View NC Events', ()
     const tableRows = page.locator('tbody tr, [role="row"]');
     const rowCount = await tableRows.count();
 
-    if (rowCount > 0) {
-      // Verify first row has key columns
-      const firstRow = tableRows.first();
-      const cells = firstRow.locator('td, [role="gridcell"]');
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(rowCount > 0, 'precondition: rowCount > 0').toBeTruthy();
+    // Verify first row has key columns
+    const firstRow = tableRows.first();
+    const cells = firstRow.locator('td, [role="gridcell"]');
 
-      // Should have at least accession, reason, date
-      const cellCount = await cells.count();
-      expect(cellCount).toBeGreaterThanOrEqual(3);
+    // Should have at least accession, reason, date
+    const cellCount = await cells.count();
+    expect(cellCount).toBeGreaterThanOrEqual(3);
 
-      // Look for accession or order ID pattern
-      const accessionCell = firstRow.getByText(/26CPHL|NC|accession/i);
-      await expect(accessionCell).toBeVisible({ timeout: 2000 }).catch(() => {
-        console.log('Accession/NC event identifier not clearly visible');
-      });
-    } else {
-      console.log('SKIP: No NC events in queue (expected if none exist in test data)');
-    }
+    // Look for accession or order ID pattern
+    const accessionCell = firstRow.getByText(/26CPHL|NC|accession/i);
+    await expect(accessionCell).toBeVisible({ timeout: 2000 });
   });
 
   test('TC-NCA-03: Corrective Actions screen loads', async ({ page }) => {
@@ -218,11 +214,11 @@ test.describe('Suite AD — Non-Conform Corrective Actions + View NC Events', ()
     await page.waitForTimeout(500);
 
     const nonConformLink = page.getByText(/Non-Conform|NC/i);
-    if (await nonConformLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await nonConformLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await nonConformLink.click();
       await page.waitForTimeout(500);
       const actionsLink = page.getByText(/Corrective.*Actions|Actions/i);
-      if (await actionsLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await actionsLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await actionsLink.click();
       }
     }
@@ -241,14 +237,10 @@ test.describe('Suite AD — Non-Conform Corrective Actions + View NC Events', ()
 
     // Verify action list and create button
     const createBtn = page.getByRole('button', { name: /Create|Add|\+|New/i });
-    await expect(createBtn).toBeVisible({ timeout: 3000 }).catch(() => {
-      console.log('Create Corrective Action button not visible');
-    });
+    await expect(createBtn).toBeVisible({ timeout: 3000 });
 
     const actionTable = page.locator('table, [role="grid"], [role="table"]').first();
-    await expect(actionTable).toBeVisible({ timeout: 2000 }).catch(() => {
-      console.log('Corrective actions table not visible');
-    });
+    await expect(actionTable).toBeVisible({ timeout: 2000 });
   });
 
   test('TC-NCA-04: Create a corrective action for existing NC event', async ({ page }) => {
@@ -261,51 +253,47 @@ test.describe('Suite AD — Non-Conform Corrective Actions + View NC Events', ()
 
     // Click create button
     const createBtn = page.getByRole('button', { name: /Create|Add|\+/i });
-    if (await createBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await createBtn.click();
-      await page.waitForTimeout(1000);
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(await createBtn.waitFor({ timeout: 2000 }).then(() => true, () => false), 'precondition: createBtn is visible').toBeTruthy();
+    await createBtn.click();
+    await page.waitForTimeout(1000);
 
-      // Fill form fields
-      // NC Event selector
-      const ncSelect = page.getByRole('combobox').first();
-      if (await ncSelect.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await ncSelect.selectOption({ index: 1 }); // Select first non-empty option
-      }
-
-      // Description field
-      const descField = page.locator('input[placeholder*="description" i], textarea').first();
-      if (await descField.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await descField.fill(`${QA_PREFIX} Test Corrective Action`);
-      }
-
-      // Assigned To
-      const assignSelect = page.getByRole('combobox', { name: /assigned|user/i }).first();
-      if (await assignSelect.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await assignSelect.selectOption({ index: 1 });
-      }
-
-      // Due Date
-      const dueDate = await getFutureDate(7);
-      const dateField = page.locator('input[type="date"]').first();
-      if (await dateField.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await dateField.fill(dueDate);
-      }
-
-      // Submit form
-      const submitBtn = page.getByRole('button', { name: /Save|Submit|Create/i });
-      if (await submitBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await submitBtn.click();
-        await page.waitForTimeout(2000);
-
-        // Verify success (redirect or message)
-        const successMsg = page.getByText(/success|created|saved/i);
-        await expect(successMsg).toBeVisible({ timeout: 3000 }).catch(() => {
-          console.log('No success message after corrective action creation');
-        });
-      }
-    } else {
-      console.log('SKIP: Create button not available or form load failed');
+    // Fill form fields
+    // NC Event selector
+    const ncSelect = page.getByRole('combobox').first();
+    if (await ncSelect.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
+      await ncSelect.selectOption({ index: 1 }); // Select first non-empty option
     }
+
+    // Description field
+    const descField = page.locator('input[placeholder*="description" i], textarea').first();
+    if (await descField.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
+      await descField.fill(`${QA_PREFIX} Test Corrective Action`);
+    }
+
+    // Assigned To
+    const assignSelect = page.getByRole('combobox', { name: /assigned|user/i }).first();
+    if (await assignSelect.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
+      await assignSelect.selectOption({ index: 1 });
+    }
+
+    // Due Date
+    const dueDate = await getFutureDate(7);
+    const dateField = page.locator('input[type="date"]').first();
+    if (await dateField.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
+      await dateField.fill(dueDate);
+    }
+
+    // Submit form
+    const submitBtn = page.getByRole('button', { name: /Save|Submit|Create/i });
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(await submitBtn.waitFor({ timeout: 2000 }).then(() => true, () => false), 'precondition: submitBtn is visible').toBeTruthy();
+    await submitBtn.click();
+    await page.waitForTimeout(2000);
+
+    // Verify success (redirect or message)
+    const successMsg = page.getByText(/success|created|saved/i);
+    await expect(successMsg).toBeVisible({ timeout: 3000 });
   });
 
   test('TC-NCA-05: Corrective action saved and visible in history', async ({ page }) => {
@@ -323,25 +311,21 @@ test.describe('Suite AD — Non-Conform Corrective Actions + View NC Events', ()
     // Look for the corrective action in the list
     const actionDescription = page.getByText(QA_PREFIX, { exact: false });
 
-    if (await actionDescription.isVisible({ timeout: 5000 }).catch(() => false)) {
-      // Click to open details
-      await actionDescription.click();
-      await page.waitForTimeout(1000);
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(await actionDescription.waitFor({ timeout: 5000 }).then(() => true, () => false), 'precondition: actionDescription is visible').toBeTruthy();
+    // Click to open details
+    await actionDescription.click();
+    await page.waitForTimeout(1000);
 
-      // Verify details match
-      const detailTitle = page.getByText(QA_PREFIX, { exact: false });
-      await expect(detailTitle).toBeVisible({ timeout: 3000 });
+    // Verify details match
+    const detailTitle = page.getByText(QA_PREFIX, { exact: false });
+    await expect(detailTitle).toBeVisible({ timeout: 3000 });
 
-      // Verify key fields
-      const descCheck = page.getByText(/Test Corrective Action/i);
-      const dueDateCheck = page.getByText(/\d{4}-\d{2}-\d{2}/); // Date format
+    // Verify key fields
+    const descCheck = page.getByText(/Test Corrective Action/i);
+    const dueDateCheck = page.getByText(/\d{4}-\d{2}-\d{2}/); // Date format
 
-      await expect(descCheck).toBeVisible({ timeout: 2000 }).catch(() => {
-        console.log('Description not visible in corrective action details');
-      });
-    } else {
-      console.log('SKIP: Corrective action not found in list (may not have been created in TC-NCA-04)');
-    }
+    await expect(descCheck).toBeVisible({ timeout: 2000 });
   });
 });
 
@@ -391,7 +375,7 @@ test.describe('Suite NC-EXT — Non-Conforming Extended Tests (TC-NC-EXT)', () =
     const searchInput = page.locator(
       'input[placeholder*="lab" i], input[placeholder*="accession" i], input[id*="lab" i]'
     ).first();
-    if (!await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (!await searchInput.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       console.log('TC-NC-EXT-02: SKIP — no search input found');
       test.skip(); return;
     }
@@ -435,7 +419,7 @@ test.describe('Suite NC-EXT — Non-Conforming Extended Tests (TC-NC-EXT)', () =
     await waitForRouteContent(page);
 
     const searchBtn = page.getByRole('button', { name: /search|find|submit/i }).first();
-    if (await searchBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await searchBtn.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await searchBtn.click();
       await page.waitForTimeout(2000);
     }
@@ -482,16 +466,14 @@ test.describe('Suite NC-EXT — Non-Conforming Extended Tests (TC-NC-EXT)', () =
     await waitForRouteContent(page);
 
     const submitBtn = page.getByRole('button', { name: /submit|save|report/i }).first();
-    if (await submitBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await submitBtn.click();
-      await page.waitForTimeout(2000);
-      const bodyText = await page.locator('body').innerText();
-      expect(bodyText, 'Empty NC form submit must not 500').not.toContain('Internal Server Error');
-      const hasValidation = /required|invalid|error|please|field/i.test(bodyText);
-      console.log(`TC-NC-EXT-06: validationShown=${hasValidation}`);
-    } else {
-      console.log('TC-NC-EXT-06: NOTE — submit button not found on NC event form');
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(await submitBtn.waitFor({ timeout: 3000 }).then(() => true, () => false), 'precondition: submitBtn is visible').toBeTruthy();
+    await submitBtn.click();
+    await page.waitForTimeout(2000);
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText, 'Empty NC form submit must not 500').not.toContain('Internal Server Error');
+    const hasValidation = /required|invalid|error|please|field/i.test(bodyText);
+    console.log(`TC-NC-EXT-06: validationShown=${hasValidation}`);
   });
 
   test('TC-NC-EXT-07: NC module loads within acceptable time', async ({ page }) => {
@@ -508,9 +490,9 @@ test.describe('Suite NC-EXT — Non-Conforming Extended Tests (TC-NC-EXT)', () =
     const ok = !bodyText.includes('Internal Server Error') && !page.url().match(/LoginPage|login/i);
 
     console.log(`TC-NC-EXT-07: NCE page loaded in ${elapsed}ms, ok=${ok}`);
-    if (ok) {
-      expect(elapsed, 'NC event page must load within 5000ms').toBeLessThan(5000);
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(ok, 'precondition: ok').toBeTruthy();
+    expect(elapsed, 'NC event page must load within 5000ms').toBeLessThan(5000);
   });
 });
 
@@ -564,7 +546,7 @@ test.describe('Phase 5 — G-DEEP: NCE Interaction Tests', () => {
     // Must have a search field so supervisor can find NC events
     const hasSearchField = await page.locator(
       'input[placeholder*="lab" i], input[placeholder*="accession" i], input'
-    ).first().isVisible({ timeout: 3000 }).catch(() => false);
+    ).first().waitFor({ timeout: 3000 }).then(() => true, () => false);
     expect(hasSearchField, 'Corrective Actions page must have a search field').toBe(true);
   });
 });

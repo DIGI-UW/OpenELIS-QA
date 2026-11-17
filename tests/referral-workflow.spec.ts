@@ -33,12 +33,14 @@ test.describe('Referral Management (TC-REF)', () => {
 
     // Navigate to Add Sample step
     const nextBtn = orderWizardForward(page);
-    for (let i = 0; i < 2 && await nextBtn.isVisible({ timeout: 1000 }).catch(() => false); i++) {
+    for (let i = 0; i < 2 && await nextBtn.waitFor({ timeout: 1000 }).then(() => true, () => false); i++) {
       await nextBtn.click();
       await page.waitForTimeout(1000);
     }
 
-    const hasReferral = await page.getByText(/refer|referral|external lab/i).isVisible({ timeout: 5000 }).catch(() => false);
+    const hasReferral = await page.getByText(/refer|referral|external lab/i).waitFor({ timeout: 5000 }).then(() => true, () => false);
+    // Was a console verdict only (2026-11-17).
+    expect(hasReferral, 'no referral section visible in Add Order').toBeTruthy();
     console.log(hasReferral
       ? 'TC-REF-01: PASS — referral section found in Add Order'
       : 'TC-REF-01: GAP — no referral section visible in Add Order');
@@ -50,14 +52,16 @@ test.describe('Referral Management (TC-REF)', () => {
 
     // Enable referral
     const referralCheck = page.getByRole('checkbox').filter({ hasText: /refer|external/i }).first();
-    if (await referralCheck.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await referralCheck.waitFor({ timeout: 5000 }).then(() => true, () => false)) {
       await referralCheck.click();
       await page.waitForTimeout(1000);
     }
 
     // Find external lab select
     const labSelect = page.getByRole('combobox', { name: /lab|external|refer/i }).first();
-    if (!(await labSelect.isVisible({ timeout: 3000 }).catch(() => false))) {
+    // Was a console verdict only (2026-11-17).
+    expect((await labSelect.waitFor({ timeout: 3000 }).then(() => true, () => false)), 'external lab dropdown not visible after enabling referral').toBeTruthy();
+    if (!(await labSelect.waitFor({ timeout: 3000 }).then(() => true, () => false))) {
       console.log('TC-REF-02: GAP — external lab dropdown not visible after enabling referral');
       return;
     }
@@ -99,6 +103,8 @@ test.describe('Referral Management (TC-REF)', () => {
     let found = false;
     for (const u of refUrls) {
       const res = await page.goto(`${BASE}${u}`).catch(() => null);
+      // Was a console verdict only (2026-11-17).
+      expect(res && res.ok() && !page.url().includes('LoginPage'), 'the check this case reports').toBeTruthy();
       if (res && res.ok() && !page.url().includes('LoginPage')) {
         const text = await page.textContent('body') ?? '';
         if (/refer|external lab|referred/i.test(text)) {
@@ -257,7 +263,7 @@ test.describe('Referral Extended — API & Search (TC-REF-EXT)', () => {
     const labInput = page.locator(
       'input[placeholder*="lab" i], input[id*="lab" i], input[placeholder*="accession" i]'
     ).first();
-    const hasLabInput = await labInput.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasLabInput = await labInput.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     if (hasLabInput) {
       // Try searching with the known accession
@@ -343,8 +349,8 @@ test.describe('Referral Extended — API & Search (TC-REF-EXT)', () => {
     expect(bodyText).not.toMatch(/500|Internal Server Error/);
 
     // Check for submit/save button presence (even if no data to act on)
-    const hasSubmitBtn = await page.getByRole('button', { name: /submit|save|update|enter result/i }).first().isVisible({ timeout: 3000 }).catch(() => false);
-    const hasSearchBtn = await page.getByRole('button', { name: /search|find/i }).first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSubmitBtn = await page.getByRole('button', { name: /submit|save|update|enter result/i }).first().waitFor({ timeout: 3000 }).then(() => true, () => false);
+    const hasSearchBtn = await page.getByRole('button', { name: /search|find/i }).first().waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     console.log(`TC-REF-EXT-05: Submit button=${hasSubmitBtn}, Search button=${hasSearchBtn}`);
     // At minimum the page must have a search button to find referrals

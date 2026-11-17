@@ -223,7 +223,7 @@ export async function placeEqaOrder(page: Page, o: { cycleId: string; enrollment
   await page.locator('main').getByText(/^Generate$/).click();
   await expect(page.locator('#labNo')).not.toHaveValue('', { timeout: 10_000 });
   const labNo = await page.locator('#labNo').inputValue();
-  const { ensureReferringClinic } = await import('../../helpers/data-factory');
+  const { ensureReferringClinic } = await import('../../helpers/data-factory.js');
   const siteId = await ensureReferringClinic(page, []);
   const sites = await api(page, 'GET', '/displayList/SAMPLE_PATIENT_REFERRING_CLINIC');
   const siteName = (sites.json ?? []).find((x: any) => String(x.id) === String(siteId))?.value ?? '';
@@ -285,8 +285,8 @@ export async function validate(page: Page, labNo: string): Promise<number> {
 
 /** Log in as another user in a context of its own (never touches the shared admin session). */
 export async function asUser<T>(browser: import('@playwright/test').Browser, user: string, pass: string, fn: (p: Page) => Promise<T>): Promise<T> {
-  const { BASE } = await import('../../helpers/test-helpers');
-  const { performUiLogin } = await import('./session');
+  const { BASE } = await import('../../helpers/test-helpers.js');
+  const { performUiLogin } = await import('./session.js');
   const ctx = await browser.newContext({ baseURL: BASE, ignoreHTTPSErrors: true, storageState: { cookies: [], origins: [] } });
   const p = await ctx.newPage();
   try {

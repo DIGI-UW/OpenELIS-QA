@@ -245,7 +245,7 @@ test.describe('Calculated Values Extended (TC-CALC-EXT)', () => {
       .or(page.locator('a[href*="calculatedValue"], a[href*="calcValue"]'))
       .first();
 
-    const hasCalcLink = await calcLink.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasCalcLink = await calcLink.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     if (hasCalcLink) {
       await calcLink.click();
@@ -414,7 +414,7 @@ test.describe('Calculated Values Extended (TC-CALC-EXT)', () => {
     // Must show either table rows (if rules exist) or an empty-state message
     const hasRows = (await page.locator('tbody tr').count()) > 0;
     const hasEmptyState = /no.*calculation|no.*formula|empty|none/i.test(bodyText);
-    const hasAddButton = await page.getByRole('button', { name: /add|create|new/i }).first().isVisible({ timeout: 2000 }).catch(() => false);
+    const hasAddButton = await page.getByRole('button', { name: /add|create|new/i }).first().waitFor({ timeout: 2000 }).then(() => true, () => false);
 
     console.log(`TC-CALC-EXT-05: hasRows=${hasRows}, hasEmptyState=${hasEmptyState}, hasAddButton=${hasAddButton}`);
     expect(hasRows || hasEmptyState || hasAddButton, 'Page must show rules, empty state, or Add button').toBe(true);
@@ -525,7 +525,7 @@ test.describe('Suite CALC-DEEP — Calculated Values Deep', () => {
     await waitForRouteContent(page);
 
     const addBtn = page.getByRole('button', { name: /add|create|new/i }).first();
-    if (await addBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await addBtn.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await addBtn.click();
       await page.waitForTimeout(1000);
 

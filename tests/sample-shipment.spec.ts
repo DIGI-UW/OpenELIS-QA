@@ -420,17 +420,15 @@ test.describe('Shipment API Extended (TC-SHIP-EXT)', () => {
       'input[placeholder*="barcode" i], input[placeholder*="box" i], input[placeholder*="scan" i], input'
     ).first();
 
-    const hasInput = await barcodeInput.isVisible({ timeout: 3000 }).catch(() => false);
-    if (hasInput) {
-      // Type a mock barcode
-      await barcodeInput.fill('BOX-2026-0001');
-      await page.waitForTimeout(500);
-      const bodyText = await page.locator('body').innerText();
-      expect(bodyText, 'Barcode input must not cause Internal Server Error').not.toContain('Internal Server Error');
-      console.log('TC-SHIP-EXT-05: PASS — barcode input accepted without error');
-    } else {
-      console.log('TC-SHIP-EXT-05: GAP — barcode input not found on receive page');
-    }
+    const hasInput = await barcodeInput.waitFor({ timeout: 3000 }).then(() => true, () => false);
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(hasInput, 'precondition: hasInput').toBeTruthy();
+    // Type a mock barcode
+    await barcodeInput.fill('BOX-2026-0001');
+    await page.waitForTimeout(500);
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText, 'Barcode input must not cause Internal Server Error').not.toContain('Internal Server Error');
+    console.log('TC-SHIP-EXT-05: PASS — barcode input accepted without error');
   });
 
   test('TC-SHIP-EXT-06: Shipment reports page handles no-data date range gracefully', async ({ page }) => {
@@ -444,16 +442,14 @@ test.describe('Shipment API Extended (TC-SHIP-EXT)', () => {
 
     // Click generate without setting date range
     const generateBtn = page.getByRole('button', { name: /generate report/i }).first();
-    const btnVisible = await generateBtn.isVisible({ timeout: 3000 }).catch(() => false);
-    if (btnVisible) {
-      await generateBtn.click();
-      await page.waitForTimeout(2000);
-      const bodyText = await page.locator('body').innerText();
-      expect(bodyText, 'Empty report must not cause Internal Server Error').not.toContain('Internal Server Error');
-      const hasNoData = /no.*shipment|no.*result|no.*data|empty|0 boxes/i.test(bodyText);
-      console.log(`TC-SHIP-EXT-06: Generate report → hasNoData=${hasNoData}`);
-    } else {
-      console.log('TC-SHIP-EXT-06: GAP — Generate Report button not found');
-    }
+    const btnVisible = await generateBtn.waitFor({ timeout: 3000 }).then(() => true, () => false);
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(btnVisible, 'precondition: btnVisible').toBeTruthy();
+    await generateBtn.click();
+    await page.waitForTimeout(2000);
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText, 'Empty report must not cause Internal Server Error').not.toContain('Internal Server Error');
+    const hasNoData = /no.*shipment|no.*result|no.*data|empty|0 boxes/i.test(bodyText);
+    console.log(`TC-SHIP-EXT-06: Generate report → hasNoData=${hasNoData}`);
   });
 });

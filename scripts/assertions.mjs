@@ -23,6 +23,21 @@ export const ASSERTION_HELPERS = [
   'assertOrderPersisted',    // tests/docs/order-helpers.ts — expect(ok).toBeTruthy()
   'assertSamplePersisted',   // tests/docs/order-helpers.ts — expect(samples.length)…
   'expectNoErrorPage',       // test-catalog-mgmt.spec.ts — expect(url).not.toContain…
+  // Added 2026-11-17 after reading each body: every one calls expect() or fails the step.
+  'openWorkplan',            // tests/workplan.spec.ts — the screen's selector, heading and label
+  'expectInAppLayout',       // tests/system-misc.spec.ts — side navigation, no error document
+  'expectStage',             // helpers/pathology-case.ts
+  'expectOffered',           // helpers/searchable.ts
+  'expectPreselected',       // helpers/searchable.ts
+  'expectBanner',            // tests/inventory-board.spec.ts
+  'expectOnePageValidation', // tests/validation-review.spec.ts
+  'verifyPageLoad',          // tests/admin-config.spec.ts
+  'assertWriteIssued',       // helpers/silentSave.ts
+  'assertWriteSucceeded',    // helpers/silentSave.ts
+  'assertUserVisibleOutcome',// helpers/silentSave.ts
+  'assertRoundTrip',         // helpers/silentSave.ts
+  'assertBugEvidence',       // helpers/networkCapture.ts
+  'requireStep',             // tests/chains/_common.ts — BLOCKED, which fails unless declared in known-gaps.ts
 ];
 
 /** Names ESLint's playwright/expect-expect should accept. `expect` covers expect.poll/soft/fail. */

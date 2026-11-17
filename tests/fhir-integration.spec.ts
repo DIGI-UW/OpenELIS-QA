@@ -273,11 +273,9 @@ test.describe('Suite FHIR-RESOURCES — Clinical Resource Queries (TC-FHIR-04–
     }, base);
 
     console.log(`TC-FHIR-08: ${result.path} Content-Type: "${result.contentType}"`);
-    if (result.status === 200) {
-      expect(result.contentType, 'FHIR metadata must return application/fhir+json Content-Type').toMatch(/fhir\+json|application\/json/);
-    } else {
-      console.log('TC-FHIR-08: SKIP — FHIR metadata not accessible');
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(result.status === 200, 'precondition: result.status === 200').toBeTruthy();
+    expect(result.contentType, 'FHIR metadata must return application/fhir+json Content-Type').toMatch(/fhir\+json|application\/json/);
   });
 });
 
@@ -357,11 +355,9 @@ test.describe('Suite FHIR-ERROR — FHIR Error Handling (TC-FHIR-09–12)', () =
     }, base);
 
     console.log(`TC-FHIR-11: ${result.path} responded in ${result.elapsed}ms`);
-    if (result.status === 200) {
-      expect(result.elapsed, 'FHIR metadata must respond within 10 seconds').toBeLessThan(10000);
-    } else {
-      console.log('TC-FHIR-11: SKIP — FHIR metadata not accessible');
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(result.status === 200, 'precondition: result.status === 200').toBeTruthy();
+    expect(result.elapsed, 'FHIR metadata must respond within 10 seconds').toBeLessThan(10000);
   });
 
   test('TC-FHIR-12: FHIR concurrent requests do not return 5xx errors', async ({ page }) => {

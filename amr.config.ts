@@ -30,6 +30,8 @@ export default defineConfig({
     navigationTimeout: 90_000,
     ...devices['Desktop Chrome'],
     baseURL: BASE,
+    // Pinned 2026-11-17: specs read English text; an unset locale follows the machine.
+    locale: 'en-US',
     headless: true,
     ignoreHTTPSErrors: true,
     trace: 'retain-on-failure',

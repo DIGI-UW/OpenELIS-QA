@@ -78,7 +78,7 @@ test.describe('Deep GET Endpoint Structure (Phase 31)', () => {
   });
 
   test('TC-DEEP-01: TestSectionCreate returns active and inactive sections', async ({ page }) => {
-    const result = await page.evaluate(async () => {
+    const result: any = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
       const res = await fetch('/api/OpenELIS-Global/rest/TestSectionCreate', {
         headers: { 'X-CSRF-Token': csrf },
@@ -1306,7 +1306,7 @@ test.describe('New-test lifecycle (2026-09-22)', () => {
   test('TC-DEEP-33: narrowing an open-ended reference range reports the uncovered tail', async ({
     page,
   }) => {
-    const result = await page.evaluate(async () => {
+    const result: any = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
       const H = { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf };
       const B = '/api/OpenELIS-Global/rest/test-catalog';

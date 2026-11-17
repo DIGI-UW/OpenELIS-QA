@@ -118,7 +118,7 @@ test.describe.serial('Chain J — Audit Trail Coverage', () => {
     if (pp) accessionPatientProps = { ...pp };
     const found = await apiCall<{ patientSearchResults?: Array<{ patientID?: string }> }>(
       page, `${API}/patient-search-results?labNumber=${encodeURIComponent(auditAccession)}`);
-    accessionPatientPK = String(found.body?.patientSearchResults?.[0]?.patientID ?? '');
+    accessionPatientPK = String((found.body as any)?.patientSearchResults?.[0]?.patientID ?? '');
     markStep('J', 1, 'PASS', `Baseline audit rows for ${auditAccession} = ${baselineCount}` + (accessionPatientPK ? `; patient ${accessionPatientPK}` : '; no patientPK in the report'));
   });
 
@@ -208,9 +208,9 @@ test.describe.serial('Chain J — Audit Trail Coverage', () => {
     // The audit trail treats them differently (see Step 7), so the chain changes one field
     // of each and lets Step 4 say which of the two reached the report.
     personMarker = marker;
-    patientMarker = `${String(details.body.nationalId ?? 'qa')}`.replace(/-chainj\d*$/, '') + `-chainj${Date.now() % 100000}`;
+    patientMarker = `${String((details.body as any).nationalId ?? 'qa')}`.replace(/-chainj\d*$/, '') + `-chainj${Date.now() % 100000}`;
     const body: Record<string, unknown> = {
-      ...details.body,
+      ...(details.body as Record<string, unknown>),
       streetAddress: personMarker,   // PERSON-owned
       nationalId: patientMarker,     // PATIENT-owned
     };
@@ -350,11 +350,11 @@ test.describe.serial('Chain J — Audit Trail Coverage', () => {
         'This endpoint backs a shipped screen; a non-2xx is a product failure, not a gap.');
       expect(ev.ok).toBeTruthy(); return;
     }
-    const rows = (ev.body?.events ?? []) as Array<Record<string, unknown>>;
+    const rows = ((ev.body as any)?.events ?? []) as Array<Record<string, unknown>>;
     const hit = rows.some(r => JSON.stringify(r).includes(personMarker));
     markStep('J', 6, hit ? 'PASS' : 'FAIL',
       hit
-        ? `PERSON change ${personMarker} is readable in systemAuditEvents (${rows.length} of ${ev.body?.totalItems} rows; entity types include ${typeList.filter(n => ['PERSON', 'PATIENT', 'RESULT_LIMITS'].includes(n)).join(', ')})`
+        ? `PERSON change ${personMarker} is readable in systemAuditEvents (${rows.length} of ${(ev.body as any)?.totalItems} rows; entity types include ${typeList.filter(n => ['PERSON', 'PATIENT', 'RESULT_LIMITS'].includes(n)).join(', ')})`
         : `systemAuditEvents answered ${rows.length} PERSON rows and none carries ${personMarker}`,
       hit ? undefined : 'The System Audit Trail screen shows this change in the browser, so a miss here is a contract drift worth chasing, not a gap.');
     expect(hit, 'the PERSON change is readable through systemAuditEvents').toBeTruthy();

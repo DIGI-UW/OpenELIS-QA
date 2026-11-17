@@ -16,7 +16,7 @@ export default defineConfig({
   workers: 1,
   retries: 1,
   reporter: [['list'], ['json', { outputFile: 'rbac-results/personas-admin-last-run.json' }]],
-  use: { ...devices['Desktop Chrome'], baseURL: BASE, ignoreHTTPSErrors: true, trace: 'retain-on-failure' },
+  use: { ...devices['Desktop Chrome'], locale: 'en-US', baseURL: BASE, ignoreHTTPSErrors: true, trace: 'retain-on-failure' },
   projects: [
     { name: 'setup', testDir: '.', testMatch: /auth\.setup\.ts/ },
     ...PERSONAS.map(p => ({

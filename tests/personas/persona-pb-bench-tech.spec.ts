@@ -59,6 +59,7 @@ test.describe.serial('Persona PB — Bench Tech (Hematology)', () => {
     markStep(PERSONA, 1, 'PASS', `${workItems.length} hematology items waiting`);
   });
 
+  // eslint-disable-next-line playwright/expect-expect -- fails through markStep BLOCKED unless known-gaps.ts declares it
   test(`Step 2 — Enter ${SHIFT_TARGET} CBC results via API substitute (PERSIST, §11.5/§6.5a, BUG-31)`, async ({ page }) => {
     if (workItems.length === 0) test.skip();
     await page.goto(BASE);

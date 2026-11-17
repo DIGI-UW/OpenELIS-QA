@@ -10,7 +10,7 @@ export default defineConfig({
   reporter: [['line']],
   workers: 1,
   retries: 0,
-  use: { ...devices['Desktop Chrome'], baseURL: BASE, headless: true, ignoreHTTPSErrors: true },
+  use: { ...devices['Desktop Chrome'], locale: 'en-US', baseURL: BASE, headless: true, ignoreHTTPSErrors: true },
   projects: [
     { name: 'setup', testMatch: /auth\.setup\.ts/ },
     {

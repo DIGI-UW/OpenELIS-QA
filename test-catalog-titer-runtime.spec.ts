@@ -50,7 +50,7 @@ async function login(page: Page) {
   // redirects and no username field appears — skip fast instead of hanging on fill().
   // (`placeholder*="ser"` matches the reworked login's "Username" field, which lost its name/id.)
   const userField = page.locator('input[name="loginName"], #loginName, input[placeholder*="ser" i]').first();
-  if (!(await userField.isVisible({ timeout: 4000 }).catch(() => false))) return;
+  if (!(await userField.waitFor({ timeout: 4000 }).then(() => true, () => false))) return;
   await userField.fill(ADMIN.user, { timeout: 8000 }).catch(() => {});
   await page.fill('input[type="password"], #password', ADMIN.pass, { timeout: 8000 }).catch(() => {});
   await page.getByRole('button', { name: /login|sign in|submit/i }).first()

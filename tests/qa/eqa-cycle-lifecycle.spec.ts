@@ -86,17 +86,17 @@ test.describe.serial('EQA V2 cycle lifecycle', () => {
       },
     });
     expect(created.ok, `POST /rest/eqa/cycles -> ${created.status} ${JSON.stringify(created.body).slice(0, 250)}`).toBeTruthy();
-    cycleId = Number(created.body?.id);
+    cycleId = Number((created.body as any)?.id);
     expect(cycleId, 'the created cycle has an id').toBeTruthy();
 
     const back = await apiCall<{ cycleName?: string; status?: string }>(page, `${EQA}/cycles/${cycleId}`);
     expect(back.ok, 'GET the cycle back').toBeTruthy();
-    expect(back.body?.cycleName, 'the cycle reads back under its own name').toBe(`${TAG} cycle`);
+    expect((back.body as any)?.cycleName, 'the cycle reads back under its own name').toBe(`${TAG} cycle`);
   });
 
   test('EQA-CY-02 — a new cycle starts in PLANNED and declares its legal transitions (LIFECYCLE)', async ({ page }) => {
     const state = await apiCall<{ status?: string }>(page, `${EQA}/cycles/${cycleId}`);
-    expect(state.body?.status, 'a new cycle starts PLANNED').toBe('PLANNED');
+    expect((state.body as any)?.status, 'a new cycle starts PLANNED').toBe('PLANNED');
 
     // /cycles/{id}/transitions is the HISTORY of state changes -- the audit log, one row per
     // move with priorState, newState, stateMachine, triggerType and triggerEvent. It is not a
@@ -127,7 +127,7 @@ test.describe.serial('EQA V2 cycle lifecycle', () => {
         ).toBeTruthy();
         return;
       }
-      reached.push(String(r.body?.status));
+      reached.push(String((r.body as any)?.status));
     }
     // eslint-disable-next-line no-console
     console.log(`[EQA cycle] participant lane: ${reached.join(' -> ')}`);
@@ -174,7 +174,7 @@ test.describe.serial('EQA V2 cycle lifecycle', () => {
       },
     });
     expect(made.ok, `POST /rest/eqa/panels -> ${made.status} ${JSON.stringify(made.body).slice(0, 250)}`).toBeTruthy();
-    panelId = Number(made.body?.id);
+    panelId = Number((made.body as any)?.id);
 
     // Panels are only listable scoped: the controller refuses a bare call with
     // "Ask for panels by cycleId or by schemeId".
@@ -184,7 +184,7 @@ test.describe.serial('EQA V2 cycle lifecycle', () => {
 
     // The sample ids come back on the create response on purpose: seal-and-distribute, the
     // wizard's very next call, is keyed by panelSampleId.
-    expect((made.body?.samples ?? []).length, 'the created panel returns its samples').toBeGreaterThan(0);
+    expect(((made.body as any)?.samples ?? []).length, 'the created panel returns its samples').toBeGreaterThan(0);
   });
 
   test('EQA-CY-06 — panel receipt binds, and says plainly when there is none (CONTRACT)', async ({ page }) => {

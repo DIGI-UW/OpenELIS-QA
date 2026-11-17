@@ -22,6 +22,8 @@
  * testing is shared, and changes only the critical result message, restored at the end.
  */
 import { test, expect, Page, Locator } from '@playwright/test';
+import { withLocale } from '../helpers/locale';
+import { requiresCommit } from '../helpers/build';
 
 const MENU = '/MasterListsPage/ResultConfigurationMenu';
 const API = '/api/OpenELIS-Global/rest';
@@ -108,9 +110,9 @@ test.describe('OGC-1364 Result & Validation Configuration (TC-1364)', () => {
   });
 
   test('TC-1364-03: every setting says what On does in plain words, never "If true" or a raw key', async ({ page }) => {
-    // A US-English browser loads en_US.json. At testing's build (0937523e6) its Transifex text still
-    // had the stored "If true ..." descriptions; develop's en_US.json has the plain ones, so this
-    // fails on testing only until its next deploy (17 Nov 2026).
+    // A US-English browser loads en_US.json. Its Transifex text had the stored "If true ..."
+    // descriptions until the pull in 9723c2517 (#5096).
+    await requiresCommit('9723c2517', 'en_US.json with the plain descriptions, Transifex pull #5096');
     const grouped = await openPage(page);
     const texts = await grouped.locator('[data-testid^="setting-"]').evaluateAll((es) =>
       es.map((e) => ((e as HTMLElement).innerText || '').replace(/\s+/g, ' ').trim()));
@@ -178,20 +180,15 @@ test.describe('OGC-1364 Result & Validation Configuration (TC-1364)', () => {
   });
 
   test('TC-1364-07: in French the page shows French text and no raw keys', async ({ page }) => {
-    await page.goto('/');
-    await page.evaluate(() => localStorage.setItem('locale', 'fr'));
-    try {
+    await requiresCommit('9723c2517', 'resultSettings.* French strings, Transifex pull #5096');
+    // withLocale puts the browser and the server session back in English afterwards.
+    await withLocale(page, 'fr', async () => {
       const grouped = await openPage(page);
       const text = (await grouped.innerText()).replace(/\s+/g, ' ');
       expect(text.match(new RegExp(RAW_KEY.source, 'g')) || [], 'no raw message keys in French').toEqual([]);
       // The page's own strings are in French (they reached fr.json after testing's 0937523e6 build).
       await expect(page.getByTestId('save-group-validation'), 'the group Save is in French').toHaveText(/Enregistrer/);
       await expect(grouped.getByText(/^(Activé|Désactivé)$/).first(), 'the switch states are in French').toBeVisible();
-    } finally {
-      // Back to English on the server too: the session keeps its last language.
-      await page.evaluate(() => localStorage.setItem('locale', 'en')).catch(() => {});
-      await openPage(page);
-      await expect(page.getByRole('heading', { name: 'Result & Validation Configuration' })).toBeVisible();
-    }
+    });
   });
 });

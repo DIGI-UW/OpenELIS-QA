@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { withLocale } from '../helpers/locale';
 import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange } from '../helpers/test-helpers';
 
 /**
@@ -29,16 +30,14 @@ test.describe('Localization and i18n (TC-I18N)', () => {
       '[id*="language-selector"]'
     ).first();
 
-    const hasLangSwitch = await langSelector.isVisible({ timeout: 5000 }).catch(() => false);
+    const hasLangSwitch = await langSelector.waitFor({ timeout: 5000 }).then(() => true, () => false);
 
-    if (!hasLangSwitch) {
-      // Try looking for FR / EN text links
-      const enLink = page.getByText(/^EN$|^FR$|^English|^Français/i).first();
-      const hasTextLink = await enLink.isVisible({ timeout: 3000 }).catch(() => false);
-      expect(hasTextLink, 'no language switcher: neither a selector widget nor an EN/FR text link was found').toBeTruthy();
-    } else {
-      console.log('TC-I18N-01: PASS — language selector widget found');
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(!hasLangSwitch, 'precondition: !hasLangSwitch').toBeTruthy();
+    // Try looking for FR / EN text links
+    const enLink = page.getByText(/^EN$|^FR$|^English|^Français/i).first();
+    const hasTextLink = await enLink.waitFor({ timeout: 3000 }).then(() => true, () => false);
+    expect(hasTextLink, 'no language switcher: neither a selector widget nor an EN/FR text link was found').toBeTruthy();
   });
 
   test('TC-I18N-02: Switch to French and verify translations', async ({ page }) => {
@@ -55,7 +54,7 @@ test.describe('Localization and i18n (TC-I18N)', () => {
     if (!hasFrench) {
       // Try clicking FR link
       const frLink = page.getByText(/^FR$|Français/i).first();
-      if (await frLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await frLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await frLink.click();
         await page.waitForTimeout(2000);
         const bodyText2 = await page.textContent('body') ?? '';
@@ -93,7 +92,10 @@ test.describe('Localization and i18n (TC-I18N)', () => {
     await page.waitForTimeout(2000);
 
     const dateInput = page.locator('input[type="date"], input[id*="date" i], input[placeholder*="date" i]').first();
-    if (await dateInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+    // Was a console verdict only (2026-11-17).
+    await expect(dateInput, 'Add Order has a date field').toBeVisible({ timeout: 10_000 });
+    await expect(dateInput, 'its placeholder shows the date format').toHaveAttribute('placeholder', /yyyy/i);
+    if (await dateInput.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       const placeholder = await dateInput.getAttribute('placeholder') ?? '';
       const label = await dateInput.evaluate(el => {
         const lbl = el.closest('div')?.querySelector('label');
@@ -119,6 +121,8 @@ test.describe('Localization and i18n (TC-I18N)', () => {
         const hasFrenchReport = /résultat|nom|date|rapport/i.test(text);
         const hasData = /Sebby|Abby|HGB|26CPHL/i.test(text);
 
+        // Was a console verdict only (2026-11-17).
+        expect(hasFrenchReport, 'report data present but template not translated').toBeTruthy();
         console.log(hasFrenchReport
           ? 'TC-I18N-05: PASS — lab report template in French, data intact'
           : hasData
@@ -175,19 +179,18 @@ test.describe('Phase 5 — T-DEEP: i18n Locale Switching Tests', () => {
   });
 
   test('TC-T-DEEP-02: FR locale translation gaps', async ({ page }) => {
-    await page.goto(`${BASE}/Dashboard`);
-    // Switch to FR and check for raw i18n keys
-    const localeSelect = page.locator('[role="combobox"]').filter({ hasText: /en|fr/i }).first();
-    if (await localeSelect.isVisible()) {
-      await localeSelect.selectOption('fr');
-      await page.waitForTimeout(2000);
-    }
-    // Check for raw i18n keys (BUG-16)
-    const pageText = await page.textContent('body');
-    const hasRawKeys = pageText?.includes('banner.menu.') ?? false;
-    // This is expected to find raw keys — BUG-16
-    console.log(`Raw i18n keys present: ${hasRawKeys}`);
+    // REWORKED 2026-11-17: it looked for a locale <select> the header no longer has, so it never
+    // switched and asserted nothing. Now in French through withLocale (restores English after).
+    const pageText = await withLocale(page, 'fr', async () => {
+      await page.goto(`${BASE}/Dashboard`);
+      await expect(page.locator('main').first()).toBeVisible({ timeout: 30_000 });
+      await page.waitForTimeout(1500);
+      return (await page.textContent('body')) ?? '';
+    });
+    // BUG-16: raw banner.menu.* keys in French.
+    expect(pageText.match(/\bbanner\.menu\.[\w.]+/g) ?? [], 'no raw banner.menu keys in French').toEqual([]);
   });
+
 
   test('TC-T-DEEP-03: FR to EN locale restore', async ({ page }) => {
     await page.goto(`${BASE}/Dashboard`);
@@ -266,13 +269,11 @@ test.describe('i18n Extended — API & Admin Translation Management (TC-I18N-EXT
       }
     }
 
-    if (!loaded) {
-      console.log('TC-I18N-EXT-02: GAP — Translation Management page not found at known URLs');
-    } else {
-      const bodyText = await page.locator('body').innerText();
-      expect(bodyText).not.toContain('Internal Server Error');
-      expect(page.url()).not.toMatch(/LoginPage|login/i);
-    }
+    // Was conditional (2026-11-17): with no page found the case asserted nothing.
+    expect(loaded, 'Translation Management opens at one of its known URLs').toBe(true);
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText).not.toContain('Internal Server Error');
+    expect(page.url()).not.toMatch(/LoginPage|login/i);
   });
 
   test('TC-I18N-EXT-03: French translation gap — BUG-16 untranslated keys visible', async ({ page }) => {

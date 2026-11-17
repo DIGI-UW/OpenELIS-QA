@@ -14,6 +14,8 @@ export default defineConfig({
   reporter: [['list']],
   use: {
     baseURL: process.env.BASE_URL || 'https://testing.openelis-global.org',
+    // Pinned 2026-11-17: specs read English text; an unset locale follows the machine.
+    locale: 'en-US',
     ignoreHTTPSErrors: true,
     // The sandbox ships a pinned Chromium; PW's bundled revision is not downloaded.
     launchOptions: process.env.PW_CHROME ? { executablePath: process.env.PW_CHROME } : {},

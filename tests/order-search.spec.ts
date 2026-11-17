@@ -416,7 +416,7 @@ test.describe('Suite J-EXT — Order Search API & Validation (TC-OS-09–16)', (
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const searchInput = page.locator('input').first();
-    if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await searchInput.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await searchInput.fill(ACCESSION);
       await page.waitForTimeout(500);
 
@@ -440,7 +440,7 @@ test.describe('Suite J-EXT — Order Search API & Validation (TC-OS-09–16)', (
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const searchInput = page.locator('input').first();
-    if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await searchInput.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await searchInput.fill('26CPHL');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2000);
@@ -490,9 +490,9 @@ test.describe('Suite J-EXT — Order Search API & Validation (TC-OS-09–16)', (
     const elapsed = Date.now() - start;
 
     console.log(`TC-OS-14: AccessionResults loaded in ${elapsed}ms`);
-    if (loaded) {
-      expect(elapsed, 'Order search page must load within 5000ms').toBeLessThan(5000);
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(loaded, 'precondition: loaded').toBeTruthy();
+    expect(elapsed, 'Order search page must load within 5000ms').toBeLessThan(5000);
   });
 
   test('TC-OS-15: Edit Order screen does not crash on empty search submit', async ({ page }) => {
@@ -506,7 +506,7 @@ test.describe('Suite J-EXT — Order Search API & Validation (TC-OS-09–16)', (
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const searchBtn = page.getByRole('button', { name: /search|find|lookup/i }).first();
-    if (await searchBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await searchBtn.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await searchBtn.click();
       await page.waitForTimeout(1500);
 

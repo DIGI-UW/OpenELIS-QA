@@ -27,6 +27,7 @@ async function mouseClickSave(page: Page) {
   if (bb) await page.mouse.click(bb.x + bb.width/2, bb.y + bb.height/2);
   await page.waitForTimeout(3000);
 }
+// eslint-disable-next-line playwright/expect-expect -- a discovery probe (disc.config.ts): it prints what it finds for a person to read.
 test('radio label click + mouse-click save', async ({ page }) => {
   test.setTimeout(120000);
   await login(page);

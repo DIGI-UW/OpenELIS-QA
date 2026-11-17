@@ -28,7 +28,8 @@
     {
       "config": "modules.config.ts",
       "why": "flat tests/*.spec.ts module sweep",
-      "shard": 1
+      "shard": 1,
+      "budgetMinutes": 230
     },
     {
       "config": "regression-chains.config.ts",
@@ -36,82 +37,98 @@
       "env": {
         "GAPS_STRICT": "1"
       },
-      "shard": 2
+      "shard": 2,
+      "budgetMinutes": 10
     },
     {
       "config": "all-tc.config.ts",
       "why": "test catalog + results tier",
-      "shard": 3
+      "shard": 3,
+      "budgetMinutes": 40
     },
     {
       "config": "rbac.config.ts",
       "why": "role matrix; needs roles.setup",
-      "shard": 4
+      "shard": 4,
+      "budgetMinutes": 10
     },
     {
       "config": "personas-admin.config.ts",
       "why": "admin persona walkthroughs",
-      "shard": 4
+      "shard": 4,
+      "budgetMinutes": 10
     },
     {
       "config": "personas-roles.config.ts",
       "why": "per-role persona walkthroughs; needs roles.setup",
-      "shard": 4
+      "shard": 4,
+      "budgetMinutes": 10
     },
     {
       "config": "census.config.ts",
       "why": "admin + app route census",
-      "shard": 4
+      "shard": 4,
+      "budgetMinutes": 10
     },
     {
       "config": "e2e.config.ts",
       "why": "order to result end-to-end; load sensitive, runs alone",
-      "shard": 3
+      "shard": 3,
+      "budgetMinutes": 20
     },
     {
       "config": "deep.config.ts",
       "why": "deep test catalog probes",
-      "shard": 3
+      "shard": 3,
+      "budgetMinutes": 10
     },
     {
       "config": "disc.config.ts",
       "why": "discoverability sweep",
-      "shard": 4
+      "shard": 4,
+      "budgetMinutes": 10
     },
     {
       "config": "guards.config.ts",
       "why": "navigation and unsaved-changes guards",
-      "shard": 3
+      "shard": 3,
+      "budgetMinutes": 10
     },
     {
       "config": "lp.config.ts",
       "why": "label presets",
-      "shard": 4
+      "shard": 4,
+      "budgetMinutes": 10
     },
     {
       "config": "multicomponent.config.ts",
       "why": "multicomponent result routing",
-      "shard": 3
+      "shard": 3,
+      "budgetMinutes": 10
     },
     {
       "config": "modify-order.config.ts",
       "why": "modify-order field binding",
-      "shard": 4
+      "shard": 4,
+      "budgetMinutes": 10
     },
     {
       "config": "ogc1192.config.ts",
       "why": "OGC-1192 env order visibility",
-      "shard": 4
+      "shard": 4,
+      "budgetMinutes": 10
     },
     {
       "config": "envseed.config.ts",
       "why": "environmental seed data",
-      "shard": 4
+      "shard": 4,
+      "budgetMinutes": 10
     },
     {
       "config": "eqa.config.ts",
       "why": "EQA flip guards",
-      "shard": 4
+      "shard": 4,
+      "budgetMinutes": 10
     },
     {
       "config": "qa.config.ts",
@@ -120,63 +137,75 @@
       "env": {
         "BASE": "https://pngdemo.openelis-global.org",
         "AUTH_STATE_FILE": ".auth/png.json"
-      }
+      },
+      "budgetMinutes": 10
     },
     {
       "config": "reval2.config.ts",
       "why": "revalidation tier 2",
-      "shard": 4
+      "shard": 4,
+      "budgetMinutes": 10
     },
     {
       "config": "probe-combo.config.ts",
       "why": "sample type combo box behaviour",
-      "shard": 4
+      "shard": 4,
+      "budgetMinutes": 10
     },
     {
       "config": "panel-leak.config.ts",
       "why": "panel / sample type leak",
-      "shard": 3
+      "shard": 3,
+      "budgetMinutes": 10
     },
     {
       "config": "preflight.config.ts",
       "why": "preflight smoke",
-      "shard": 4
+      "shard": 4,
+      "budgetMinutes": 10
     },
     {
       "config": "pr3987.config.ts",
       "why": "PR 3987 regression: FHIR specimen terminology, patient photo, catalog",
-      "shard": 4
+      "shard": 4,
+      "budgetMinutes": 10
     },
     {
       "config": "cfg.config.ts",
       "why": "configuration pages",
-      "shard": 4
+      "shard": 4,
+      "budgetMinutes": 10
     },
     {
       "config": "revalidate.config.ts",
       "why": "OGC-1120 revalidation",
-      "shard": 4
+      "shard": 4,
+      "budgetMinutes": 10
     },
     {
       "config": "revalidate-unauth.config.ts",
       "why": "OGC-1120 revalidation, unauthenticated",
-      "shard": 4
+      "shard": 4,
+      "budgetMinutes": 10
     },
     {
       "config": "rtype.config.ts",
       "why": "result type coverage",
-      "shard": 3
+      "shard": 3,
+      "budgetMinutes": 10
     },
     {
       "config": "workplan.config.ts",
       "why": "workplan by unit, including the crash regression",
-      "shard": 3
+      "shard": 3,
+      "budgetMinutes": 10
     },
     {
       "config": "regression-seed.config.ts",
       "why": "baseline fixture data the module sweep depends on; setup projects only, collects no spec files",
       "allowZero": true,
-      "shard": 4
+      "shard": 4,
+      "budgetMinutes": 10
     }
   ],
   "docsSuite": {

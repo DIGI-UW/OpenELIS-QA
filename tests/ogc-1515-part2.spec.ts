@@ -139,7 +139,8 @@ test.describe('OGC-1515 part 2: searchable lists (#4925)', () => {
     const panels: { id: string; name: string; testIds: string }[] = data.panels ?? [];
     const pair = panels.map((p) => ({ p, t: tests.find((t) => p.testIds.split(',').map((x) => x.trim()).includes(t.id)) })).find((x) => x.t);
     test.skip(!pair, 'no panel on this sample type has a test in its list');
-    const { p, t } = pair!;
+    const { p } = pair!;
+    const t = pair!.t!;
     await expect(page.getByRole('searchbox', { name: 'Search tests' })).toBeVisible();
     await expect(page.getByRole('searchbox', { name: 'Search panels' })).toBeVisible();
     // Find the test by typing, tick it, then tick its panel.

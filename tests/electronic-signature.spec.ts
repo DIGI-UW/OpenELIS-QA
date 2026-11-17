@@ -48,7 +48,7 @@ async function goToSiteInformation(page: any): Promise<boolean> {
   await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
   await waitForRouteContent(page);
   const link = page.locator('a, button, span, li').filter({ hasText: /site information/i }).first();
-  if (await link.isVisible({ timeout: 3000 }).catch(() => false)) {
+  if (await link.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
     await link.click();
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
     await waitForRouteContent(page);
@@ -137,7 +137,7 @@ test.describe('Suite AY-ESIG-ADMIN — Site Information & Electronic Signature C
       .or(page.locator('a, button').filter({ hasText: /modify/i }))
       .first();
 
-    const isVisible = await modifyBtn.isVisible({ timeout: 5000 }).catch(() => false);
+    const isVisible = await modifyBtn.waitFor({ timeout: 5000 }).then(() => true, () => false);
     expect(isVisible, '"Modify" button should be present on Site Information page').toBe(true);
 
     if (isVisible) {
@@ -167,7 +167,7 @@ test.describe('Suite AY-ESIG-ADMIN — Site Information & Electronic Signature C
       .filter({ hasText: /electronic|signature|sign/i })
       .first();
 
-    if (await expandable.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await expandable.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await expandable.click();
       await page.waitForTimeout(500);
     }
@@ -177,7 +177,7 @@ test.describe('Suite AY-ESIG-ADMIN — Site Information & Electronic Signature C
       .getByRole('button', { name: /modify/i })
       .or(page.locator('a, button').filter({ hasText: /modify/i }))
       .first();
-    if (await modifyBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await modifyBtn.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await selectSiteInfoRow(page);
       await modifyBtn.click();
       await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
@@ -208,7 +208,7 @@ test.describe('Suite AY-ESIG-ADMIN — Site Information & Electronic Signature C
       .or(page.locator('a, button').filter({ hasText: /modify/i }))
       .first();
 
-    const canModify = await modifyBtn.isVisible({ timeout: 5000 }).catch(() => false);
+    const canModify = await modifyBtn.waitFor({ timeout: 5000 }).then(() => true, () => false);
     if (!canModify) {
       console.log('TC-ESIG-05: SKIP — Modify button not found');
       test.skip();
@@ -272,7 +272,7 @@ test.describe('Suite AY-ESIG-WORKFLOW — Electronic Signature in Routine Valida
     let sectionControlFound = false;
     for (const sel of sectionSelectors) {
       const control = page.locator(sel).first();
-      if (await control.isVisible({ timeout: 1000 }).catch(() => false)) {
+      if (await control.waitFor({ timeout: 1000 }).then(() => true, () => false)) {
         sectionControlFound = true;
         break;
       }
@@ -308,7 +308,7 @@ test.describe('Suite AY-ESIG-WORKFLOW — Electronic Signature in Routine Valida
       .or(page.locator('button, a').filter({ hasText: /^sign$/i }))
       .first();
 
-    const signVisible = await signBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const signVisible = await signBtn.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
     if (!signVisible) {
       // Sign button may only appear when results are present in the table
@@ -341,7 +341,7 @@ test.describe('Suite AY-ESIG-WORKFLOW — Electronic Signature in Routine Valida
       .or(page.locator('button').filter({ hasText: /^sign$/i }))
       .first();
 
-    if (await signBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await signBtn.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await signBtn.click();
       await page.waitForTimeout(1000);
 
@@ -376,7 +376,7 @@ test.describe('Suite AY-ESIG-WORKFLOW — Electronic Signature in Routine Valida
       .or(page.locator('button').filter({ hasText: /^sign$/i }))
       .first();
 
-    if (await signBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await signBtn.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await signBtn.click();
       await page.waitForTimeout(1000);
 
@@ -384,7 +384,7 @@ test.describe('Suite AY-ESIG-WORKFLOW — Electronic Signature in Routine Valida
         .getByLabel(/i have read|i understand|above statement/i)
         .or(page.locator('input[type="checkbox"]').first());
 
-      const checkboxVisible = await ackCheckbox.isVisible({ timeout: 3000 }).catch(() => false);
+      const checkboxVisible = await ackCheckbox.waitFor({ timeout: 3000 }).then(() => true, () => false);
       expect(checkboxVisible, '"I have read and understand" checkbox should appear in modal').toBe(
         true
       );
@@ -406,7 +406,7 @@ test.describe('Suite AY-ESIG-WORKFLOW — Electronic Signature in Routine Valida
       .or(page.locator('button').filter({ hasText: /^sign$/i }))
       .first();
 
-    if (await signBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await signBtn.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await signBtn.click();
       await page.waitForTimeout(1000);
 
@@ -415,7 +415,7 @@ test.describe('Suite AY-ESIG-WORKFLOW — Electronic Signature in Routine Valida
         .or(page.getByLabel(/password/i))
         .first();
 
-      const passwordVisible = await passwordField.isVisible({ timeout: 3000 }).catch(() => false);
+      const passwordVisible = await passwordField.waitFor({ timeout: 3000 }).then(() => true, () => false);
       expect(passwordVisible, 'Password field should be present in e-sig certification modal').toBe(
         true
       );
@@ -437,14 +437,14 @@ test.describe('Suite AY-ESIG-WORKFLOW — Electronic Signature in Routine Valida
       .or(page.locator('button').filter({ hasText: /^sign$/i }))
       .first();
 
-    if (await signBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await signBtn.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       await signBtn.click();
       await page.waitForTimeout(1000);
 
       const certifyBtn = page
         .getByRole('button', { name: /certify.*continue|certify/i })
         .first();
-      const certifyVisible = await certifyBtn.isVisible({ timeout: 3000 }).catch(() => false);
+      const certifyVisible = await certifyBtn.waitFor({ timeout: 3000 }).then(() => true, () => false);
       expect(
         certifyVisible,
         '"Certify & Continue" button should be present in certification modal'
@@ -479,7 +479,7 @@ test.describe('Suite AY-ESIG-WORKFLOW — Electronic Signature in Routine Valida
       .or(page.locator('button').filter({ hasText: /^sign$/i }))
       .first();
 
-    if (!(await signBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
+    if (!(await signBtn.waitFor({ timeout: 3000 }).then(() => true, () => false))) {
       console.log(
         'TC-ESIG-13: SKIP — Sign button not visible. ' +
           'Test requires validated results in the routine queue to trigger the e-sig flow.'
@@ -497,7 +497,7 @@ test.describe('Suite AY-ESIG-WORKFLOW — Electronic Signature in Routine Valida
       .getByLabel(/i have read|i understand|above statement/i)
       .or(page.locator('input[type="checkbox"]').first());
 
-    if (await ackCheckbox.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await ackCheckbox.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await ackCheckbox.check();
     }
 
@@ -507,7 +507,7 @@ test.describe('Suite AY-ESIG-WORKFLOW — Electronic Signature in Routine Valida
       .or(page.getByLabel(/password/i))
       .first();
 
-    if (await passwordField.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await passwordField.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await passwordField.fill(ADMIN.pass);
     }
 
@@ -516,7 +516,7 @@ test.describe('Suite AY-ESIG-WORKFLOW — Electronic Signature in Routine Valida
       .getByRole('button', { name: /certify.*continue|certify/i })
       .first();
 
-    if (await certifyBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await certifyBtn.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await certifyBtn.click();
       await page.waitForTimeout(1000);
     }
@@ -527,7 +527,7 @@ test.describe('Suite AY-ESIG-WORKFLOW — Electronic Signature in Routine Valida
       .or(page.locator('button').filter({ hasText: /^sign$/i }))
       .first();
 
-    if (await finalSignBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await finalSignBtn.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await finalSignBtn.click();
       await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
       await waitForRouteContent(page);

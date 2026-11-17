@@ -57,7 +57,7 @@ async function createClinical(page: any, i: number): Promise<string> {
   await go(page, '/order/clinical/enter');
   const lab = await generateLabNumber(page);
   await newPatient(page, { last: LAST[i % LAST.length], first: FIRST[i % FIRST.length], dob: '15/05/1990', gender: i % 2 ? /^female$/i : /^male$/i });
-  try { const s = page.getByPlaceholder(/site name/i).first(); if (await s.isVisible({ timeout: 1200 })) await s.fill(REFERRING[i % REFERRING.length]); } catch {}
+  try { const s = page.getByPlaceholder(/site name/i).first(); if (await s.waitFor({ timeout: 1200 }).then(() => true, () => false)) await s.fill(REFERRING[i % REFERRING.length]); } catch {}
   await setSelectByOption(page, /^\s*Whole Blood\s*$/i);
   await page.waitForTimeout(800);
   await clickButton(page, /tests\s*&\s*panels|choose available/i, 700).catch(() => {});

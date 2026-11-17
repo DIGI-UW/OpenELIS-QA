@@ -20,7 +20,7 @@ test('User manual — Vector deep states v3', async ({ page }, info) => {
     await page.getByRole('button', { name: /identif/i }).first().click({ timeout: 3000 });
     await page.waitForTimeout(900);
     const sp = page.getByPlaceholder(/genus or species/i).first();
-    if (await sp.isVisible({ timeout: 1500 })) { await sp.fill('Aedes aegypti', { timeout: 1500 }); await page.waitForTimeout(500); }
+    if (await sp.waitFor({ timeout: 1500 }).then(() => true, () => false)) { await sp.fill('Aedes aegypti', { timeout: 1500 }); await page.waitForTimeout(500); }
   } catch {}
   await shot(page, info, 'Identify form — species, method, confidence, lifecycle');
 
@@ -34,7 +34,7 @@ test('User manual — Vector deep states v3', async ({ page }, info) => {
   await shot(page, info, 'Split into sub-pools — options');
   try {
     const pv = page.getByRole('button', { name: /preview/i }).first();
-    if (await pv.isVisible({ timeout: 2000 })) { await pv.click({ timeout: 2000 }); await page.waitForTimeout(1200); }
+    if (await pv.waitFor({ timeout: 2000 }).then(() => true, () => false)) { await pv.click({ timeout: 2000 }); await page.waitForTimeout(1200); }
   } catch {}
   await shot(page, info, 'Split — proposed grouping preview');
 
@@ -43,7 +43,7 @@ test('User manual — Vector deep states v3', async ({ page }, info) => {
     // close modal first
     await page.keyboard.press('Escape'); await page.waitForTimeout(400);
     const status = page.getByLabel(/status/i).first();
-    if (await status.isVisible({ timeout: 1500 })) { await status.selectOption('decon').catch(async () => { await status.click(); }); await page.waitForTimeout(1200); }
+    if (await status.waitFor({ timeout: 1500 }).then(() => true, () => false)) { await status.selectOption('decon').catch(async () => { await status.click(); }); await page.waitForTimeout(1200); }
   } catch {}
   await shot(page, info, 'Sub-pools after deconvolution');
   await saveWalkthrough(page, info);

@@ -26,13 +26,13 @@ async function goToResultsByUnit(page: any) {
 
 async function navigateViaMenu(page: any, menuPath: string[]) {
   const menu = page.getByRole('button', { name: /menu|hamburger|navigation/i }).first();
-  if (await menu.isVisible({ timeout: 2000 }).catch(() => false)) {
+  if (await menu.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
     await menu.click();
     await page.waitForTimeout(300);
   }
   for (const item of menuPath) {
     const link = page.getByText(item, { exact: true });
-    if (await link.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await link.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await link.click();
       await page.waitForTimeout(300);
     }
@@ -172,18 +172,10 @@ test.describe('Results By Unit worklist (TC-BU)', () => {
       console.log(`TC-BU-01: ${e.message}`);
       return null;
     });
-    if (url) {
-      expect(page.url()).not.toMatch(/LoginPage|login/i);
-      console.log(`TC-BU-01: PASS — By Unit reached at ${url}`);
-    } else {
-      // Navigate via hamburger menu as fallback
-      await page.goto(`${BASE}/Dashboard`);
-      await page.getByRole('button', { name: /open|menu|hamburger/i }).click();
-      await page.waitForTimeout(500);
-      const byUnitLink = page.getByText(/By Unit|By Section|Work Plan/i);
-      const found = await byUnitLink.isVisible({ timeout: 3000 }).catch(() => false);
-      console.log(`TC-BU-01: Hamburger menu "By Unit" found = ${found}`);
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(url, 'precondition: url').toBeTruthy();
+    expect(page.url()).not.toMatch(/LoginPage|login/i);
+    console.log(`TC-BU-01: PASS — By Unit reached at ${url}`);
   });
 
   test('TC-BU-02: Test section filter appears on By Unit page', async ({ page }) => {
@@ -194,7 +186,7 @@ test.describe('Results By Unit worklist (TC-BU)', () => {
     }
     // Look for a test section select dropdown
     const sectionSelect = page.getByRole('combobox', { name: /section/i }).first();
-    const hasSectionSelect = await sectionSelect.isVisible({ timeout: 5000 }).catch(() => false);
+    const hasSectionSelect = await sectionSelect.waitFor({ timeout: 5000 }).then(() => true, () => false);
     console.log(`TC-BU-02: Test section select visible = ${hasSectionSelect}`);
     if (hasSectionSelect) {
       const opts = await sectionSelect.locator('option').allTextContents();
@@ -211,7 +203,7 @@ test.describe('Results By Unit worklist (TC-BU)', () => {
     }
     // Load Hematology section if possible
     const sectionSelect = page.locator('select').first();
-    const hasSect = await sectionSelect.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSect = await sectionSelect.waitFor({ timeout: 3000 }).then(() => true, () => false);
     if (hasSect) {
       // selectOption takes a STRING label, not a RegExp. The cast to any hid
       // that, and Playwright threw -options[0].label: expected string, got
@@ -232,7 +224,7 @@ test.describe('Results By Unit worklist (TC-BU)', () => {
     }
     // Find a result input field (textarea or input in result column)
     const resultInput = page.getByRole('textbox', { name: /result/i }).first();
-    const hasInput = await resultInput.isVisible({ timeout: 5000 }).catch(() => false);
+    const hasInput = await resultInput.waitFor({ timeout: 5000 }).then(() => true, () => false);
     console.log(`TC-BU-03: Result input visible = ${hasInput}`);
     if (hasInput) {
       const isEditable = await resultInput.isEditable();
@@ -243,22 +235,16 @@ test.describe('Results By Unit worklist (TC-BU)', () => {
 
   test('TC-BU-04: Entering result and saving via By Unit worklist', async ({ page }) => {
     const url = await goToResultsByUnit(page).catch(() => null);
-    if (!url) {
-      console.log('TC-BU-04: SKIP — By Unit page not found');
-      return;
-    }
+    // Was a console verdict only (2026-11-17).
+    expect(url, 'the By Unit worklist opens').toBeTruthy();
     // If there are pending results, enter one and save
     const resultInput = page.getByRole('textbox', { name: /result/i }).first();
-    const hasInput = await resultInput.isVisible({ timeout: 5000 }).catch(() => false);
-    if (hasInput) {
-      await resultInput.fill('14.5');
-      const saveBtn = page.getByRole('button', { name: /Save/i });
-      await saveBtn.click();
-      await page.waitForTimeout(2000);
-      console.log('TC-BU-04: Result 14.5 saved via By Unit worklist');
-    } else {
-      console.log('TC-BU-04: SKIP — No pending result input fields found (queue may be empty)');
-    }
+    const hasInput = await resultInput.waitFor({ timeout: 5000 }).then(() => true, () => false);
+    test.skip(!hasInput, 'no pending result in the By Unit worklist on this instance');
+    await resultInput.fill('14.5');
+    const saved = page.waitForResponse((r) => r.request().method() === 'POST' && /Result|Logbook/i.test(r.url()), { timeout: 15_000 });
+    await page.getByRole('button', { name: /Save/i }).first().click();
+    expect((await saved).status(), 'the result save is accepted').toBeLessThan(400);
   });
 });
 
@@ -286,24 +272,18 @@ test.describe('Suite AA — Results By Patient & By Order', () => {
     ];
     const success = await fillSearchField(page, PATIENT_NAME, selectors);
 
-    if (success) {
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(1000);
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(success, 'precondition: success').toBeTruthy();
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(1000);
 
-      // Verify results table appears
-      const resultRow = page.locator('tr, [role="row"]').first();
-      await expect(resultRow).toBeVisible({ timeout: 5000 }).catch(() => {
-        console.log('No results returned for patient name search');
-      });
+    // Verify results table appears
+    const resultRow = page.locator('tr, [role="row"]').first();
+    await expect(resultRow).toBeVisible({ timeout: 5000 });
 
-      // Verify patient name or ID appears in results
-      const patientInResults = page.getByText(PATIENT_NAME, { exact: false });
-      await expect(patientInResults).toBeVisible({ timeout: 3000 }).catch(() => {
-        console.log('Patient name not visible in results');
-      });
-    } else {
-      console.log('Could not locate search field');
-    }
+    // Verify patient name or ID appears in results
+    const patientInResults = page.getByText(PATIENT_NAME, { exact: false });
+    await expect(patientInResults).toBeVisible({ timeout: 3000 });
   });
 
   test('TC-RBP-03: Search by patient ID returns results', async ({ page }) => {
@@ -318,16 +298,14 @@ test.describe('Suite AA — Results By Patient & By Order', () => {
     ];
     const success = await fillSearchField(page, PATIENT_ID, selectors);
 
-    if (success) {
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(1000);
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(success, 'precondition: success').toBeTruthy();
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(1000);
 
-      // Verify patient ID appears in results
-      const patientIdInResults = page.getByText(PATIENT_ID, { exact: false });
-      await expect(patientIdInResults).toBeVisible({ timeout: 5000 }).catch(() => {
-        console.log('Patient ID not found in results');
-      });
-    }
+    // Verify patient ID appears in results
+    const patientIdInResults = page.getByText(PATIENT_ID, { exact: false });
+    await expect(patientIdInResults).toBeVisible({ timeout: 5000 });
   });
 
 
@@ -343,16 +321,14 @@ test.describe('Suite AA — Results By Patient & By Order', () => {
     ];
     const success = await fillSearchField(page, ACCESSION, selectors);
 
-    if (success) {
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(2000);
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(success, 'precondition: success').toBeTruthy();
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(2000);
 
-      // Verify accession appears in results
-      const accessionInResults = page.getByText(ACCESSION, { exact: false });
-      await expect(accessionInResults).toBeVisible({ timeout: 8000 }).catch(() => {
-        console.log(`Accession ${ACCESSION} not found in results`);
-      });
-    }
+    // Verify accession appears in results
+    const accessionInResults = page.getByText(ACCESSION, { exact: false });
+    await expect(accessionInResults).toBeVisible({ timeout: 8000 });
   });
 
   test('TC-RBO-06: Results display includes test name, result value, status', async ({ page }) => {
@@ -363,28 +339,22 @@ test.describe('Suite AA — Results By Patient & By Order', () => {
     const selectors = ['input[placeholder*="accession" i]', 'input[id*="accession" i]', 'input'];
     const success = await fillSearchField(page, ACCESSION, selectors);
 
-    if (success) {
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(2000);
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(success, 'precondition: success').toBeTruthy();
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(2000);
 
-      // Verify result row structure
-      const resultRow = page.locator('tr, [role="row"]').first();
-      await expect(resultRow).toBeVisible({ timeout: 8000 }).catch(() => {
-        console.log('No result row found');
-      });
+    // Verify result row structure
+    const resultRow = page.locator('tr, [role="row"]').first();
+    await expect(resultRow).toBeVisible({ timeout: 8000 });
 
-      // Check for key columns: test name, result value, status
-      const testNameCol = resultRow.getByText(/HGB|test|result/i);
-      const statusCol = resultRow.getByText(/Final|Preliminary|Corrected|Pending|Validation/i);
+    // Check for key columns: test name, result value, status
+    const testNameCol = resultRow.getByText(/HGB|test|result/i);
+    const statusCol = resultRow.getByText(/Final|Preliminary|Corrected|Pending|Validation/i);
 
-      await expect(testNameCol).toBeVisible({ timeout: 3000 }).catch(() => {
-        console.log('Test name column not clearly visible');
-      });
+    await expect(testNameCol).toBeVisible({ timeout: 3000 });
 
-      await expect(statusCol).toBeVisible({ timeout: 3000 }).catch(() => {
-        console.log('Status column not clearly visible');
-      });
-    }
+    await expect(statusCol).toBeVisible({ timeout: 3000 });
   });
 });
 
@@ -412,13 +382,13 @@ test.describe('Suite AJ — Results By Range & By Test/Date/Status', () => {
     await inputs[1].fill('26CPHL00010T');
 
     const button = page.getByRole('button', { name: /search|submit/i }).first();
-    if (await button.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await button.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await button.click();
       await page.waitForTimeout(2000);
     }
 
     // Verify results table present or empty state
-    const tableVisible = await page.locator('table, [role="table"]').first().isVisible({ timeout: 3000 }).catch(() => false);
+    const tableVisible = await page.locator('table, [role="table"]').first().waitFor({ timeout: 3000 }).then(() => true, () => false);
     expect(tableVisible).toBeTruthy();
   });
 
@@ -473,7 +443,7 @@ test.describe('Phase 5 — F-DEEP: Results Entry Field Validation Tests', () => 
     await waitForRouteContent(page);
 
     const unitSelect = page.locator('select').first();
-    if (await unitSelect.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await unitSelect.waitFor({ timeout: 3000 }).then(() => true, () => false)) {
       // Select Hematology via native setter
       await page.evaluate(() => {
         const sel = document.querySelector<HTMLSelectElement>('select');
@@ -489,15 +459,16 @@ test.describe('Phase 5 — F-DEEP: Results Entry Field Validation Tests', () => 
 
     // Click expand chevron on first row if present
     const expandBtn = page.locator('button:has(svg), [class*="expand"], [aria-label*="expand" i]').first();
-    if (await expandBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    const expandable = await expandBtn.waitFor({ timeout: 3000 }).then(() => true, () => false);
+    test.skip(!expandable, 'no pending Hematology result to expand on this instance');
+    {
       await expandBtn.click();
       await page.waitForTimeout(1000);
       // Detail fields should appear after expand
       const detailVisible = await page.locator('text=Methods, text=Upload file, text=Note').first()
-        .isVisible({ timeout: 3000 }).catch(() => false);
+        .waitFor({ timeout: 3000 }).then(() => true, () => false);
       console.log(`TC-F-DEEP-01: detail fields visible after expand = ${detailVisible}`);
-    } else {
-      console.log('TC-F-DEEP-01: SKIP — No expand button found (no pending results in Hematology)');
+      expect(detailVisible, 'the expanded row shows its detail fields').toBe(true);
     }
   });
 
@@ -520,7 +491,7 @@ test.describe('Phase 5 — F-DEEP: Results Entry Field Validation Tests', () => 
 
     // Find a result input field
     const resultInput = page.locator('input[type="text"], input[type="number"]').first();
-    if (!(await resultInput.isVisible({ timeout: 3000 }).catch(() => false))) {
+    if (!(await resultInput.waitFor({ timeout: 3000 }).then(() => true, () => false))) {
       console.log('TC-F-DEEP-02: SKIP — No result input fields visible (queue empty)');
       return;
     }
@@ -563,7 +534,7 @@ test.describe('Phase 6 — BF-DEEP: Results By Range Tests', () => {
     const fromInput = page.locator('input[placeholder*="Accession" i], input[placeholder*="From" i]').first();
     const toInput = page.locator('input[placeholder*="Accession" i], input[placeholder*="To" i]').last();
 
-    if (!(await fromInput.isVisible({ timeout: 3000 }).catch(() => false))) {
+    if (!(await fromInput.waitFor({ timeout: 3000 }).then(() => true, () => false))) {
       console.log('TC-BF-DEEP-02: SKIP — input fields not found');
       return;
     }
@@ -655,14 +626,14 @@ test.describe('Relocated from gap-suites', () => {
   
       // Try to find and click Results menu
       const resultsLink = page.getByText(/^Results$/i, { exact: true });
-      if (await resultsLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await resultsLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await resultsLink.click();
         await page.waitForTimeout(500);
       }
   
       // Try to find and click By Patient
       const byPatientLink = page.getByText('By Patient', { exact: true });
-      if (await byPatientLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await byPatientLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await byPatientLink.click();
       }
   
@@ -689,9 +660,7 @@ test.describe('Relocated from gap-suites', () => {
       const searchField = page.locator(
         'input[placeholder*="patient" i], input[placeholder*="name" i], input[id*="search"]'
       ).first();
-      await expect(searchField).toBeVisible({ timeout: 3000 }).catch(() => {
-        console.log('Note: Search field selector may need adjustment for this app version');
-      });
+      await expect(searchField).toBeVisible({ timeout: 3000 });
     });
 
   test('TC-RBO-04: Results > By Order screen loads', async ({ page }) => {
@@ -700,11 +669,11 @@ test.describe('Relocated from gap-suites', () => {
       await page.waitForTimeout(500);
   
       const resultsLink = page.getByText(/^Results$/i, { exact: true });
-      if (await resultsLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await resultsLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
         await resultsLink.click();
         await page.waitForTimeout(500);
         const byOrderLink = page.getByText('By Order', { exact: true });
-        if (await byOrderLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await byOrderLink.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
           await byOrderLink.click();
         }
       }
@@ -725,9 +694,7 @@ test.describe('Relocated from gap-suites', () => {
       const accessionField = page.locator(
         'input[placeholder*="accession" i], input[id*="accession" i], input'
       ).first();
-      await expect(accessionField).toBeVisible({ timeout: 3000 }).catch(() => {
-        console.log('Accession search field not found');
-      });
+      await expect(accessionField).toBeVisible({ timeout: 3000 });
     });
 
 });

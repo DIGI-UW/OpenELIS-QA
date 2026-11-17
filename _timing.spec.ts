@@ -18,6 +18,7 @@ async function login(page: Page) {
   await page.locator('button:has-text("Login"), button[type="submit"]').first().click();
   await page.waitForURL('**/MasterListsPage', { timeout: 15000 }).catch(() => {});
 }
+// eslint-disable-next-line playwright/expect-expect -- a timing probe (timing.config.ts): it prints load times for a person to read.
 test('editor load timing', async ({ page }) => {
   test.setTimeout(180000);
   await login(page);

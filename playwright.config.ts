@@ -15,6 +15,8 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: BASE,
+    // Pinned 2026-11-17: specs read English text; an unset locale follows the machine.
+    locale: 'en-US',
     trace: 'retain-on-failure',
     ignoreHTTPSErrors: true,
   },

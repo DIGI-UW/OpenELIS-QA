@@ -50,7 +50,7 @@ async function login(page: Page) {
   // With a preloaded storageState (guards.config.ts) we're already authenticated, so /login
   // redirects away and no username field appears — skip fast instead of hanging on fill().
   const userField = page.locator('input[name="loginName"], #loginName, input[placeholder*="ser" i]').first();
-  if (!(await userField.isVisible({ timeout: 4000 }).catch(() => false))) return;
+  if (!(await userField.waitFor({ timeout: 4000 }).then(() => true, () => false))) return;
   // Short timeouts + catches: the testing login page intermittently hangs ("Loginloading"); never
   // let that stall a test for 150s — storageState already authenticates us.
   await userField.fill(ADMIN.user, { timeout: 8000 }).catch(() => {});
@@ -191,7 +191,7 @@ async function createTest(page: Page, name: string, code: string, sampleType = '
     // Maybe a prior attempt already created it (Save fired but redirect/lookup raced).
     const pre = await findTestIdByName(page, name); if (pre) return pre;
     await nav(page, url);
-    if (!(await nameField().isVisible({ timeout: 8000 }).catch(() => false))) {
+    if (!(await nameField().waitFor({ timeout: 8000 }).then(() => true, () => false))) {
       // 2026-08-12: DIAGNOSE BEFORE REACTING. This used to assume "logged out" and always ran
       // login() + nav() — more navigation on top of a still-bootstrapping SPA, which is what kept
       // the shell empty. Only log in when a login form is actually on screen; for an empty shell the

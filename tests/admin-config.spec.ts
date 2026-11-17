@@ -281,7 +281,7 @@ test.describe('Admin Configuration (TC-ADMIN)', () => {
 
     // Click Add / New Entry
     const addBtn = page.getByRole('button', { name: /add|new entry/i }).first();
-    if (!(await addBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
+    if (!(await addBtn.waitFor({ timeout: 3000 }).then(() => true, () => false))) {
       console.log('TC-ADMIN-06: GAP — no Add button found on dictionary screen');
       return;
     }
@@ -290,7 +290,7 @@ test.describe('Admin Configuration (TC-ADMIN)', () => {
     await page.waitForTimeout(1000);
 
     const entryField = page.getByRole('textbox').first();
-    if (await entryField.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await entryField.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await entryField.fill('QA_AUTO_RejReason');
     }
 
@@ -302,12 +302,12 @@ test.describe('Admin Configuration (TC-ADMIN)', () => {
     });
 
     const saveBtn = page.getByRole('button', { name: /save|accept/i }).first();
-    if (await saveBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await saveBtn.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await saveBtn.click();
       await page.waitForTimeout(1500);
     }
 
-    const persisted = await page.getByText(/QA_AUTO_RejReason/i).isVisible({ timeout: 3000 }).catch(() => false);
+    const persisted = await page.getByText(/QA_AUTO_RejReason/i).waitFor({ timeout: 3000 }).then(() => true, () => false);
     if (persisted) {
       console.log(`TC-ADMIN-06: PASS — dictionary entry created (POST ${postStatus})`);
     } else {
@@ -558,7 +558,7 @@ test.describe('Suite AT — Result Reporting & Menu Configuration', () => {
     // `if (x)` here was always true and a missing element burned the full timeout
     // inside .click(). Guarded with an actual visibility check. See
     // navigateToAdminItem in helpers/test-helpers.ts.
-    const chevronPresent = await chevron.isVisible({ timeout: 5_000 }).catch(() => false);
+    const chevronPresent = await chevron.waitFor({ timeout: 5_000 }).then(() => true, () => false);
     if (chevronPresent) {
       await chevron.click();
     }
@@ -606,7 +606,7 @@ test.describe('Suite AU — General Config & App Properties', () => {
     // `if (x)` here was always true and a missing element burned the full timeout
     // inside .click(). Guarded with an actual visibility check. See
     // navigateToAdminItem in helpers/test-helpers.ts.
-    const chevronPresent = await chevron.isVisible({ timeout: 5_000 }).catch(() => false);
+    const chevronPresent = await chevron.waitFor({ timeout: 5_000 }).then(() => true, () => false);
     if (chevronPresent) {
       await chevron.click();
     }
@@ -831,7 +831,7 @@ test.describe('Suite AX — Localization, Notify User, Batch Reassignment', () =
     // `if (x)` here was always true and a missing element burned the full timeout
     // inside .click(). Guarded with an actual visibility check. See
     // navigateToAdminItem in helpers/test-helpers.ts.
-    const chevronPresent = await chevron.isVisible({ timeout: 5_000 }).catch(() => false);
+    const chevronPresent = await chevron.waitFor({ timeout: 5_000 }).then(() => true, () => false);
     if (chevronPresent) {
       await chevron.click();
     }
@@ -909,7 +909,7 @@ test.describe('Suite AX — Localization, Notify User, Batch Reassignment', () =
 
     // navigateToAdminItem in helpers/test-helpers.ts.
 
-    const batchItemPresent = await batchItem.isVisible({ timeout: 5_000 }).catch(() => false);
+    const batchItemPresent = await batchItem.waitFor({ timeout: 5_000 }).then(() => true, () => false);
 
     if (batchItemPresent) {
       await batchItem.click();

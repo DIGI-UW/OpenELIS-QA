@@ -114,7 +114,7 @@ test.describe('Suite BD-DEEP — Patient History Core (TC-HIST)', () => {
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const searchInput = page.locator('input').first();
-    if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await searchInput.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await searchInput.fill(KNOWN_PATIENT_ID);
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2500);
@@ -142,7 +142,7 @@ test.describe('Suite BD-DEEP — Patient History Core (TC-HIST)', () => {
 
     // Search for known patient to get results
     const searchInput = page.locator('input').first();
-    if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await searchInput.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await searchInput.fill(KNOWN_PATIENT_ID);
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2500);
@@ -217,7 +217,7 @@ test.describe('Suite H-DEEP-EXT — Patient History API (TC-HIST-06–10)', () =
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const searchInput = page.locator('input').first();
-    if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await searchInput.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await searchInput.fill('ZZZZZ99999999');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(2000);
@@ -266,9 +266,9 @@ test.describe('Suite H-DEEP-EXT — Patient History API (TC-HIST-06–10)', () =
     const elapsed = Date.now() - start;
 
     console.log(`TC-HIST-09: Patient History loaded in ${elapsed}ms`);
-    if (loaded) {
-      expect(elapsed, 'Patient History must load within 5000ms').toBeLessThan(5000);
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(loaded, 'precondition: loaded').toBeTruthy();
+    expect(elapsed, 'Patient History must load within 5000ms').toBeLessThan(5000);
   });
 
   test('TC-HIST-10: Patient history search field accepts national ID format', async ({ page }) => {
@@ -283,7 +283,7 @@ test.describe('Suite H-DEEP-EXT — Patient History API (TC-HIST-06–10)', () =
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
     const searchInput = page.locator('input').first();
-    if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await searchInput.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
       await searchInput.fill(KNOWN_PATIENT_ID);
       await page.waitForTimeout(500);
 

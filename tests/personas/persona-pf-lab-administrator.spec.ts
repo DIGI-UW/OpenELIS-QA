@@ -93,19 +93,16 @@ test.describe.serial('Persona PF — Lab Administrator (first-time setup)', () =
   });
 
   test('Step 2 — Configure barcode formats (PERSIST)', async ({ page }) => {
+    // REWORKED 2026-11-17: this POSTed an empty body to /rest/BarcodeConfiguration on the server
+    // under test and called any refusal PARTIAL, a silent pass; on a shared server an accepted empty
+    // body would overwrite the site's label settings. It now reads the configuration the admin edits.
     await page.goto(BASE);
-    const r = await apiCall<unknown>(page, '/api/OpenELIS-Global/rest/BarcodeConfiguration', {
-      method: 'POST', body: { /* admin would set label dimensions etc; PF persona just exercises the path */ },
-    });
-    if (!r.ok) {
-      markStep(PERSONA, 2, 'PARTIAL',
-        `Barcode config POST HTTP ${r.status}`,
-        `Admin may not have a way to programmatically set this. The UI path may work.`);
-      test.info().annotations.push({ type: 'partial', description: 'barcode config' });
-      return;
-    }
-    markStep(PERSONA, 2, 'PASS', 'Barcode configuration POST accepted');
+    const r = await apiCall<Record<string, unknown>>(page, '/api/OpenELIS-Global/rest/BarcodeConfiguration');
+    expect(r.ok, `the barcode configuration reads (HTTP ${r.status})`).toBe(true);
+    expect(r.body && typeof r.body === 'object' && Object.keys(r.body).length, 'with its settings').toBeTruthy();
+    markStep(PERSONA, 2, 'PASS', 'Barcode configuration readable');
   });
+
 
   test('Step 3 — Create a new test (PERSIST, BUG-1/BUG-12 catch)', async ({ page }) => {
     await page.goto(BASE);
@@ -124,6 +121,8 @@ test.describe.serial('Persona PF — Lab Administrator (first-time setup)', () =
         active: 'true',
       },
     });
+    // Was PARTIAL, a silent pass (2026-11-17): a refused create is now a failure to look at.
+    expect(r.ok, `test-catalog/tests creates the test (HTTP ${r.status}); if this is the spec's body shape, capture the editor's POST`).toBe(true);
     if (!r.ok) {
       markStep(PERSONA, 3, 'PARTIAL',
         `BUG-1/BUG-12 catch: TestAdd HTTP ${r.status}`,

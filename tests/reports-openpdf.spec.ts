@@ -193,9 +193,11 @@ test.describe('Activity, rejection and referral reports (ManagementReportPdf, Re
   test('TC-RPTPDF-13 Referred Out Tests Report lists the seeded referrals and names the destination on every page', async ({ page }) => {
     await page.goto('/Report?type=patient&report=referredOut');
     // The laboratory list loads after the screen: wait for it before reading it.
-    await expect(page.locator('select#locationcode option', { hasText: /QA_AUTO Reference Lab Alpha/ })).toHaveCount(1, { timeout: 30_000 }).catch(() => undefined);
+    await expect(page.locator('select#locationcode option', { hasText: /QA_AUTO Reference Lab Alpha/ })).toHaveCount(1, { timeout: 30_000 });
     const options = await page.locator('select#locationcode option').evaluateAll((os) => os.map((o: any) => ({ v: o.value, t: o.textContent })));
-    const lab = options.find((o) => /QA_AUTO Reference Lab Alpha/.test(String(o.t)));
+    // hasText above matches on normalised whitespace; textContent keeps the raw spacing (CI run
+    // 43961492669 found the option by locator and then not by this test), so normalise it too.
+    const lab = options.find((o) => /QA_AUTO Reference Lab Alpha/.test(String(o.t).replace(/\s+/g, ' ')));
     expect(lab, 'the referral seed laboratory is offered (modules.config runs referral-seed.setup first)').toBeTruthy();
     await setDate(page, 'startDate', `01/01/${seed.date.slice(6)}`);
     await setDate(page, 'endDate', seed.date);
@@ -334,7 +336,7 @@ test.describe('Printed workplans (WorkplanPdf)', () => {
       return { status: res.status, b64: btoa(s) };
     }, { url: sent.url(), data: sent.request().postData() || '' });
     expect(again.status, 'PrintWorkplanReport answers 200').toBe(200);
-    const { readPdf, isPdf } = await import('../helpers/report-pdf');
+    const { readPdf, isPdf } = await import('../helpers/report-pdf.js');
     const buf = Buffer.from(again.b64, 'base64');
     expect(isPdf(buf), 'a PDF').toBe(true);
     for (const p of page.context().pages()) if (p !== page) await p.close().catch(() => {});
@@ -381,7 +383,7 @@ test.describe('Cold storage temperature log (FreezerTemperatureReportPdf)', () =
       return { status: res.status, b64: btoa(s) };
     }, { url: req.url(), data: req.postData() || '' });
     expect(again.status, 'the report generates').toBe(200);
-    const { readPdf } = await import('../helpers/report-pdf');
+    const { readPdf } = await import('../helpers/report-pdf.js');
     return { sent, doc: await readPdf(Buffer.from(again.b64, 'base64')) };
   }
 

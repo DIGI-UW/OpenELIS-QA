@@ -56,7 +56,7 @@ test.describe('Dashboard KPIs (TC-DASH)', () => {
 
     // Find clickable KPI card (try "Ready for Validation" or similar)
     const cardLink = page.locator('a[href*="Validation"], a[href*="Result"], [class*="tile"] a, [class*="card"] a').first();
-    if (!(await cardLink.isVisible({ timeout: 3000 }).catch(() => false))) {
+    if (!(await cardLink.waitFor({ timeout: 3000 }).then(() => true, () => false))) {
       console.log('TC-DASH-03: GAP — no clickable KPI card links found');
       return;
     }
@@ -200,11 +200,9 @@ test.describe('Dashboard Extended Tests (TC-DASH-EXT)', () => {
     }
 
     console.log(`TC-DASH-EXT-03: ${passed}/${tested} nav links reachable`);
-    if (tested === 0) {
-      console.log('TC-DASH-EXT-03: GAP — no nav links found to test');
-    } else {
-      expect(passed).toBeGreaterThanOrEqual(Math.floor(tested * 0.8));
-    }
+    // Was conditional (2026-11-17): with no links found the case asserted nothing.
+    expect(tested, 'the dashboard offers navigation links to test').toBeGreaterThan(0);
+    expect(passed).toBeGreaterThanOrEqual(Math.floor(tested * 0.8));
   });
 
   test('TC-DASH-EXT-04: Dashboard renders within acceptable time', async ({ page }) => {
@@ -493,17 +491,14 @@ test.describe('Suite DASH-DEEP — Dashboard API Deep Validation (TC-DASH-DEEP)'
     const bell = page.locator(
       'button[aria-label*="notification" i], button[aria-label*="alert" i], [class*="bell"], [data-testid*="notification"]'
     ).first();
-    const hasBell = await bell.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasBell = await bell.waitFor({ timeout: 3000 }).then(() => true, () => false);
 
-    if (hasBell) {
-      await bell.click();
-      await page.waitForTimeout(1000);
-      const bodyText = await page.locator('body').innerText();
-      expect(bodyText, 'Bell click must not cause server error').not.toContain('Internal Server Error');
-      console.log('TC-DASH-DEEP-07: PASS — notification bell clicked without error');
-    } else {
-      console.log('TC-DASH-DEEP-07: NOTE — notification bell not found by aria-label (may use icon-only)');
-      // Non-blocking — bell is confirmed in Phase 15 but selector may vary
-    }
+    // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
+    expect(hasBell, 'precondition: hasBell').toBeTruthy();
+    await bell.click();
+    await page.waitForTimeout(1000);
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText, 'Bell click must not cause server error').not.toContain('Internal Server Error');
+    console.log('TC-DASH-DEEP-07: PASS — notification bell clicked without error');
   });
 });

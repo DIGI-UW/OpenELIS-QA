@@ -154,6 +154,8 @@ export default defineConfig({
   use: {
     ...devices['Desktop Chrome'],
     baseURL: BASE,
+    // Pinned 2026-11-17: specs read English text; an unset locale follows the machine.
+    locale: 'en-US',
     headless: true,
     // Casey's click rule, enforced where it bites: a click that has not landed
     // in 30s is a finding, and waiting longer buys nothing. This is what keeps
