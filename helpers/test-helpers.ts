@@ -434,6 +434,7 @@ export async function navigateWithDiscovery(page: Page, candidates: string[]): P
         /"title"\s*:\s*"Not Found"/.test(body);
       if (isErrorDocument) continue;
 
+      await waitForRouteContent(page); // callers read the page right away
       return true;
     } catch (e) {
       // Try next candidate

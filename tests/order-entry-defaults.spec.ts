@@ -20,6 +20,7 @@ test.describe.configure({ mode: 'serial' });
 let labNo = '';
 let defaultReception = '';   // HH:mm the wizard pre-filled
 let localAtStep = '';        // HH:mm in the browser zone when that step loaded
+let enteredOn = '';
 let orderStepText = '';      // the Order step's text, for the label checks
 
 async function next(page: Page) { await page.getByRole('button', { name: /^Next$/ }).click(); }
@@ -53,6 +54,9 @@ test.describe('Add Order defaults (UTC+10)', () => {
     await page.waitForTimeout(1500);
 
     localAtStep = await page.evaluate(() => new Date().toTimeString().slice(0, 5));
+    // The browser's date when the order was entered: the assertion runs later, and a run that
+    // crosses midnight compared against the next day (CI run 293, 16/17 Nov 2026).
+    enteredOn = await page.evaluate(() => { const d = new Date(); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`; });
     defaultReception = `${await page.locator('#order_receivedTime_hour').inputValue()}:${await page.locator('#order_receivedTime_minute').inputValue()}`;
     await expect(page.locator('#order_nextVisitDate'), 'Date of next visit starts empty').toHaveValue('');
     orderStepText = await page.locator('main').innerText();
@@ -79,9 +83,8 @@ test.describe('Add Order defaults (UTC+10)', () => {
   test('TC-OED-00: CANARY the order saved with the received date and time entered', async ({ page }) => {
     await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
     const r = await apiGet<{ sampleOrderItems?: { receivedTime?: string; receivedDateForDisplay?: string } }>(page, `/rest/SampleEdit?accessionNumber=${labNo}`);
-    const today = await page.evaluate(() => { const d = new Date(); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`; });
     expect(r.json?.sampleOrderItems?.receivedTime, 'received time as entered').toBe('20:00');
-    expect(r.json?.sampleOrderItems?.receivedDateForDisplay, 'received today (local)').toBe(today);
+    expect(r.json?.sampleOrderItems?.receivedDateForDisplay, 'received on the day it was entered (local)').toBe(enteredOn);
   });
 
   test('TC-TZ-05: Reception Time defaults to the local clock', async () => {

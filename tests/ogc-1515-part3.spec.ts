@@ -77,7 +77,7 @@ test.describe('OGC-1515 part 3: searchable lists (#4929)', () => {
   test('TC-1515-21 Report NCE: reporting unit is searchable', async ({ page }) => {
     await open(page, '/ReportNonConformingEvent');
     const box = page.locator('input#reporting-unit');
-    test.skip(!(await box.isVisible({ timeout: 30_000 }).catch(() => false)), 'the reporting unit shows only after a sample is chosen; covered by the dev spec non-conforming-event.spec.ts');
+    test.skip(!(await box.waitFor({ timeout: 30_000 }).then(() => true, () => false)), 'the reporting unit shows only after a sample is chosen; covered by the dev spec non-conforming-event.spec.ts');
     expect(await searchAndPick(page, box, undefined, false), 'the list was searched and a choice offered').toBeTruthy();
   });
 
@@ -141,14 +141,14 @@ test.describe('OGC-1515 part 4: searchable lists (#4931)', () => {
   test('TC-1515-27 EQA participants: the scheme is searchable', async ({ page }) => {
     await open(page, '/qa/eqa/participants');
     const box = page.locator('input#program-selector');
-    test.skip(!(await box.isVisible({ timeout: 30_000 }).catch(() => false)), 'no EQA scheme selector (EQA off on this instance)');
+    test.skip(!(await box.waitFor({ timeout: 30_000 }).then(() => true, () => false)), 'no EQA scheme selector (EQA off on this instance)');
     expect(await searchAndPick(page, box, undefined, false), 'the list was searched and a choice offered').toBeTruthy();
   });
 
   test('TC-1515-28 New EQA cycle: the scheme is searchable; Escape ends the search before it closes the dialog', async ({ page }) => {
     await open(page, '/qa/eqa/my-cycles');
     const newBtn = page.getByRole('main').getByRole('button', { name: /new cycle/i }).first();
-    test.skip(!(await newBtn.isVisible({ timeout: 30_000 }).catch(() => false)), 'no New cycle action on this instance');
+    test.skip(!(await newBtn.waitFor({ timeout: 30_000 }).then(() => true, () => false)), 'no New cycle action on this instance');
     await newBtn.click();
     const modal = page.locator('.cds--modal.is-visible');
     await expect(modal).toBeVisible();

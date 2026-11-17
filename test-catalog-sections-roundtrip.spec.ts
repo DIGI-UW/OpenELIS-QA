@@ -207,7 +207,7 @@ async function createTest(page: Page, name: string, code: string, sampleType = '
         await waitForAppBoot(page);
       }
     }
-    if (!(await nameField().isVisible({ timeout: 12000 }).catch(() => false))) {
+    if (!(await nameField().waitFor({ timeout: 12000 }).then(() => true, () => false))) {
       // Still no form after the targeted remedy. Say WHAT rendered rather than failing silently —
       // an empty app shell and a logout look identical from the outside otherwise.
       console.log('CREATETEST_NOFORM' + attempt + '_AFTER_REMEDY', JSON.stringify(await pageState(page)));

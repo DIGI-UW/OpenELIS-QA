@@ -1234,7 +1234,7 @@ test.describe('Phase 4 — Q-DEEP: EQA Interactions', () => {
     await page.goto(`${BASE}/qa/eqa/distribution`);
     await expect(page.getByRole('heading', { name: 'EQA schemes we provide', exact: true })).toBeVisible();
     const newCycle = page.locator('main').getByRole('button', { name: 'New cycle' }).first();
-    expect(await newCycle.isVisible({ timeout: 15_000 }).catch(() => false),
+    expect(await newCycle.waitFor({ timeout: 15_000 }).then(() => true, () => false),
       'precondition: this lab provides at least one EQA scheme (ci-fixtures.setup.ts seeds one)').toBe(true);
     await newCycle.click();
     await expect(page).toHaveURL(/\/qa\/eqa\/provider\/schemes\/\d+\/cycles\/new/);

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { expectOffered, pick } from '../helpers/searchable';
+import { expectOffered, optionTexts, pick } from '../helpers/searchable';
 import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, orderWizardForward } from '../helpers/test-helpers';
 
 /**
@@ -313,13 +313,13 @@ test.describe('Phase 4 — X-DEEP: Performance', () => {
     // page is Workplan By Test (/WorkPlanByTest); its test type picker is the large dropdown.
     await page.goto(`${BASE}/WorkPlanByTest`);
     await expect(page.getByRole('heading', { name: 'Workplan By Test' })).toBeVisible();
-    await page.locator('main select').first().locator('option').nth(100).waitFor({ state: 'attached', timeout: 30000 }).catch(() => {});
-    const optionCount = await page.evaluate(() => {
-      const selects = Array.from(document.querySelectorAll('main select')) as HTMLSelectElement[];
-      const largest = selects.reduce((max, s) => s.options.length > max ? s.options.length : max, 0);
-      return largest;
-    });
-    expect(optionCount).toBeGreaterThan(100); // 303 test types
+    // A searchable list since OGC-1515 (#4922), #workplan-test; it offers /rest/test-list.
+    const picker = page.locator('#workplan-test');
+    await expect(picker).toBeVisible({ timeout: 30_000 });
+    await expect.poll(async () => (await optionTexts(picker)).length, { timeout: 30_000 }).toBeGreaterThan(100);
+    const optionCount = (await optionTexts(picker)).length;
+    console.log(`TC-X-DEEP-02: ${optionCount} test types listed`);
+    expect(optionCount).toBeGreaterThan(100); // 236 on testing, 16 Nov 2026
   });
 
   test('TC-X-DEEP-03: Memory utilization check', async ({ page }) => {
@@ -483,6 +483,11 @@ test.describe('Performance Extended — API Latency & Throughput (TC-PERF-EXT)',
      */
     await page.goto(`${BASE}`);
     await page.waitForLoadState('networkidle');
+    // Measure the dashboard once it has drawn, both times. The baseline used to be read at
+    // networkidle, before the app drew (189 nodes, the shell), and compared with the drawn
+    // dashboard after the last step (1,135): "growth" of 500% with no leak (CI run 293, testing).
+    const drawn = () => page.getByRole('heading', { name: 'Dashboard', level: 1 }).waitFor({ timeout: 30_000 }).then(() => page.waitForTimeout(1500));
+    await drawn();
 
     const measure = () => page.evaluate(() => document.querySelectorAll('*').length);
 
@@ -500,6 +505,7 @@ test.describe('Performance Extended — API Latency & Throughput (TC-PERF-EXT)',
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(300);
     }
+    await drawn();
 
     const after = await measure();
     const growth = after - baseline;

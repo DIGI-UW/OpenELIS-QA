@@ -498,19 +498,14 @@ test.describe('Suite AH — Incoming Orders & Batch Order Entry', () => {
   test('TC-IO-03: Batch Order Entry screen loads', async ({ page }) => {
     await login(page, ADMIN.user, ADMIN.pass);
 
-    try {
-      await navigateViaMenu(page, ['Order', 'Batch Order Entry']);
-    } catch (e) {
-      const found = await tryNavigateToURL(page, ['/BatchOrderEntry', '/BatchEntry', '/order/batch']);
-      if (!found) {
-        test.skip();
-        return;
-      }
-    }
-
-    await page.waitForTimeout(1000);
+    // The route is /SampleBatchEntrySetup (App.jsx). The menu walk used to land on the Dashboard
+    // without raising (16 Nov 2026), so go straight to the route.
+    await page.goto(`${BASE}/SampleBatchEntrySetup`);
+    await expect(page, 'Batch Order Entry opens on its own route').toHaveURL(/SampleBatchEntrySetup/);
 
     expect(page.url()).not.toContain('login');
+    // The form draws after load; wait for a field before reading it (a fixed 1 s was too short in CI).
+    await page.locator('main textarea, main [role="textbox"], main input[type="text"]').first().waitFor({ timeout: 30_000 }).catch(() => {});
 
     // Check for form or input field
     const textarea = await page.locator('textarea, [role="textbox"]').first().isVisible({ timeout: 3000 }).catch(() => false);

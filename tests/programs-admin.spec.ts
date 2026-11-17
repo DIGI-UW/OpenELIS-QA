@@ -71,9 +71,9 @@ test.describe('Programs admin (TC-PRGW)', () => {
   });
 
   test('TC-PRGW-03: Order Programs lists each order once', async ({ page }) => {
-    // FLIP-WHEN-FIXED (R49). Observed 2026-09-27: DEV...0090 listed twice; Total Entries
+    // FIXED (R49), flipped 2026-11-17: passes in develop-stack CI run 293 (develop a2e66aed).
+    // Was FLIP-WHEN-FIXED. Observed 2026-09-27: DEV...0090 listed twice; Total Entries
     // counted the duplicate.
-    test.fail();
     await page.goto(`${BASE}/genericProgram`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('columnheader', { name: /Accession number/i })).toBeVisible({ timeout: 20_000 });
     await page.waitForLoadState('networkidle');

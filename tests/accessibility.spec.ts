@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, orderWizardForward } from '../helpers/test-helpers';
+import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, orderWizardForward, waitForRouteContent } from '../helpers/test-helpers';
 
 /**
  * Accessibility Tests
@@ -173,6 +173,7 @@ test.describe('Phase 5 — V-DEEP: Accessibility Audit Tests', () => {
 
   test('TC-V-DEEP-02: Color contrast adequate', async ({ page }) => {
     await page.goto(`${BASE}/Dashboard`);
+    await waitForRouteContent(page); // the app draws after load (16 Nov CI read an empty page)
     // Programmatic contrast check on header
     const headerBg = await page.evaluate(() => {
       const header = document.querySelector('header, [role="banner"]');
@@ -184,6 +185,7 @@ test.describe('Phase 5 — V-DEEP: Accessibility Audit Tests', () => {
 
   test('TC-V-DEEP-03: Heading structure and focus', async ({ page }) => {
     await page.goto(`${BASE}/Dashboard`);
+    await waitForRouteContent(page); // the app draws after load (16 Nov CI read an empty page)
     // Check heading hierarchy
     const h1 = await page.locator('h1').count();
     expect(h1).toBeGreaterThanOrEqual(1);
@@ -214,6 +216,7 @@ test.describe('Accessibility Extended (TC-A11Y-EXT)', () => {
      */
     await page.goto(`${BASE}/LogbookResults`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const tableAudit = await page.evaluate(() => {
       const tables = Array.from(document.querySelectorAll('table'));
@@ -248,6 +251,7 @@ test.describe('Accessibility Extended (TC-A11Y-EXT)', () => {
      */
     await page.goto(`${BASE}/MasterListsPage/calculatedValue`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     // Open Add modal if available
     const addBtn = page.getByRole('button', { name: /add|create|new/i }).first();
@@ -283,6 +287,7 @@ test.describe('Accessibility Extended (TC-A11Y-EXT)', () => {
      */
     await page.goto(`${BASE}/SamplePatientEntry`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     // Submit the form without filling required fields to trigger validation errors
     const nextBtn = orderWizardForward(page);
@@ -324,6 +329,7 @@ test.describe('Accessibility Extended (TC-A11Y-EXT)', () => {
      */
     await page.goto(`${BASE}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const audit = await page.evaluate(() => {
       const buttons = Array.from(document.querySelectorAll('button, [role="button"]'));
@@ -365,6 +371,7 @@ test.describe('Accessibility Extended (TC-A11Y-EXT)', () => {
      */
     await page.goto(`${BASE}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const lang = await page.evaluate(() => document.documentElement.lang);
     console.log(`TC-A11Y-EXT-05: <html lang="${lang}">`);
@@ -382,6 +389,7 @@ test.describe('Accessibility Extended (TC-A11Y-EXT)', () => {
      */
     await page.goto(`${BASE}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const liveRegions = await page.evaluate(() => {
       const live = document.querySelectorAll('[aria-live], [role="status"], [role="alert"], [role="log"]');

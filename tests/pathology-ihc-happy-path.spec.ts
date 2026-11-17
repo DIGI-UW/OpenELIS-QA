@@ -169,36 +169,42 @@ test.describe('Pathology and IHC happy path (TC-PATHHP, TC-IHCHP)', () => {
     await openCase(page, 'pathology', state.caseId);
     await setStage(page, 'GROSSING');
     await openSection(page, 'grossing');
-    await page.locator('#blocksToAdd').fill('2');
-    await page.getByRole('button', { name: /^Add Block\(s\)$/ }).click();
-    // Block rows are now blockNumber0, blockNumber1, ... (they all had id "blockNumber").
-    await expect(page.locator('[id^="blockNumber"]'), 'two block rows on the form').toHaveCount(2);
+    // REWORKED 2026-11-17 for #4969: grossing takes a macroscopic description and cassettes added
+    // one at a time ("Add cassette"); the block count field and "Add Block(s)" are gone.
+    await page.getByLabel('Macroscopic description', { exact: true }).fill('QA_AUTO received in formalin: two pieces of tissue.');
+    const add = page.getByRole('button', { name: 'Add cassette' });
+    await add.click();
+    await add.click();
+    await expect(page.locator('#pathology-section-grossing').getByRole('button', { name: /^(Remove|Deactivate cassette) / }), 'two cassettes on the form').toHaveCount(2);
     expect(await saveCase(page, 'pathology', state.caseId), 'case save').toBe(200);
     const c = await caseJson(page, 'pathology', state.caseId);
     expect(c.status, 'stage stored').toBe('GROSSING');
-    expect((c.blocks ?? []).map((b: any) => Number(b.blockNumber)).sort(), 'blocks 1 and 2 stored').toEqual([1, 2]);
+    expect((c.blocks ?? []).map((b: any) => b.designation).sort(), 'cassettes A1 and A2 stored').toEqual(['A1', 'A2']);
+    expect(c.grossExam ?? '', 'the description stored').toContain('QA_AUTO received in formalin');
     await openCase(page, 'pathology', state.caseId);
     await expectStage(page, 'GROSSING', 'the stage survives a reload');
     await openSection(page, 'grossing');
-    await expect(page.locator('[id^="blockNumber"]')).toHaveCount(2);
+    await expect(page.locator('#pathology-section-grossing').getByRole('button', { name: /^(Remove|Deactivate cassette) / })).toHaveCount(2);
   });
 
-  test('TC-PATHHP-03: staining with two slides is saved and read back', async ({ page }) => {
+  test('TC-PATHHP-03: the case passes the bench to Staining and reads back', async ({ page }) => {
+    // REWORKED 2026-11-17 for #4969: the case moves stage by stage, and each bench stage has its own
+    // condition. setStage meets them the way the bench does (both cassettes embedded, a slide cut and
+    // its label checked); the dev team's pathology-stage-events spec drives each control.
     await openCase(page, 'pathology', state.caseId);
     await setStage(page, 'STAINING');
-    // Slides are cut in the Microtomy section now (it unlocks once the stage passes it).
-    await openSection(page, 'microtomy');
-    await page.locator('#slidesToAdd').fill('2');
-    await page.getByRole('button', { name: /^Add Slide\(s\)$/ }).click();
-    await expect(page.locator('[id^="slideNumber"]'), 'two slide rows on the form').toHaveCount(2);
-    expect(await saveCase(page, 'pathology', state.caseId)).toBe(200);
+    await expectStage(page, 'STAINING', 'the case view shows Staining');
     const c = await caseJson(page, 'pathology', state.caseId);
     expect(c.status).toBe('STAINING');
-    expect((c.slides ?? []).length, 'two slides stored').toBe(2);
-    expect((c.blocks ?? []).length, 'the blocks are still there').toBe(2);
+    expect((c.blocks ?? []).length, 'the cassettes are still there').toBe(2);
+    expect((c.blocks ?? []).every((b: any) => b.cassetteState === 'BLOCK'), 'every cassette embedded').toBe(true);
+    expect((c.slides ?? []).filter((x: any) => x.active !== false).length, 'a slide cut').toBeGreaterThanOrEqual(1);
+    expect((c.stageEvents ?? []).map((e: any) => e.stage), 'each move is in the stage history').toEqual(
+      expect.arrayContaining(['GROSSING', 'PROCESSING', 'EMBEDDING', 'MICROTOMY', 'STAINING']));
     const row = await findRow(page, 'PathologyDashboard');
     await expect(row, 'the dashboard shows the new stage').toContainText('Staining');
   });
+
 
   test('TC-PATHHP-04: Ready for Pathologist with a pathologist assigned moves the case to Awaiting Review', async ({ page }) => {
     const mid = await counts(page, 'pathology');
@@ -282,15 +288,19 @@ test.describe('Pathology and IHC happy path (TC-PATHHP, TC-IHCHP)', () => {
     const mid = await counts(page, 'pathology');
     await openCase(page, 'pathology', state.caseId);
     for (const key of ['grossing', 'findings', 'reports']) await openSection(page, key);
-    await area(page, /^Gross Exam/).fill(GROSS);
-    await area(page, /^Microscopy Exam/).fill(MICRO);
-    await area(page, /^Text Conclusion/).fill(CONCLUSION);
+    // REWORKED 2026-11-17 for #4969: the fields are "Macroscopic description" and "Microscopic
+    // description", and the case is completed by the pathologist's release ("Ready For release"),
+    // not by a stage picker.
+    await page.getByLabel('Macroscopic description', { exact: true }).fill(GROSS);
+    await page.getByLabel('Microscopic description', { exact: true }).fill(MICRO);
+    await page.getByLabel('Text Conclusion', { exact: true }).fill(CONCLUSION);
     await page.getByRole('button', { name: /^Add Report$/ }).click();
     const pdf = await generateReport(page);
     expect(pdf.status, `pathology report PDF: ${pdf.body}`).toBe(200);
     expect(pdf.type).toContain('pdf');
-    await setStage(page, 'COMPLETED');
-    expect(await saveCase(page, 'pathology', state.caseId)).toBe(200);
+    await expect(page.locator('#release'), 'Release is offered under review').toBeEnabled();
+    await page.locator('label[for="release"]').click();
+    expect(await saveCase(page, 'pathology', state.caseId), 'release save answers 200').toBe(200);
     const c = await caseJson(page, 'pathology', state.caseId);
     expect(c.status).toBe('COMPLETED');
     expect(c.grossExam, 'gross exam stored').toBe(GROSS);
@@ -298,32 +308,33 @@ test.describe('Pathology and IHC happy path (TC-PATHHP, TC-IHCHP)', () => {
     expect(c.conclusionText, 'conclusion stored').toBe(CONCLUSION);
     expect((c.reports ?? []).length, 'the report is stored with the case').toBe(1);
     expect((c.blocks ?? []).length, 'blocks still there at the end').toBe(2);
-    expect((c.slides ?? []).length, 'slides still there at the end').toBe(2);
+    expect((c.slides ?? []).length, 'slides still there at the end').toBeGreaterThanOrEqual(1);
     const now = await counts(page, 'pathology');
     expect(now.complete, 'Complete tile counts it').toBe(mid.complete + 1);
-    // Under Pathologist Review counts as In Progress on the dashboard, so that tile drops it.
-    expect(now.inProgress, 'and In Progress drops it').toBe(mid.inProgress - 1);
+    // Released straight from Ready for Pathologist (#4969), the case leaves Awaiting Review; from
+    // Under Pathologist Review it would leave In Progress. Either way the two tiles drop it once.
+    expect(now.awaitingReview + now.inProgress, 'and the open tiles drop it').toBe(mid.awaitingReview + mid.inProgress - 1);
   });
 
   test('TC-PATHHP-06: the completed case reads back on the case view and the dashboard', async ({ page }) => {
     await openCase(page, 'pathology', state.caseId);
     await expectStage(page, 'COMPLETED');
     for (const key of ['grossing', 'findings', 'reports']) await openSection(page, key);
-    await expect(area(page, /^Gross Exam/), 'gross exam shown').toHaveValue(GROSS);
-    await expect(area(page, /^Microscopy Exam/), 'microscopy shown').toHaveValue(MICRO);
-    await expect(area(page, /^Text Conclusion/), 'conclusion shown').toHaveValue(CONCLUSION);
+    await expect(page.getByLabel('Macroscopic description', { exact: true }), 'gross exam shown').toHaveValue(GROSS);
+    await expect(page.getByLabel('Microscopic description', { exact: true }), 'microscopy shown').toHaveValue(MICRO);
+    await expect(page.getByLabel('Text Conclusion', { exact: true }), 'conclusion shown').toHaveValue(CONCLUSION);
     await expect(page.getByRole('button', { name: /^View( File)?$/ }).first(), 'the stored report can be opened').toBeVisible();
     const row = await findRow(page, 'PathologyDashboard', 'COMPLETED');
     await expect(row, 'listed under Completed').toContainText('Completed');
   });
 
-  test('TC-PATHHP-07: marking the completed pathology case "Ready For release" saves [FIXED]', async ({ page }) => {
-    // FIXED (never filed), flipped 2026-10-08 (passes on local develop 2026-10-06 and 2026-10-08); was FLIP-WHEN-FIXED. Same fault as TC-IHCHP-04, observed 2 Oct 2026: with "Ready For release"
-    // ticked the case POST answers 500 and the log shows "No row with the given identifier exists:
-    // [Analysis#<the order's sample id>]". Not filed yet (Casey to decide).
+  test('TC-PATHHP-07: a released pathology case is not released again', async ({ page }) => {
+    // REWORKED 2026-11-17 for #4969. Was "marking the completed case Ready For release saves" (the
+    // 500 fixed by 2026-10-08): the release is now how a case completes (TC-PATHHP-05), and once
+    // released the control is locked with its reason (S-7.4).
     await openCase(page, 'pathology', state.caseId);
     await openSection(page, 'findings');
-    await page.locator('label[for="release"]').click();
-    expect(await saveCase(page, 'pathology', state.caseId), 'release save answers 200').toBe(200);
+    await expect(page.locator('#release'), 'Release is locked on a released case').toBeDisabled();
   });
+
 });

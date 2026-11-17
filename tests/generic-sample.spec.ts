@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, QA_PREFIX, TIMEOUT, login } from '../helpers/test-helpers';
+import { BASE, ADMIN, QA_PREFIX, TIMEOUT, login, waitForRouteContent } from '../helpers/test-helpers';
 
 /**
  * Generic Sample Test Suite — Phase 60
@@ -51,6 +51,7 @@ test.describe('Generic Sample — Create Order (US-GEN-1)', () => {
     await login(page, ADMIN.user, ADMIN.pass);
     await page.goto(`${BASE}${GEN_ORDER_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
   });
 
   test('TC-GEN-01: Create Order page loads with all required form sections', async ({ page }) => {
@@ -156,6 +157,7 @@ test.describe('Generic Sample — Edit Order (US-GEN-2)', () => {
     await login(page, ADMIN.user, ADMIN.pass);
     await page.goto(`${BASE}${GEN_EDIT_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
   });
 
   test('TC-GEN-06: Edit Order has accession search to find the existing sample', async ({ page }) => {
@@ -212,6 +214,7 @@ test.describe('Generic Sample — Import Samples (US-GEN-3)', () => {
     await login(page, ADMIN.user, ADMIN.pass);
     await page.goto(`${BASE}${GEN_IMPORT_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
   });
 
   test('TC-GEN-08: Import page supports CSV and Excel file formats', async ({ page }) => {
@@ -267,6 +270,7 @@ test.describe('Generic Sample — Enter Results (US-GEN-4)', () => {
     await login(page, ADMIN.user, ADMIN.pass);
     await page.goto(`${BASE}${GEN_RESULTS_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
   });
 
   test('TC-GEN-10: Enter Results page has accession search and no server errors', async ({ page }) => {
@@ -316,6 +320,7 @@ test.describe('Generic Sample — Sample Management (US-GEN-5)', () => {
     await login(page, ADMIN.user, ADMIN.pass);
     await page.goto(`${BASE}${GEN_MGMT_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
   });
 
   test('TC-GEN-12: Sample Management loads with accession search', async ({ page }) => {
@@ -397,6 +402,7 @@ test.describe('Suite GEN-EXT — Generic Sample Extended', () => {
     for (const url of urls) {
       await page.goto(`${BASE}${url}`);
       await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+      await waitForRouteContent(page);
       const bodyText = await page.locator('body').innerText();
       const ok = !bodyText.includes('Internal Server Error') && !page.url().match(/login/i);
       results.push({ url, ok });
@@ -414,6 +420,7 @@ test.describe('Suite GEN-EXT — Generic Sample Extended', () => {
      */
     await page.goto(`${BASE}${GEN_ORDER_URL}`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const bodyText = await page.locator('body').innerText();
     const hasAccessionField = /accession|lab number|sample id/i.test(bodyText);
@@ -430,6 +437,7 @@ test.describe('Suite GEN-EXT — Generic Sample Extended', () => {
      */
     await page.goto(`${BASE}${GEN_MGMT_URL}`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const searchInput = page.locator('input[placeholder*="accession" i], input').first();
     if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
@@ -450,6 +458,7 @@ test.describe('Suite GEN-EXT — Generic Sample Extended', () => {
      */
     await page.goto(`${BASE}${GEN_IMPORT_URL}`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const bodyText = await page.locator('body').innerText();
     const hasUpload = /upload|import|file|csv|excel/i.test(bodyText);

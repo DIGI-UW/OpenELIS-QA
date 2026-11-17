@@ -4,8 +4,7 @@ import {
   ADMIN,
   TIMEOUT,
   login,
-  navigateWithDiscovery,
-} from '../helpers/test-helpers';
+  navigateWithDiscovery, waitForRouteContent } from '../helpers/test-helpers';
 
 /**
  * Electronic Signature Test Suite
@@ -47,10 +46,12 @@ async function goToSiteInformation(page: any): Promise<boolean> {
   // Fallback: navigate via Admin sidebar
   await page.goto(`${BASE}/MasterListsPage`);
   await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+  await waitForRouteContent(page);
   const link = page.locator('a, button, span, li').filter({ hasText: /site information/i }).first();
   if (await link.isVisible({ timeout: 3000 }).catch(() => false)) {
     await link.click();
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
     return !page.url().match(/LoginPage|login/i);
   }
   return false;
@@ -104,6 +105,7 @@ test.describe('Suite AY-ESIG-ADMIN — Site Information & Electronic Signature C
   test('TC-ESIG-02: Site Information sub-sections are visible', async ({ page }) => {
     await goToSiteInformation(page);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     // Site Information contains multiple configurable sections
     // Scribe shows a panel that can be expanded — look for identifiable headings
@@ -127,6 +129,7 @@ test.describe('Suite AY-ESIG-ADMIN — Site Information & Electronic Signature C
   test('TC-ESIG-03: Modify button is present and opens edit mode', async ({ page }) => {
     await goToSiteInformation(page);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     // Scribe step 6: Click "Modify"
     const modifyBtn = page
@@ -141,6 +144,7 @@ test.describe('Suite AY-ESIG-ADMIN — Site Information & Electronic Signature C
       await selectSiteInfoRow(page);
       await modifyBtn.click();
       await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+      await waitForRouteContent(page);
 
       // After clicking Modify, inputs or form fields should appear
       const inputCount = await page.locator('input, textarea, select').count();
@@ -154,6 +158,7 @@ test.describe('Suite AY-ESIG-ADMIN — Site Information & Electronic Signature C
   }) => {
     await goToSiteInformation(page);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     // Expand or scroll to find e-sig setting
     // Scribe step 5 shows clicking to expand a section before Modify
@@ -176,6 +181,7 @@ test.describe('Suite AY-ESIG-ADMIN — Site Information & Electronic Signature C
       await selectSiteInfoRow(page);
       await modifyBtn.click();
       await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+      await waitForRouteContent(page);
     }
 
     const body = await page.locator('body').innerText();
@@ -194,6 +200,7 @@ test.describe('Suite AY-ESIG-ADMIN — Site Information & Electronic Signature C
   test('TC-ESIG-05: Save button persists Site Information changes', async ({ page }) => {
     await goToSiteInformation(page);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     // Open Modify mode (Scribe step 6)
     const modifyBtn = page
@@ -210,6 +217,7 @@ test.describe('Suite AY-ESIG-ADMIN — Site Information & Electronic Signature C
     await selectSiteInfoRow(page);
     await modifyBtn.click();
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     // Scribe step 8: Click Save
     // Scoped to the page body (REWORKED 2026-10-08): Modify opens an "Edit Record" form whose Save
@@ -222,6 +230,7 @@ test.describe('Suite AY-ESIG-ADMIN — Site Information & Electronic Signature C
     if (saveVisible) {
       await saveBtn.click();
       await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+      await waitForRouteContent(page);
 
       // Should not redirect to error or login
       expect(page.url()).not.toMatch(/LoginPage|error|500/i);
@@ -251,6 +260,7 @@ test.describe('Suite AY-ESIG-WORKFLOW — Electronic Signature in Routine Valida
     // Scribe steps 11-13: navigate Routine, select Biochemistry, select Hematology
     await goToRoutineValidation(page);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     // Look for section/department selector — typically a dropdown or checkboxes
     const sectionSelectors = [
@@ -291,6 +301,7 @@ test.describe('Suite AY-ESIG-WORKFLOW — Electronic Signature in Routine Valida
     // Scribe step 14: Click the sign button on validation screen
     await goToRoutineValidation(page);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const signBtn = page
       .getByRole('button', { name: /^sign$/i })
@@ -322,6 +333,7 @@ test.describe('Suite AY-ESIG-WORKFLOW — Electronic Signature in Routine Valida
     // that your electronic signature is the legally binding equivalent of your handwritten..."
     await goToRoutineValidation(page);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     // Trigger the sign modal if button is present
     const signBtn = page
@@ -357,6 +369,7 @@ test.describe('Suite AY-ESIG-WORKFLOW — Electronic Signature in Routine Valida
     // Scribe step 17: "I have read and understand the above statement" checkbox
     await goToRoutineValidation(page);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const signBtn = page
       .getByRole('button', { name: /^sign$/i })
@@ -386,6 +399,7 @@ test.describe('Suite AY-ESIG-WORKFLOW — Electronic Signature in Routine Valida
     // Scribe step 18: Click the Password field in the e-sig modal
     await goToRoutineValidation(page);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const signBtn = page
       .getByRole('button', { name: /^sign$/i })
@@ -416,6 +430,7 @@ test.describe('Suite AY-ESIG-WORKFLOW — Electronic Signature in Routine Valida
     // Scribe step 19: Click "Certify & Continue"
     await goToRoutineValidation(page);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const signBtn = page
       .getByRole('button', { name: /^sign$/i })
@@ -457,6 +472,7 @@ test.describe('Suite AY-ESIG-WORKFLOW — Electronic Signature in Routine Valida
      */
     await goToRoutineValidation(page);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const signBtn = page
       .getByRole('button', { name: /^sign$/i })
@@ -514,6 +530,7 @@ test.describe('Suite AY-ESIG-WORKFLOW — Electronic Signature in Routine Valida
     if (await finalSignBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
       await finalSignBtn.click();
       await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+      await waitForRouteContent(page);
     }
 
     // Verify no error occurred

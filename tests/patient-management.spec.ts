@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { seedDuplicatePair, seedMergedPair, findPatientIdsByNationalId, findPatientIdsByLastName } from '../helpers/data-factory';
-import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, QA_ID_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, navigateToAdminItem, getDateRange, getFutureDateRange, clickFormSearch, checkCarbonRadio } from '../helpers/test-helpers';
+import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, QA_ID_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, navigateToAdminItem, getDateRange, getFutureDateRange, clickFormSearch, checkCarbonRadio, waitForRouteContent } from '../helpers/test-helpers';
 
 /**
  * Patient Management Test Suite
@@ -257,7 +257,7 @@ test.describe('Patient Management (TC-PAT)', () => {
     // also what produced the run's 10 "Element not found: #nationalId".
     await page.goto(`${BASE}/PatientManagement/new`, { waitUntil: 'domcontentloaded' });
     const idField = page.locator('#nationalId');
-    const landed = await idField.isVisible({ timeout: 10_000 }).catch(() => false);
+    const landed = await idField.waitFor({ timeout: 10_000 }).then(() => true, () => false);
     test.skip(!landed, 'Add Patient form (/PatientManagement/new) did not render #nationalId');
 
     // Fill demographics. National ID must match the server's
@@ -820,6 +820,7 @@ test.describe('Phase 4 — H-DEEP: Patient Interaction Tests', () => {
     // Navigate directly — SPA menu clicks require BASE navigation first
     await page.goto(`${BASE}/SamplePatientEntry`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     // Fill national ID using native setter (Carbon controlled input)
     await page.evaluate(() => {
@@ -885,6 +886,7 @@ test.describe('Phase 6 — BD-DEEP: Patient History Tests', () => {
   test('TC-BD-DEEP-01: Patient History page has required search fields', async ({ page }) => {
     await page.goto(`${BASE}/PatientHistory`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     expect(page.url(), 'Must not redirect to login').not.toMatch(/LoginPage|login/i);
 
@@ -908,6 +910,7 @@ test.describe('Phase 6 — BD-DEEP: Patient History Tests', () => {
   test('TC-BD-DEEP-02: Searching by Last Name returns results table', async ({ page }) => {
     await page.goto(`${BASE}/PatientHistory`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const lastNameInput = page.locator('input[placeholder*="Last Name" i]').first();
     if (!(await lastNameInput.isVisible({ timeout: 3000 }).catch(() => false))) {
@@ -946,6 +949,9 @@ test.describe('Phase 6 — BE-DEEP: Patient Merge Tests', () => {
     if (!found) { test.skip(); return; }
 
     expect(page.url()).not.toMatch(/LoginPage|login/i);
+    // The wizard draws after load; its two search panels carry ids patient1-* and patient2-*
+    // (see TC-BE-DEEP-02). Read the page once they are there.
+    await page.locator('[id^="patient1-"]').first().waitFor({ timeout: 30_000 }).catch(() => {});
 
     const bodyText = await page.locator('body').innerText();
     const hasFirstPatient = /Select First Patient|First Patient/i.test(bodyText);

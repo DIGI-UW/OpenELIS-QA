@@ -141,7 +141,12 @@ async function v4Enter(page: Page) {
   await page.route('**/api/OpenELIS-Global/**', (r: Route) => (['GET', 'HEAD', 'OPTIONS'].includes(r.request().method()) ? r.fallback() : r.abort()));
   await page.goto(`${BASE}/order/clinical/enter`);
   await expect(page.locator('#sampleType-0'), 'Enter Order must show a sample type picker').toBeVisible({ timeout: 60_000 });
-  await page.waitForFunction(() => (document.querySelector('#sampleType-0') as HTMLSelectElement)?.options.length > 1, null, { timeout: 30_000 });
+  // A native select (options) or, since OGC-1515, a searchable input (enabled once its list loads).
+  await page.waitForFunction(() => {
+    const el = document.querySelector('#sampleType-0') as (HTMLSelectElement & HTMLInputElement) | null;
+    if (!el) return false;
+    return el.tagName === 'SELECT' ? el.options.length > 1 : !el.disabled;
+  }, null, { timeout: 30_000 });
 }
 
 const v4Listed = (page: Page) =>

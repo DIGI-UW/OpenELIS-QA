@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { optionTexts, pick } from '../helpers/searchable';
-import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, clickFormSearch } from '../helpers/test-helpers';
+import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, clickFormSearch, waitForRouteContent } from '../helpers/test-helpers';
 import { seedOrder } from '../helpers/data-factory';
 
 /**
@@ -470,6 +470,7 @@ test.describe('Phase 5 — F-DEEP: Results Entry Field Validation Tests', () => 
     // Navigate directly to LogbookResults with Hematology
     await page.goto(`${BASE}/LogbookResults?type=Hematology`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const unitSelect = page.locator('select').first();
     if (await unitSelect.isVisible({ timeout: 3000 }).catch(() => false)) {
@@ -503,6 +504,7 @@ test.describe('Phase 5 — F-DEEP: Results Entry Field Validation Tests', () => 
   test('TC-F-DEEP-02: Result field accepts numeric input (native setter)', async ({ page }) => {
     await page.goto(`${BASE}/LogbookResults?type=Hematology`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     // Select Hematology
     await page.evaluate(() => {
@@ -556,6 +558,7 @@ test.describe('Phase 6 — BF-DEEP: Results By Range Tests', () => {
   test('TC-BF-DEEP-02: Range search returns results or empty state', async ({ page }) => {
     await page.goto(`${BASE}/RangeResults`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const fromInput = page.locator('input[placeholder*="Accession" i], input[placeholder*="From" i]').first();
     const toInput = page.locator('input[placeholder*="Accession" i], input[placeholder*="To" i]').last();
@@ -586,6 +589,7 @@ test.describe('Phase 6 — BG-DEEP: Results By Status Tests', () => {
   test('TC-BG-DEEP-01: Results By Status page has all required filters', async ({ page }) => {
     await page.goto(`${BASE}/StatusResults`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     expect(page.url(), 'Must not redirect to login').not.toMatch(/LoginPage|login/i);
     const bodyText = await page.locator('body').innerText();
@@ -605,6 +609,7 @@ test.describe('Phase 6 — BG-DEEP: Results By Status Tests', () => {
   test('TC-BG-DEEP-02: Analysis Status dropdown has expected options', async ({ page }) => {
     await page.goto(`${BASE}/StatusResults`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     // Find the Analysis Status select
     const allSelects = page.locator('select');

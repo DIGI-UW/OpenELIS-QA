@@ -125,22 +125,30 @@ test.describe('Pathology workflow (TC-PATHW)', () => {
   });
 
   test('TC-PATHW-03: an empty case cannot be saved as Completed', async ({ page }) => {
-    // FLIP-WHEN-FIXED (R51). By hand on 2026-09-27 a case completed with no blocks, slides,
-    // report or pathologist; Cytology and IHC behave the same.
+    // FLIP-WHEN-FIXED (R51), partly fixed by #4969 (10 Nov 2026): the case view has no stage picker,
+    // the case save keeps the stored stage, and the bench stages need a description, a cassette and
+    // a checked slide. Completing is the pathologist's Release, offered from Ready for Pathologist on
+    // (the person opening the case there is assigned as pathologist). It asks for no microscopy, no
+    // conclusion and no report: this case reaches Ready for Pathologist through setStage with only
+    // the bench minimum, then is released with no findings.
     test.fail();
     await openCase(page);
     const caseUrl = page.url();
-    // REWORKED 2026-10-08: the stage picker is a Carbon dropdown now, so the old selectOption threw
-    // and this tripwire "failed as expected" without testing anything.
-    await setStage(page, 'COMPLETED');
-    await pressCaseSave(page);   // the case-level Save
-    await page.waitForTimeout(2500);
+    await expect(page.locator('#caseStage')).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('#status'), 'the case view offers no stage picker').toHaveCount(0);
+    await setStage(page, 'READY_PATHOLOGIST');
+    await openSection(page, 'findings');
+    const release = page.locator('#release');
+    await expect(release).toHaveCount(1, { timeout: 15_000 });
+    if (await release.isEnabled()) {
+      await release.check({ force: true });
+      await pressCaseSave(page);
+      await page.waitForTimeout(2500);
+    }
     await page.goto(caseUrl, { waitUntil: 'domcontentloaded' });
-    // Read the status only once the case has loaded: before that the select shows its
-    // placeholder stage (an early read "passed" this tripwire by race on 2026-09-27).
     await expect(page.locator('main').getByText(labNo).first()).toBeVisible({ timeout: 20_000 });
-    await page.waitForLoadState('networkidle');
-    const status = await readStage(page);
-    expect(status, 'an empty case is not stored as Completed').not.toBe('Completed');
+    await expect(page.locator('#caseStage')).toBeVisible({ timeout: 30_000 });
+    expect(await readStage(page), 'a case with no findings is not stored as Completed').not.toMatch(/Completed/);
   });
+
 });

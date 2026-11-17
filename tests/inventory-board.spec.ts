@@ -625,14 +625,19 @@ test.describe('Defining items, tags, count mode and Reports (#4361 to #4365)', (
       await page.keyboard.press('Escape');
       return text;
     };
-    await expect(banner, 'before filtering the banner names the off-tag item').toContainText(other.name, { timeout: 30_000 });
+    // The banner names five items and then "and N more" (CI 43961492669, where earlier runs left
+    // more low items), so it is asked to name an item only when it lists them all; the suggestions
+    // dialog lists every item.
+    await expect(banner).toContainText(/Reorder now/, { timeout: 30_000 });
+    const listsAll = async () => !/\band \d+ more\b/.test(await banner.innerText());
+    if (await listsAll()) await expect(banner, 'before filtering the banner names the off-tag item').toContainText(other.name);
     expect(await dialogNames(), 'before filtering, suggestions list the off-tag item').toContain(other.name);
     const filter = panel.locator('#inventory-board-tag-filter');
     await filter.click();
     await page.getByRole('option', { name: /^Reagent$/ }).first().click();
     await page.keyboard.press('Escape');
     await expect(itemRow(panel, other.name), 'the off-tag item leaves the table').toHaveCount(0);
-    await expect(banner, 'the banner names the on-tag item').toContainText(mine.name);
+    if (await listsAll()) await expect(banner, 'the banner names the on-tag item').toContainText(mine.name);
     await expect(banner, 'the banner no longer names the off-tag item').not.toContainText(other.name);
     const after = await dialogNames();
     expect(after, 'suggestions list the on-tag item').toContain(mine.name);

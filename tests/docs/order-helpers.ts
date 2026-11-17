@@ -5,6 +5,7 @@
 //  - Carbon checkboxes do NOT update React state via a native-setter; click the VISIBLE LABEL
 //    (clicking the hidden <input> hangs ~60s). Label click fires onChange correctly.
 import { Page, expect } from '@playwright/test';
+import { pick } from '../../helpers/searchable';
 
 
 /**
@@ -477,7 +478,19 @@ export async function selectSampleTypeAgnostic(
   }, { id: chosen.id, label: chosen.label, selectId: opts.selectId || '' });
 
   if (!applied) {
-    console.log('[agnostic] no <select> on the page offers sample type ' + chosen.id + ' (' + chosen.label + ')');
+    // Since OGC-1515 the order wizard's Sample Type is a searchable list (SearchableSelect,
+    // id sampleType-<n>), not a <select>: pick the label there.
+    const combo = page.locator(opts.selectId ? '#' + opts.selectId : '[id^="sampleType-"]').first();
+    if (await combo.count()) {
+      try {
+        await pick(combo, chosen.label);
+        await page.waitForTimeout(900);
+        return { id: chosen.id, label: chosen.label, testCount: chosen.testCount, viaPreference: !!preferred };
+      } catch (e) {
+        console.log('[agnostic] the Sample Type list did not take ' + chosen.label + ': ' + String(e).slice(0, 120));
+      }
+    }
+    console.log('[agnostic] no <select> or Sample Type list on the page offers sample type ' + chosen.id + ' (' + chosen.label + ')');
     return null;
   }
   await page.waitForTimeout(900);

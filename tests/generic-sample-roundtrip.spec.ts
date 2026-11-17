@@ -24,7 +24,7 @@ test.describe('Generic Sample round trip', () => {
     // Sample Type is a searchable list since OGC-1515 (#4922).
     await pick(page.locator('#sampleType'), 'Serum');
     await page.locator('#quantity').fill('3');
-    await page.locator('#sampleUnitOfMeasure').selectOption({ label: 'mL' });
+    await pick(page.locator('#sampleUnitOfMeasure'), 'mL'); // a searchable list since OGC-1515
     await page.locator('#from').fill('QA_GEN source');
     await page.locator('#collector').fill('QA_GEN collector');
     const saved = page.waitForResponse(r => r.url().includes('/rest/GenericSampleOrder') && r.request().method() === 'POST');

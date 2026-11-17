@@ -174,9 +174,13 @@ test.describe('Date pickers on a full page load (R26)', () => {
     const max = await page.evaluate(() => {
       const el = document.getElementById('startDate') as any;
       const d = el._flatpickr.config.maxDate as Date;
-      // Compare in the page's own zone (Port Moresby), not the test runner's.
-      return { max: d.toDateString(), today: new Date().toDateString() };
+      // Days between maxDate and today in the page's own zone (Port Moresby).
+      const day = (x: Date) => Math.floor(new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime() / 86400000);
+      return { max: d.toDateString(), today: new Date().toDateString(), off: Math.abs(day(new Date()) - day(d)) };
     });
-    expect(max.max, 'maxDate is today in the browser zone').toBe(max.today);
+    // Within a day, not equal: the browser is pinned to Port Moresby (UTC+10) while CI's server runs
+    // on UTC, so from 14:00 UTC the server's today (which the picker follows) is the browser's
+    // yesterday (CI run 293, 17 Nov 2026). R26's bug was 9 January, months off.
+    expect(max.off, `maxDate ${max.max} is today (${max.today}) or one day off`).toBeLessThanOrEqual(1);
   });
 });

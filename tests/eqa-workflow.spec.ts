@@ -5,8 +5,7 @@ import {
   QA_PREFIX,
   TIMEOUT,
   login,
-  navigateWithDiscovery,
-} from '../helpers/test-helpers';
+  navigateWithDiscovery, waitForRouteContent } from '../helpers/test-helpers';
 
 /**
  * EQA (External Quality Assurance) Workflow Test Suite
@@ -62,7 +61,8 @@ const EQA_DISTRIBUTION_URLS = [
 
 async function goToEQAProgramManagement(page: any): Promise<boolean> {
   await page.goto(`${BASE}${EQA_PROGRAM_URL}`);
-  if (await page.getByRole('heading', { name: EQA_PROGRAM_HEADING }).first().isVisible({ timeout: 30_000 }).catch(() => false)) return true;
+  // waitFor, not isVisible({ timeout }): isVisible never waits, and the page draws after load.
+  if (await page.getByRole('heading', { name: EQA_PROGRAM_HEADING }).first().waitFor({ timeout: 30_000 }).then(() => true).catch(() => false)) return true;
 
   // Fallback: navigate via Admin sidebar
   await page.goto(`${BASE}/MasterListsPage`);
@@ -73,6 +73,7 @@ async function goToEQAProgramManagement(page: any): Promise<boolean> {
   if (await link.isVisible({ timeout: 3000 }).catch(() => false)) {
     await link.click();
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
     return !page.url().match(/LoginPage|login/i);
   }
   return false;
@@ -96,9 +97,9 @@ test.describe('Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration'
     expect(loaded, 'EQA Program Management page should load').toBe(true);
 
     const body = await page.locator('body').innerText();
-    expect(body).not.toContain('404');
-    expect(body).not.toContain('500');
-    expect(body).not.toContain('Internal Server Error');
+    // Error pages, not the digits: the scheme list can show counts such as 500 (16 Nov 2026).
+    expect(body).not.toMatch(/404 Not Found|Page not found|\bstatus 404\b/i);
+    expect(body).not.toMatch(/Internal Server Error|\b(HTTP|status|error) 500\b/i);
 
     console.log(`TC-EQA-ADMIN-01: PASS — EQA Program Management at ${page.url()}`);
   });
@@ -106,6 +107,7 @@ test.describe('Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration'
   test('TC-EQA-ADMIN-02: EQA Program list or empty state renders', async ({ page }) => {
     await goToEQAProgramManagement(page);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const body = await page.locator('body').innerText();
 
@@ -126,6 +128,7 @@ test.describe('Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration'
   test('TC-EQA-ADMIN-03: Add / New EQA Program button is present', async ({ page }) => {
     await goToEQAProgramManagement(page);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     // "Add Scheme" on develop; "Add/New EQA Program" on older builds.
     const addBtn = page
@@ -151,6 +154,7 @@ test.describe('Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration'
   test('TC-EQA-ADMIN-04: New EQA Program form fields are present', async ({ page }) => {
     await goToEQAProgramManagement(page);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     // Click Add/New to open the form
     const addBtn = page
@@ -166,6 +170,7 @@ test.describe('Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration'
 
     await addBtn.click();
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
     await page.waitForTimeout(500);
 
     // Expected form fields for EQA Program: name, description, start/end date, status
@@ -192,6 +197,7 @@ test.describe('Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration'
      */
     await goToEQAProgramManagement(page);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const addBtn = page
       .getByRole('button', { name: /add|new|create/i })
@@ -231,6 +237,7 @@ test.describe('Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration'
     if (await saveBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
       await saveBtn.click();
       await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+      await waitForRouteContent(page);
 
       const body = await page.locator('body').innerText();
       const hasError = /error|exception|required|invalid/i.test(body);
@@ -260,6 +267,7 @@ test.describe('Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration'
       if (await distLink.isVisible({ timeout: 3000 }).catch(() => false)) {
         await distLink.click();
         await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+        await waitForRouteContent(page);
       }
     }
 
@@ -277,6 +285,7 @@ test.describe('Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration'
   test('TC-EQA-ADMIN-07: EQA Distribution list or empty state renders', async ({ page }) => {
     await goToEQADistributions(page);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const hasTable = (await page.locator('table, .bx--data-table').count()) > 0;
     const body = await page.locator('body').innerText();
@@ -294,6 +303,7 @@ test.describe('Suite AZ-EQA-ADMIN — EQA Program & Distribution Administration'
   test('TC-EQA-ADMIN-08: Create new EQA Distribution form is accessible', async ({ page }) => {
     await goToEQADistributions(page);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     // Look for an Add / Create Distribution button
     const addBtn = page
@@ -346,6 +356,7 @@ test.describe('Suite AZ-EQA-WORKFLOW — EQA Sample Submission & Results', () =>
     ]);
     expect(reached, 'Sample/Order entry should be reachable').toBe(true);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     // Check if EQA or "Quality Control" sample type is available
     const body = await page.locator('body').innerText();
@@ -376,6 +387,7 @@ test.describe('Suite AZ-EQA-WORKFLOW — EQA Sample Submission & Results', () =>
     ]);
     expect(reached, 'Results entry should be reachable').toBe(true);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const body = await page.locator('body').innerText();
     expect(body).not.toMatch(/404|500|Internal Server Error/i);
@@ -389,6 +401,7 @@ test.describe('Suite AZ-EQA-WORKFLOW — EQA Sample Submission & Results', () =>
      */
     await goToEQADistributions(page);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const body = await page.locator('body').innerText();
     const hasDeadline = /deadline/i.test(body);
@@ -397,6 +410,7 @@ test.describe('Suite AZ-EQA-WORKFLOW — EQA Sample Submission & Results', () =>
     if (!hasDeadline) {
       await goToEQAProgramManagement(page);
       await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+      await waitForRouteContent(page);
       const pgBody = await page.locator('body').innerText();
       const pgHasDeadline = /deadline/i.test(pgBody);
       console.log(
@@ -460,6 +474,7 @@ test.describe('Suite AZ-EQA-WORKFLOW — EQA Sample Submission & Results', () =>
       await goToEQAProgramManagement(page);
     }
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const body = await page.locator('body').innerText();
 

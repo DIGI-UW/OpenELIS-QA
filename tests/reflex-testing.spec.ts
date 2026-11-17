@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, QA_PREFIX, TIMEOUT, login, orderWizardForward } from '../helpers/test-helpers';
+import { BASE, ADMIN, QA_PREFIX, TIMEOUT, login, orderWizardForward, waitForRouteContent } from '../helpers/test-helpers';
 
 /**
  * Reflex Testing Suite — Phase 28
@@ -46,6 +46,7 @@ test.describe('Reflex Tests Management (Phase 28)', () => {
   test('TC-REFLEX-01: Reflex Tests Management page loads with rule builder', async ({ page }) => {
     await page.goto(`${BASE}${REFLEX_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     // Verify URL
     expect(page.url()).toContain('reflex');
@@ -66,6 +67,7 @@ test.describe('Reflex Tests Management (Phase 28)', () => {
   test('TC-REFLEX-01b: Rule builder has required form fields', async ({ page }) => {
     await page.goto(`${BASE}${REFLEX_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     // Verify Over All Option dropdown exists (critical for rule saving)
     const overAllSelect = await page.evaluate(() => {
@@ -85,6 +87,7 @@ test.describe('Reflex Tests Management (Phase 28)', () => {
   test('TC-REFLEX-04: GET /rest/reflexrules returns saved rules', async ({ page }) => {
     await page.goto(`${BASE}${REFLEX_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     // Fetch reflex rules via API
     const result = await page.evaluate(async () => {
@@ -133,6 +136,7 @@ test.describe('Reflex Tests Management (Phase 28)', () => {
   test('TC-REFLEX-04b: POST /rest/reflexrule creates a new rule via API', async ({ page }) => {
     await page.goto(`${BASE}${REFLEX_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const ruleName = `${QA_PREFIX}_ReflexTest`;
 
@@ -194,6 +198,7 @@ test.describe('Reflex Testing — Order Integration (Phase 28)', () => {
   test('TC-REFLEX-05: Order creation wizard accessible for reflex test orders', async ({ page }) => {
     await page.goto(`${BASE}${ORDER_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     // Verify SamplePatientEntry page loads (4-step wizard)
     const bodyText = await page.locator('body').textContent();
@@ -209,6 +214,7 @@ test.describe('Reflex Testing — Order Integration (Phase 28)', () => {
     // Navigate to Results By Unit
     await page.goto(`${BASE}/LogbookResults?type=`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     // Verify the page loads with test unit selector
     const bodyText = await page.locator('body').textContent();
@@ -232,6 +238,7 @@ test.describe('Reflex Testing — Over All Option Validation', () => {
   test('Over All Option dropdown has ANY and ALL options', async ({ page }) => {
     await page.goto(`${BASE}${REFLEX_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const options = await page.evaluate(() => {
       const select = document.getElementById('0_overall') as HTMLSelectElement;
@@ -257,6 +264,7 @@ test.describe('Reflex Rule Lifecycle Tests (Phase 28 Extended)', () => {
   test('TC-REFLEX-07: Create reflex rule and verify it appears in GET /rest/reflexrules', async ({ page }) => {
     await page.goto(`${BASE}${REFLEX_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const ruleName = `${QA_PREFIX}_LifecycleTest`;
 
@@ -301,6 +309,7 @@ test.describe('Reflex Rule Lifecycle Tests (Phase 28 Extended)', () => {
   test('TC-REFLEX-08: Update existing reflex rule and verify change persists', async ({ page }) => {
     await page.goto(`${BASE}${REFLEX_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     // Get current rules
     const rules = await page.evaluate(async () => {
@@ -350,6 +359,7 @@ test.describe('Reflex Rule Lifecycle Tests (Phase 28 Extended)', () => {
   test('TC-REFLEX-09: Inactive reflex rule is visible in the list', async ({ page }) => {
     await page.goto(`${BASE}${REFLEX_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const ruleName = `${QA_PREFIX}_InactiveRule`;
 
