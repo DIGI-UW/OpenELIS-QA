@@ -35,7 +35,7 @@
   },
   "all-tc|test-catalog|test-catalog-lab-unit-visibility.spec.ts|Lab unit visibility — choosers vs viewers (OGC-189) > G-4: [GUARDRAIL] no lab unit holding content is hidden from every viewer at once": {
    "ticket": "OGC-189",
-   "note": "inactive lab units still hold tests (by design question)",
+   "note": "The inactive unit fixture now works, so this runs on CI. Same product question as G-2 and TO-5 (Casey call pending). 17 Nov 2026.",
    "since": "2026-10-15"
   },
   "all-tc|test-catalog|tests/reference-lab-results-fhir-contract.spec.ts|Reference Lab Results — FHIR contract (OGC-802 / 805 / 809) > RLR-FHIR-04 [OGC-802/805]: a returned referral carries the peer result card, or says why none exists": {
@@ -408,11 +408,6 @@
    "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
    "since": "2026-10-15"
   },
-  "regression-seed|ci-fixtures|ci-fixtures.setup.ts|ci-fixture: inactive lab unit holding a test (G-2, G-4)": {
-   "ticket": "OGC-189",
-   "note": "inactive lab units still hold tests (by design question)",
-   "since": "2026-10-15"
-  },
   "rtype|rtype|tests/result-type-coverage.spec.ts|TC-RTYPE — result type coverage > TC-RTYPE-1: no configured test declares a result type the results UI cannot render": {
    "ticket": "untriaged",
    "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
@@ -616,6 +611,11 @@
   "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-PatientEntry-initial: Patient Initial Entry renders": {
    "ticket": "untriaged",
    "note": "Legacy study pages (retroCIEntryByProject.jsp): initializeStudySelection() calls selectStudy(null) on a first visit, an uncaught TypeError since 2023 with nothing shown to the user; picking a study works (checked on testing 16 Nov; Initial Entry joined in develop-stack 44020392687, 17 Nov). The census spec that asserts no page errors is new (#242, 9 Nov).",
+   "since": "2026-11-17"
+  },
+  "all-tc|test-catalog|test-catalog-lab-unit-visibility.spec.ts|Lab unit visibility — choosers vs viewers (OGC-189) > G-2: [FLIP-WHEN-FIXED] the filtering is inverted — the VIEWER hides inactive units while the CHOOSER offers them": {
+   "ticket": "OGC-189",
+   "note": "Runs now that the inactive unit fixture works (it switched the unit off before moving the test in, and the server refuses that move). Same product question as G-4 and TO-5: should an inactive unit that holds tests be offered on the Results worklist? Checked on testing 17 Nov 2026.",
    "since": "2026-11-17"
   }
  }

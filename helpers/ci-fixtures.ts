@@ -211,12 +211,20 @@ export async function ensureInactiveLabUnitWithTest(page: Page, log: string[]): 
   }
   const id = String(unit.id);
   const serum = await sampleTypeId(page);
+  // Made in an active unit, the way the editor does (its unit picker lists active units only),
+  // then moved into the inactive one through Basic Info.
   const found = await findTest(page, NAMES.inactiveUnitTest);
-  if (!found) {
-    // Made in an active unit, the way the editor does (its unit picker lists active units only),
-    // then moved into the inactive one through Basic Info.
-    const testId = await ensureTest(page, { name: NAMES.inactiveUnitTest, code: 'QACILUT', labUnitId: await labUnitId(page), sampleTypeId: serum,
+  const testId = found ? found.id : await ensureTest(page, { name: NAMES.inactiveUnitTest, code: 'QACILUT', labUnitId: await labUnitId(page), sampleTypeId: serum,
       components: [{ code: 'PRIMARY', label: 'Result', resultType: 'N' }] }, log);
+  const where = (await api(page, 'GET', `/test-catalog/tests/${testId}/basic-info`)).body ?? {};
+  if (String(where.labUnitId ?? '') !== id) {
+    // The server refuses a move into an inactive unit, so switch the unit on for the move; the
+    // block below switches it off again.
+    const cur = list((await api(page, 'GET', '/lab-units-management')).body).find((u) => String(u.id) === id);
+    if (cur && !cur.isActive) {
+      const on = await api(page, 'PUT', `/lab-units-management/${id}`, { names: cur.names ?? { en: NAMES.inactiveUnit }, domain: cur.domain ?? 'CLINICAL', description: cur.description ?? '', isActive: true });
+      expect(on.status, `switch ${NAMES.inactiveUnit} on for the move: ${on.text}`).toBeLessThan(300);
+    }
     const basic = (await api(page, 'GET', `/test-catalog/tests/${testId}/basic-info`)).body ?? {};
     const put = await api(page, 'PUT', `/test-catalog/tests/${testId}/basic-info`, { ...basic, labUnitId: id });
     expect(put.status, `move ${NAMES.inactiveUnitTest} into ${NAMES.inactiveUnit}: ${put.text}`).toBeLessThan(300);
@@ -224,7 +232,8 @@ export async function ensureInactiveLabUnitWithTest(page: Page, log: string[]): 
   // Re-assert inactive (an edit elsewhere may have switched it on).
   const now = list((await api(page, 'GET', '/lab-units-management')).body).find((u) => String(u.id) === id);
   if (now?.isActive) {
-    await api(page, 'PUT', `/lab-units-management/${id}`, { names: now.names ?? { en: NAMES.inactiveUnit }, domain: now.domain ?? 'CLINICAL', description: now.description ?? '', isActive: false });
+    const off = await api(page, 'PUT', `/lab-units-management/${id}`, { names: now.names ?? { en: NAMES.inactiveUnit }, domain: now.domain ?? 'CLINICAL', description: now.description ?? '', isActive: false });
+    expect(off.status, `switch ${NAMES.inactiveUnit} off: ${off.text}`).toBeLessThan(300);
   }
   const check = list((await api(page, 'GET', '/lab-units-management')).body).find((u) => String(u.id) === id);
   expect(check?.isActive, 'the fixture unit is inactive').toBe(false);
