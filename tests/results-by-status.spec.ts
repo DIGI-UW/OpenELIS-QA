@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { optionTexts } from '../helpers/searchable';
 import {
   BASE,
   ADMIN,
@@ -105,31 +106,23 @@ test.describe('Suite BG — Results By Status Core (TC-RBS)', () => {
     expect(hasSelect || hasStatusTerm, 'Results By Status must have a filter control').toBe(true);
   });
 
-  test('TC-RBS-03: Status dropdown enumerates multiple test types', async ({ page }) => {
+  test('TC-RBS-03: the Results worklist Lab Unit filter lists the lab units', async ({ page }) => {
     /**
-     * US-RBS-3: The status dropdown is expected to contain 200+ test types
-     * (confirmed in Phase 6 BG-DEEP). Must have at least 10 options.
+     * REWORKED 2026-11-17. Was "Status dropdown enumerates multiple test types" (the JSP status
+     * screen). /StatusResults now opens the unified Results worklist, which has no status dropdown:
+     * the old check counted the pager's selects and passed only when they had not drawn yet (CI run
+     * 43998431265 read 2 options once the page was waited for). The worklist filters by Lab Unit,
+     * a searchable list (OGC-1515).
      */
     const loaded = await goToResultsByStatus(page);
-    expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
-
-    await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
-
-    const selects = await page.locator('select').all();
-    let maxOptions = 0;
-    for (const sel of selects) {
-      const optCount = await sel.locator('option').count().catch(() => 0);
-      if (optCount > maxOptions) maxOptions = optCount;
-    }
-
-    console.log(`TC-RBS-03: Max dropdown options: ${maxOptions}`);
-    if (maxOptions > 0) {
-      expect(maxOptions, 'Status dropdown must have at least 10 options').toBeGreaterThanOrEqual(10);
-      console.log(`TC-RBS-03: PASS — ${maxOptions} options in dropdown (expected 200+)`);
-    } else {
-      console.log('TC-RBS-03: NOTE — no select with options found (may use custom dropdown)');
-    }
+    expect(loaded, 'page must be reachable').toBe(true);
+    const unit = page.locator('#unifiedResultsLabUnit');
+    await expect(unit, 'the Lab Unit filter').toBeVisible({ timeout: TIMEOUT });
+    const units = await optionTexts(unit);
+    console.log(`TC-RBS-03: ${units.length} lab units offered`);
+    expect(units.length, 'the Lab Unit filter offers several lab units').toBeGreaterThanOrEqual(2);
   });
+
 
   test('TC-RBS-04: Filtering by status does not cause server error', async ({ page }) => {
     /**
