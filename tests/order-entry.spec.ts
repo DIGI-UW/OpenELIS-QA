@@ -359,6 +359,8 @@ test.describe('Multi-Patient Batch Workflow (TC-BATCH)', () => {
   });
 
   test('TC-BATCH-04: Validation queue shows multiple pending results', async ({ page }) => {
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+    test.fixme(true, 'Drives Validation by Order (/ResultValidation?type=order), which is retired. Rewrite against the unified Validation page.');
     const valUrls = ['/ResultValidation?type=order', '/ResultValidation', '/ResultsValidation'];
     let valUrl = '';
     for (const u of valUrls) {

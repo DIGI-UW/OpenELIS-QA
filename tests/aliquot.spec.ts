@@ -288,6 +288,13 @@ test.describe('Suite AP-DEEP — Aliquot Deep Validation (TC-ALQ-09–16)', () =
      */
     await page.goto(`${BASE}`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    // The Aliquot menu entry is site configuration: testing has menu_aliquot switched off (17 Nov 2026).
+    const menu = await page.request.get(`${BASE}/api/OpenELIS-Global/rest/menu`).then((r) => r.json()).catch(() => []);
+    const entries: any[] = [];
+    const walk = (n: any) => (Array.isArray(n) ? n : [n]).forEach((x: any) => { if (x?.menu) entries.push(x.menu); if (x?.childMenus) walk(x.childMenus); });
+    walk(menu);
+    const aliquotMenu = entries.find((m) => m.elementId === 'menu_aliquot');
+    test.skip(!aliquotMenu?.isActive, 'the Aliquot menu entry is switched off on this server (menu_aliquot)');
 
     const bodyText = await page.locator('body').innerText();
     const hasSidebarLink = /aliquot/i.test(bodyText);

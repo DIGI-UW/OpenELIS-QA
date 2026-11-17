@@ -87,14 +87,14 @@ async function menuRoute(page: Page, needle: string): Promise<string> {
 
 /** Click the print button and read the PDF the new tab would open. */
 async function printedPdf(page: Page, button: Locator) {
-  const popup = page.context().waitForEvent('page', { timeout: 30_000 });
+  // Read the report request itself, from whichever tab sends it. The tab's own URL is no use: it
+  // starts on about:blank (CI 43961492669 read the SPA index), and headless Chromium downloads a
+  // PDF instead of showing it, so on CI the tab never shows the report URL at all (run 44020392687).
+  const request = page.context().waitForEvent('request', { predicate: (r) => /\/ReportPrint\b|\/(api|OpenELIS-Global)\/.*Report/i.test(r.url()), timeout: 30_000 });
+  const popup = page.context().waitForEvent('page', { timeout: 30_000 }).catch(() => null);
   await button.click();
-  const tab = await popup;
-  // The new tab opens on about:blank and is then sent to the report; a URL read at once can be the
-  // blank or the app shell (CI 43961492669 read the SPA index), so wait for the report request.
-  await expect.poll(() => tab.url(), { timeout: 30_000 }).toMatch(/\/(api|OpenELIS-Global)\/.*Report/i);
-  const url = tab.url();
-  await tab.close().catch(() => {});
+  const url = (await request).url();
+  (await popup)?.close().catch(() => {});
   const r = await page.request.get(url, { timeout: 120_000 });
   const body = await r.body();
   return { url, status: r.status(), type: r.headers()['content-type'] ?? '', head: body.subarray(0, 5).toString(), text: body.subarray(0, 400).toString() };

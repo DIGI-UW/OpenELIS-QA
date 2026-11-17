@@ -26,10 +26,14 @@ async function openMetadata(page: Page) {
   // runs of three. The MetaData button below is the real readiness check.
   // In CI (43961492669) the goto right after Save was aborted (net::ERR_ABORTED) by the page's own
   // navigation; one retry once it has settled.
+  // In run 44020392687 that retry itself hung 90 s while the form was already on screen: the page's
+  // own navigation had landed on the project. So retry only when the page is somewhere else.
   await page.goto(projectUrl, { waitUntil: 'commit' }).catch(async (e) => {
     if (!/ERR_ABORTED/.test(String(e))) throw e;
     await page.waitForLoadState('domcontentloaded').catch(() => {});
-    await page.goto(projectUrl, { waitUntil: 'commit' });
+    if (new URL(page.url()).pathname !== new URL(projectUrl, page.url()).pathname) {
+      await page.goto(projectUrl, { waitUntil: 'commit', timeout: 30_000 });
+    }
   });
   await page.locator('button', { hasText: /^MetaData$/ }).first().click();
   await expect(page.locator('#objective')).toBeVisible({ timeout: 15_000 });

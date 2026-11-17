@@ -1357,7 +1357,7 @@ test.describe('Phase 4 — S-DEEP: Order Extended Fields', () => {
     await expect(page).toHaveURL(/\/order\/(clinical\/)?enter/);
     await expect(page.getByTestId('order-step-enter')).toContainText('Enter Order');
     await expect(page.getByTestId('order-step-prepare')).toContainText('Prepare Samples');
-    await expect(page.getByTestId('order-step-check')).toContainText('Sample check');
+    await expect(page.getByTestId('order-step-check')).toContainText(/Sample check/i); // "Sample Check" since Nov 2026
     await expect(page.locator('main').getByText(/\b\d\/3 steps\b/).first()).toBeVisible();
     await expect(page.locator('#labNumber')).toBeVisible();
   });
@@ -1369,7 +1369,9 @@ test.describe('Phase 4 — S-DEEP: Order Extended Fields', () => {
     const main = page.locator('main');
     // REWORKED 2026-10-08: "Unique Health ID number" is labelled "Patient ID / Clinic ID / UR number"
     // on develop, and the contact and additional fields moved into three collapsed sections.
-    for (const label of ['Patient ID / Clinic ID / UR number', 'National ID', 'Primary phone']) {
+    // The patient number label is "Unique Health ID number" (en.json) or "Patient ID / Clinic ID /
+    // UR number" (older en_US, en_GB, en_PG text); the en_US Transifex fix of 16 Nov moves en_US to the first.
+    for (const label of [/Unique Health ID number|Patient ID \/ Clinic ID \/ UR number/, /National ID/, /Primary phone/]) {
       await expect(main.locator('label', { hasText: label }).first()).toBeVisible();
     }
     for (const section of ['Emergency Contact Info', 'Additional Information', 'Identification Documents']) {

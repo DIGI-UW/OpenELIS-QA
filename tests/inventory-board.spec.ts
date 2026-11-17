@@ -385,7 +385,8 @@ test.describe('Row actions (OGC-438 #4358)', () => {
     cleanup.push(it.id);
     const before = (await usageOf(page, it.id)).length;
     const panel = await openBoard(page);
-    await panel.getByRole('button', { name: /^Log usage$/ }).click();
+    // "Record Usage" on develop since 25b9652b8 (12 Nov); testing's older build says "Log usage".
+    await panel.getByRole('button', { name: /^(Log usage|Record Usage)$/i }).click();
     const dlg = page.getByRole('dialog').last();
     await expect(dlg).toBeVisible();
     const resp = await logUsage(page, dlg, it.name, 3);

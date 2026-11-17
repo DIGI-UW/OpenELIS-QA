@@ -45,6 +45,8 @@ import {
  */
 
 const REPORT_URLS = [
+  // A bare /Report says "This report link is incomplete" (17 Nov 2026); open a real routine report.
+  '/Report?type=patient&report=patientCILNSP_vreduit',
   '/Report',
   '/reports',
   '/MasterListsPage/reports',

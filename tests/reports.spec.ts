@@ -604,6 +604,8 @@ test.describe('Suite AF — Management Reports', () => {
   });
 
   test('TC-RPT-M04: Delayed Validation report loads and generates', async ({ page }) => {
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+    test.fixme(true, 'Walks the old Reports menu. Delayed Validation is now menu_reports_validation_backlog (/ReportPrint?type=indicator&report=validationBacklog). Rewrite against it.');
     // Navigate to Non Conformity Reports > Delayed Validation
     await page.getByRole('button', { name: /menu/i }).click();
     await page.waitForTimeout(500);

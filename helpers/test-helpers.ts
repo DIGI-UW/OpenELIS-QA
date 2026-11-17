@@ -344,14 +344,15 @@ export function lookupAdminUrl(itemName: string): string | undefined {
  * callers then read isVisible() (which does not wait) on an empty <main>: 16 Nov 2026, twelve
  * admin-config "list or form visible" cases read false on the develop stack. Never throws.
  */
-export async function waitForRouteContent(page: Page, timeout = 20_000): Promise<void> {
+export async function waitForRouteContent(page: Page, timeout = 20_000): Promise<boolean> {
   const started = Date.now();
   await page.locator('.cds--loading-overlay').first().waitFor({ state: 'hidden', timeout }).catch(() => {});
   // The first match in the DOM can be a hidden element (CI run 43998431265: Results kept a hidden
   // one first, so every caller waited the full 20 s); wait for the first visible one.
-  await page.locator('main').locator('h1, h2, h3, h4, table, form, [role="table"], button, select, input, [role="combobox"]')
-    .locator('visible=true').first().waitFor({ state: 'visible', timeout }).catch(() => {});
+  const shown = await page.locator('main').locator('h1, h2, h3, h4, table, form, [role="table"], button, select, input, [role="combobox"]')
+    .locator('visible=true').first().waitFor({ state: 'visible', timeout }).then(() => true, () => false);
   noteSlowWait('waitForRouteContent', page.url(), Date.now() - started);
+  return shown;
 }
 
 /**
@@ -454,7 +455,10 @@ export async function navigateWithDiscovery(page: Page, candidates: string[]): P
         /"title"\s*:\s*"Not Found"/.test(body);
       if (isErrorDocument) continue;
 
-      await waitForRouteContent(page); // callers read the page right away
+      // A route the app does not have still answers 200 with an empty main (17 Nov 2026:
+      // /MasterListsPage/LOINC and /MasterListsPage/dictionary). Such a candidate is not the page;
+      // try the next one instead of reporting it loaded after a 20 s wait.
+      if (!(await waitForRouteContent(page, 8_000))) continue;
       return true;
     } catch (e) {
       // Try next candidate

@@ -51,6 +51,7 @@ const LOINC_URLS = [
 ];
 
 const DICT_URLS = [
+  '/MasterListsPage/DictionaryMenu', // the Dictionary Menu page (admin menu link)
   '/MasterListsPage/dictionary',
   '/DictionaryManagement',
   '/dictionary',
@@ -58,6 +59,11 @@ const DICT_URLS = [
 ];
 
 async function goToLOINC(page: any): Promise<boolean> {
+  // 17 Nov 2026: the app has no LOINC mapping page. Every candidate route answers 200 with an empty
+  // main, and these cases passed on that blank page (the load-time case measured a 20 s wait for
+  // content that never came). LOINC codes are set per test in the Test Catalog and per sample type
+  // (Terminology section). Not run, with the reason, until rewritten against those screens.
+  test.fixme(true, 'No LOINC mapping page in the app; LOINC is set per test in the Test Catalog. Rewrite against it.');
   return navigateWithDiscovery(page, LOINC_URLS);
 }
 
@@ -331,8 +337,9 @@ test.describe('Suite O-DEEP â€” LOINC & Dictionary Deep Validation (TC-LOINC-09â
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    // Collect first-column text from any visible table
-    const cells = await page.locator('table tbody tr td:first-child').allTextContents().catch(() => [] as string[]);
+    // Whole-row text: the Dictionary Menu's first column is the selection box (17 Nov 2026: the
+    // first cells were all empty, so the check read 20 identical rows on the real page).
+    const cells = await page.locator('table tbody tr').allInnerTexts().catch(() => [] as string[]);
     const trimmed = cells.map(c => c.trim()).filter(c => c.length > 0);
     const unique = new Set(trimmed);
 

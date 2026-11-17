@@ -108,6 +108,8 @@ test.describe('Localization and i18n (TC-I18N)', () => {
   });
 
   test('TC-I18N-05: Lab report renders in translated locale', async ({ page }) => {
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+    test.fixme(true, '/LabReport and /PatientReport are not app routes (the app answers its empty shell). Rewrite against the patient report PDF in French.');
     // Switch to French and check report
     const reportUrls = [
       `/LabReport?accession=26CPHL00008V&lang=fr`,
