@@ -346,8 +346,10 @@ export function lookupAdminUrl(itemName: string): string | undefined {
  */
 export async function waitForRouteContent(page: Page, timeout = 20_000): Promise<void> {
   await page.locator('.cds--loading-overlay').first().waitFor({ state: 'hidden', timeout }).catch(() => {});
-  await page.locator('main h1, main h2, main h3, main h4, main table, main form, main [role="table"], main button')
-    .first().waitFor({ state: 'visible', timeout }).catch(() => {});
+  // The first match in the DOM can be a hidden element (CI run 43998431265: Results kept a hidden
+  // one first, so every caller waited the full 20 s); wait for the first visible one.
+  await page.locator('main').locator('h1, h2, h3, h4, table, form, [role="table"], button, select, input, [role="combobox"]')
+    .locator('visible=true').first().waitFor({ state: 'visible', timeout }).catch(() => {});
 }
 
 export async function navigateToAdminItem(page: Page, itemName: string): Promise<void> {
@@ -434,6 +436,7 @@ export async function navigateWithDiscovery(page: Page, candidates: string[]): P
         /"title"\s*:\s*"Not Found"/.test(body);
       if (isErrorDocument) continue;
 
+      await waitForRouteContent(page); // callers read the page right away
       return true;
     } catch (e) {
       // Try next candidate

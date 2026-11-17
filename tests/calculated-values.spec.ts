@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, QA_PREFIX, TIMEOUT, login } from '../helpers/test-helpers';
+import { BASE, ADMIN, QA_PREFIX, TIMEOUT, login, waitForRouteContent } from '../helpers/test-helpers';
 
 /**
  * Calculated Values Test Suite — Phase 28
@@ -40,6 +40,7 @@ test.describe('Calculated Values Management (Phase 28)', () => {
   test('TC-CALC-02: Calculated Value Management page loads with formula builder', async ({ page }) => {
     await page.goto(`${BASE}${CALC_VALUE_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     // Verify URL
     expect(page.url()).toContain('calculatedValue');
@@ -58,6 +59,7 @@ test.describe('Calculated Values Management (Phase 28)', () => {
   test('TC-CALC-03: Formula builder supports autocomplete test selection', async ({ page }) => {
     await page.goto(`${BASE}${CALC_VALUE_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     // Find the Result Test autocomplete input
     const autocompleteInputs = await page.locator('input').all();
@@ -71,6 +73,7 @@ test.describe('Calculated Values Management (Phase 28)', () => {
   test('TC-CALC-05: GET /rest/test-calculations returns saved rules', async ({ page }) => {
     await page.goto(`${BASE}${CALC_VALUE_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     // Fetch calculated values via API
     const rules = await page.evaluate(async () => {
@@ -99,6 +102,7 @@ test.describe('Calculated Values Management (Phase 28)', () => {
   test('TC-CALC-05b: POST /rest/test-calculation creates a new rule', async ({ page }) => {
     await page.goto(`${BASE}${CALC_VALUE_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const ruleName = `${QA_PREFIX}_CalcTest_${Date.now()}`;
 
@@ -110,13 +114,16 @@ test.describe('Calculated Values Management (Phase 28)', () => {
         sampleId: '2',       // Serum
         testId: '1',         // GPT/ALAT
         result: '',
+        // GOT/ASAT / 2. A rule may not read its own result test (OGC-1587, #4908 answers 400
+        // calculation.error.selfReference), and the old GOT / GPT -> GPT rule did. Saved off and
+        // inactive so it never calculates on other suites' orders.
         operations: [
           { order: 1, type: 'TEST_RESULT', value: '2', sampleId: '2' },  // GOT/ASAT
           { order: 2, type: 'MATH_FUNCTION', value: '/' },
-          { order: 3, type: 'TEST_RESULT', value: '1', sampleId: '2' },  // GPT/ALAT
+          { order: 3, type: 'INTEGER', value: '2' },
         ],
-        toggled: true,
-        active: true,
+        toggled: false,
+        active: false,
         note: 'QA automated test',
       };
 
@@ -138,6 +145,7 @@ test.describe('Calculated Values Management (Phase 28)', () => {
   test('TC-CALC-05c: POST /rest/test-calculation updates existing rule', async ({ page }) => {
     await page.goto(`${BASE}${CALC_VALUE_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     // First, get existing rules to find one with an id
     const rules = await page.evaluate(async () => {
@@ -181,6 +189,7 @@ test.describe('Calculated Values Management (Phase 28)', () => {
   test('TC-CALC-06: No DELETE endpoint for calculated values', async ({ page }) => {
     await page.goto(`${BASE}${CALC_VALUE_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     // Attempt DELETE — should return 404
     const result = await page.evaluate(async () => {
@@ -227,6 +236,7 @@ test.describe('Calculated Values Extended (TC-CALC-EXT)', () => {
      */
     await page.goto(`${BASE}/MasterListsPage`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const bodyText = await page.locator('body').innerText();
 
@@ -240,12 +250,14 @@ test.describe('Calculated Values Extended (TC-CALC-EXT)', () => {
     if (hasCalcLink) {
       await calcLink.click();
       await page.waitForLoadState('networkidle');
+      await waitForRouteContent(page);
       expect(page.url()).toContain('calculatedValue');
       console.log('TC-CALC-EXT-01: PASS — navigated to Calculated Values via sidebar link');
     } else {
       // Fallback: direct URL must work
       await page.goto(`${BASE}${CALC_VALUE_URL}`);
       await page.waitForLoadState('networkidle');
+      await waitForRouteContent(page);
       expect(page.url()).toContain('calculatedValue');
       console.log('TC-CALC-EXT-01: PASS (via direct URL) — Calculated Values page accessible');
     }
@@ -258,6 +270,7 @@ test.describe('Calculated Values Extended (TC-CALC-EXT)', () => {
      */
     await page.goto(`${BASE}${CALC_VALUE_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const rules = await page.evaluate(async () => {
       const csrf = localStorage.getItem('CSRF') || '';
@@ -293,6 +306,7 @@ test.describe('Calculated Values Extended (TC-CALC-EXT)', () => {
      */
     await page.goto(`${BASE}${CALC_VALUE_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const ruleName = `${QA_PREFIX}_CalcVerify_${Date.now()}`;
 
@@ -348,12 +362,20 @@ test.describe('Calculated Values Extended (TC-CALC-EXT)', () => {
      */
     await page.goto(`${BASE}${CALC_VALUE_URL}`);
     await page.waitForLoadState('networkidle');
-    // REWORKED 2026-10-08: the formula builder (its "Add" buttons per operation type) shows inside
-    // an opened rule; open the first one, or start a new one when there are none.
-    const view = page.locator('main').getByRole('button', { name: 'View Rule' }).first();
-    if (await view.isVisible({ timeout: 10_000 }).catch(() => false)) await view.click();
-    else await page.locator('main').getByRole('button', { name: /add rule|add calculation|new/i }).first().click().catch(() => {});
-    await page.locator('main').getByRole('button', { name: 'Mathematical Function' }).first().waitFor({ timeout: 10_000 }).catch(() => {});
+    await waitForRouteContent(page);
+    // The formula builder's "Add" buttons per operation type sit inside a rule's "View Rule"
+    // accordion (rulebuilder.label.ruleDetails), closed by default. With no rules (a fresh stack),
+    // Add Rule first. The list can re-render after the first click and close it again, so click
+    // until the builder shows (16 Nov 2026: CI and testing both read an empty builder).
+    const main = page.locator('main');
+    const view = main.getByRole('button', { name: 'View Rule' }).first();
+    if (!(await view.waitFor({ timeout: 15_000 }).then(() => true, () => false))) {
+      await main.getByRole('button', { name: /^add rule$/i }).first().click();
+    }
+    await expect(async () => {
+      if ((await view.getAttribute('aria-expanded')) !== 'true') await view.click();
+      await expect(main.getByRole('button', { name: 'Mathematical Function' }).first()).toBeVisible({ timeout: 3_000 });
+    }).toPass({ timeout: 45_000 });
 
     const bodyText = await page.locator('body').innerText();
 
@@ -380,6 +402,7 @@ test.describe('Calculated Values Extended (TC-CALC-EXT)', () => {
      */
     await page.goto(`${BASE}${CALC_VALUE_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const bodyText = await page.locator('body').innerText();
 
@@ -484,6 +507,7 @@ test.describe('Suite CALC-DEEP — Calculated Values Deep', () => {
   test('TC-CALC-DEEP-03: Calculated Values page accessible to admin (RBAC)', async ({ page }) => {
     await page.goto(`${BASE}${CALC_VALUE_URL}`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     expect(page.url(), 'Admin must not be redirected to login').not.toMatch(/LoginPage|login/i);
     const bodyText = await page.locator('body').innerText();
@@ -498,6 +522,7 @@ test.describe('Suite CALC-DEEP — Calculated Values Deep', () => {
      */
     await page.goto(`${BASE}${CALC_VALUE_URL}`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const addBtn = page.getByRole('button', { name: /add|create|new/i }).first();
     if (await addBtn.isVisible({ timeout: 3000 }).catch(() => false)) {

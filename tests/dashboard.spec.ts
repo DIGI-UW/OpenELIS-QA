@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange } from '../helpers/test-helpers';
+import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, waitForRouteContent } from '../helpers/test-helpers';
 import { withIsolatedSession, reloginIsolated, logoutViaUi } from '../helpers/isolated-session';
 
 /**
@@ -91,7 +91,7 @@ test.describe('Dashboard KPIs (TC-DASH)', () => {
     // REWORKED 2026-10-08: the KPI tiles are plain divs (label h5, value h2 until #4681, now a paragraph); the class-name guess
     // landed on hidden header elements first, so a visible dashboard read as none.
     const hasKPI = await page.locator('main .dashboard-tile__value').filter({ hasText: /^\d+$/ }).first()
-      .isVisible({ timeout: 15000 }).catch(() => false); // each KPI tile shows its value in .dashboard-tile__value (a paragraph since OGC-1448, #4681)
+      .waitFor({ timeout: 15000 }).then(() => true, () => false); // each KPI tile shows its value in .dashboard-tile__value (a paragraph since OGC-1448, #4681)
     expect(hasKPI, 'Dashboard must show at least one KPI or stat card').toBe(true);
   });
 });
@@ -364,6 +364,7 @@ test.describe('Suite DASH-DEEP — Dashboard API Deep Validation (TC-DASH-DEEP)'
      */
     await page.goto(`${BASE}`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const bodyText = await page.locator('body').innerText();
     const kpiLabels = [
@@ -411,6 +412,7 @@ test.describe('Suite DASH-DEEP — Dashboard API Deep Validation (TC-DASH-DEEP)'
      */
     await page.goto(`${BASE}`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const bodyText = await page.locator('body').innerText();
     const majorModules = [
@@ -467,6 +469,7 @@ test.describe('Suite DASH-DEEP — Dashboard API Deep Validation (TC-DASH-DEEP)'
      */
     await page.goto(`${BASE}`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const bodyText = await page.locator('body').innerText();
     const hasHeader = await page.locator('header, [role="banner"], nav').count() > 0;
@@ -484,6 +487,7 @@ test.describe('Suite DASH-DEEP — Dashboard API Deep Validation (TC-DASH-DEEP)'
      */
     await page.goto(`${BASE}`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     // Look for bell icon or notification button
     const bell = page.locator(

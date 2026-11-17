@@ -200,7 +200,7 @@ export async function createPatientViaUI(page: Page, state: TestDataState): Prom
     await page.waitForTimeout(2_500);
 
     const formAnchor = page.locator('#lastName, #firstName, #nationalId').first();
-    if (!(await formAnchor.isVisible({ timeout: 10_000 }).catch(() => false))) {
+    if (!(await formAnchor.waitFor({ timeout: 10_000 }).then(() => true, () => false))) {
       state.setupErrors.push(
         `createPatient: the create form did not render at /PatientManagement/new (url=${page.url()})`
       );

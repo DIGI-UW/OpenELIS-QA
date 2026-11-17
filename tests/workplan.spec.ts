@@ -480,3 +480,54 @@ test.describe('Relocated from gap-suites', () => {
       `expected an urgent priority; got ${JSON.stringify(labels)}`).toBe(true);
   });
 });
+
+/**
+ * OGC-1647 (filed 16 Nov 2026): the workplan pages on the server (100 rows a page), but
+ * "Total Tests" counts only the rows on screen and Print Workplan posts only that page.
+ */
+test.describe('Workplan paging, total and print (OGC-1647)', () => {
+  let panel: { value: string; text: string } | null = null;
+  let pages = 0;
+
+  test.beforeEach(async ({ page }) => {
+    await login(page, ADMIN.user, ADMIN.pass);
+    await openWorkplan(page, SCREENS[1].route, SCREENS[1].label);
+    if (!panel) {
+      // A panel whose queue spans more than one page; a small instance (the CI stack) has none.
+      for (const o of (await realOptions(page)).slice(0, 40)) {
+        const paging = await page.evaluate(async (id) => {
+          const r = await fetch(`/api/OpenELIS-Global/rest/WorkPlanByPanel?panel_id=${id}`, { headers: { Accept: 'application/json' } });
+          const b = await r.json().catch(() => ({}));
+          return Number(b?.paging?.totalPages ?? 0);
+        }, o.value);
+        if (paging > 1) { panel = o; pages = paging; break; }
+      }
+    }
+    test.skip(!panel, 'no panel on this instance has a workplan longer than one page');
+    await choose(page, panel!);
+    await expect(page.getByText(/^\s*of \d+ pages?\s*$/).first(), 'the pager shows').toBeVisible({ timeout: 30_000 });
+  });
+
+  test('TC-WPP-09: a workplan longer than one page shows its pages and a Total Tests line', async ({ page }) => {
+    // Canary for TC-WPP-10: the same path, asserting only what works today.
+    await expect(page.getByText(new RegExp(`^\\s*of ${pages} pages\\s*$`)).first(), `the pager reads ${pages} pages`).toBeVisible();
+    await expect(page.getByText(/Total Tests\s*=\s*\d+/).first(), 'the Total Tests line is shown').toBeVisible();
+    expect(await rowsOnPage(page.locator('main')), 'a full first page').toBeGreaterThan(0);
+    await expect(page.getByRole('button', { name: /Print Workplan/i }).first()).toBeEnabled();
+  });
+
+  test('TC-WPP-10: Total Tests counts the whole queue and Print Workplan prints every page', async ({ page }) => {
+    // FLIP-WHEN-FIXED (OGC-1647): "Total Tests = 100" over 15 pages on testing, and the print
+    // request posts the 100 rows on screen.
+    test.fail();
+    const onPage = (await rowsOnPage(page.locator('main'))) ?? 0;
+    const total = Number(((await page.getByText(/Total Tests\s*=\s*\d+/).first().innerText()).match(/\d+/) ?? ['0'])[0]);
+    const posted = page.waitForRequest((r) => /PrintWorkplanReport/i.test(r.url()) && r.method() === 'POST', { timeout: 30_000 });
+    await page.getByRole('button', { name: /Print Workplan/i }).first().click();
+    const body = (await posted).postData() ?? '';
+    const rows = (body.match(/"accessionNumber"/g) ?? []).length;
+    console.log(`TC-WPP-10: ${panel?.text}: ${pages} pages, ${onPage} on page, Total Tests = ${total}, print posted ${rows} rows`);
+    expect.soft(total, 'Total Tests counts more than the page on screen').toBeGreaterThan(onPage);
+    expect(rows, 'the print carries more than the page on screen').toBeGreaterThan(onPage);
+  });
+});

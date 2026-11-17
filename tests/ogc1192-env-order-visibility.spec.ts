@@ -89,6 +89,9 @@ async function dashboardText(page: Page, path: string): Promise<string> {
   await page.goto(`${BASE}${path}`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('columnheader', { name: /Lab Number/i })).toBeVisible({ timeout: 20_000 });
   await page.waitForLoadState('networkidle');
+  // The rows arrive after the headers; networkidle came while the table still read "Loading..."
+  // (CI run 293 and testing, 16 Nov 2026).
+  await expect(page.locator('main tbody').first()).not.toContainText('Loading', { timeout: 30_000 });
   return page.locator('main').innerText();
 }
 
@@ -125,7 +128,8 @@ test.describe('OGC-1192: environmental order routing and patientless samples', (
   test('OGC1192-3: CANARY the Clinical dashboard lists the newest orders', async ({ page }) => {
     // Proves the dashboard read above works: the newest order of any kind is on page 1.
     const text = await dashboardText(page, '/order/clinical');
-    expect(text, 'the clinical dashboard renders order rows').toMatch(/DEV\d{10,}/);
+    // CI numbers orders DEV0126...; testing uses the site format (260001K1).
+    expect(text, 'the clinical dashboard renders order rows').toMatch(/DEV\d{10,}|\b\d{6}[0-9A-Z]{2,}\b/);
   });
 
   test('OGC1192-4: Modify Order on the env order does not open the clinical patient wizard', async ({ page }) => {

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, QA_PREFIX, login } from '../helpers/test-helpers';
+import { BASE, ADMIN, QA_PREFIX, login, waitForRouteContent } from '../helpers/test-helpers';
 
 /**
  * Storage CRUD Test Suite — Phase 28
@@ -26,6 +26,7 @@ test.describe('Storage CRUD (Phase 28)', () => {
   test('TC-STOR-CRUD-01: Storage Management page loads with all tabs', async ({ page }) => {
     await page.goto(`${BASE}${STORAGE_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const bodyText = await page.locator('body').textContent();
     expect(bodyText).toBeTruthy();
@@ -38,6 +39,7 @@ test.describe('Storage CRUD (Phase 28)', () => {
   test('TC-STOR-CRUD-01b: Storage Rooms tab loads', async ({ page }) => {
     await page.goto(`${BASE}${STORAGE_URL}/rooms`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const bodyText = await page.locator('body').textContent();
     expect(bodyText).toBeTruthy();
@@ -47,6 +49,7 @@ test.describe('Storage CRUD (Phase 28)', () => {
   test('TC-STOR-CRUD-02: Add Room button opens form', async ({ page }) => {
     await page.goto(`${BASE}${STORAGE_URL}/rooms`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     // Look for Add Room button
     const addBtn = page.getByRole('button', { name: /add room/i });
@@ -69,6 +72,7 @@ test.describe('Storage CRUD (Phase 28)', () => {
   test('TC-STOR-CRUD-05: Storage page renders meaningful content (stat cards or data table)', async ({ page }) => {
     await page.goto(`${BASE}${STORAGE_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const bodyText = await page.locator('body').innerText();
     expect(bodyText).toBeTruthy();
@@ -86,6 +90,7 @@ test.describe('Storage CRUD (Phase 28)', () => {
   test('TC-STOR-CRUD-06: Cold Storage Monitoring page loads', async ({ page }) => {
     await page.goto(`${BASE}${COLD_STORAGE_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const bodyText = await page.locator('body').textContent();
     expect(bodyText).toBeTruthy();
@@ -98,6 +103,7 @@ test.describe('Storage CRUD (Phase 28)', () => {
     // Dashboard, Corrective Actions, Historical Trends, Reports, Settings
     await page.goto(`${BASE}${COLD_STORAGE_URL}?tab=0`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const tabs = await page.locator('[role="tab"], [class*="tab"]').allTextContents();
     expect(tabs.length).toBeGreaterThanOrEqual(4);
@@ -116,6 +122,7 @@ test.describe('Storage Extended — Room Creation & Tab Navigation', () => {
   test('TC-STOR-EXT-01: Navigate to Devices tab from Storage', async ({ page }) => {
     await page.goto(`${BASE}${STORAGE_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     // Click the Devices tab if available
     const devicesTab = page
@@ -140,6 +147,7 @@ test.describe('Storage Extended — Room Creation & Tab Navigation', () => {
   test('TC-STOR-EXT-02: Create a new storage room', async ({ page }) => {
     await page.goto(`${BASE}${STORAGE_URL}/rooms`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const addBtn = page
       .getByRole('button', { name: /add room|add/i })
@@ -197,6 +205,7 @@ test.describe('Storage Extended — Room Creation & Tab Navigation', () => {
   test('TC-STOR-EXT-04: Sample Items tab displays inventory entries', async ({ page }) => {
     await page.goto(`${BASE}${STORAGE_URL}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     // Click Sample Items tab if present
     const sampleTab = page
@@ -266,6 +275,7 @@ test.describe('Suite STOR-DEEP — Storage API & Cross-Module', () => {
      */
     await page.goto(`${BASE}${COLD_STORAGE_URL}`);
     await page.waitForLoadState('networkidle', { timeout: 10000 });
+    await waitForRouteContent(page);
 
     const bodyText = await page.locator('body').innerText();
     expect(bodyText).not.toContain('Internal Server Error');
@@ -279,6 +289,7 @@ test.describe('Suite STOR-DEEP — Storage API & Cross-Module', () => {
   test('TC-STOR-DEEP-03: Storage Devices tab loads without crash', async ({ page }) => {
     await page.goto(`${BASE}${STORAGE_URL}/devices`);
     await page.waitForLoadState('networkidle', { timeout: 10000 });
+    await waitForRouteContent(page);
 
     const bodyText = await page.locator('body').innerText();
     expect(bodyText).not.toContain('Internal Server Error');
@@ -288,6 +299,7 @@ test.describe('Suite STOR-DEEP — Storage API & Cross-Module', () => {
   test('TC-STOR-DEEP-04: Storage Boxes tab loads without crash', async ({ page }) => {
     await page.goto(`${BASE}${STORAGE_URL}/boxes`);
     await page.waitForLoadState('networkidle', { timeout: 10000 });
+    await waitForRouteContent(page);
 
     const bodyText = await page.locator('body').innerText();
     expect(bodyText).not.toContain('Internal Server Error');
@@ -301,6 +313,7 @@ test.describe('Suite STOR-DEEP — Storage API & Cross-Module', () => {
      */
     await page.goto(`${BASE}${STORAGE_URL}`);
     await page.waitForLoadState('networkidle', { timeout: 10000 });
+    await waitForRouteContent(page);
 
     const tabs = await page.locator('[role="tab"]').all();
     for (let i = 0; i < Math.min(tabs.length, 6); i++) {
@@ -319,6 +332,7 @@ test.describe('Suite STOR-DEEP — Storage API & Cross-Module', () => {
      */
     await page.goto(`${BASE}${STORAGE_URL}/rooms`);
     await page.waitForLoadState('networkidle', { timeout: 10000 });
+    await waitForRouteContent(page);
 
     const addBtn = page.getByRole('button', { name: /add|create|new/i }).first();
     if (await addBtn.isVisible({ timeout: 3000 }).catch(() => false)) {

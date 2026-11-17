@@ -90,6 +90,9 @@ async function printedPdf(page: Page, button: Locator) {
   const popup = page.context().waitForEvent('page', { timeout: 30_000 });
   await button.click();
   const tab = await popup;
+  // The new tab opens on about:blank and is then sent to the report; a URL read at once can be the
+  // blank or the app shell (CI 43961492669 read the SPA index), so wait for the report request.
+  await expect.poll(() => tab.url(), { timeout: 30_000 }).toMatch(/\/(api|OpenELIS-Global)\/.*Report/i);
   const url = tab.url();
   await tab.close().catch(() => {});
   const r = await page.request.get(url, { timeout: 120_000 });
@@ -152,7 +155,8 @@ test.describe('OGC-1515 part 1: searchable lists (#4922)', () => {
     await dateRange(page);
     const button = page.getByRole('button', { name: 'Generate Printable Version' });
     await button.click();
-    await expect(page.getByText('Choose the referral center or laboratory to report on.'), 'asks for the lab first').toBeVisible();
+    // Either spelling: a US-English browser got en_US's "centre" until the 16 Nov Transifex fix is pulled.
+    await expect(page.getByText(/Choose the referral cent(er|re) or laboratory to report on\./), 'asks for the lab first').toBeVisible();
     await checkSearch(page, page.getByRole('combobox', { name: 'Referral Center or Laboratory' }));
     const pdf = await printedPdf(page, button);
     expect(pdf.url, 'the print carries the chosen lab').toMatch(/locationCode=[^&]+/);

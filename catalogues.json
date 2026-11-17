@@ -155,6 +155,11 @@
       "file": "module-system-test-cases.md",
       "area": "Module system with no module installed: registry, Admin > Modules, unknown module pages and assets (OGC-1577, #4954)",
       "note": "Feature suite, 2026-11-05, testing f7eb2d47. Spec: tests/ogc-1577-modules.spec.ts (ogc1200.config.ts)."
+    },
+    {
+      "file": "result-validation-config-test-cases.md",
+      "area": "Result & Validation Configuration (OGC-1364), typed dates (OGC-1635), workplan paging (OGC-1647)",
+      "note": "Feature suite, 2026-11-17, testing 0937523e6. Specs: tests/ogc-1364-result-validation-config.spec.ts, tests/ogc-1635-typed-dates.spec.ts, tests/workplan.spec.ts (modules.config.ts)."
     }
   ],
   "notCatalogues": [

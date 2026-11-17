@@ -8,8 +8,7 @@ import {
   navigateWithDiscovery,
   getDateRange,
   navigateViaMenu,
-  tryNavigateToURL,
-} from '../helpers/test-helpers';
+  tryNavigateToURL, waitForRouteContent } from '../helpers/test-helpers';
 
 /**
  * Electronic / Incoming Orders Test Suite — Suite AH + BC-DEEP
@@ -76,6 +75,7 @@ test.describe('Suite AH — Electronic / Incoming Orders Core (TC-IO)', () => {
     expect(loaded, 'Incoming Orders page must be reachable').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
     const bodyText = await page.locator('body').innerText();
     expect(bodyText).not.toContain('404');
     expect(bodyText).not.toContain('Internal Server Error');
@@ -91,6 +91,7 @@ test.describe('Suite AH — Electronic / Incoming Orders Core (TC-IO)', () => {
     expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
     const bodyText = await page.locator('body').innerText();
 
     const hasStatusFilter = /status|pending|accepted|entered|released|cancelled/i.test(bodyText);
@@ -109,6 +110,7 @@ test.describe('Suite AH — Electronic / Incoming Orders Core (TC-IO)', () => {
     expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
     const bodyText = await page.locator('body').innerText();
 
     const hasEntered = /entered/i.test(bodyText);
@@ -136,6 +138,7 @@ test.describe('Suite AH — Electronic / Incoming Orders Core (TC-IO)', () => {
     expect(loaded, 'page must be reachable — navigateWithDiscovery matched none of the candidate URLs').toBe(true);
 
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const dateInput = page.locator('input[type="date"], input[placeholder*="mm/dd" i], input[placeholder*="date" i]').first();
     const hasDateInput = await dateInput.isVisible({ timeout: 3000 }).catch(() => false);

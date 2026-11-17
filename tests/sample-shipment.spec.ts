@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, QA_PREFIX, TIMEOUT, login } from '../helpers/test-helpers';
+import { BASE, ADMIN, QA_PREFIX, TIMEOUT, login, waitForRouteContent } from '../helpers/test-helpers';
 
 /**
  * Sample Shipment Test Suite — Phase 60
@@ -46,6 +46,7 @@ test.describe('Shipment Dashboard (US-SHIP-1, US-SHIP-2)', () => {
     await login(page, ADMIN.user, ADMIN.pass);
     await page.goto(`${BASE}${SHIP_DASHBOARD}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
   });
 
   test('TC-SHIP-01: Dashboard shows the 4 transit-state KPI cards', async ({ page }) => {
@@ -98,6 +99,7 @@ test.describe('Create Box Form (US-SHIP-1, US-SHIP-2)', () => {
     await login(page, ADMIN.user, ADMIN.pass);
     await page.goto(`${BASE}${SHIP_CREATE}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
   });
 
   test('TC-SHIP-04: Auto-generated box ID follows expected format', async ({ page }) => {
@@ -182,6 +184,7 @@ test.describe('Receive Shipment (US-SHIP-3)', () => {
     await login(page, ADMIN.user, ADMIN.pass);
     await page.goto(`${BASE}${SHIP_RECEIVE}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
   });
 
   test('TC-SHIP-08: Receive page has barcode scan field and FHIR import', async ({ page }) => {
@@ -218,6 +221,7 @@ test.describe('Shipment Reports (US-SHIP-4)', () => {
     await login(page, ADMIN.user, ADMIN.pass);
     await page.goto(`${BASE}${SHIP_REPORTS}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
   });
 
   test('TC-SHIP-09: Reports page has filters needed for referral auditing', async ({ page }) => {
@@ -236,7 +240,8 @@ test.describe('Shipment Reports (US-SHIP-4)', () => {
     await expect(stateFilter, 'Filter by State dropdown must be present').toBeVisible({ timeout: TIMEOUT });
 
     // Date range pickers
-    const dateInputs = page.locator('input[type="date"], input[placeholder*="mm/dd/yyyy" i]');
+    // The site's own format since OGC-1616 (dd/mm/yyyy on testing and CI), so match any yyyy placeholder.
+    const dateInputs = page.locator('input[type="date"], input[placeholder*="yyyy" i]');
     const dateCount = await dateInputs.count();
     expect(dateCount, 'From Date and To Date fields must be present (2 date inputs)').toBeGreaterThanOrEqual(2);
 
@@ -257,6 +262,7 @@ test.describe('Shipment Settings (US-SHIP-5)', () => {
     await login(page, ADMIN.user, ADMIN.pass);
     await page.goto(`${BASE}${SHIP_SETTINGS}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
   });
 
   test('TC-SHIP-10: Settings shows box label config with live preview', async ({ page }) => {
@@ -360,6 +366,7 @@ test.describe('Shipment API Extended (TC-SHIP-EXT)', () => {
      */
     await page.goto(`${BASE}${SHIP_DASHBOARD}`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const bodyText = await page.locator('body').innerText();
     // Look for numeric values on the dashboard
@@ -407,6 +414,7 @@ test.describe('Shipment API Extended (TC-SHIP-EXT)', () => {
      */
     await page.goto(`${BASE}${SHIP_RECEIVE}`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const barcodeInput = page.locator(
       'input[placeholder*="barcode" i], input[placeholder*="box" i], input[placeholder*="scan" i], input'
@@ -432,6 +440,7 @@ test.describe('Shipment API Extended (TC-SHIP-EXT)', () => {
      */
     await page.goto(`${BASE}${SHIP_REPORTS}`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     // Click generate without setting date range
     const generateBtn = page.getByRole('button', { name: /generate report/i }).first();

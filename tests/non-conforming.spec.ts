@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, getFutureDate, navigateViaMenu, tryNavigateToURL, selectSampleType, orderWizardForward, selectOrderProgram } from '../helpers/test-helpers';
+import { BASE, ADMIN, PATIENT_NAME, PATIENT_ID, ACCESSION, QA_PREFIX, TIMEOUT, CONFIRMED_ADMIN_URLS, login, navigateWithDiscovery, fillSearchField, getDateRange, getFutureDateRange, getFutureDate, navigateViaMenu, tryNavigateToURL, selectSampleType, orderWizardForward, selectOrderProgram, waitForRouteContent } from '../helpers/test-helpers';
 import { ensureReferringClinic } from '../helpers/data-factory';
 import { seededPatient, sampleTypeWithTest, legacyPickPatient, legacyToAddSample, legacyTickTest, legacyFillOrderStep } from '../helpers/legacy-order-entry';
 
@@ -386,6 +386,7 @@ test.describe('Suite NC-EXT — Non-Conforming Extended Tests (TC-NC-EXT)', () =
      */
     await page.goto(`${BASE}/ViewNonConformingEvent`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const searchInput = page.locator(
       'input[placeholder*="lab" i], input[placeholder*="accession" i], input[id*="lab" i]'
@@ -412,6 +413,7 @@ test.describe('Suite NC-EXT — Non-Conforming Extended Tests (TC-NC-EXT)', () =
      */
     await page.goto(`${BASE}${NCE_REPORT}`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const bodyText = await page.locator('body').innerText();
     const hasHyphenated = /non-conforming/i.test(bodyText);
@@ -430,6 +432,7 @@ test.describe('Suite NC-EXT — Non-Conforming Extended Tests (TC-NC-EXT)', () =
      */
     await page.goto(`${BASE}/NCECorrectiveAction`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const searchBtn = page.getByRole('button', { name: /search|find|submit/i }).first();
     if (await searchBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
@@ -457,6 +460,7 @@ test.describe('Suite NC-EXT — Non-Conforming Extended Tests (TC-NC-EXT)', () =
     for (const url of ncUrls) {
       await page.goto(`${BASE}${url}`);
       await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+      await waitForRouteContent(page);
       const bodyText = await page.locator('body').innerText();
       const ok = !bodyText.includes('404') && !bodyText.includes('Internal Server Error')
         && !page.url().match(/LoginPage|login/i);
@@ -475,6 +479,7 @@ test.describe('Suite NC-EXT — Non-Conforming Extended Tests (TC-NC-EXT)', () =
      */
     await page.goto(`${BASE}${NCE_REPORT}`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
+    await waitForRouteContent(page);
 
     const submitBtn = page.getByRole('button', { name: /submit|save|report/i }).first();
     if (await submitBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
@@ -518,6 +523,7 @@ test.describe('Phase 5 — G-DEEP: NCE Interaction Tests', () => {
     // Navigate directly to the confirmed NC event reporting URL
     await page.goto(`${BASE}${NCE_REPORT}`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const bodyText = await page.locator('body').innerText();
     expect(bodyText, 'Page must not have a server error').not.toMatch(/500|Internal Server Error/);
@@ -531,6 +537,7 @@ test.describe('Phase 5 — G-DEEP: NCE Interaction Tests', () => {
   test('TC-G-DEEP-02: View NC Events search page loads', async ({ page }) => {
     await page.goto(`${BASE}/ViewNonConformingEvent`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const bodyText = await page.locator('body').innerText();
     expect(bodyText, 'Page must not have a server error').not.toMatch(/500|Internal Server Error/);
@@ -548,6 +555,7 @@ test.describe('Phase 5 — G-DEEP: NCE Interaction Tests', () => {
   test('TC-G-DEEP-03: Corrective Actions search page loads', async ({ page }) => {
     await page.goto(`${BASE}/NCECorrectiveAction`);
     await page.waitForLoadState('networkidle');
+    await waitForRouteContent(page);
 
     const bodyText = await page.locator('body').innerText();
     expect(bodyText, 'Page must not have a server error').not.toMatch(/500|Internal Server Error/);

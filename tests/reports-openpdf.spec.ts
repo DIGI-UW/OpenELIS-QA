@@ -172,10 +172,10 @@ test.describe('Activity, rejection and referral reports (ManagementReportPdf, Re
   });
 
   test('TC-RPTPDF-11 Activity Report by test produces the report (not a 500)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Regression from #4538, observed 2026-10-08: every valid request
+    // FIXED (OGC-1446 item 1), flipped 2026-11-17: passes in develop-stack CI run 293 (develop
+    // a2e66aed). Was FLIP-WHEN-FIXED. Regression from #4538, observed 2026-10-08: every valid request
     // answers 500. ActivityReport.initializeReport no longer calls createReportParameters(),
     // so ActivityReportByTest.buildReportContent NPEs on reportParameters.put("underlineResults", false).
-    test.fail();
     const { url, r } = await dateReport(page, '/Report?type=indicator&report=activityReportByTest', seed.date, seed.date, TEST_IDS.Creatinine);
     expect(r.status, `Activity Report by test answers 200 (${url})`).toBe(200);
     expect(r.pdf?.text ?? '', 'lists the complete order').toContain(seed.complete);
@@ -394,11 +394,11 @@ test.describe('Cold storage temperature log (FreezerTemperatureReportPdf)', () =
   });
 
   test('TC-RPTPDF-41 Weekly Log on the screen produces the weekly log', async ({ page }) => {
-    // FLIP-WHEN-FIXED (not from the port). Observed 2026-10-08: the screen maps Daily,
+    // FIXED by #4343 (cold storage reports, 11 Nov 2026), flipped 2026-11-17: passes in develop-stack
+    // CI run 293. Was FLIP-WHEN-FIXED (not from the port). Observed 2026-10-08: the screen maps Daily,
     // Weekly and Monthly Log all to reportType "freezerDailyLogReport"
     // (coldStorage/Reports.jsx REPORT_TYPE_MAP), so Weekly and Monthly print the daily
     // log. The server already answers "weekly" and "monthly".
-    test.fail();
     const { sent, doc } = await freezerReport(page, 'Weekly Log');
     expect(sent, 'the screen asks for the weekly log').toMatch(/weekly/i);
     expect(doc.text).toMatch(/WEEKLY LOG/);

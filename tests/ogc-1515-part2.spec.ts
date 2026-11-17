@@ -57,7 +57,9 @@ test.describe('OGC-1515 part 2: searchable lists (#4925)', () => {
 
   for (const [id, route] of [
     ['TC-1515-13a', '/MasterListsPage/SiteInformationMenu'],
-    ['TC-1515-13b', '/MasterListsPage/ResultConfigurationMenu'],
+    // TC-1515-13b (ResultConfigurationMenu) retired 17 Nov 2026: #5094 replaced that page's
+    // settings table with grouped switches (Result & Validation Configuration, OGC-1364), which
+    // has no "Search settings". tests/ogc-1364-result-validation-config.spec.ts covers the page.
     ['TC-1515-13c', '/MasterListsPage/SampleEntryConfigurationMenu'],
   ] as const) {
     test(`${id} Settings table ${route.split('/').pop()}: "Search settings" narrows the rows`, async ({ page }) => {

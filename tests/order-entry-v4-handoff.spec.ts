@@ -248,11 +248,11 @@ test.describe('R-TIME one clock', () => {
   });
 
   test('TC-OEV4-TIME-04 order entry and its dashboard use one date format (R-TIME-4)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. Observed 2026-10-08 on 76c6d625a with the locale "English": Enter Order
+    // FIXED, flipped 2026-11-17: passes in develop-stack CI run 293 (develop a2e66aed; the date pickers
+    // follow the site format since OGC-1616). Was FLIP-WHEN-FIXED. Observed 2026-10-08 on 76c6d625a with the locale "English": Enter Order
     // and Prepare Samples use dd/mm/yyyy; the Order Dashboard From / To filters use mm/dd/yyyy.
     // With "English (US)" both read mm/dd/yyyy, so the dashboard ignores the locale. The case
     // pins "English" (the shipped default) and puts the session's locale back afterwards.
-    test.fail();
     await openEnter(page);
     const before = await currentLocale(page);
     await setLocale(page, /^English$/);
