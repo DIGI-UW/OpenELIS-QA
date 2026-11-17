@@ -68,37 +68,12 @@
    "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
    "since": "2026-10-15"
   },
-  "e2e|e2e|test-catalog-sections-roundtrip.spec.ts|Test Catalog editor — section round-trips (A–G) > TCF-03 Methods: Link Method persists": {
-   "ticket": "untriaged",
-   "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
-   "since": "2026-10-15"
-  },
   "e2e|e2e|test-catalog-titer-runtime.spec.ts|Test Catalog editor — Titer result type at runtime > TCC-T: Titer test → order → renders an interactive result-entry control → save → validate": {
    "ticket": "untriaged",
    "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
    "since": "2026-10-15"
   },
   "guards|guards|test-catalog-critical-indicator.spec.ts|OGC-1121 — critical vs abnormal result indicator (patient safety) [GUARD] > TCG-02: a CRITICAL value is styled identically to an ABNORMAL value at result entry (bug present → PASS; flips when a distinct critical marker ships)": {
-   "ticket": "untriaged",
-   "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
-   "since": "2026-10-15"
-  },
-  "guards|guards|test-catalog-sections-roundtrip.spec.ts|Test Catalog editor — section round-trips (A–G) > TCF-03 Methods: Link Method persists": {
-   "ticket": "untriaged",
-   "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
-   "since": "2026-10-15"
-  },
-  "lp||label-presets.spec.ts|TC-LP-03: filter narrows the list (FUNCTION)": {
-   "ticket": "untriaged",
-   "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
-   "since": "2026-10-15"
-  },
-  "lp||label-presets.spec.ts|TC-LP-05: editing a preset dimension in the UI saves and reads back [ROUND-TRIP]": {
-   "ticket": "untriaged",
-   "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
-   "since": "2026-10-15"
-  },
-  "lp||label-presets.spec.ts|TC-LP-09: a successful save shows a confirmation [FUNCTION]": {
    "ticket": "untriaged",
    "note": "develop-stack run 38791266222 (develop 7472c304, 15 Oct 2026); not yet triaged",
    "since": "2026-10-15"
@@ -621,11 +596,6 @@
   "all-tc|test-catalog|tests/calculated-results-bounded.spec.ts|Calculated results run on the bounded evaluator (#4852) > TC-CALCB-01 a whole-number result is stored with no trailing .0": {
    "ticket": "lead",
    "note": "Fresh stack only (develop-stack 43961492669, a2e66aed): the calculated result is stored as \"40.0\" where testing (0937523e6) stores \"40\"; no calculation code changed between the two builds. Check on a fresh Mac stack before calling it (#4852 contract). 17 Nov 2026.",
-   "since": "2026-11-16"
-  },
-  "all-tc|test-catalog|tests/results-entry.spec.ts|Phase 6 — BG-DEEP: Results By Status Tests > TC-BG-DEEP-01: Results By Status page has all required filters": {
-   "ticket": "untriaged",
-   "note": "New on develop-stack run 43850117646 (develop 9723c251) after CI came back (15 Nov); not yet triaged. See the 16 Nov CI triage session doc.",
    "since": "2026-11-16"
   },
   "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-PatientEntry-verify: Patient Double Entry renders": {
