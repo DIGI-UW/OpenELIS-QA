@@ -394,13 +394,14 @@ jobs:
 
       # Known reds are failures already ticketed or ruled, listed in ci-known-reds.json.
       # This step writes out/reds.json; Verdict fails only on failures NOT in that list.
-      # The commit and subject go in out/ too, for the report job.
+      # The commit and subject go in out/ too, for the report job. Not as .txt: every
+      # out/*.txt is read as a suite log, and these two read as suites that ran nothing.
       - name: Sort failures into known and new
         if: always() && (steps.seen.outputs.cache-hit != 'true' || inputs.force == true)
         run: |
           mkdir -p out
-          echo "${{ steps.head.outputs.sha }}" > out/sha.txt
-          gh api "repos/$APP_REPO/commits/${{ steps.head.outputs.sha }}" --jq '.commit.message' | head -1 > out/subject.txt || true
+          echo "${{ steps.head.outputs.sha }}" > out/commit.sha
+          gh api "repos/$APP_REPO/commits/${{ steps.head.outputs.sha }}" --jq '.commit.message' | head -1 > out/commit.subject || true
           node scripts/ci-known-reds.mjs check --out out
         env:
           GH_TOKEN: ${{ github.token }}
@@ -665,8 +666,8 @@ jobs:
           path: shards
       - name: Merge the shards
         run: |
-          SHA=$(cat shards/*/out/sha.txt 2>/dev/null | head -1)
-          SUBJ=$(cat shards/*/out/subject.txt 2>/dev/null | head -1)
+          SHA=$(cat shards/*/out/commit.sha 2>/dev/null | head -1)
+          SUBJ=$(cat shards/*/out/commit.subject 2>/dev/null | head -1)
           node scripts/ci-known-reds.mjs report --shards shards --out report \
             --sha "$SHA" --subject "$SUBJ" \
             --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
