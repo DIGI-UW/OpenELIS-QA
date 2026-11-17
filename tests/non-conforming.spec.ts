@@ -122,6 +122,10 @@ test.describe('Non-conforming samples (TC-NC)', () => {
   });
 
   test('TC-NC-04: NC order result field behavior', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'the NC legend this reads is gone from order results; rewrite against the NCE screens');
     // Use the known accession if we already have one, otherwise note as dependency
     // This test verifies the UX behavior — not a strict pass/fail
     // REWORKED 2026-10-08: /AccessionResults opens the unified Results page, whose lab number
@@ -150,6 +154,10 @@ test.describe('Suite AD — Non-Conform Corrective Actions + View NC Events', ()
   });
 
   test('TC-NCA-01: View New Non-Conforming Events queue loads', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'the NCE queue moved (OGC-1159 era NCE pages); rewrite to the current route');
     // Navigate via menu
     await page.getByRole('button', { name: /menu/i }).click();
     await page.waitForTimeout(500);
@@ -182,6 +190,10 @@ test.describe('Suite AD — Non-Conform Corrective Actions + View NC Events', ()
   });
 
   test('TC-NCA-02: NC events list shows recent events', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'depends on TC-NCA-01 reaching the NCE queue');
     const candidates = [
       '/NCQueue',
       '/NonConformingQueue',
@@ -209,6 +221,10 @@ test.describe('Suite AD — Non-Conform Corrective Actions + View NC Events', ()
   });
 
   test('TC-NCA-03: Corrective Actions screen loads', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'the Corrective Actions screen moved; rewrite to the current route');
     // Navigate via menu
     await page.getByRole('button', { name: /menu/i }).click();
     await page.waitForTimeout(500);
@@ -244,6 +260,10 @@ test.describe('Suite AD — Non-Conform Corrective Actions + View NC Events', ()
   });
 
   test('TC-NCA-04: Create a corrective action for existing NC event', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'depends on TC-NCA-03');
     const candidates = [
       '/CorrectiveActions',
       '/NonConformingCorrectiveActions',
@@ -297,6 +317,10 @@ test.describe('Suite AD — Non-Conform Corrective Actions + View NC Events', ()
   });
 
   test('TC-NCA-05: Corrective action saved and visible in history', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'depends on TC-NCA-04');
     const candidates = [
       '/CorrectiveActions',
       '/NonConformingCorrectiveActions',

@@ -174,6 +174,10 @@ test.describe('Dashboard Extended Tests (TC-DASH-EXT)', () => {
   });
 
   test('TC-DASH-EXT-03: Dashboard navigation links lead to correct screens', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'the dashboard has no in-page navigation links to follow (tiles are buttons); rewrite against the tiles');
     /**
      * US-DASH-2: Lab staff need KPI links to drill down into work queues.
      * Tests that nav links from the dashboard land on non-error pages.

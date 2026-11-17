@@ -107,6 +107,10 @@ test.describe('Suite S — Data Export Core (TC-EXP)', () => {
   });
 
   test('TC-EXP-03: Patient report date range form accepts valid dates', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'no date input with the old locators on the patient report; rewrite to its dd/mm/yyyy pickers');
     /**
      * US-EXP-2: The report form must accept valid date inputs without triggering
      * a format validation error on a correctly-formatted date.
@@ -256,6 +260,10 @@ test.describe('Suite S-DEEP — Export Deep Validation (TC-EXP-09–16)', () => 
   });
 
   test('TC-EXP-09: Patient results report API endpoint is healthy', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'the patient results report endpoint at the candidate path answers 404; find the real one');
     /**
      * US-EXP-2: The patient results report API must exist and respond.
      * This endpoint backs the print-patient-results button.
@@ -426,6 +434,10 @@ test.describe('Suite S-DEEP — Export Deep Validation (TC-EXP-09–16)', () => 
   });
 
   test('TC-EXP-16: Empty date range shows validation, not 500', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'no Generate button on the reached screen; rewrite with TC-EXP-03');
     /**
      * US-EXP-4: Submitting the report form with empty/blank dates must show
      * a validation message, not an Internal Server Error.

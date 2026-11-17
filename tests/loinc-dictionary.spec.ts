@@ -370,6 +370,10 @@ test.describe('Suite O-DEEP â€” LOINC & Dictionary Deep Validation (TC-LOINC-09â
   });
 
   test('TC-LOINC-15: Concurrent dictionary API requests are stable', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'the dictionary endpoint at the candidate path answers 404');
     /**
      * US-LOINC-3 (performance): Multiple simultaneous dictionary lookups (e.g.,
      * from different browser tabs) must not cause server errors.

@@ -191,6 +191,10 @@ test.describe('Suite AP — Aliquot Management Core (TC-ALQ)', () => {
   });
 
   test('TC-ALQ-08: Aliquot API endpoint exists and responds', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'no aliquot REST endpoint at the candidate paths (404); find the real one or retire');
     /**
      * US-ALQ-2: The AliquotOrder REST API must exist. A 404 means the feature
      * is not wired up. 405 (Method Not Allowed on GET) is acceptable.
@@ -300,6 +304,10 @@ test.describe('Suite AP-DEEP — Aliquot Deep Validation (TC-ALQ-09–16)', () =
   });
 
   test('TC-ALQ-12: Concurrent aliquot API requests are stable', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'no aliquot REST endpoint at the candidate paths (404)');
     /**
      * US-ALQ-2 (performance): Multiple simultaneous aliquot lookups must not
      * cause server errors or session corruption.
@@ -446,6 +454,10 @@ test.describe('Relocated from gap-suites', () => {
     });
 
   test('TC-ALQ-18: Aliquot entry form visible with fields', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'the aliquot page has no #accessionNumber field in main any more; rewrite against the current form');
       // REWORKED 2026-10-08: /Aliquot opens on a sample search ("Enter Accession Number", Search);
       // there is no Create/New/Add button, and the page-wide button match clicked a hidden header
       // control. The entry form is that search: the aliquot fields follow once a sample is found

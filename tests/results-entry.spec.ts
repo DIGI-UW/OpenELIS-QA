@@ -255,6 +255,12 @@ test.describe('Suite AA — Results By Patient & By Order', () => {
 
 
   test('TC-RBP-02: Search by patient name returns results', async ({ page }) => {
+
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+
+    test.fixme(true, 'Results By Patient retired into the unified Results worklist');
     // Navigate to Results > By Patient
     const candidates = [
       '/PatientResults',
@@ -287,6 +293,10 @@ test.describe('Suite AA — Results By Patient & By Order', () => {
   });
 
   test('TC-RBP-03: Search by patient ID returns results', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'Results By Patient retired into the unified Results worklist');
     const candidates = ['/PatientResults', '/ResultsByPatient', '/patient/results'];
     await navigateWithDiscovery(page, candidates);
 
@@ -332,6 +342,10 @@ test.describe('Suite AA — Results By Patient & By Order', () => {
   });
 
   test('TC-RBO-06: Results display includes test name, result value, status', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'reads the old By Order table; the unified worklist rows are covered by results-unified-worklist');
     const candidates = ['/AccessionResults', '/OrderResults', '/order/results'];
     await navigateWithDiscovery(page, candidates);
 
@@ -437,6 +451,10 @@ test.describe('Phase 5 — F-DEEP: Results Entry Field Validation Tests', () => 
   });
 
   test('TC-F-DEEP-01: Result row expand shows detail fields', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'reads /LogbookResults?type=Hematology, the old worklist; the unified worklist expands rows differently');
     // Navigate directly to LogbookResults with Hematology
     await page.goto(`${BASE}/LogbookResults?type=Hematology`);
     await page.waitForLoadState('networkidle');
@@ -620,6 +638,10 @@ test.describe('Relocated from gap-suites', () => {
   });
 
   test('TC-RBP-01: Results > By Patient screen loads', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'Results By Patient retired into the unified Results worklist (search by patient there)');
       // Navigate to hamburger menu
       await page.click('button[aria-label*="menu" i], button[id*="menu" i]');
       await page.waitForTimeout(500);

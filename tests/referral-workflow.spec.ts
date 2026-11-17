@@ -28,6 +28,10 @@ test.describe('Referral Management (TC-REF)', () => {
   });
 
   test('TC-REF-01: Referral section visible in Add Order', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'the referral section moved in order entry v4 (Refer Out per sample); covered by order-entry-v4 REF cases');
     await page.goto(`${BASE}/SamplePatientEntry`);
     await page.waitForTimeout(2000);
 
@@ -47,6 +51,10 @@ test.describe('Referral Management (TC-REF)', () => {
   });
 
   test('TC-REF-02 [BUG-2 KNOWN]: External lab dropdown populates', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'the referral section moved in order entry v4; covered by order-entry-v4 REF cases');
     await page.goto(`${BASE}/SamplePatientEntry`);
     await page.waitForTimeout(2000);
 

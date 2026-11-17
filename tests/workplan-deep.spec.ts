@@ -339,6 +339,10 @@ test.describe('Suite N-DEEP-EXT2 — Workplan Cross-Module & API (TC-WPD-11–16
   });
 
   test('TC-WPD-13: WorkPlanByPanel API endpoint responds for first panel', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'WorkPlanByPanel at the candidate path answers 404 (the app calls /rest/WorkPlanByPanel?panel_id=)');
     /**
      * US-WP-1: The workplan API for an individual panel must respond without
      * a server error. Uses panel ID 1 as a probe.

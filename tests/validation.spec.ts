@@ -107,6 +107,10 @@ test.describe('Validation workflow (TC-VAL)', () => {
   });
 
   test('TC-VAL-03: Accept checkbox is present on result rows', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'the unified Validation page replaced the per-row checkbox layout this reads; rewrite against validation-review');
     await goToValidation(page, 'order');
 
     // Accept checkbox — typically a checkbox in each result row
@@ -155,6 +159,10 @@ test.describe('Validation workflow (TC-VAL)', () => {
   });
 
   test('TC-VAL-05: Notes / comment field is accessible on result row', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'unified Validation page; notes live in the expanded row (validation-review covers it)');
     await goToValidation(page, 'order');
 
     // Load a result
@@ -184,6 +192,10 @@ test.describe('Validation workflow (TC-VAL)', () => {
   });
 
   test('TC-VAL-08: Date range filter is present on validation screen', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'unified Validation page filters by lab unit and lab number, not a date range; rewrite or retire');
     await goToValidation(page);
     // Look for any date picker inputs
     const dateInputs = page.locator('input[type="date"], input[placeholder*="dd/mm/yyyy" i], .cds--date-picker__input');
@@ -205,6 +217,10 @@ test.describe('Suite AB — Validation By Order & By Date', () => {
   });
 
   test('TC-VBO-01: Validation > By Order screen loads', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'Validation By Order screen retired into the unified Validation page');
     // Navigate via menu
     await page.getByRole('button', { name: /menu/i }).click();
     await page.waitForTimeout(500);
@@ -239,6 +255,10 @@ test.describe('Suite AB — Validation By Order & By Date', () => {
   });
 
   test('TC-VBO-02: Enter accession number shows results for validation', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'Validation By Order screen retired into the unified Validation page');
     const candidates = [
       '/ValidationByAccession',
       '/ValidationByOrder',
@@ -269,6 +289,10 @@ test.describe('Suite AB — Validation By Order & By Date', () => {
   });
 
   test('TC-VBR-03: Validation > By Range of Order Numbers screen loads', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'Validation By Range screen retired into the unified Validation page');
     // Navigate via menu
     await page.getByRole('button', { name: /menu/i }).click();
     await page.waitForTimeout(500);
@@ -308,6 +332,10 @@ test.describe('Suite AB — Validation By Order & By Date', () => {
   });
 
   test('TC-VBD-04: Validation > By Date screen loads', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'Validation By Date screen retired into the unified Validation page');
     // Navigate via menu
     await page.getByRole('button', { name: /menu/i }).click();
     await page.waitForTimeout(500);
@@ -341,6 +369,10 @@ test.describe('Suite AB — Validation By Order & By Date', () => {
   });
 
   test('TC-VBD-05: Select date range shows validation queue', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'Validation By Date screen retired into the unified Validation page');
     const candidates = ['/ValidationByDate', '/ValidationDate', '/validation/date'];
     await navigateWithDiscoveryLocal(page, candidates);
 

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { LOGIN_USER_FIELD } from '../helpers/login-form';
 import {
   BASE,
   ADMIN,
@@ -133,7 +134,11 @@ test.describe('Suite U — Session Lifecycle (TC-SESS)', () => {
     expect(onDashboard, 'Successful login must redirect away from login page').toBe(true);
   });
 
-  test('TC-SESS-03: Invalid login credentials do not expose server internals', async ({ page }) => {
+  test('TC-SESS-03: Invalid login credentials do not expose server internals', async ({ browser }) => {
+    // Signed out on purpose (2026-11-17): with the shared login, /LoginPage redirects into the app
+    // and the form this case types into never appears.
+    const ctx = await browser.newContext({ ignoreHTTPSErrors: true, storageState: { cookies: [], origins: [] } });
+    const page = await ctx.newPage();
     /**
      * US-SESS-6: Entering wrong credentials must show a user-facing error message,
      * not an Internal Server Error or Java stack trace.
@@ -141,7 +146,7 @@ test.describe('Suite U — Session Lifecycle (TC-SESS)', () => {
     await page.goto(`${BASE}/LoginPage`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    const userInput = page.locator('input[name="username"], input[id*="username" i], input[placeholder*="user" i]').first();
+    const userInput = page.locator(LOGIN_USER_FIELD).first();
     const passInput = page.locator('input[type="password"]').first();
 
     // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
@@ -377,7 +382,11 @@ test.describe('Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–1
     // Non-failing test — documents the current state
   });
 
-  test('TC-SESS-12: XSS payload in login fields does not cause server error', async ({ page }) => {
+  test('TC-SESS-12: XSS payload in login fields does not cause server error', async ({ browser }) => {
+    // Signed out on purpose (2026-11-17): with the shared login, /LoginPage redirects into the app
+    // and the form this case types into never appears.
+    const ctx = await browser.newContext({ ignoreHTTPSErrors: true, storageState: { cookies: [], origins: [] } });
+    const page = await ctx.newPage();
     /**
      * US-SESS-3 (edge case): XSS payloads in the login form must be handled
      * gracefully — the server must sanitize input, not crash.
@@ -385,7 +394,7 @@ test.describe('Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–1
     await page.goto(`${BASE}/LoginPage`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    const userInput = page.locator('input[name="username"], input[placeholder*="user" i]').first();
+    const userInput = page.locator(LOGIN_USER_FIELD).first();
     const passInput = page.locator('input[type="password"]').first();
 
     // Was conditional (2026-11-17): the case asserted nothing when this did not hold.
@@ -401,7 +410,11 @@ test.describe('Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–1
     console.log('TC-SESS-12: PASS — XSS payload in login handled without 500');
   });
 
-  test('TC-SESS-13: SQL injection payload in login does not cause server error', async ({ page }) => {
+  test('TC-SESS-13: SQL injection payload in login does not cause server error', async ({ browser }) => {
+    // Signed out on purpose (2026-11-17): with the shared login, /LoginPage redirects into the app
+    // and the form this case types into never appears.
+    const ctx = await browser.newContext({ ignoreHTTPSErrors: true, storageState: { cookies: [], origins: [] } });
+    const page = await ctx.newPage();
     /**
      * US-SESS-3: SQL injection in login credentials must be blocked.
      * Parameterized queries should prevent this — test confirms no 500.
@@ -409,7 +422,7 @@ test.describe('Suite U-DEEP — Security Headers & Rate Limiting (TC-SESS-09–1
     await page.goto(`${BASE}/LoginPage`);
     await page.waitForLoadState('networkidle', { timeout: TIMEOUT });
 
-    const userInput = page.locator('input[name="username"], input[placeholder*="user" i]').first();
+    const userInput = page.locator(LOGIN_USER_FIELD).first();
     const passInput = page.locator('input[type="password"]').first();
 
     // Was conditional (2026-11-17): the case asserted nothing when this did not hold.

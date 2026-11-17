@@ -121,6 +121,10 @@ test.describe('Performance Smoke (TC-PERF)', () => {
       });
     };
 
+    // The baseline is the app already drawn once (2026-11-17): read right after login, the heap
+    // held only the sign-in page, so any first visit to the app read as 50x "growth".
+    await page.goto(`${BASE}/Dashboard`).catch(() => {});
+    await page.waitForTimeout(2000);
     const initialMem = await getMemory();
 
     const urls = [
@@ -527,6 +531,10 @@ test.describe('Performance Extended — API Latency & Throughput (TC-PERF-EXT)',
   });
 
   test('TC-PERF-EXT-06: Report generation API responds within 5s', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'the report endpoint at the candidate path answers 404');
     /**
      * US-PERF-6: Report generation is batch-heavy but must complete in reasonable
      * time. A supervisor waiting more than 5s for a report will abandon it.

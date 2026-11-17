@@ -97,6 +97,10 @@ test.describe('Lab Reports and Print (TC-RPT)', () => {
   });
 
   test('TC-RPT-04: Label print accessible from order confirmation', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'order confirmation has no label print control in the v4 flow; rewrite against Print Labels');
     // Navigate to order confirmation for known accession via order search
     await page.goto(`${BASE}/SampleEdit?type=readwrite`).catch(() => page.goto(`${BASE}/SampleEdit`));
     await page.waitForTimeout(1500);
@@ -155,6 +159,10 @@ test.describe('Suite AE — Routine Reports', () => {
   });
 
   test('TC-RPT-R01: Patient Status Report page loads', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'reaches the report through the retired hamburger path; rewrite to /Report?type=patient&report=patientStatus');
     // Navigate via hamburger menu
     await page.getByRole('button', { name: /menu/i }).click();
     await page.waitForTimeout(500);
@@ -260,6 +268,10 @@ test.describe('Suite AE — Routine Reports', () => {
   });
 
   test('TC-RPT-R03: Statistics Report page loads with date range selector', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'retired menu path and date inputs; rewrite to the Statistics report URL and its dd/mm/yyyy pickers');
     // Navigate via menu
     await page.getByRole('button', { name: /menu/i }).click();
     await page.waitForTimeout(500);
@@ -314,6 +326,10 @@ test.describe('Suite AE — Routine Reports', () => {
   });
 
   test('TC-RPT-R04: Generate Statistics Report — verify table/data output', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'depends on TC-RPT-R03 reaching the report');
     const candidates = [
       // REWORKED 2026-10-08: the real route (side menu / route census) first; the guessed
       // ones below never existed, and develop now answers an unknown path off the SPA.
@@ -430,6 +446,10 @@ test.describe('Suite AF — Management Reports', () => {
   });
 
   test('TC-RPT-M01: Rejection Report page loads with date picker', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'retired menu path; rewrite to the Rejection report URL');
     // Navigate via menu
     await page.getByRole('button', { name: /menu/i }).click();
     await page.waitForTimeout(500);
@@ -511,6 +531,10 @@ test.describe('Suite AF — Management Reports', () => {
   });
 
   test('TC-RPT-M03: Referred Out Tests Report loads and generates', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'retired menu path; TC-RPTPDF-13 covers the Referred Out report');
     // Navigate to Activity Reports > Referred Out
     await page.getByRole('button', { name: /menu/i }).click();
     await page.waitForTimeout(500);
@@ -649,6 +673,10 @@ test.describe('Suite AF — Management Reports', () => {
   });
 
   test('TC-RPT-M05: Audit Trail report loads with date/user filters', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'retired menu path; the Audit Trail report is covered by TC-SYS audit cases');
     // Navigate to Non Conformity Reports > Audit Trail
     await page.getByRole('button', { name: /menu/i }).click();
     await page.waitForTimeout(500);
@@ -814,6 +842,10 @@ test.describe('Suite AG — WHONET & Export Reports', () => {
   });
 
   test('TC-RPT-W03: WHONET Report date range filtering works', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'no WHONET report route answers at the candidate URLs; WHONET export lives in microbiology (AMR suites)');
     const candidates = ['/WHONETReport', '/Report/WHONET', '/reports/whonet'];
     const navigated = await navigateWithDiscovery(page, candidates);
 
@@ -1214,6 +1246,10 @@ test.describe('Reports Extended — API & Edge Cases (TC-RPT-EXT)', () => {
   });
 
   test('TC-RPT-EXT-07: Report for known accession 26CPHL00008V contains expected data', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'reads accession 26CPHL00008V, which exists only on the CPHL server, not on testing or CI');
     /**
      * US-RPT-7: Regression guard — the baseline accession must always appear
      * in its report. If this fails, the report pipeline or test data is broken.

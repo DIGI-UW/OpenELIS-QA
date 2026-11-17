@@ -51,6 +51,8 @@ import { BASE, ADMIN, login } from '../helpers/test-helpers';
  */
 
 const ENTRY_FIELDS = '#labNumber, #patientId, #lastName, #firstName';
+// A lab number in either site format: prefixed (DEV01260000000000574) or year-led (260001M1, testing).
+const LAB_NO = /\b(?:[A-Z]{2,}\d{6,}|\d{6,}[A-Z0-9]*)\b/;
 
 /** The dashboard's own Continue action. Loads an existing order into context. */
 async function continueFirstOrder(page: Page): Promise<string> {
@@ -59,10 +61,11 @@ async function continueFirstOrder(page: Page): Promise<string> {
   await expect(rows.first(), 'the order dashboard must list at least one order').toBeVisible({
     timeout: 20_000,
   });
-  const labNo = await page.evaluate(() => {
-    const tr = Array.from(document.querySelectorAll('tr')).find((t) => /[A-Z]{2,}\d{6,}/.test(t.innerText || ''));
-    return tr ? (tr.innerText.match(/[A-Z]{2,}\d{6,}/) || [''])[0] : '';
-  });
+  const labNo = await page.evaluate((src) => {
+    const re = new RegExp(src);
+    const tr = Array.from(document.querySelectorAll('tr')).find((t) => re.test(t.innerText || ''));
+    return tr ? (tr.innerText.match(re) || [''])[0] : '';
+  }, LAB_NO.source);
   const cont = page.locator('a,button').filter({ hasText: /^\s*Continue\s*$/ }).first();
   await expect(cont, 'the dashboard must offer Continue on an existing order').toBeVisible({ timeout: 15_000 });
   await cont.click();
@@ -139,7 +142,7 @@ test.describe('Order entry — state reset and lab number lifecycle (TC-OE)', ()
   // ── CANARY. Not a defect check. Guards every tripwire below. ─────────────
   test('TC-OE-01: the dashboard loads an existing order into the entry flow', async ({ page }) => {
     const labNo = await continueFirstOrder(page);
-    expect(labNo, 'a lab number must be readable from the dashboard row').toMatch(/[A-Z]{2,}\d{6,}/);
+    expect(labNo, 'a lab number must be readable from the dashboard row').toMatch(LAB_NO);
     await navToEntryInApp(page);
     await expect(page.locator(ENTRY_FIELDS).first(), 'the entry form must be on screen').toBeVisible({
       timeout: 15_000,
@@ -162,7 +165,7 @@ test.describe('Order entry — state reset and lab number lifecycle (TC-OE)', ()
     const shown = await page.locator('#labNumber').inputValue();
     console.log(`TC-OE-02: previous=${previous} shown=${shown}`);
     // Guard the oracle: an empty field is also "not previous", and would pass while generation is broken.
-    expect(shown, 'the entry step must show a generated lab number, not an empty field').toMatch(/[A-Z]{2,}\d{6,}/);
+    expect(shown, 'the entry step must show a generated lab number, not an empty field').toMatch(LAB_NO);
     expect(
       shown,
       `the entry form must not still be bound to ${previous}; a new order needs its own reserved number`,

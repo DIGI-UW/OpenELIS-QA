@@ -211,6 +211,10 @@ test.describe('LOINC and Dictionary CRUD (TC-LOINC)', () => {
   });
 
   test('TC-LOINC-05: Dictionary category list accessible', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'the Dictionary page no longer lists categories by name in its text; rewrite against its category filter');
     const dictUrls = ['/MasterListsPage/Dictionary', '/DictionaryManagement'];
     for (const u of dictUrls) {
       const res = await page.goto(`${BASE}${u}`).catch(() => null);
@@ -420,6 +424,10 @@ test.describe('FHIR Integration (TC-EO)', () => {
   });
 
   test('TC-EO-04: FHIR DiagnosticReport includes result values', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'needs a DiagnosticReport with results in the FHIR store; testing has none for the seeded patient');
     const res = await fhirText(page, '/DiagnosticReport?subject:Patient.identifier=0123456');
     // Was a console verdict only (2026-11-17).
     expect(res && /result|Observation|valueQuantity/i.test(res.text), 'the check this case reports').toBeTruthy();
@@ -442,6 +450,10 @@ test.describe('Export and Download (TC-EXP)', () => {
   });
 
   test('TC-EXP-01: Results export button present', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'no export control on Results By Order; catalog question: is one required?');
     await page.goto(`${BASE}/AccessionResults`);
     await page.waitForTimeout(2000);
 
@@ -459,6 +471,10 @@ test.describe('Export and Download (TC-EXP)', () => {
   });
 
   test('TC-EXP-02: Workplan export button present', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'no export control on the workplan (Print Workplan prints); catalog question');
     const wpUrls = ['/WorkPlan', '/WorkPlanByTestSection', '/WorkPlanByTest'];
     for (const u of wpUrls) {
       const res = await page.goto(`${BASE}${u}`).catch(() => null);
@@ -500,6 +516,10 @@ test.describe('Export and Download (TC-EXP)', () => {
   });
 
   test('TC-EXP-04: Validation screen has export/print option', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'no export control on Validation; catalog question');
     const valUrls = ['/ResultValidation?type=order', '/ResultValidation'];
     for (const u of valUrls) {
       const res = await page.goto(`${BASE}${u}`).catch(() => null);
@@ -518,6 +538,10 @@ test.describe('Export and Download (TC-EXP)', () => {
   });
 
   test('TC-EXP-05: Dashboard has export/download option', async ({ page }) => {
+
+    // Was a silent pass (2026-11-17): its checks never ran here. Not run, with the reason, until rewritten.
+
+    test.fixme(true, 'no export control on the dashboard; catalog question');
     await page.goto(`${BASE}`);
     await page.waitForTimeout(2000);
 
