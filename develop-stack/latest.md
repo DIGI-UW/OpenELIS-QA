@@ -2,14 +2,14 @@
 
 Update OpenELIS translations from Transifex (#5125)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/44284998733 · TZ Pacific/Port_Moresby · 2026-11-18T12:34:33.448Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/44290840081 · TZ UTC · 2026-11-18T15:05:06.160Z
 
-**4 NEW FAILURE(S)**: 92 failing = 88 known + 4 new; 5 known reds now pass.
+**3 NEW FAILURE(S)**: 92 failing = 89 known + 3 new; 5 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing | minutes | helper waits over 5 s |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| all-tc | 356 | 8 | 0 | 1 | 21 | 0 |
-| census | 124 | 5 | 0 | 0 | 5 | 0 |
+| all-tc | 356 | 8 | 0 | 1 | 24 | 0 |
+| census | 124 | 5 | 0 | 0 | 6 | 0 |
 | cfg | 3 | 0 | 0 | 0 | 1 | 0 |
 | deep | 0 | 1 | 0 | 0 | 1 | 0 |
 | disc | 1 | 0 | 0 | 0 | 1 | 0 |
@@ -19,18 +19,18 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/44284998733 · TZ Pacif
 | guards | 18 | 1 | 0 | 0 | 4 | 0 |
 | lp | 10 | 0 | 0 | 0 | 3 | 0 |
 | modify-order | 7 | 1 | 0 | 0 | 1 | 0 |
-| modules | 1354 | 52 | 3 | 4 | 119 | 8 |
+| modules | 1356 | 52 | 2 | 4 | 136 | 8 |
 | multicomponent | 3 | 0 | 0 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 | 0 | 0 |
-| personas-admin | 9 | 2 | 1 | 0 | 0 | 0 |
+| personas-admin | 9 | 2 | 1 | 0 | 1 | 0 |
 | personas-roles | 13 | 1 | 0 | 0 | 1 | 0 |
 | pr3987 | 10 | 3 | 0 | 0 | 2 | 0 |
 | preflight | 4 | 0 | 0 | 0 | 0 | 0 |
 | probe-combo | 3 | 0 | 0 | 0 | 0 | 0 |
 | qa | 0 | 1 | 0 | 0 | 2 | 0 |
-| rbac | 57 | 0 | 0 | 0 | 4 | 0 |
-| regression-chains | 84 | 13 | 0 | 0 | 3 | 0 |
+| rbac | 57 | 0 | 0 | 0 | 5 | 0 |
+| regression-chains | 84 | 13 | 0 | 0 | 4 | 0 |
 | regression-seed | 16 | 0 | 0 | 0 | 0 | 0 |
 | reval2 | 4 | 0 | 0 | 0 | 0 | 0 |
 | revalidate | 3 | 0 | 0 | 0 | 0 | 0 |
@@ -40,22 +40,21 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/44284998733 · TZ Pacif
 
 ## Slowest tests
 
-- 486 s `modules|modules|tests/ux-heuristics-sweep.spec.ts|TC-HEUR-00: heuristic pass over every menu page`
+- 522 s `modules|modules|tests/ux-heuristics-sweep.spec.ts|TC-HEUR-00: heuristic pass over every menu page`
 - 360 s `e2e|e2e|test-catalog-titer-runtime.spec.ts|Test Catalog editor — Titer result type at runtime > TCC-T: Titer test → order → renders an interactive result-entry control → save → validate`
-- 255 s `modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-01: no page in the menu shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading`
-- 240 s `modules|modules|tests/a11y-control-names.spec.ts|TC-AXE-03: every visible form control on every menu page has an accessible name`
-- 143 s `modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-02: no Admin page shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading`
+- 279 s `modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-01: no page in the menu shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading`
+- 263 s `modules|modules|tests/a11y-control-names.spec.ts|TC-AXE-03: every visible form control on every menu page has an accessible name`
+- 155 s `modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-02: no Admin page shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading`
 - 125 s `qa|setup|auth.setup.ts|authenticate`
 - 123 s `modules|modules|tests/order-creation-e2e.spec.ts|Phase 32 — Order Creation E2E via UI > TC-ORD-13: Submit order and verify success message`
-- 96 s `modules|modules|tests/order-creation-e2e.spec.ts|Phase 32 — Order Creation E2E via UI > TC-ORD-12: Fill order details (dates, requester, site)`
-- 89 s `e2e|e2e|test-catalog-critical-indicator.spec.ts|OGC-1121 — critical vs abnormal result indicator (patient safety) [GUARD] > TCG-02: a CRITICAL value is styled identically to an ABNORMAL value at result entry (bug present → PASS; flips when a distinct critical marker ships)`
-- 75 s `all-tc|test-catalog|test-catalog-lab-unit-management-write.spec.ts|Lab Unit Management — write paths (OGC-189, PR #4121) > LU-W-10: deactivating a lab unit that still holds an assigned test is allowed without a prompt (CONTRACT FACT — unbuilt OGC-189 AC, FLIP-WHEN-FIXED)`
+- 97 s `modules|modules|tests/order-creation-e2e.spec.ts|Phase 32 — Order Creation E2E via UI > TC-ORD-12: Fill order details (dates, requester, site)`
+- 96 s `modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept`
+- 93 s `e2e|e2e|test-catalog-critical-indicator.spec.ts|OGC-1121 — critical vs abnormal result indicator (patient safety) [GUARD] > TCG-02: a CRITICAL value is styled identically to an ABNORMAL value at result entry (bug present → PASS; flips when a distinct critical marker ships)`
 
-## New failures (4)
+## New failures (3)
 
+- `modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept`
 - `modules|modules|tests/ogc-788-phrase-library.spec.ts|Phrase library (TC-PHR, OGC-788) > TC-PHR-06: bulk Deactivate names both phrases, Cancel changes nothing, confirm deactivates both; Activate restores both`
-- `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-TZ-05: Reception Time defaults to the local clock`
-- `modules|modules|tests/validation-review-panel.spec.ts|Validation review panel provenance > TC-TZ-06: "Entered on" shows the local time the result was saved`
 - `personas-admin|persona-pf|tests/personas/persona-pf-lab-administrator.spec.ts|Persona PF — Lab Administrator (first-time setup) > Step 3 — Create a new test (PERSIST, BUG-1/BUG-12 catch)`
 
 ## Known reds now passing (remove from ci-known-reds.json, check the ticket) (5)
@@ -70,7 +69,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/44284998733 · TZ Pacif
 
 - untriaged: 57
 - OGC-730: 12
-- harness: 8
+- harness: 9
 - ci-env: 4
 - lead: 2
 - R49: 1
