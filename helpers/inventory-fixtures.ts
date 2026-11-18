@@ -185,7 +185,8 @@ export async function deactivate(page: Page, itemId: number): Promise<void> {
 }
 
 async function findItem(page: Page, name: string): Promise<any | undefined> {
-  return (await allItems(page)).find((i) => i.name === name);
+  const items = (await allItems(page)).filter((i) => i.name === name);
+  return items.find((i) => i.isActive === 'Y') ?? items[0];
 }
 
 /** A throwaway item for one case, with an optional QC-passed lot. */
@@ -230,7 +231,19 @@ export async function ensureInventoryFixtures(page: Page, log: string[] = []): P
     return id;
   })();
 
-  ids.fefo = (await have(INV.fefo)) ?? await (async () => {
+  // The FEFO lots expire 15 and 8 days after they are received, so a reused item ages out (on testing
+  // FIRST and PENDING had expired by 18 Nov 2026 and TC-INVB-02/05 read 10 on hand, not 30). When a
+  // lot that should still be usable has expired, retire that item and receive a fresh set.
+  const fefoNow = await findItem(page, INV.fefo);
+  if (fefoNow && fefoNow.isActive === 'Y') {
+    const lots = await lotsOf(page, Number(fefoNow.id));
+    const soonest = Math.min(...lots.filter((l) => /FIRST|PENDING/.test(String(l.lotNumber))).map((l) => Number(l.expirationDate)));
+    if (!Number.isFinite(soonest) || soonest < Date.now() + 2 * 86_400_000) {
+      await deactivate(page, Number(fefoNow.id));
+      log.push(`retired aged ${INV.fefo} (${fefoNow.id})`);
+    }
+  }
+  ids.fefo = (await have(INV.fefo).then(async (id) => (id && (await findItem(page, INV.fefo))?.isActive === 'Y' ? id : undefined))) ?? await (async () => {
     const id = await createItem(page, INV.fefo, { threshold: 1 });
     await receiveLot(page, id, { number: 'QAINVFEFO-EXPIRED', qty: 10, expiresInDays: -3, qc: 'PASSED' });
     await receiveLot(page, id, { number: 'QAINVFEFO-FIRST', qty: 10, expiresInDays: 15, qc: 'PASSED' });
