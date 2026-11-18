@@ -92,10 +92,28 @@ def check_card(description: str) -> list[str]:
     return problems
 
 
+# Manual review sub-tasks (openelis-docs): "Doc review: <page>" under the release review story.
+# They are not bug reports, so they carry no filing card; Casey still approves each create.
+DOC_REVIEW_PARENTS = {"OGC-1271"}
+
+
+def is_doc_review(ti: dict) -> bool:
+    summary = str(ti.get("summary") or "").strip()
+    itype = str(ti.get("issueTypeName") or "").lower().replace("-", "").replace(" ", "")
+    parent = str(ti.get("parent") or "").strip().upper()
+    return itype == "subtask" and summary.startswith("Doc review:") and parent in DOC_REVIEW_PARENTS
+
+
 def jira_create(data: dict) -> None:
     ti = data.get("tool_input") or {}
     summary = str(ti.get("summary") or "")
     description = adf_text(ti.get("description") or "")
+    if is_doc_review(ti):
+        if "\u2014" in summary or "\u2014" in description:
+            pre_tool("deny", "openelis-qa filing gate: em dash in the summary or description (org rule: no em dashes).")
+            return
+        pre_tool("ask", f"Doc review sub-task under {str(ti.get('parent')).upper()}. Create \"{summary[:120]}\"?")
+        return
     problems = check_card(description)
     extra = ti.get("additional_fields") or {}
     labels = extra.get("labels") or []

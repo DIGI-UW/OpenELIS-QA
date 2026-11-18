@@ -54,6 +54,14 @@ expect("missing line denies", decision(run("jira-create", jira(CARD.replace("- S
 expect("placeholder denies", decision(run("jira-create", jira(CARD.replace("Build: testing.openelis-global.org, develop 482eb81c, 2 Nov 2026", "Build: TBD")))), "deny")
 expect("no automated-qa label denies", decision(run("jira-create", jira(CARD, labels=("qa-found",)))), "deny")
 expect("em dash denies", decision(run("jira-create", jira(CARD, summary="Order entry \u2014 no toast"))), "deny")
+# Doc review sub-tasks under the release review story skip the filing card but still ask.
+def subtask(summary, parent="OGC-1271", itype="Sub-task", desc="Review the manual page 1790115861."):
+    return {"tool_name": "mcp__Atlassian__createJiraIssue", "tool_input": {"projectKey": "OGC", "issueTypeName": itype, "parent": parent, "summary": summary, "description": desc}}
+expect("doc review sub-task asks", decision(run("jira-create", subtask("Doc review: Run a batch workplan"))), "ask")
+expect("doc review under another parent denies", decision(run("jira-create", subtask("Doc review: Run a batch workplan", parent="OGC-999"))), "deny")
+expect("doc review as a Bug denies", decision(run("jira-create", subtask("Doc review: Run a batch workplan", itype="Bug"))), "deny")
+expect("other sub-task denies", decision(run("jira-create", subtask("Fix the page"))), "deny")
+expect("doc review em dash denies", decision(run("jira-create", subtask("Doc review: Admin \u2014 tests"))), "deny")
 adf = {"type": "doc", "version": 1, "content": [
     {"type": "paragraph", "content": [{"type": "text", "text": line}]} for line in CARD.splitlines()]}
 expect("ADF card asks", decision(run("jira-create", jira(adf))), "ask")
