@@ -273,6 +273,21 @@ test.describe('OGC-1610: the calls calculate RESULT at result entry', () => {
     await enterCall(page, labNo, EBOLA, 'Internal control', 'Detected');
     expect((await shown(page, labNo, EBOLA)).Result).toBe('Not detected');
   });
+
+  test('TC-EBOV-09: RESULT, which a rule calculates, is not offered for entry by hand (R-36)', async ({ page }) => {
+    // FLIP-WHEN-FIXED. R-36 (Casey, 18 Nov 2026, OGC-1610 open question 5): the calculated value stands; a
+    // wrong RESULT is fixed by correcting a call. Observed 18 Nov 2026 on develop cd4bfc602: the Results page
+    // offers RESULT as an editable dropdown (Detected / Not detected / Invalid, retest) next to the calls.
+    test.fail();
+    const seed = await queueContext(page);
+    const { labNo } = await order(page, seed, [{ type: state.plasma!, tests: [state.ebola!] }]);
+    await page.goto(`/Results?accessionNumber=${labNo}`, { waitUntil: 'domcontentloaded' });
+    const row = componentRow(page, EBOLA, 'Result');
+    await expect(row).toBeVisible({ timeout: 30_000 });
+    await expect(componentRow(page, EBOLA, 'Ebola').locator('select'), 'the call is entered by hand').toBeEnabled();
+    const pick = row.locator('select');
+    expect((await pick.count()) === 0 || (await pick.isDisabled()), 'RESULT has no enabled answer picker').toBe(true);
+  });
 });
 
 test.describe('OGC-1610: Import Catalog and the sample type cache (lead, 18 Nov 2026)', () => {
