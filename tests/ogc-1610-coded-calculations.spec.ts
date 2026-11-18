@@ -274,19 +274,26 @@ test.describe('OGC-1610: the calls calculate RESULT at result entry', () => {
     expect((await shown(page, labNo, EBOLA)).Result).toBe('Not detected');
   });
 
-  test('TC-EBOV-09: RESULT, which a rule calculates, is not offered for entry by hand (R-36)', async ({ page }) => {
-    // FLIP-WHEN-FIXED. R-36 (Casey, 18 Nov 2026, OGC-1610 open question 5): the calculated value stands; a
-    // wrong RESULT is fixed by correcting a call. Observed 18 Nov 2026 on develop cd4bfc602: the Results page
-    // offers RESULT as an editable dropdown (Detected / Not detected / Invalid, retest) next to the calls.
-    test.fail();
+  // R-36 (Casey, 18 Nov 2026): a coded calculated result works like every other calculated value
+  // (TC-CALCI-04 to 06): hand entry is allowed, a hand value is kept, an empty result is calculated.
+  test('TC-EBOV-09: RESULT entered by hand before the calls is kept when the calls arrive (R-36, as TC-CALCI-04)', async ({ page }) => {
     const seed = await queueContext(page);
     const { labNo } = await order(page, seed, [{ type: state.plasma!, tests: [state.ebola!] }]);
-    await page.goto(`/Results?accessionNumber=${labNo}`, { waitUntil: 'domcontentloaded' });
-    const row = componentRow(page, EBOLA, 'Result');
-    await expect(row).toBeVisible({ timeout: 30_000 });
-    await expect(componentRow(page, EBOLA, 'Ebola').locator('select'), 'the call is entered by hand').toBeEnabled();
-    const pick = row.locator('select');
-    expect((await pick.count()) === 0 || (await pick.isDisabled()), 'RESULT has no enabled answer picker').toBe(true);
+    await enterCall(page, labNo, EBOLA, 'Result', 'Invalid, retest');
+    await enterCall(page, labNo, EBOLA, 'Ebola', 'Not detected');
+    await enterCall(page, labNo, EBOLA, 'Internal control', 'Detected');
+    expect((await shown(page, labNo, EBOLA)).Result, `RESULT on ${labNo} keeps the hand-entered answer, not Not detected`).toBe('Invalid, retest');
+  });
+
+  test('TC-EBOV-10: a calculated RESULT edited by hand is not recalculated when a call changes (R-36, as TC-CALCI-06)', async ({ page }) => {
+    const seed = await queueContext(page);
+    const { labNo } = await order(page, seed, [{ type: state.plasma!, tests: [state.ebola!] }]);
+    await enterCall(page, labNo, EBOLA, 'Ebola', 'Not detected');
+    await enterCall(page, labNo, EBOLA, 'Internal control', 'Detected');
+    expect((await shown(page, labNo, EBOLA)).Result, 'first calculated as Not detected').toBe('Not detected');
+    await enterCall(page, labNo, EBOLA, 'Result', 'Invalid, retest');
+    await enterCall(page, labNo, EBOLA, 'Internal control', 'Not detected');
+    expect((await shown(page, labNo, EBOLA)).Result, `RESULT on ${labNo} keeps the hand edit after a call changes`).toBe('Invalid, retest');
   });
 });
 
