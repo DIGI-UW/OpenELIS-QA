@@ -50,7 +50,7 @@ to contradict a row, ask Casey which stands; do not pick one yourself.
 | R-33 | Analyzers | No fuzzy matching engine (deferred to Catalyst): auto-match only on exact keys. Labs never type a sender name; the analyzer is identified from what it sends. Connecting is an IT and lab collaboration; OpenELIS does not guess the server address. Setup traffic is a setup capture, not results. | 2026-10-28 |
 | R-34 | RBAC | Cancelling a test with results and cancelling one without results are two separate permissions. | 2026-10-06 |
 | R-35 | Install | Install the latest release; every release ships an offline package; the online install staying on develop images is fine; recommend the latest Ubuntu LTS. | 2026-10-09 |
-| R-36 | Calculated results | A result a rule calculates stands as calculated: a technician fixes a wrong RESULT by correcting the input it reads (for OGC-1610, the EBOV/MARV or IC call), not by entering RESULT by hand. Answers OGC-1610 open question 5. | 2026-11-18 |
+| R-36 | Calculated results | A coded calculated result (OGC-1610 Ebola and Marburg RESULT) works like every other calculated value: an empty result is calculated from its inputs and recalculates when they change; a result entered or edited by hand is kept and not overwritten (as TC-CALCI-04 to 06). Hand entry of RESULT is allowed. Answers OGC-1610 open question 5; corrects the first wording of 18 Nov. | 2026-11-18 |
 
 ## Release calls
 
