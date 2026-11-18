@@ -1,14 +1,14 @@
-# develop-stack: develop `cd4bfc60`
+# develop-stack: develop `4fc36f91`
 
-Update OpenELIS translations from Transifex (#5125)
+fix(dates): environmental and vector order dates follow the site date format (OGC-1657) (#5127)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/44290840081 · TZ UTC · 2026-11-18T15:05:06.160Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/44385347262 · TZ UTC · 2026-11-18T21:54:26.364Z
 
-**3 NEW FAILURE(S)**: 92 failing = 89 known + 3 new; 5 known reds now pass.
+**5 NEW FAILURE(S)**: 93 failing = 88 known + 5 new; 5 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing | minutes | helper waits over 5 s |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| all-tc | 356 | 8 | 0 | 1 | 24 | 0 |
+| all-tc | 356 | 8 | 0 | 1 | 23 | 0 |
 | census | 124 | 5 | 0 | 0 | 6 | 0 |
 | cfg | 3 | 0 | 0 | 0 | 1 | 0 |
 | deep | 0 | 1 | 0 | 0 | 1 | 0 |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/44290840081 · TZ UTC �
 | guards | 18 | 1 | 0 | 0 | 4 | 0 |
 | lp | 10 | 0 | 0 | 0 | 3 | 0 |
 | modify-order | 7 | 1 | 0 | 0 | 1 | 0 |
-| modules | 1356 | 52 | 2 | 4 | 136 | 8 |
+| modules | 1354 | 53 | 4 | 4 | 111 | 8 |
 | multicomponent | 3 | 0 | 0 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 | 0 | 0 |
@@ -30,7 +30,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/44290840081 · TZ UTC �
 | probe-combo | 3 | 0 | 0 | 0 | 0 | 0 |
 | qa | 0 | 1 | 0 | 0 | 2 | 0 |
 | rbac | 57 | 0 | 0 | 0 | 5 | 0 |
-| regression-chains | 84 | 13 | 0 | 0 | 4 | 0 |
+| regression-chains | 84 | 13 | 0 | 0 | 5 | 0 |
 | regression-seed | 16 | 0 | 0 | 0 | 0 | 0 |
 | reval2 | 4 | 0 | 0 | 0 | 0 | 0 |
 | revalidate | 3 | 0 | 0 | 0 | 0 | 0 |
@@ -40,21 +40,23 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/44290840081 · TZ UTC �
 
 ## Slowest tests
 
-- 522 s `modules|modules|tests/ux-heuristics-sweep.spec.ts|TC-HEUR-00: heuristic pass over every menu page`
+- 464 s `modules|modules|tests/ux-heuristics-sweep.spec.ts|TC-HEUR-00: heuristic pass over every menu page`
 - 360 s `e2e|e2e|test-catalog-titer-runtime.spec.ts|Test Catalog editor — Titer result type at runtime > TCC-T: Titer test → order → renders an interactive result-entry control → save → validate`
-- 279 s `modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-01: no page in the menu shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading`
-- 263 s `modules|modules|tests/a11y-control-names.spec.ts|TC-AXE-03: every visible form control on every menu page has an accessible name`
-- 155 s `modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-02: no Admin page shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading`
+- 240 s `modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-01: no page in the menu shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading`
+- 223 s `modules|modules|tests/a11y-control-names.spec.ts|TC-AXE-03: every visible form control on every menu page has an accessible name`
+- 133 s `modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-02: no Admin page shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading`
 - 125 s `qa|setup|auth.setup.ts|authenticate`
-- 123 s `modules|modules|tests/order-creation-e2e.spec.ts|Phase 32 — Order Creation E2E via UI > TC-ORD-13: Submit order and verify success message`
-- 97 s `modules|modules|tests/order-creation-e2e.spec.ts|Phase 32 — Order Creation E2E via UI > TC-ORD-12: Fill order details (dates, requester, site)`
-- 96 s `modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept`
+- 122 s `modules|modules|tests/order-creation-e2e.spec.ts|Phase 32 — Order Creation E2E via UI > TC-ORD-13: Submit order and verify success message`
+- 96 s `modules|modules|tests/order-creation-e2e.spec.ts|Phase 32 — Order Creation E2E via UI > TC-ORD-12: Fill order details (dates, requester, site)`
 - 93 s `e2e|e2e|test-catalog-critical-indicator.spec.ts|OGC-1121 — critical vs abnormal result indicator (patient safety) [GUARD] > TCG-02: a CRITICAL value is styled identically to an ABNORMAL value at result entry (bug present → PASS; flips when a distinct critical marker ships)`
+- 91 s `modules|modules|tests/order-entry-v4-handoff.spec.ts|R-NET network resilience > TC-OEV4-NET-02 a 60 s outage shows Reconnecting and recovers, with no dead-end modal (R-NET-1, M12, was TC-NET-02)`
 
-## New failures (3)
+## New failures (5)
 
-- `modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept`
+- `modules|modules|tests/ogc-1610-coded-calculations.spec.ts|OGC-1610: coded calculated values (Ebola and Marburg PCR) > TC-EBOV-02: a calculated-values file loads coded rules that read each call and write an answer to RESULT`
 - `modules|modules|tests/ogc-788-phrase-library.spec.ts|Phrase library (TC-PHR, OGC-788) > TC-PHR-06: bulk Deactivate names both phrases, Cancel changes nothing, confirm deactivates both; Activate restores both`
+- `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered`
+- `modules|modules|tests/order-entry.spec.ts|Add Order workflow > TC-AO-02: Patient search finds existing patient`
 - `personas-admin|persona-pf|tests/personas/persona-pf-lab-administrator.spec.ts|Persona PF — Lab Administrator (first-time setup) > Step 3 — Create a new test (PERSIST, BUG-1/BUG-12 catch)`
 
 ## Known reds now passing (remove from ci-known-reds.json, check the ticket) (5)
@@ -69,7 +71,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/44290840081 · TZ UTC �
 
 - untriaged: 57
 - OGC-730: 12
-- harness: 9
+- harness: 8
 - ci-env: 4
 - lead: 2
 - R49: 1
