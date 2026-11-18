@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1 (2026-11-18)
+
+- Jira filing gate: a Sub-task under OGC-1271 whose summary starts with "Doc review:" (the user manual's page review tasks, made by the openelis-docs plugin) no longer needs a filing card. The gate still refuses an em dash and still asks Casey before every create. Bugs and every other issue type are unchanged.
+
 ## 0.1.0 (2026-11-03)
 
 First version. Replaces the `openelis-test-catalog-qa` skill (last installed 28 Sep, with three

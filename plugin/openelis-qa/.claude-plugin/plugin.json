@@ -1,6 +1,6 @@
 {
   "name": "openelis-qa",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "QA for OpenELIS Global: run and grade suites on a live instance, check what new work came in, confirm and file bugs without false positives, close verified fixes, keep the QA tracker current, capture evidence, and author test catalog CSVs.",
   "author": {
     "name": "Casey Iiams-Hauser, DIGI (University of Washington)"
