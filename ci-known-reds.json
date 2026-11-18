@@ -413,19 +413,9 @@
    "note": "Fresh stack only (43961492669): the rule overwrote the entered 5.5 with 6, which OGC-1587 forbids; passes on testing. Check on a fresh Mac stack. 17 Nov 2026.",
    "since": "2026-11-16"
   },
-  "modules|modules|tests/cphl-field-report.spec.ts|Results entry Method list (OGC-1614) > TC-CPHL-31: the Method list offers the test's linked active methods, A to Z": {
-   "ticket": "ci-env",
-   "note": "The CI catalog links no active method to Creatinine, so the Method list has nothing to offer; passes on testing. 17 Nov 2026.",
-   "since": "2026-11-16"
-  },
   "modules|modules|tests/fhir-integration.spec.ts|Suite FHIR-RESOURCES — Clinical Resource Queries (TC-FHIR-04–08) > TC-FHIR-07: FHIR Observation search returns a Bundle": {
    "ticket": "ci-env",
    "note": "GET /fhir/Observation answers 500 (OperationOutcome) on the fresh stack only; passes on testing. 17 Nov 2026.",
-   "since": "2026-11-16"
-  },
-  "modules|modules|tests/ogc-1515-part3.spec.ts|OGC-1515 part 3: searchable lists (#4929) > TC-1515-22 TAT report: sample type and ordering site are searchable": {
-   "ticket": "ci-env",
-   "note": "The fresh stack has one ordering site, the case wants two options to search among. 17 Nov 2026.",
    "since": "2026-11-16"
   },
   "modules|modules|tests/report-required-components.spec.ts|Patient report and Required result components (OGC-1608) > TC-RPTCOMP-00 upgrade: on an existing test only the primary component is Required": {
@@ -471,11 +461,6 @@
   "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-PatientEntry-initial: Patient Initial Entry renders": {
    "ticket": "untriaged",
    "note": "Legacy study pages (retroCIEntryByProject.jsp): initializeStudySelection() calls selectStudy(null) on a first visit, an uncaught TypeError since 2023 with nothing shown to the user; picking a study works (checked on testing 16 Nov; Initial Entry joined in develop-stack 44020392687, 17 Nov). The census spec that asserts no page errors is new (#242, 9 Nov).",
-   "since": "2026-11-17"
-  },
-  "all-tc|test-catalog|test-catalog-lab-unit-visibility.spec.ts|Lab unit visibility — choosers vs viewers (OGC-189) > G-2: [FLIP-WHEN-FIXED] the filtering is inverted — the VIEWER hides inactive units while the CHOOSER offers them": {
-   "ticket": "OGC-189",
-   "note": "Runs now that the inactive unit fixture works (it switched the unit off before moving the test in, and the server refuses that move). Same product question as G-4 and TO-5: should an inactive unit that holds tests be offered on the Results worklist? Checked on testing 17 Nov 2026.",
    "since": "2026-11-17"
   },
   "modules|modules|tests/order-entry-v4-handoff.spec.ts|R-TIME one clock > TC-OEV4-TIME-04 order entry and its dashboard use one date format (R-TIME-4)": {
