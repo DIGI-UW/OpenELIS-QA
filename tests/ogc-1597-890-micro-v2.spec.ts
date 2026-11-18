@@ -101,10 +101,11 @@ test.describe('Microbiology V2: V1 inoculation retired (OGC-1597), keyboard, con
   });
 
   test('TC-MV2-06: offline, the case page turns off its own saves (case note, case information)', async ({ page, context }) => {
-    // FLIP-WHEN-FIXED (OGC-890, AC-NFR-01-02). Observed 18 Nov 2026 on develop cd4bfc602: with the
-    // offline notice showing, Save note, Save, Save order detail and Save questionnaire answers stay
-    // enabled; Save note then shows "Unable to load or save case testing data." The gate (useOnline)
-    // is on the dialogs only; CaseTestingWorkspace's note and the order detail have none.
+    // FLIP-WHEN-FIXED (OGC-1659, blocks OGC-890 AC-NFR-01-02). Observed 18 Nov 2026 on develop
+    // cd4bfc602: with the offline notice showing, Save note, Save (Case info), Save order detail and
+    // Save questionnaire answers stay enabled; Save note then shows "Unable to load or save case testing
+    // data." The gate (useOnline) is on the dialogs only (CaseTestingWorkspace, OrderDetailPanel,
+    // CaseQuestionnaire and CaseContextEditor have none).
     test.fail();
     const id = await cultureCase(page);
     await page.goto(`/Microbiology/cases/${id}`);
