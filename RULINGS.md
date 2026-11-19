@@ -51,6 +51,7 @@ to contradict a row, ask Casey which stands; do not pick one yourself.
 | R-34 | RBAC | Cancelling a test with results and cancelling one without results are two separate permissions. | 2026-10-06 |
 | R-35 | Install | Install the latest release; every release ships an offline package; the online install staying on develop images is fine; recommend the latest Ubuntu LTS. | 2026-10-09 |
 | R-36 | Calculated results | A coded calculated result (OGC-1610 Ebola and Marburg RESULT) works like every other calculated value: an empty result is calculated from its inputs and recalculates when they change; a result entered or edited by hand is kept and not overwritten (as TC-CALCI-04 to 06). Hand entry of RESULT is allowed. Answers OGC-1610 open question 5; corrects the first wording of 18 Nov. | 2026-11-18 |
+| R-37 | Analyzers (OGC-1057) | Guided setup cannot finish until every switched-on assay and its results are mapped, marked "Do not receive", or the assay is switched off. The Verify step must say so (not "You can confirm and connect"). Connecting first and mapping from real traffic is OGC-1573. Unmapped results that do arrive are held and mapped later on the analyzer's mapping page. | 2026-11-18 |
 
 ## Release calls
 
