@@ -2,14 +2,14 @@
 
 Update OpenELIS translations from Transifex (#5147)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/44895120084 · TZ UTC · 2026-11-21T13:08:53.340Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/44936616965 · TZ UTC · 2026-11-21T20:41:57.166Z
 
-**6 NEW FAILURE(S)**: 95 failing = 89 known + 6 new; 5 known reds now pass.
+**8 NEW FAILURE(S)**: 96 failing = 88 known + 8 new; 5 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing | minutes | helper waits over 5 s |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| all-tc | 356 | 8 | 0 | 1 | 28 | 0 |
-| census | 124 | 5 | 0 | 0 | 5 | 0 |
+| all-tc | 356 | 8 | 0 | 1 | 23 | 0 |
+| census | 124 | 5 | 0 | 0 | 6 | 0 |
 | cfg | 3 | 0 | 0 | 0 | 1 | 0 |
 | deep | 0 | 1 | 0 | 0 | 1 | 0 |
 | disc | 1 | 0 | 0 | 0 | 1 | 0 |
@@ -19,17 +19,17 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/44895120084 · TZ UTC �
 | guards | 18 | 1 | 0 | 0 | 4 | 0 |
 | lp | 10 | 0 | 0 | 0 | 3 | 0 |
 | modify-order | 7 | 1 | 0 | 0 | 1 | 0 |
-| modules | 1359 | 55 | 5 | 4 | 139 | 8 |
+| modules | 1351 | 56 | 7 | 4 | 113 | 8 |
 | multicomponent | 3 | 0 | 0 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 | 0 | 0 |
-| personas-admin | 9 | 2 | 1 | 0 | 0 | 0 |
+| personas-admin | 9 | 2 | 1 | 0 | 1 | 0 |
 | personas-roles | 13 | 1 | 0 | 0 | 1 | 0 |
 | pr3987 | 10 | 3 | 0 | 0 | 2 | 0 |
 | preflight | 4 | 0 | 0 | 0 | 0 | 0 |
 | probe-combo | 3 | 0 | 0 | 0 | 0 | 0 |
 | qa | 0 | 1 | 0 | 0 | 2 | 0 |
-| rbac | 57 | 0 | 0 | 0 | 4 | 0 |
+| rbac | 57 | 0 | 0 | 0 | 5 | 0 |
 | regression-chains | 84 | 13 | 0 | 0 | 4 | 0 |
 | regression-seed | 16 | 0 | 0 | 0 | 0 | 0 |
 | reval2 | 4 | 0 | 0 | 0 | 0 | 0 |
@@ -40,23 +40,25 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/44895120084 · TZ UTC �
 
 ## Slowest tests
 
-- 521 s `modules|modules|tests/ux-heuristics-sweep.spec.ts|TC-HEUR-00: heuristic pass over every menu page`
+- 467 s `modules|modules|tests/ux-heuristics-sweep.spec.ts|TC-HEUR-00: heuristic pass over every menu page`
 - 360 s `e2e|e2e|test-catalog-titer-runtime.spec.ts|Test Catalog editor — Titer result type at runtime > TCC-T: Titer test → order → renders an interactive result-entry control → save → validate`
-- 282 s `modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-01: no page in the menu shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading`
-- 266 s `modules|modules|tests/a11y-control-names.spec.ts|TC-AXE-03: every visible form control on every menu page has an accessible name`
-- 158 s `modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-02: no Admin page shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading`
+- 240 s `modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-01: no page in the menu shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading`
+- 227 s `modules|modules|tests/a11y-control-names.spec.ts|TC-AXE-03: every visible form control on every menu page has an accessible name`
+- 136 s `modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-02: no Admin page shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading`
 - 125 s `qa|setup|auth.setup.ts|authenticate`
 - 123 s `modules|modules|tests/order-creation-e2e.spec.ts|Phase 32 — Order Creation E2E via UI > TC-ORD-13: Submit order and verify success message`
-- 99 s `e2e|e2e|test-catalog-critical-indicator.spec.ts|OGC-1121 — critical vs abnormal result indicator (patient safety) [GUARD] > TCG-02: a CRITICAL value is styled identically to an ABNORMAL value at result entry (bug present → PASS; flips when a distinct critical marker ships)`
-- 97 s `modules|modules|tests/order-creation-e2e.spec.ts|Phase 32 — Order Creation E2E via UI > TC-ORD-12: Fill order details (dates, requester, site)`
-- 92 s `modules|modules|tests/order-entry-v4-handoff.spec.ts|R-NET network resilience > TC-OEV4-NET-02 a 60 s outage shows Reconnecting and recovers, with no dead-end modal (R-NET-1, M12, was TC-NET-02)`
+- 96 s `modules|modules|tests/order-creation-e2e.spec.ts|Phase 32 — Order Creation E2E via UI > TC-ORD-12: Fill order details (dates, requester, site)`
+- 94 s `modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept`
+- 92 s `e2e|e2e|test-catalog-critical-indicator.spec.ts|OGC-1121 — critical vs abnormal result indicator (patient safety) [GUARD] > TCG-02: a CRITICAL value is styled identically to an ABNORMAL value at result entry (bug present → PASS; flips when a distinct critical marker ships)`
 
-## New failures (6)
+## New failures (8)
 
 - `modules|modules|tests/management-overview.spec.ts|Management Overview: screen > TC-MGMT-20 Reports lists Management Overview first; the page shows heading, subtitle and five tiles (guard)`
 - `modules|modules|tests/management-overview.spec.ts|Management Overview: screen > TC-MGMT-23 a failed KPI request shows an error, not five empty tiles (guard)`
+- `modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept`
 - `modules|modules|tests/ogc-1610-coded-calculations.spec.ts|OGC-1610: coded calculated values (Ebola and Marburg PCR) > TC-EBOV-02: a calculated-values file loads coded rules that read each call and write an answer to RESULT`
-- `modules|modules|tests/ogc-788-phrase-library.spec.ts|Phrase library (TC-PHR, OGC-788) > TC-PHR-08: Remove local phrases asks for a danger confirmation and removes only the selected phrase`
+- `modules|modules|tests/ogc-788-phrase-library.spec.ts|Phrase library (TC-PHR, OGC-788) > TC-PHR-06: bulk Deactivate names both phrases, Cancel changes nothing, confirm deactivates both; Activate restores both`
+- `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered`
 - `modules|modules|tests/workplan.spec.ts|Workplan paging, total and print (OGC-1647) > TC-WPP-10: Total Tests counts the whole queue and Print Workplan prints every page`
 - `personas-admin|persona-pf|tests/personas/persona-pf-lab-administrator.spec.ts|Persona PF — Lab Administrator (first-time setup) > Step 3 — Create a new test (PERSIST, BUG-1/BUG-12 catch)`
 
@@ -72,7 +74,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/44895120084 · TZ UTC �
 
 - untriaged: 57
 - OGC-730: 12
-- harness: 9
+- harness: 8
 - ci-env: 4
 - lead: 2
 - R49: 1
