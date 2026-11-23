@@ -482,8 +482,8 @@ test.describe('Relocated from gap-suites', () => {
 });
 
 /**
- * OGC-1647 (filed 16 Nov 2026): the workplan pages on the server (100 rows a page), but
- * "Total Tests" counts only the rows on screen and Print Workplan posts only that page.
+ * OGC-1647 (filed 16 Nov 2026, fixed by #5131): the workplan pages on the server; "Total Tests"
+ * must count the whole queue and Print Workplan must post every page, not only the one on screen.
  */
 test.describe('Workplan paging, total and print (OGC-1647)', () => {
   let panel: { value: string; text: string } | null = null;
@@ -517,9 +517,8 @@ test.describe('Workplan paging, total and print (OGC-1647)', () => {
   });
 
   test('TC-WPP-10: Total Tests counts the whole queue and Print Workplan prints every page', async ({ page }) => {
-    // FLIP-WHEN-FIXED (OGC-1647): "Total Tests = 100" over 15 pages on testing, and the print
-    // request posts the 100 rows on screen.
-    test.fail();
+    // Guard (flipped 23 Nov 2026, OGC-1647 fixed by #5131 at develop 17042146): on testing
+    // Bilan Biochimique showed 17 pages, Total Tests = 1699, and the print posted 1699 rows.
     const onPage = (await rowsOnPage(page.locator('main'))) ?? 0;
     const total = Number(((await page.getByText(/Total Tests\s*=\s*\d+/).first().innerText()).match(/\d+/) ?? ['0'])[0]);
     const posted = page.waitForRequest((r) => /PrintWorkplanReport/i.test(r.url()) && r.method() === 'POST', { timeout: 30_000 });

@@ -76,6 +76,11 @@ async function fillCode(page: Page, code: string) {
 
 async function typeAndPick(page: Page, fieldId: string, typed: string) {
   const f = page.locator(`#${fieldId}`);
+  await f.waitFor({ state: 'attached', timeout: 30_000 });
+  if (!(await f.isVisible())) {
+    // V3 (#5140, 20 Nov 2026) moved the order detail fields into the collapsed "Case info" accordion.
+    await page.locator('.cds--accordion__heading', { hasText: 'Case info' }).first().click();
+  }
   await f.waitFor({ timeout: 30_000 });
   await f.click();
   await f.fill('');
