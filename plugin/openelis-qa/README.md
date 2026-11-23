@@ -25,7 +25,7 @@ after installing this, or both sets of instructions will load.
 |---|---|
 | Agent `finding-skeptic` | Reads a filing card cold and tries to knock it down before Casey sees it. |
 | Hook: session start | Reminds the session where servers, rulings and the tracker live. |
-| Hook: Jira filing gate | Refuses `createJiraIssue` unless the description ends with a complete **QA checks** section and the `automated-qa` label; then asks Casey to approve. |
+| Hook: Jira filing gate | Refuses `createJiraIssue` unless the description ends with a complete **QA checks** section and the `automated-qa` label; then asks Casey to approve. Manual review sub-tasks (Sub-task under OGC-1271, summary starting "Doc review:") skip the card but are still asked. |
 | Hook: git guard | Refuses `git add -A`, `git add .`, `git commit -a` and force pushes in the public QA repo. |
 | Hook: tracker reminder | Once per change, asks for a tracker update when Jira or the QA repo changed and the tracker was not republished. |
 
