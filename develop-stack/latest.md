@@ -1,15 +1,15 @@
-# develop-stack: develop `7b0c67aa`
+# develop-stack: develop `e19ed6c2`
 
-feat(runs): pending rows of one test are batched into a run from the worklist, and a batch run takes its lot and is marked complete on it (OGC-1200) (#5188)
+feat(runs): a result saved on a row in no run is a run of one, and the row's sections show its run (OGC-1200) (#5197)
 
-Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/45656896492 · TZ UTC · 2026-11-25T19:23:44.540Z
+Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/45736053092 · TZ UTC · 2026-11-26T04:05:28.338Z
 
-**8 NEW FAILURE(S)**: 97 failing = 89 known + 8 new; 4 known reds now pass.
+**7 NEW FAILURE(S)**: 96 failing = 89 known + 7 new; 5 known reds now pass.
 
 | suite | passed | failing | new | known reds now passing | minutes | helper waits over 5 s |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| all-tc | 356 | 8 | 0 | 1 | 28 | 0 |
-| census | 124 | 5 | 0 | 0 | 6 | 0 |
+| all-tc | 356 | 8 | 0 | 1 | 21 | 0 |
+| census | 125 | 4 | 0 | 1 | 6 | 0 |
 | cfg | 3 | 0 | 0 | 0 | 1 | 0 |
 | deep | 0 | 1 | 0 | 0 | 1 | 0 |
 | disc | 1 | 0 | 0 | 0 | 1 | 0 |
@@ -19,7 +19,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/45656896492 · TZ UTC �
 | guards | 18 | 1 | 0 | 0 | 4 | 0 |
 | lp | 10 | 0 | 0 | 0 | 3 | 0 |
 | modify-order | 7 | 1 | 0 | 0 | 1 | 0 |
-| modules | 1351 | 57 | 7 | 3 | 140 | 8 |
+| modules | 1355 | 57 | 6 | 3 | 140 | 8 |
 | multicomponent | 3 | 0 | 0 | 0 | 0 | 0 |
 | ogc1192 | 9 | 0 | 0 | 0 | 0 | 0 |
 | panel-leak | 5 | 0 | 0 | 0 | 0 | 0 |
@@ -30,7 +30,7 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/45656896492 · TZ UTC �
 | probe-combo | 3 | 0 | 0 | 0 | 0 | 0 |
 | qa | 0 | 1 | 0 | 0 | 2 | 0 |
 | rbac | 57 | 0 | 0 | 0 | 5 | 0 |
-| regression-chains | 84 | 13 | 0 | 0 | 5 | 0 |
+| regression-chains | 84 | 13 | 0 | 0 | 4 | 0 |
 | regression-seed | 16 | 0 | 0 | 0 | 0 | 0 |
 | reval2 | 4 | 0 | 0 | 0 | 0 | 0 |
 | revalidate | 3 | 0 | 0 | 0 | 0 | 0 |
@@ -40,18 +40,18 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/45656896492 · TZ UTC �
 
 ## Slowest tests
 
-- 528 s `modules|modules|tests/ux-heuristics-sweep.spec.ts|TC-HEUR-00: heuristic pass over every menu page`
+- 531 s `modules|modules|tests/ux-heuristics-sweep.spec.ts|TC-HEUR-00: heuristic pass over every menu page`
 - 360 s `e2e|e2e|test-catalog-titer-runtime.spec.ts|Test Catalog editor — Titer result type at runtime > TCC-T: Titer test → order → renders an interactive result-entry control → save → validate`
 - 288 s `modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-01: no page in the menu shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading`
 - 267 s `modules|modules|tests/a11y-control-names.spec.ts|TC-AXE-03: every visible form control on every menu page has an accessible name`
-- 159 s `modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-02: no Admin page shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading`
+- 158 s `modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-02: no Admin page shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading`
 - 125 s `qa|setup|auth.setup.ts|authenticate`
-- 124 s `modules|modules|tests/order-creation-e2e.spec.ts|Phase 32 — Order Creation E2E via UI > TC-ORD-13: Submit order and verify success message`
-- 100 s `e2e|e2e|test-catalog-critical-indicator.spec.ts|OGC-1121 — critical vs abnormal result indicator (patient safety) [GUARD] > TCG-02: a CRITICAL value is styled identically to an ABNORMAL value at result entry (bug present → PASS; flips when a distinct critical marker ships)`
+- 123 s `modules|modules|tests/order-creation-e2e.spec.ts|Phase 32 — Order Creation E2E via UI > TC-ORD-13: Submit order and verify success message`
 - 97 s `modules|modules|tests/order-creation-e2e.spec.ts|Phase 32 — Order Creation E2E via UI > TC-ORD-12: Fill order details (dates, requester, site)`
-- 80 s `all-tc|test-catalog|test-catalog-lab-unit-management-write.spec.ts|Lab Unit Management — write paths (OGC-189, PR #4121) > LU-W-10: deactivating a lab unit that still holds an assigned test is allowed without a prompt (CONTRACT FACT — unbuilt OGC-189 AC, FLIP-WHEN-FIXED)`
+- 90 s `modules|modules|tests/order-entry-v4-handoff.spec.ts|R-NET network resilience > TC-OEV4-NET-02 a 60 s outage shows Reconnecting and recovers, with no dead-end modal (R-NET-1, M12, was TC-NET-02)`
+- 89 s `e2e|e2e|test-catalog-critical-indicator.spec.ts|OGC-1121 — critical vs abnormal result indicator (patient safety) [GUARD] > TCG-02: a CRITICAL value is styled identically to an ABNORMAL value at result entry (bug present → PASS; flips when a distinct critical marker ships)`
 
-## New failures (8)
+## New failures (7)
 
 - `modules|modules|tests/cphl-field-report.spec.ts|Removing a test from an environmental order (OGC-1613) > TC-CPHL-20: removing a test with no result saves`
 - `modules|modules|tests/cphl-field-report.spec.ts|Removing a test from an environmental order (OGC-1613) > TC-CPHL-21: removing a resulted test asks for the reason, then cancels the test`
@@ -59,23 +59,23 @@ Run: https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/45656896492 · TZ UTC �
 - `modules|modules|tests/management-overview.spec.ts|Management Overview: screen > TC-MGMT-23 a failed KPI request shows an error, not five empty tiles (guard)`
 - `modules|modules|tests/ogc-1610-coded-calculations.spec.ts|OGC-1610: coded calculated values (Ebola and Marburg PCR) > TC-EBOV-02: a calculated-values file loads coded rules that read each call and write an answer to RESULT`
 - `modules|modules|tests/ogc-788-phrase-library.spec.ts|Phrase library (TC-PHR, OGC-788) > TC-PHR-06: bulk Deactivate names both phrases, Cancel changes nothing, confirm deactivates both; Activate restores both`
-- `modules|modules|tests/order-entry-defaults.spec.ts|Add Order defaults (UTC+10) > TC-OED-00: CANARY the order saved with the received date and time entered`
 - `personas-admin|persona-pf|tests/personas/persona-pf-lab-administrator.spec.ts|Persona PF — Lab Administrator (first-time setup) > Step 3 — Create a new test (PERSIST, BUG-1/BUG-12 catch)`
 
-## Known reds now passing (remove from ci-known-reds.json, check the ticket) (4)
+## Known reds now passing (remove from ci-known-reds.json, check the ticket) (5)
 
 - `modules|modules|tests/cphl-field-report.spec.ts|Results entry Method list (OGC-1614) > TC-CPHL-31: the Method list offers the test's linked active methods, A to Z`
-- `modules|modules|tests/dashboard.spec.ts|Suite DASH-DEEP — Dashboard API Deep Validation (TC-DASH-DEEP) > TC-DASH-DEEP-03: Dashboard KPI values are numeric (non-negative)`
 - `modules|modules|tests/ogc-1515-part3.spec.ts|OGC-1515 part 3: searchable lists (#4929) > TC-1515-22 TAT report: sample type and ordering site are searchable`
+- `modules|modules|tests/order-entry-v4-handoff.spec.ts|R-TIME one clock > TC-OEV4-TIME-04 order entry and its dashboard use one date format (R-TIME-4)`
 - `all-tc|test-catalog|test-catalog-lab-unit-visibility.spec.ts|Lab unit visibility — choosers vs viewers (OGC-189) > G-2: [FLIP-WHEN-FIXED] the filtering is inverted — the VIEWER hides inactive units while the CHOOSER offers them`
+- `census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-PatientEntry-initial: Patient Initial Entry renders`
 
 ## Known reds by ticket
 
-- untriaged: 58
+- untriaged: 56
 - OGC-730: 12
-- harness: 8
+- harness: 9
 - ci-env: 4
-- lead: 2
+- lead: 3
 - R49: 1
 - OGC-1446: 1
 - OGC-1367: 1
