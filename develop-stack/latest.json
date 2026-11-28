@@ -1,26 +1,97 @@
 {
- "when": "2026-11-27T16:59:45.384Z",
- "sha": "",
- "subject": "{\"message\":\"No commit found for SHA: \",\"documentation_url\":\"https://docs.github.com/rest/commits/commits#get-a-commit\",\"status\":\"422\"}fix(calendar): reject impossible holiday dates instead of saving a different day (#5176) (#5179)",
- "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/46030062707",
+ "when": "2026-11-28T03:24:53.784Z",
+ "sha": "8f151cabe3f4d7a0e801a0e594ed6e41b63d3888",
+ "subject": "fix(calendar): reject impossible holiday dates instead of saving a different day (#5176) (#5179)",
+ "runUrl": "https://github.com/DIGI-UW/OpenELIS-QA/actions/runs/46090838674",
  "tz": "UTC",
  "bootstrap": false,
  "noResults": false,
  "totals": {
-  "failing": 40,
-  "known": 39,
-  "new": 1,
-  "fixed": 1
+  "failing": 98,
+  "known": 90,
+  "new": 8,
+  "fixed": 4
  },
  "knownByTicket": {
-  "untriaged": 33,
-  "harness": 2,
-  "OGC-730": 1,
+  "untriaged": 57,
+  "OGC-730": 12,
+  "lead": 3,
+  "ci-env": 4,
+  "harness": 9,
+  "R49": 1,
+  "OGC-1446": 1,
+  "OGC-1367": 1,
   "OGC-189": 1,
-  "question": 1,
-  "lead": 1
+  "question": 1
  },
  "suites": {
+  "modules": {
+   "counts": {
+    "expected": 1353,
+    "unexpected": 58,
+    "flaky": 0,
+    "skipped": 143
+   },
+   "new": [
+    "modules|modules|tests/cphl-field-report.spec.ts|Removing a test from an environmental order (OGC-1613) > TC-CPHL-20: removing a test with no result saves",
+    "modules|modules|tests/cphl-field-report.spec.ts|Removing a test from an environmental order (OGC-1613) > TC-CPHL-21: removing a resulted test asks for the reason, then cancels the test",
+    "modules|modules|tests/management-overview.spec.ts|Management Overview: screen > TC-MGMT-20 Reports lists Management Overview first; the page shows heading, subtitle and five tiles (guard)",
+    "modules|modules|tests/management-overview.spec.ts|Management Overview: screen > TC-MGMT-23 a failed KPI request shows an error, not five empty tiles (guard)",
+    "modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept",
+    "modules|modules|tests/ogc-1610-coded-calculations.spec.ts|OGC-1610: coded calculated values (Ebola and Marburg PCR) > TC-EBOV-02: a calculated-values file loads coded rules that read each call and write an answer to RESULT",
+    "modules|modules|tests/ogc-788-phrase-library.spec.ts|Phrase library (TC-PHR, OGC-788) > TC-PHR-06: bulk Deactivate names both phrases, Cancel changes nothing, confirm deactivates both; Activate restores both"
+   ],
+   "fixed": [
+    "modules|modules|tests/cphl-field-report.spec.ts|Results entry Method list (OGC-1614) > TC-CPHL-31: the Method list offers the test's linked active methods, A to Z",
+    "modules|modules|tests/ogc-1515-part3.spec.ts|OGC-1515 part 3: searchable lists (#4929) > TC-1515-22 TAT report: sample type and ordering site are searchable",
+    "modules|modules|tests/order-entry-duplicate-patient.spec.ts|TC-DUPPAT-03 existing patient chosen from the search stays one patient (guard)"
+   ],
+   "known": 51,
+   "minutes": 132,
+   "slowest": [
+    {
+     "id": "modules|modules|tests/ux-heuristics-sweep.spec.ts|TC-HEUR-00: heuristic pass over every menu page",
+     "seconds": 507
+    },
+    {
+     "id": "modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-01: no page in the menu shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading",
+     "seconds": 273
+    },
+    {
+     "id": "modules|modules|tests/a11y-control-names.spec.ts|TC-AXE-03: every visible form control on every menu page has an accessible name",
+     "seconds": 256
+    },
+    {
+     "id": "modules|modules|tests/ui-text-sweep.spec.ts|TC-UIX-02: no Admin page shows [object Object], NaN, undefined, raw i18n keys or a server error, or gets a 5xx while loading",
+     "seconds": 152
+    },
+    {
+     "id": "modules|modules|tests/order-creation-e2e.spec.ts|Phase 32 — Order Creation E2E via UI > TC-ORD-13: Submit order and verify success message",
+     "seconds": 123
+    },
+    {
+     "id": "modules|modules|tests/order-creation-e2e.spec.ts|Phase 32 — Order Creation E2E via UI > TC-ORD-12: Fill order details (dates, requester, site)",
+     "seconds": 97
+    },
+    {
+     "id": "modules|modules|tests/notebook-project.spec.ts|Notebook project form (TC-ELNW) > TC-ELNW-05: an edited project Objective is kept",
+     "seconds": 95
+    },
+    {
+     "id": "modules|modules|tests/order-entry-v4-handoff.spec.ts|R-NET network resilience > TC-OEV4-NET-02 a 60 s outage shows Reconnecting and recovers, with no dead-end modal (R-NET-1, M12, was TC-NET-02)",
+     "seconds": 63
+    },
+    {
+     "id": "modules|modules|tests/order-entry-state.spec.ts|Order entry — state reset and lab number lifecycle (TC-OE) > TC-OE-05: nothing must be posted while the form sits untouched",
+     "seconds": 57
+    },
+    {
+     "id": "modules|modules|tests/admin-config.spec.ts|Suite AW — Logging, Legacy Admin, Plugins > TC-LEG-02: Legacy admin interface or redirect documented",
+     "seconds": 51
+    }
+   ],
+   "slowWaits": 8
+  },
   "qa": {
    "counts": {
     "expected": 0,
@@ -86,23 +157,23 @@
    "new": [],
    "fixed": [],
    "known": 13,
-   "minutes": 5,
+   "minutes": 6,
    "slowest": [
     {
-     "id": "regression-chains|chain-c|tests/chains/chain-c-reflex-trigger.spec.ts|Chain C — Reflex Trigger > Step 1 — Acquire a QA_AUTO_ order (RENDER)",
-     "seconds": 31
+     "id": "regression-chains|chain-e|tests/chains/chain-e-sample-validation-lifecycle.spec.ts|Chain E — Sample Validation Lifecycle > Step 1 — Acquire QA_AUTO_ order (RENDER)",
+     "seconds": 33
     },
     {
-     "id": "regression-chains|chain-e|tests/chains/chain-e-sample-validation-lifecycle.spec.ts|Chain E — Sample Validation Lifecycle > Step 1 — Acquire QA_AUTO_ order (RENDER)",
-     "seconds": 31
+     "id": "regression-chains|chain-c|tests/chains/chain-c-reflex-trigger.spec.ts|Chain C — Reflex Trigger > Step 1 — Acquire a QA_AUTO_ order (RENDER)",
+     "seconds": 32
     },
     {
      "id": "regression-chains|chain-b|tests/chains/chain-b-rejection.spec.ts|Chain B — Rejection → NCE → Report > Step 1 — Acquire a QA_AUTO_ order (RENDER)",
-     "seconds": 31
+     "seconds": 32
     },
     {
      "id": "regression-chains|chain-k|tests/chains/chain-k-fhir-round-trip.spec.ts|Chain K — FHIR Round-trip > Step 3 — Acquire an order so we have a Patient + Observation to round-trip (RENDER)",
-     "seconds": 28
+     "seconds": 29
     },
     {
      "id": "regression-chains|chain-a|tests/chains/chain-a-order-lifecycle.spec.ts|Chain A — Order Lifecycle > Step 1 — Acquire a QA_AUTO_ order (RENDER)",
@@ -110,23 +181,23 @@
     },
     {
      "id": "regression-chains|chain-d|tests/chains/chain-d-calculated-value.spec.ts|Chain D — Calculated Value > Step 2 — Seed an accession carrying all operand tests (PERSIST)",
-     "seconds": 13
-    },
-    {
-     "id": "regression-chains|chain-h|tests/chains/chain-h-permission-enforcement.spec.ts|Chain H — Permission Enforcement > Step 1 — Obtain a restricted-role identity (reuse seeded, else create)",
-     "seconds": 4
+     "seconds": 14
     },
     {
      "id": "regression-chains|chain-g|tests/chains/chain-g-cold-chain-excursion.spec.ts|Chain G — Cold-Chain Excursion > Step 1 — Cold Storage device exists (FUNCTION)",
      "seconds": 4
     },
     {
-     "id": "regression-chains|chain-h|tests/chains/chain-h-permission-enforcement.spec.ts|Chain H — Permission Enforcement > Step 2 — Login as restricted user in fresh browser context (FUNCTION)",
+     "id": "regression-chains|chain-k|tests/chains/chain-k-fhir-round-trip.spec.ts|Chain K — FHIR Round-trip > Step 1 — FHIR metadata endpoint reachable (RENDER)",
      "seconds": 4
     },
     {
-     "id": "regression-chains|chain-k|tests/chains/chain-k-fhir-round-trip.spec.ts|Chain K — FHIR Round-trip > Step 1 — FHIR metadata endpoint reachable (RENDER)",
-     "seconds": 3
+     "id": "regression-chains|chain-f|tests/chains/chain-f-eqa-distribution.spec.ts|Chain F — EQA Distribution > Step 1 — eqaEnabled config check (FUNCTION)",
+     "seconds": 4
+    },
+    {
+     "id": "regression-chains|chain-d|tests/chains/chain-d-calculated-value.spec.ts|Chain D — Calculated Value > Step 1 — Discover an active calc rule (FUNCTION)",
+     "seconds": 4
     }
    ],
    "slowWaits": 0
@@ -159,15 +230,15 @@
     },
     {
      "id": "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Panels (TC-CX-PN) > TC-CX-PN-02: if the member list fails to load, saving one added test does not replace every existing member",
-     "seconds": 27
+     "seconds": 29
     },
     {
      "id": "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: activation (TC-CX-AV) > TC-CX-AV-03: lifecycle: activate, deactivate, reactivate; order entry follows each step",
-     "seconds": 27
+     "seconds": 29
     },
     {
      "id": "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Panels (TC-CX-PN) > TC-CX-PN-07: two editors: a stale member list does not drop the test another admin just added",
-     "seconds": 21
+     "seconds": 22
     },
     {
      "id": "all-tc|test-catalog|test-catalog-admin-list-screens-write.spec.ts|Panel Editor — create > PW-1: Save issues the documented two-call create and reports success",
@@ -175,14 +246,14 @@
     },
     {
      "id": "all-tc|test-catalog|test-catalog-admin-list-screens.spec.ts|Panel Editor filters > TC-PANEL-08 — the domain filter is wired to the table, both when it matches and when it does not",
-     "seconds": 16
-    },
-    {
-     "id": "all-tc|test-catalog|test-catalog-mn-sampletypes.spec.ts|Test Catalog — sample-type many-to-many (Phase 1, OGC-1145) > MN-2: an activated multi-specimen test is orderable under EACH specimen",
-     "seconds": 15
+     "seconds": 17
     },
     {
      "id": "all-tc|test-catalog|test-catalog-chaos-links.spec.ts|Test Catalog chaos: Panels (TC-CX-PN) > TC-CX-PN-08: lifecycle: build a panel, reorder, remove a member, deactivate; order entry and the test side follow",
+     "seconds": 16
+    },
+    {
+     "id": "all-tc|test-catalog|test-catalog-chaos.spec.ts|Test Catalog chaos: Basic Info save faults (TC-CHAOS-BI) > CHAOS-BI-08: a Save sent without lastupdated is not checked for staleness (recorded, not judged)",
      "seconds": 15
     }
    ],
@@ -249,7 +320,7 @@
     },
     {
      "id": "e2e|e2e|test-catalog-critical-indicator.spec.ts|OGC-1121 — critical vs abnormal result indicator (patient safety) [GUARD] > TCG-02: a CRITICAL value is styled identically to an ABNORMAL value at result entry (bug present → PASS; flips when a distinct critical marker ships)",
-     "seconds": 99
+     "seconds": 100
     },
     {
      "id": "e2e|e2e|test-catalog-sections-roundtrip.spec.ts|Test Catalog editor — section round-trips (A–G) > OGC-1116: created + activated test becomes orderable in /rest/test-list",
@@ -261,7 +332,7 @@
     },
     {
      "id": "e2e|e2e|test-catalog-sections-roundtrip.spec.ts|Test Catalog editor — section round-trips (A–G) > TCD: Normal/Critical/Valid range round-trips with component association (FR-19)",
-     "seconds": 18
+     "seconds": 19
     },
     {
      "id": "e2e|e2e|test-catalog-sections-roundtrip.spec.ts|Test Catalog editor — section round-trips (A–G) > TCF-02: add-to-existing-panel and remove-membership round-trip",
@@ -269,7 +340,7 @@
     },
     {
      "id": "e2e|e2e|test-catalog-sections-roundtrip.spec.ts|Test Catalog editor — section round-trips (A–G) > TCC-D: dictionary result type with select-list options round-trips (value/sort/normal)",
-     "seconds": 15
+     "seconds": 16
     },
     {
      "id": "e2e|e2e|test-catalog-sections-roundtrip.spec.ts|Test Catalog editor — section round-trips (A–G) > TCC-M: multi-select type and its select-list options persist [FIXED OGC-1123]",
@@ -307,12 +378,12 @@
      "seconds": 23
     },
     {
-     "id": "guards|guards|test-catalog-sections-roundtrip.spec.ts|Test Catalog editor — section round-trips (A–G) > TCC-10: two components render as accordion, persist, and reorder round-trips",
+     "id": "guards|guards|test-catalog-sections-roundtrip.spec.ts|Test Catalog editor — section round-trips (A–G) > TCD: Normal/Critical/Valid range round-trips with component association (FR-19)",
      "seconds": 19
     },
     {
-     "id": "guards|guards|test-catalog-sections-roundtrip.spec.ts|Test Catalog editor — section round-trips (A–G) > TCD: Normal/Critical/Valid range round-trips with component association (FR-19)",
-     "seconds": 19
+     "id": "guards|guards|test-catalog-sections-roundtrip.spec.ts|Test Catalog editor — section round-trips (A–G) > TCC-10: two components render as accordion, persist, and reorder round-trips",
+     "seconds": 18
     },
     {
      "id": "guards|guards|test-catalog-sections-roundtrip.spec.ts|Test Catalog editor — section round-trips (A–G) > TCF-02: add-to-existing-panel and remove-membership round-trip",
@@ -335,7 +406,7 @@
      "seconds": 14
     },
     {
-     "id": "guards|guards|test-catalog-sections-roundtrip.spec.ts|Test Catalog editor — section round-trips (A–G) > TCF-03 Methods: Link Method persists",
+     "id": "guards|guards|test-catalog-sections-roundtrip.spec.ts|Test Catalog editor — section round-trips (A–G) > TCF-05 Alerts: rule with Critical trigger persists",
      "seconds": 14
     }
    ],
@@ -398,7 +469,7 @@
     },
     {
      "id": "panel-leak|panel-leak|tests/panel-sample-type-leak.spec.ts|TC-PANEL-LEAK-3: no panel may offer a test outside the sample type it is offered under",
-     "seconds": 2
+     "seconds": 1
     },
     {
      "id": "panel-leak|panel-leak|tests/panel-sample-type-leak.spec.ts|TC-PANEL-LEAK-0: the panel really does span two sample types",
@@ -463,11 +534,11 @@
      "seconds": 3
     },
     {
-     "id": "workplan|setup|auth.setup.ts|authenticate",
-     "seconds": 3
+     "id": "workplan|workplan|tests/workplan-by-unit-crash.spec.ts|TC-WP-UNIT — Workplan By Unit > TC-WP-UNIT-1: every unit in the picker answers without a 5xx",
+     "seconds": 2
     },
     {
-     "id": "workplan|workplan|tests/workplan-by-unit-crash.spec.ts|TC-WP-UNIT — Workplan By Unit > TC-WP-UNIT-1: every unit in the picker answers without a 5xx",
+     "id": "workplan|setup|auth.setup.ts|authenticate",
      "seconds": 2
     }
    ],
@@ -486,15 +557,11 @@
    "minutes": 6,
    "slowest": [
     {
-     "id": "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-PatientEntry-initial: Patient Initial Entry renders",
-     "seconds": 7
-    },
-    {
-     "id": "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-PatientEdit-ro: Patient View renders",
+     "id": "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-PatientEntry-verify: Patient Double Entry renders",
      "seconds": 6
     },
     {
-     "id": "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-PatientEntry-verify: Patient Double Entry renders",
+     "id": "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-PatientEdit-ro: Patient View renders",
      "seconds": 6
     },
     {
@@ -502,16 +569,12 @@
      "seconds": 6
     },
     {
-     "id": "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-analyzers-errors: Analyzer Error Dashboard renders",
+     "id": "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-PatientEntry-initial: Patient Initial Entry renders",
      "seconds": 6
     },
     {
-     "id": "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-analyzers-types: Analyzer Types renders",
-     "seconds": 3
-    },
-    {
-     "id": "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-LaporanHasil: Compliance Report renders",
-     "seconds": 3
+     "id": "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-analyzers-errors: Analyzer Error Dashboard renders",
+     "seconds": 6
     },
     {
      "id": "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-order-clinical: Clinical order dashboard renders",
@@ -522,7 +585,15 @@
      "seconds": 3
     },
     {
-     "id": "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-Storage-sample-items: Storage - Sample Items renders",
+     "id": "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-LaporanHasil: Compliance Report renders",
+     "seconds": 3
+    },
+    {
+     "id": "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-analyzers-types: Analyzer Types renders",
+     "seconds": 3
+    },
+    {
+     "id": "census|census|tests/app-route-census.spec.ts|TC-APP-CENSUS — every working route renders > TC-APPCENSUS-order-clinical-collect: Clinical - Collect Sample renders",
      "seconds": 3
     }
    ],
@@ -545,11 +616,11 @@
      "seconds": 17
     },
     {
-     "id": "cfg||config-pages.spec.ts|TC-CFG-02: each reporting integration exposes enable + URL + queue (RENDER)",
+     "id": "cfg||config-pages.spec.ts|TC-CFG-03: Order Entry Configuration page loads and lists its items (FUNCTION)",
      "seconds": 17
     },
     {
-     "id": "cfg||config-pages.spec.ts|TC-CFG-03: Order Entry Configuration page loads and lists its items (FUNCTION)",
+     "id": "cfg||config-pages.spec.ts|TC-CFG-02: each reporting integration exposes enable + URL + queue (RENDER)",
      "seconds": 17
     }
    ],
@@ -588,7 +659,7 @@
    "slowest": [
     {
      "id": "envseed|probe|tests/envseed.spec.ts|create deployment-named env tests on sample type 51",
-     "seconds": 12
+     "seconds": 11
     },
     {
      "id": "envseed|setup|analyzer-auth.setup.ts|authenticate against the analyzers instance",
@@ -596,7 +667,7 @@
     },
     {
      "id": "envseed|setup|auth.setup.ts|authenticate",
-     "seconds": 3
+     "seconds": 2
     }
    ],
    "slowWaits": 0
@@ -623,7 +694,7 @@
     },
     {
      "id": "eqa|setup|auth.setup.ts|authenticate",
-     "seconds": 3
+     "seconds": 2
     }
    ],
    "slowWaits": 0
@@ -641,11 +712,11 @@
    "minutes": 3,
    "slowest": [
     {
-     "id": "lp||label-presets.spec.ts|TC-LP-05: editing a preset dimension in the UI saves and reads back [ROUND-TRIP]",
+     "id": "lp||label-presets.spec.ts|TC-LP-09: a successful save shows a confirmation [FUNCTION]",
      "seconds": 19
     },
     {
-     "id": "lp||label-presets.spec.ts|TC-LP-09: a successful save shows a confirmation [FUNCTION]",
+     "id": "lp||label-presets.spec.ts|TC-LP-05: editing a preset dimension in the UI saves and reads back [ROUND-TRIP]",
      "seconds": 19
     },
     {
@@ -658,7 +729,7 @@
     },
     {
      "id": "lp||label-presets.spec.ts|TC-LP-01: Label Presets list renders with the 5 system presets (RENDER)",
-     "seconds": 18
+     "seconds": 17
     },
     {
      "id": "lp||label-presets.spec.ts|TC-LP-02: list columns + Add Preset present (RENDER)",
@@ -670,11 +741,11 @@
     },
     {
      "id": "lp||label-presets.spec.ts|TC-LP-08: a partial update that omits `fields` does not delete them [PERSIST]",
-     "seconds": 17
+     "seconds": 16
     },
     {
      "id": "lp||label-presets.spec.ts|TC-LP-10: saving a preset does not alter its name [ROUND-TRIP]",
-     "seconds": 17
+     "seconds": 16
     },
     {
      "id": "lp||label-presets.spec.ts|TC-LP-06: PUT accepts the payload shape the editor actually sends [FUNCTION]",
@@ -697,7 +768,7 @@
    "slowest": [
     {
      "id": "modify-order|modify-order|tests/modify-order-field-binding.spec.ts|Modify Order — field binding and save gate (FLIP-WHEN-FIXED) > MO-1: the Lab Number is read-only text on the ORDER step — no input bound to newAccessionNumber",
-     "seconds": 31
+     "seconds": 29
     },
     {
      "id": "modify-order|modify-order|tests/modify-order-field-binding.spec.ts|Modify Order — field binding and save gate (FLIP-WHEN-FIXED) > MO-5: [DEFECT] the field that hard-blocks Submit is not marked required, and its error is never wired to the input",
@@ -705,7 +776,7 @@
     },
     {
      "id": "modify-order|modify-order|tests/modify-order-field-binding.spec.ts|Modify Order — field binding and save gate (FLIP-WHEN-FIXED) > MO-6: a plain save preserves every field — opening and submitting an order changes nothing",
-     "seconds": 6
+     "seconds": 5
     },
     {
      "id": "modify-order|modify-order|tests/modify-order-field-binding.spec.ts|Modify Order — field binding and save gate (FLIP-WHEN-FIXED) > MO-7: the ORDER step offers no Generate control that could mint a new accession number",
@@ -724,11 +795,11 @@
      "seconds": 3
     },
     {
-     "id": "modify-order|modify-order|tests/modify-order-field-binding.spec.ts|Modify Order — field binding and save gate (FLIP-WHEN-FIXED) > MO-7-DESTRUCTIVE: [DEFECT] submitting after Generate silently reassigns the accession number and then offers the OLD one to print",
+     "id": "modify-order|modify-order|tests/modify-order-field-binding.spec.ts|Modify Order — field binding and save gate (FLIP-WHEN-FIXED) > MO-3: [CONTRACT FACT] the Edit Order payload omits receivedDate, which is not the same as the order lacking one",
      "seconds": 0
     },
     {
-     "id": "modify-order|modify-order|tests/modify-order-field-binding.spec.ts|Modify Order — field binding and save gate (FLIP-WHEN-FIXED) > MO-3: [CONTRACT FACT] the Edit Order payload omits receivedDate, which is not the same as the order lacking one",
+     "id": "modify-order|modify-order|tests/modify-order-field-binding.spec.ts|Modify Order — field binding and save gate (FLIP-WHEN-FIXED) > MO-7-DESTRUCTIVE: [DEFECT] submitting after Generate silently reassigns the accession number and then offers the OLD one to print",
      "seconds": 0
     }
    ],
@@ -752,15 +823,15 @@
     },
     {
      "id": "ogc1192|ogc1192|tests/ogc1192-env-order-visibility.spec.ts|OGC-1192: environmental order routing and patientless samples > OGC1192-2: the saved env order is NOT listed on the Clinical dashboard",
-     "seconds": 4
-    },
-    {
-     "id": "ogc1192|setup|auth.setup.ts|authenticate",
-     "seconds": 4
+     "seconds": 3
     },
     {
      "id": "ogc1192|ogc1192|tests/ogc1192-env-order-visibility.spec.ts|OGC-1192: environmental order routing and patientless samples > OGC1192-4: Modify Order on the env order does not open the clinical patient wizard",
-     "seconds": 4
+     "seconds": 3
+    },
+    {
+     "id": "ogc1192|setup|auth.setup.ts|authenticate",
+     "seconds": 3
     },
     {
      "id": "ogc1192|ogc1192|tests/ogc1192-env-order-visibility.spec.ts|OGC-1192: environmental order routing and patientless samples > OGC1192-1: the saved env order is listed on the Environmental dashboard",
@@ -775,11 +846,11 @@
      "seconds": 1
     },
     {
-     "id": "ogc1192|ogc1192|tests/ogc1192-env-order-visibility.spec.ts|OGC-1192: environmental order routing and patientless samples > OGC1192-9: the environmental order create path works",
+     "id": "ogc1192|ogc1192|tests/ogc1192-env-order-visibility.spec.ts|OGC-1192: environmental order routing and patientless samples > OGC1192-6: CONTROL SampleEdit handles a nonexistent accession gracefully",
      "seconds": 1
     },
     {
-     "id": "ogc1192|ogc1192|tests/ogc1192-env-order-visibility.spec.ts|OGC-1192: environmental order routing and patientless samples > OGC1192-6: CONTROL SampleEdit handles a nonexistent accession gracefully",
+     "id": "ogc1192|ogc1192|tests/ogc1192-env-order-visibility.spec.ts|OGC-1192: environmental order routing and patientless samples > OGC1192-9: the environmental order create path works",
      "seconds": 1
     }
    ],
@@ -808,16 +879,16 @@
      "seconds": 4
     },
     {
-     "id": "personas-admin|setup|analyzer-auth.setup.ts|authenticate against the analyzers instance",
-     "seconds": 3
-    },
-    {
      "id": "personas-admin|setup|auth.setup.ts|authenticate",
      "seconds": 3
     },
     {
-     "id": "personas-admin|persona-pd|tests/personas/persona-pd-lab-manager.spec.ts|Persona PD — Lab Manager > Step 3 — Pull Rejection Report PDF (REPORTABLE, BUG-29 catch)",
+     "id": "personas-admin|setup|analyzer-auth.setup.ts|authenticate against the analyzers instance",
      "seconds": 3
+    },
+    {
+     "id": "personas-admin|persona-pd|tests/personas/persona-pd-lab-manager.spec.ts|Persona PD — Lab Manager > Step 3 — Pull Rejection Report PDF (REPORTABLE, BUG-29 catch)",
+     "seconds": 2
     },
     {
      "id": "personas-admin|persona-pe|tests/personas/persona-pe-qa-officer.spec.ts|Persona PE — QA Officer > Step 1 — Open NCE Dashboard (RENDER)",
@@ -859,12 +930,20 @@
      "seconds": 5
     },
     {
-     "id": "personas-roles|setup-roles|roles.setup.ts|role user ready — receptionist (qa_recept)",
+     "id": "personas-roles|setup-roles|roles.setup.ts|unit-scoped user ready — recept-heme (qa_recept_heme)",
+     "seconds": 5
+    },
+    {
+     "id": "personas-roles|setup-roles|roles.setup.ts|role user ready — labtech (qa_labtech)",
      "seconds": 5
     },
     {
      "id": "personas-roles|persona-pa-role|tests/personas/persona-pa-receptionist.spec.ts|Persona PA — Receptionist > Step 3 — Discover orderable tests from the order-entry catalogue (RENDER)",
      "seconds": 5
+    },
+    {
+     "id": "personas-roles|setup-roles|roles.setup.ts|role user ready — receptionist (qa_recept)",
+     "seconds": 4
     },
     {
      "id": "personas-roles|persona-pa-role|tests/personas/persona-pa-receptionist.spec.ts|Persona PA — Receptionist > Step 1 — Patient search by national ID (RENDER)",
@@ -875,19 +954,11 @@
      "seconds": 4
     },
     {
-     "id": "personas-roles|setup-roles|roles.setup.ts|unit-scoped user ready — recept-heme (qa_recept_heme)",
-     "seconds": 4
-    },
-    {
-     "id": "personas-roles|setup-roles|roles.setup.ts|role user ready — labtech (qa_labtech)",
-     "seconds": 4
-    },
-    {
-     "id": "personas-roles|persona-pa-role|tests/personas/persona-pa-receptionist.spec.ts|Persona PA — Receptionist > Step 4 — Place order on Routine Testing program (PERSIST)",
+     "id": "personas-roles|setup|auth.setup.ts|authenticate",
      "seconds": 3
     },
     {
-     "id": "personas-roles|setup|auth.setup.ts|authenticate",
+     "id": "personas-roles|persona-pa-role|tests/personas/persona-pa-receptionist.spec.ts|Persona PA — Receptionist > Step 4 — Place order on Routine Testing program (PERSIST)",
      "seconds": 3
     },
     {
@@ -911,30 +982,30 @@
    "slowest": [
     {
      "id": "pr3987|pr3987-patient|patient-photo-pr3987.spec.ts|item 10 — photo dialogs escape the disabled fieldset and keep their controls live",
-     "seconds": 56
+     "seconds": 55
     },
     {
      "id": "pr3987|pr3987-fhir|fhir-specimen-terminology-pr3987.spec.ts|PR #3987 — FHIR terminology reaches, and respects, the specimen > items 3 + 6 + 4 — specimen codings emitted, filtered per specimen, names distinct",
-     "seconds": 16
+     "seconds": 15
     },
     {
      "id": "pr3987|pr3987-patient|patient-photo-pr3987.spec.ts|follow-up — Add Order photo remains editable on a read-only patient panel",
-     "seconds": 12
+     "seconds": 11
     },
     {
      "id": "pr3987|pr3987-catalog|test-catalog-pr3987-regression.spec.ts|item 2 — \"No LOINC\" clears for an active LOINC mapping in ANY scope",
-     "seconds": 11
+     "seconds": 10
     },
     {
      "id": "pr3987|pr3987-fhir|fhir-specimen-terminology-pr3987.spec.ts|PR #3987 — FHIR terminology reaches, and respects, the specimen > items 12 + 13 — patient report specimen suffix + per-component unit/range",
      "seconds": 4
     },
     {
-     "id": "pr3987|setup|auth.setup.ts|authenticate",
+     "id": "pr3987|setup|analyzer-auth.setup.ts|authenticate against the analyzers instance",
      "seconds": 3
     },
     {
-     "id": "pr3987|setup|analyzer-auth.setup.ts|authenticate against the analyzers instance",
+     "id": "pr3987|setup|auth.setup.ts|authenticate",
      "seconds": 3
     },
     {
@@ -973,11 +1044,11 @@
      "seconds": 0
     },
     {
-     "id": "preflight||preflight.spec.ts|PF-3: every testMatch resolves to at least one file on disk",
+     "id": "preflight||preflight.spec.ts|PF-1: every config that sets storageState also depends on a setup project",
      "seconds": 0
     },
     {
-     "id": "preflight||preflight.spec.ts|PF-1: every config that sets storageState also depends on a setup project",
+     "id": "preflight||preflight.spec.ts|PF-3: every testMatch resolves to at least one file on disk",
      "seconds": 0
     }
    ],
@@ -1005,7 +1076,7 @@
     },
     {
      "id": "probe-combo|setup|auth.setup.ts|authenticate",
-     "seconds": 3
+     "seconds": 2
     }
    ],
    "slowWaits": 0
@@ -1024,18 +1095,6 @@
    "slowest": [
     {
      "id": "rbac|rbac-matrix|tests/rbac/rbac-matrix.spec.ts|RBAC matrix — Receptionist (qa_recept) > INV-03 [invariant] jsp:/api/OpenELIS-Global/TestAdd → expect deny",
-     "seconds": 35
-    },
-    {
-     "id": "rbac|rbac-matrix|tests/rbac/rbac-matrix.spec.ts|RBAC matrix — Lab Technician (qa_labtech) > BASE-04 [baseline] jsp:/api/OpenELIS-Global/ReportPrint → expect baseline",
-     "seconds": 34
-    },
-    {
-     "id": "rbac|rbac-matrix|tests/rbac/rbac-matrix.spec.ts|RBAC matrix — Lab Technician (qa_labtech) > INV-03 [invariant] jsp:/api/OpenELIS-Global/TestAdd → expect deny",
-     "seconds": 34
-    },
-    {
-     "id": "rbac|rbac-matrix|tests/rbac/rbac-matrix.spec.ts|RBAC matrix — Receptionist (qa_recept) > BASE-04 [baseline] jsp:/api/OpenELIS-Global/ReportPrint → expect baseline",
      "seconds": 34
     },
     {
@@ -1043,7 +1102,19 @@
      "seconds": 34
     },
     {
+     "id": "rbac|rbac-matrix|tests/rbac/rbac-matrix.spec.ts|RBAC matrix — Lab Technician (qa_labtech) > INV-03 [invariant] jsp:/api/OpenELIS-Global/TestAdd → expect deny",
+     "seconds": 34
+    },
+    {
      "id": "rbac|rbac-matrix|tests/rbac/rbac-matrix.spec.ts|RBAC matrix — Validator / Biologist (qa_validator) > INV-03 [invariant] jsp:/api/OpenELIS-Global/TestAdd → expect deny",
+     "seconds": 34
+    },
+    {
+     "id": "rbac|rbac-matrix|tests/rbac/rbac-matrix.spec.ts|RBAC matrix — Receptionist (qa_recept) > BASE-04 [baseline] jsp:/api/OpenELIS-Global/ReportPrint → expect baseline",
+     "seconds": 34
+    },
+    {
+     "id": "rbac|rbac-matrix|tests/rbac/rbac-matrix.spec.ts|RBAC matrix — Lab Technician (qa_labtech) > BASE-04 [baseline] jsp:/api/OpenELIS-Global/ReportPrint → expect baseline",
      "seconds": 34
     },
     {
@@ -1051,15 +1122,15 @@
      "seconds": 6
     },
     {
-     "id": "rbac|setup-roles|roles.setup.ts|role user ready — validator (qa_validator)",
+     "id": "rbac|setup-roles|roles.setup.ts|role user ready — labtech (qa_labtech)",
+     "seconds": 5
+    },
+    {
+     "id": "rbac|setup-roles|roles.setup.ts|role user ready — receptionist (qa_recept)",
      "seconds": 5
     },
     {
      "id": "rbac|setup-roles|roles.setup.ts|unit-scoped user ready — recept-heme (qa_recept_heme)",
-     "seconds": 5
-    },
-    {
-     "id": "rbac|setup-roles|roles.setup.ts|unit-scoped user ready — heme (qa_heme)",
      "seconds": 5
     }
    ],
@@ -1083,14 +1154,10 @@
     },
     {
      "id": "regression-seed|setup|auth.setup.ts|authenticate",
-     "seconds": 3
-    },
-    {
-     "id": "regression-seed|seed-data|seed-data.setup.ts|bulk seed (Phase E1)",
      "seconds": 2
     },
     {
-     "id": "regression-seed|ci-fixtures|ci-fixtures.setup.ts|ci-fixture: dictionary tests (TC-SA-01, EQA scheme test)",
+     "id": "regression-seed|seed-data|seed-data.setup.ts|bulk seed (Phase E1)",
      "seconds": 2
     },
     {
@@ -1098,15 +1165,19 @@
      "seconds": 2
     },
     {
+     "id": "regression-seed|ci-fixtures|ci-fixtures.setup.ts|ci-fixture: dictionary tests (TC-SA-01, EQA scheme test)",
+     "seconds": 2
+    },
+    {
      "id": "regression-seed|ci-fixtures|ci-fixtures.setup.ts|ci-fixture: EQA scheme provided and enrolled (TC-EQAHP-00, TC-EQA-02/03, TC-BL-DEEP-02, TC-Q-DEEP-02)",
      "seconds": 1
     },
     {
-     "id": "regression-seed|ci-fixtures|ci-fixtures.setup.ts|ci-fixture: inventory board items and usage history (TC-INVB)",
+     "id": "regression-seed|ci-fixtures|ci-fixtures.setup.ts|ci-fixture: three-component test (TC-MC-ROUTE)",
      "seconds": 1
     },
     {
-     "id": "regression-seed|ci-fixtures|ci-fixtures.setup.ts|ci-fixture: three-component test (TC-MC-ROUTE)",
+     "id": "regression-seed|ci-fixtures|ci-fixtures.setup.ts|ci-fixture: inventory board items and usage history (TC-INVB)",
      "seconds": 1
     },
     {
@@ -1146,7 +1217,7 @@
     },
     {
      "id": "reval2|setup|auth.setup.ts|authenticate",
-     "seconds": 3
+     "seconds": 2
     }
    ],
    "slowWaits": 0
@@ -1169,7 +1240,7 @@
     },
     {
      "id": "revalidate-unauth|setup|auth.setup.ts|authenticate",
-     "seconds": 3
+     "seconds": 2
     },
     {
      "id": "revalidate-unauth|probe|revalidate-ogc1120-unauth.spec.ts|OGC-1120 unauth check",
@@ -1192,7 +1263,7 @@
    "slowest": [
     {
      "id": "revalidate|probe|revalidate-ogc1120.spec.ts|OGC-1120 revalidate",
-     "seconds": 4
+     "seconds": 3
     },
     {
      "id": "revalidate|setup|analyzer-auth.setup.ts|authenticate against the analyzers instance",
@@ -1200,7 +1271,7 @@
     },
     {
      "id": "revalidate|setup|auth.setup.ts|authenticate",
-     "seconds": 3
+     "seconds": 2
     }
    ],
    "slowWaits": 0
